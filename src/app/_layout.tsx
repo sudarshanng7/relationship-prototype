@@ -33,6 +33,13 @@ export default function RootLayout() {
           title: "Moment",
         }}
       />
+      <Stack.Screen
+        name="onboarding"
+        options={{
+          title: "Getting started",
+          headerBackVisible: false,
+        }}
+      />
     </Stack>
   );
 }

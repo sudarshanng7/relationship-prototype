@@ -11,6 +11,28 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
 
+  async function navigateAfterAuthentication(userId: string) {
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error || !profile) {
+      console.error("Could not check onboarding:", error);
+      setStatus(error?.message ?? "Profile not found. Please try again.");
+      return;
+    }
+
+    setStatus("");
+
+    if (profile.onboarding_completed) {
+      router.replace("/profile");
+    } else {
+      router.replace("/onboarding");
+    }
+  }
+
   async function signIn() {
     const cleanEmail = email.trim();
 
@@ -18,10 +40,10 @@ export default function LoginScreen() {
       setStatus("Please enter your email and password.");
       return;
     }
-
+    9;
     setStatus("Signing in...");
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password,
     });
@@ -32,8 +54,7 @@ export default function LoginScreen() {
       return;
     }
 
-    setStatus("");
-    router.replace("/profile");
+    await navigateAfterAuthentication(data.user.id);
   }
 
   async function signUp() {
@@ -69,9 +90,8 @@ export default function LoginScreen() {
       return;
     }
 
-    if (data.session) {
-      setStatus("");
-      router.replace("/profile");
+    if (data.session && data.user) {
+      await navigateAfterAuthentication(data.user.id);
       return;
     }
 
