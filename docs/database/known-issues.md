@@ -2,7 +2,7 @@
 
 ## DB-01: Supabase CLI remote connection timeout
 
-**Status:** Open — non-blocking for local development  
+**Status:** Resolved — monitoring
 **Date identified:** 14 October 2026  
 **Priority:** Resolve before the next remote database migration
 
