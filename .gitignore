@@ -47,3 +47,7 @@ example
 # generated native folders
 /ios
 /android
+
+
+# Local Supabase SQL Editor snippets
+supabase/snippets/

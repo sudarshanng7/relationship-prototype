@@ -1,13 +1,13 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    Button,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Button,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 import { supabase } from "@/lib/supabase";
@@ -49,7 +49,9 @@ export default function RecordMomentScreen() {
 
   const [category, setCategory] = useState("");
   const [intensity, setIntensity] = useState(3);
-  const [note, setNote] = useState("");
+  const [privateNote, setPrivateNote] = useState("");
+  const [sharedTopic, setSharedTopic] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const [visibility, setVisibility] = useState<Visibility>("mine");
 
@@ -98,6 +100,8 @@ export default function RecordMomentScreen() {
   }
 
   async function saveMoment() {
+    if (saving) return;
+
     if (!coupleId) {
       setStatus("No relationship space found.");
       return;
@@ -108,25 +112,43 @@ export default function RecordMomentScreen() {
       return;
     }
 
+    setSaving(true);
     setStatus("Saving...");
 
-    const { error } = await supabase.from("relationship_events").insert({
-      couple_id: coupleId,
-      event_type: eventType,
-      category,
-      intensity: eventType === "friction" ? intensity : null,
-      note: note.trim() || null,
-      visibility,
-      status: eventType === "friction" ? "open" : null,
-    });
+    try {
+      const { data: eventId, error } = await supabase.rpc(
+        "create_relationship_moment",
+        {
+          p_couple_id: coupleId,
+          p_event_type: eventType,
+          p_category: category,
+          p_intensity: eventType === "friction" ? intensity : null,
+          p_visibility: visibility,
+          p_private_note: privateNote.trim() || null,
+          p_shared_topic:
+            visibility === "ours" ? sharedTopic.trim() || null : null,
+        },
+      );
 
-    if (error) {
-      console.error(error);
-      setStatus(error.message);
-      return;
+      if (error) throw error;
+
+      if (!eventId) {
+        throw new Error("Moment could not be created.");
+      }
+
+      router.replace({
+        pathname: "/event/[id]",
+        params: { id: eventId },
+      });
+    } catch (error) {
+      console.error("Failed to save moment:", error);
+
+      setStatus(
+        error instanceof Error ? error.message : "Could not save the moment.",
+      );
+    } finally {
+      setSaving(false);
     }
-
-    router.back();
   }
 
   const categories =
@@ -198,15 +220,41 @@ export default function RecordMomentScreen() {
         </>
       )}
 
-      <Text style={styles.heading}>Note</Text>
+      <Text style={styles.heading}>My private reflection</Text>
+
+      <Text style={styles.privacyText}>
+        Only you can read this reflection, even if you share the moment with
+        your partner.
+      </Text>
 
       <TextInput
         style={styles.note}
-        value={note}
-        onChangeText={setNote}
-        placeholder="Optional"
+        value={privateNote}
+        onChangeText={setPrivateNote}
+        placeholder="What happened? How did you feel?"
         multiline
+        editable={!saving}
       />
+
+      {visibility === "ours" && (
+        <>
+          <Text style={styles.heading}>What would you like to share?</Text>
+
+          <Text style={styles.privacyText}>
+            This text will be visible to your partner. Do not include anything
+            you want to keep private.
+          </Text>
+
+          <TextInput
+            style={styles.note}
+            value={sharedTopic}
+            onChangeText={setSharedTopic}
+            placeholder="What would you like your partner to know?"
+            multiline
+            editable={!saving}
+          />
+        </>
+      )}
 
       <Text style={styles.heading}>Who can see this?</Text>
 
@@ -237,7 +285,11 @@ export default function RecordMomentScreen() {
       </Text>
 
       <View style={styles.saveButton}>
-        <Button title="Save moment" onPress={saveMoment} />
+        <Button
+          title={saving ? "Saving..." : "Save moment"}
+          onPress={saveMoment}
+          disabled={saving}
+        />
       </View>
 
       {status !== "" && <Text style={styles.status}>{status}</Text>}
