@@ -9,7 +9,7 @@ type RelationshipEvent = {
   event_type: "positive" | "friction";
   category: string;
   intensity: number | null;
-  note: string | null;
+  shared_topic: string | null;
   visibility: "mine" | "ours";
   status: "open" | "partially_repaired" | "reconnected" | null;
   repair_method: string | null;
@@ -69,6 +69,8 @@ export default function EventDetailScreen() {
 
   const [showRepairMethods, setShowRepairMethods] = useState(false);
 
+  const [privateNote, setPrivateNote] = useState<string | null>(null);
+
   useEffect(() => {
     loadEvent();
   }, [eventId]);
@@ -100,7 +102,7 @@ export default function EventDetailScreen() {
         event_type,
         category,
         intensity,
-        note,
+        shared_topic,
         visibility,
         status,
         repair_method,
@@ -124,6 +126,23 @@ export default function EventDetailScreen() {
       );
       return;
     }
+
+    setPrivateNote(null);
+
+    const { data: reflection, error: reflectionError } = await supabase
+      .from("event_private_reflections")
+      .select("note")
+      .eq("event_id", eventId)
+      .eq("author_id", user.id)
+      .maybeSingle();
+
+    if (reflectionError) {
+      console.error("Failed to load private reflection:", reflectionError);
+      setStatusMessage(reflectionError.message);
+      return;
+    }
+
+    setPrivateNote(reflection?.note ?? null);
 
     setEvent(data);
     setStatusMessage("");
@@ -247,11 +266,20 @@ export default function EventDetailScreen() {
         </View>
       )}
 
-      {event.note && (
+      {event.visibility === "ours" && event.shared_topic && (
         <View style={styles.section}>
-          <Text style={styles.label}>Note</Text>
+          <Text style={styles.label}>Shared topic</Text>
+          <Text>{event.shared_topic}</Text>
+        </View>
+      )}
 
-          <Text>{event.note}</Text>
+      {privateNote && (
+        <View style={styles.section}>
+          <Text style={styles.label}>My private reflection</Text>
+          <Text>{privateNote}</Text>
+          <Text style={styles.helperText}>
+            Only you can see this reflection.
+          </Text>
         </View>
       )}
 
