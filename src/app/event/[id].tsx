@@ -1,7 +1,14 @@
 import { supabase } from "@/lib/supabase";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Button,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 type RelationshipEvent = {
   id: string;
@@ -70,6 +77,10 @@ export default function EventDetailScreen() {
   const [showRepairMethods, setShowRepairMethods] = useState(false);
 
   const [privateNote, setPrivateNote] = useState<string | null>(null);
+
+  const [showSharingControls, setShowSharingControls] = useState(false);
+  const [sharedTopicInput, setSharedTopicInput] = useState("");
+  const [changingVisibility, setChangingVisibility] = useState(false);
 
   useEffect(() => {
     loadEvent();
@@ -209,6 +220,55 @@ export default function EventDetailScreen() {
     await loadEvent();
 
     setStatusMessage("Repair saved");
+  }
+
+  async function changeMomentVisibility(newVisibility: "mine" | "ours") {
+    if (!event || !currentUserId) return;
+
+    // Only the event creator should see or initiate this action.
+    // The database function independently enforces ownership.
+    if (event.creator_id !== currentUserId) return;
+
+    if (changingVisibility) return;
+
+    const topic = newVisibility === "ours" ? sharedTopicInput.trim() : null;
+
+    if (newVisibility === "ours" && !topic) {
+      setStatusMessage("Please enter a topic to share.");
+      return;
+    }
+
+    setChangingVisibility(true);
+    setStatusMessage("Updating sharing...");
+
+    try {
+      const { error } = await supabase.rpc("set_moment_visibility", {
+        p_event_id: event.id,
+        p_visibility: newVisibility,
+        p_shared_topic: topic,
+      });
+
+      if (error) throw error;
+
+      setSharedTopicInput("");
+      setShowSharingControls(false);
+
+      await loadEvent();
+
+      setStatusMessage(
+        newVisibility === "ours"
+          ? "Moment shared with your partner."
+          : "Moment moved to Mine. Shared topic cleared.",
+      );
+    } catch (error) {
+      console.error("Visibility change failed:", error);
+
+      setStatusMessage(
+        error instanceof Error ? error.message : "Could not change visibility.",
+      );
+    } finally {
+      setChangingVisibility(false);
+    }
   }
 
   async function deleteEvent() {
@@ -367,6 +427,85 @@ export default function EventDetailScreen() {
       )}
 
       {isCreator && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sharing</Text>
+
+          <Text style={styles.helperText}>
+            This moment is currently{" "}
+            {event.visibility === "mine" ? "Mine" : "Ours"}. Your private
+            reflection is never shared.
+          </Text>
+
+          {!showSharingControls ? (
+            <Button
+              title={
+                event.visibility === "mine"
+                  ? "Share with partner"
+                  : "Change sharing"
+              }
+              onPress={() => {
+                setSharedTopicInput("");
+                setShowSharingControls(true);
+                setStatusMessage("");
+              }}
+            />
+          ) : (
+            <View>
+              {event.visibility === "mine" ? (
+                <>
+                  <Text style={styles.label}>
+                    What would you like to share?
+                  </Text>
+
+                  <TextInput
+                    style={styles.sharingInput}
+                    value={sharedTopicInput}
+                    onChangeText={setSharedTopicInput}
+                    placeholder="Enter a topic your partner can see"
+                    multiline
+                    editable={!changingVisibility}
+                  />
+
+                  <View style={styles.button}>
+                    <Button
+                      title="Confirm sharing"
+                      disabled={changingVisibility || !sharedTopicInput.trim()}
+                      onPress={() => changeMomentVisibility("ours")}
+                    />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.helperText}>
+                    Moving this moment to Mine removes your partner's access and
+                    clears the shared topic. Information already seen cannot be
+                    recalled.
+                  </Text>
+
+                  <View style={styles.button}>
+                    <Button
+                      title="Confirm move to Mine"
+                      disabled={changingVisibility}
+                      onPress={() => changeMomentVisibility("mine")}
+                    />
+                  </View>
+                </>
+              )}
+
+              <Button
+                title="Cancel"
+                disabled={changingVisibility}
+                onPress={() => {
+                  setSharedTopicInput("");
+                  setShowSharingControls(false);
+                }}
+              />
+            </View>
+          )}
+        </View>
+      )}
+
+      {isCreator && (
         <View style={styles.deleteSection}>
           <Button title="Delete moment" onPress={deleteEvent} />
         </View>
@@ -464,6 +603,16 @@ const styles = StyleSheet.create({
 
   cancelButton: {
     marginTop: 8,
+  },
+
+  sharingInput: {
+    minHeight: 90,
+    borderWidth: 1,
+    borderColor: "#bbb",
+    borderRadius: 8,
+    padding: 12,
+    textAlignVertical: "top",
+    marginBottom: 12,
   },
 
   deleteSection: {
