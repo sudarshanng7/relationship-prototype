@@ -156,25 +156,22 @@ export const THEME_LIST: ThemeConfig[] = [
 type PreviewState =
   | "calm_day"
   | "evening_reflection"
-  | "partner_response"
   | "open_repair"
   | "positive_moment"
-  | "open_moment"
-  | "shared_memory";
+  | "recently_resolved";
 
 type ReflectionFeeling =
   | "special"
   | "regular"
   | "distant"
-  | "friction"
-  | "annoyed";
+  | "annoyed"
+  | "friction";
 
 interface FeelingOption {
   key: ReflectionFeeling;
   label: string;
   symbol: string;
   accentColor: string;
-  futureNotice: string;
 }
 
 const FEELING_OPTIONS: FeelingOption[] = [
@@ -183,36 +180,62 @@ const FEELING_OPTIONS: FeelingOption[] = [
     label: "Special",
     symbol: "✦",
     accentColor: "#6E416D",
-    futureNotice: "In the future, this will open the positive-moment flow.",
   },
   {
     key: "regular",
     label: "Regular",
     symbol: "☼",
     accentColor: "#564458",
-    futureNotice: "In the future, this will save and finish.",
   },
   {
     key: "distant",
     label: "Distant",
     symbol: "〰",
     accentColor: "#756777",
-    futureNotice: "In the future, this will save and finish.",
-  },
-  {
-    key: "friction",
-    label: "Friction",
-    symbol: "∿",
-    accentColor: "#934762",
-    futureNotice: "In the future, this will open the friction and repair flow.",
   },
   {
     key: "annoyed",
     label: "Annoyed",
     symbol: "⏺",
     accentColor: "#9E6326",
-    futureNotice:
-      "In the future, this can offer a light reframe or a small reset.",
+  },
+  {
+    key: "friction",
+    label: "Friction",
+    symbol: "∿",
+    accentColor: "#934762",
+  },
+];
+
+const PREVIEW_SCENARIOS: {
+  key: PreviewState;
+  label: string;
+  description: string;
+}[] = [
+  {
+    key: "calm_day",
+    label: "Calm day",
+    description: "Nothing needs your attention right now.",
+  },
+  {
+    key: "evening_reflection",
+    label: "Evening reflection",
+    description: "Check-in prompt and feelings before day ends.",
+  },
+  {
+    key: "open_repair",
+    label: "Open shared moment",
+    description: "One shared moment is waiting when ready.",
+  },
+  {
+    key: "positive_moment",
+    label: "Shared positive moment",
+    description: "Sam shared something good with you.",
+  },
+  {
+    key: "recently_resolved",
+    label: "Recently resolved moment",
+    description: "A recent moment was marked reconnected.",
   },
 ];
 
@@ -241,7 +264,8 @@ export default function HomeScreen() {
   >(null);
   const [eveningReflectionEnabled, setEveningReflectionEnabled] =
     useState(true);
-  const [previewState] = useState<PreviewState>("calm_day");
+  const [previewState, setPreviewState] =
+    useState<PreviewState>("calm_day");
   const [selectedFeeling, setSelectedFeeling] =
     useState<ReflectionFeeling | null>(null);
   const [localFeedback, setLocalFeedback] = useState<string | null>(null);
@@ -258,14 +282,28 @@ export default function HomeScreen() {
 
   const handleSelectFeeling = (feeling: FeelingOption) => {
     setSelectedFeeling(feeling.key);
+    if (feeling.key === "special") {
+      router.push({
+        pathname: "/record-moment",
+        params: { type: "positive" },
+      });
+      return;
+    }
+    if (feeling.key === "friction") {
+      router.push({
+        pathname: "/record-moment",
+        params: { type: "friction" },
+      });
+      return;
+    }
     setLocalFeedback(
-      `Tonight’s reflection is saved.\n${feeling.futureNotice} (Preview only — nothing was actually saved.)`
+      "Preview only — daily reflections will be connected later."
     );
   };
 
-  const handleReflectionAction = (actionName: string) => {
+  const handleReflectionAction = (_actionName: string) => {
     setLocalFeedback(
-      `Local preview: "${actionName}" tapped. No notifications scheduled or data saved.`
+      "Preview only — daily reflections will be connected later."
     );
   };
 
@@ -341,33 +379,9 @@ export default function HomeScreen() {
     }
   };
 
-  const handlePartnerResponseAction = () => {
-    setLocalFeedback(
-      "In the future, this will open that shared-moment detail. No data saved."
-    );
-  };
-
-  const handleOpenRepairAction = () => {
-    setLocalFeedback(
-      "In the future, this will open the next step of that specific repair flow. No data saved."
-    );
-  };
-
-  const handlePositiveMomentAction = () => {
-    setLocalFeedback(
-      "In the future, this will open that shared moment. No data saved."
-    );
-  };
-
   const handleWeeklyGentlePress = () => {
     setLocalFeedback(
       "Your weekly reflection will appear here when it is connected."
-    );
-  };
-
-  const handleOpenMomentsAction = (action: string) => {
-    setLocalFeedback(
-      `Preview action: "${action}" selected. No backend connection.`
     );
   };
 
@@ -465,114 +479,61 @@ export default function HomeScreen() {
                   How did things feel between you and Sam today?
                 </Text>
 
-                {selectedFeeling ? (
-                  <View style={styles.savedNoticeBox}>
-                    <Text style={styles.savedHeading}>
-                      Tonight’s reflection is saved.
-                    </Text>
-                    <Text style={styles.savedDescription}>
-                      {
-                        FEELING_OPTIONS.find((f) => f.key === selectedFeeling)
-                          ?.futureNotice
-                      }
-                    </Text>
-                    <Text style={styles.savedSubtext}>
-                      Preview only — nothing was actually saved.
-                    </Text>
+                <View style={styles.feelingsRow}>
+                  {FEELING_OPTIONS.map((option) => (
                     <Pressable
-                      style={styles.quietResetButton}
-                      onPress={() => setSelectedFeeling(null)}
+                      key={option.key}
+                      style={styles.feelingButton}
+                      onPress={() => handleSelectFeeling(option)}
                       accessibilityRole="button"
-                      accessibilityLabel="Choose another feeling"
+                      accessibilityLabel={`Feeling option: ${option.label}`}
                     >
-                      <Text style={styles.quietResetText}>
-                        Change feeling choice
+                      <Text
+                        style={[
+                          styles.feelingSymbol,
+                          { color: option.accentColor },
+                        ]}
+                      >
+                        {option.symbol}
+                      </Text>
+                      <Text style={styles.feelingLabel}>
+                        {option.label}
                       </Text>
                     </Pressable>
-                  </View>
-                ) : (
-                  <>
-                    <View style={styles.feelingsRow}>
-                      {FEELING_OPTIONS.map((option) => (
-                        <Pressable
-                          key={option.key}
-                          style={styles.feelingButton}
-                          onPress={() => handleSelectFeeling(option)}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Feeling option: ${option.label}`}
-                        >
-                          <Text
-                            style={[
-                              styles.feelingSymbol,
-                              { color: option.accentColor },
-                            ]}
-                          >
-                            {option.symbol}
-                          </Text>
-                          <Text style={styles.feelingLabel}>
-                            {option.label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-
-                    <View style={styles.reflectionSecondaryActions}>
-                      <Pressable
-                        style={styles.quietSecondaryButton}
-                        onPress={() =>
-                          handleReflectionAction("Remind me later")
-                        }
-                        accessibilityRole="button"
-                        accessibilityLabel="Remind me later"
-                      >
-                        <Text style={styles.quietSecondaryText}>
-                          Remind me later
-                        </Text>
-                      </Pressable>
-                      <View style={styles.quietSeparatorDot} />
-                      <Pressable
-                        style={styles.quietSecondaryButton}
-                        onPress={() =>
-                          handleReflectionAction("Skip tonight")
-                        }
-                        accessibilityRole="button"
-                        accessibilityLabel="Skip tonight"
-                      >
-                        <Text style={styles.quietSecondaryText}>
-                          Skip tonight
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </>
-                )}
-              </View>
-            )}
-
-            {/* Partner response state */}
-            {previewState === "partner_response" && (
-              <View style={styles.partnerResponseContent}>
-                <View style={styles.partnerTextGroup}>
-                  <View style={styles.partnerBubble}>
-                    <Text style={styles.partnerIconMini}>💌</Text>
-                  </View>
-                  <Text style={styles.partnerResponseText}>
-                    Sam shared something with you.
-                  </Text>
+                  ))}
                 </View>
-                <Pressable
-                  style={styles.primaryActionButton}
-                  onPress={handlePartnerResponseAction}
-                  accessibilityRole="button"
-                  accessibilityLabel="Read their response"
-                >
-                  <Text style={styles.primaryActionText}>
-                    Read their response
-                  </Text>
-                </Pressable>
+
+                <View style={styles.reflectionSecondaryActions}>
+                  <Pressable
+                    style={styles.quietSecondaryButton}
+                    onPress={() =>
+                      handleReflectionAction("Remind me later")
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel="Remind me later"
+                  >
+                    <Text style={styles.quietSecondaryText}>
+                      Remind me later
+                    </Text>
+                  </Pressable>
+                  <View style={styles.quietSeparatorDot} />
+                  <Pressable
+                    style={styles.quietSecondaryButton}
+                    onPress={() =>
+                      handleReflectionAction("Skip tonight")
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel="Skip tonight"
+                  >
+                    <Text style={styles.quietSecondaryText}>
+                      Skip tonight
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             )}
 
-            {/* Open repair state */}
+            {/* Open shared moment state */}
             {previewState === "open_repair" && (
               <View style={styles.partnerResponseContent}>
                 <View style={styles.partnerTextGroup}>
@@ -585,7 +546,12 @@ export default function HomeScreen() {
                 </View>
                 <Pressable
                   style={styles.primaryActionButton}
-                  onPress={handleOpenRepairAction}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/events",
+                      params: { scope: "ours" },
+                    })
+                  }
                   accessibilityRole="button"
                   accessibilityLabel="Continue when ready"
                 >
@@ -597,27 +563,65 @@ export default function HomeScreen() {
             )}
 
             {/* Positive shared moment state */}
-            {(previewState === "positive_moment" ||
-              previewState === "shared_memory") && (
-                <View style={styles.partnerResponseContent}>
-                  <View style={styles.partnerTextGroup}>
-                    <View style={styles.partnerBubble}>
-                      <Text style={styles.partnerIconMini}>🌷</Text>
-                    </View>
+            {previewState === "positive_moment" && (
+              <View style={styles.partnerResponseContent}>
+                <View style={styles.partnerTextGroup}>
+                  <View style={styles.partnerBubble}>
+                    <Text style={styles.partnerIconMini}>🌷</Text>
+                  </View>
+                  <Text style={styles.partnerResponseText}>
+                    Sam shared something good with you.
+                  </Text>
+                </View>
+                <Pressable
+                  style={styles.primaryActionButton}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/events",
+                      params: { scope: "ours" },
+                    })
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel="See it"
+                >
+                  <Text style={styles.primaryActionText}>See it</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {/* Recently resolved moment state */}
+            {previewState === "recently_resolved" && (
+              <View style={styles.partnerResponseContent}>
+                <View style={styles.partnerTextGroup}>
+                  <View style={styles.partnerBubble}>
+                    <Text style={styles.partnerIconMini}>🌱</Text>
+                  </View>
+                  <View style={styles.resolvedTextCol}>
                     <Text style={styles.partnerResponseText}>
-                      Sam added a moment to remember.
+                      A recent moment was marked reconnected.
+                    </Text>
+                    <Text style={styles.resolvedSupportingText}>
+                      Taking time to notice repair helps it stick.
                     </Text>
                   </View>
-                  <Pressable
-                    style={styles.primaryActionButton}
-                    onPress={handlePositiveMomentAction}
-                    accessibilityRole="button"
-                    accessibilityLabel="See it"
-                  >
-                    <Text style={styles.primaryActionText}>See it</Text>
-                  </Pressable>
                 </View>
-              )}
+                <Pressable
+                  style={styles.primaryActionButton}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/events",
+                      params: { scope: "ours" },
+                    })
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel="View in Our Space"
+                >
+                  <Text style={styles.primaryActionText}>
+                    View in Our Space
+                  </Text>
+                </Pressable>
+              </View>
+            )}
           </View>
 
           {/* 4. Mine (~34%) and Ours (~66%) Spaces */}
@@ -692,42 +696,7 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          {/* 5. Space below Mine and Ours: Compact Open Moments (Shown ONLY when open moment exists) */}
-          {previewState === "open_moment" && (
-            <View style={[styles.sectionCard, styles.compactOpenMomentCard]}>
-              <View style={styles.sectionHeaderRow}>
-                <View style={styles.sectionHeaderBubble}>
-                  <Text style={styles.sectionHeaderIcon}>✦</Text>
-                </View>
-                <Text style={styles.sectionOverline}>Open moments</Text>
-              </View>
-              <View style={styles.openMomentCompactContent}>
-                <View style={styles.neutralNoticeHeader}>
-                  <Text style={styles.neutralTopicTag}>Household</Text>
-                  <Text style={styles.neutralMetadata}>
-                    Reconnecting · Ours
-                  </Text>
-                </View>
-                <Text style={styles.neutralPromptText}>
-                  The issue feels resolved. How connected do you feel now?
-                </Text>
-                <Pressable
-                  style={styles.primaryActionButton}
-                  onPress={() =>
-                    handleOpenMomentsAction("Continue when ready")
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel="Continue when ready"
-                >
-                  <Text style={styles.primaryActionText}>
-                    Continue when ready
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-
-          {/* 6. "Your week, gently" - Look back card */}
+          {/* 5. "Your week, gently" - Look back card */}
           <Pressable
             style={({ pressed }) => [
               styles.sectionCard,
@@ -1237,6 +1206,60 @@ export default function HomeScreen() {
                         </Pressable>
                       </View>
                     </View>
+
+                    {/* 6. Development-only preview scenario switcher */}
+                    {__DEV__ && (
+                      <View style={styles.settingsSection}>
+                        <Text style={styles.settingsSectionTitle}>
+                          Preview scenarios
+                        </Text>
+                        <View style={styles.settingsCard}>
+                          {PREVIEW_SCENARIOS.map((scenario, index) => {
+                            const isSelected = previewState === scenario.key;
+                            return (
+                              <View key={scenario.key}>
+                                {index > 0 && (
+                                  <View style={styles.settingsDivider} />
+                                )}
+                                <Pressable
+                                  style={[
+                                    styles.settingsActionRow,
+                                    isSelected &&
+                                      styles.previewScenarioSelectedRow,
+                                  ]}
+                                  onPress={() => {
+                                    setPreviewState(scenario.key);
+                                    setIsSettingsOpen(false);
+                                  }}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`Preview: ${scenario.label}`}
+                                >
+                                  <View style={styles.settingsRowTextGroup}>
+                                    <Text
+                                      style={[
+                                        styles.settingsRowHeading,
+                                        isSelected &&
+                                          styles.previewScenarioSelectedHeading,
+                                      ]}
+                                    >
+                                      {scenario.label}
+                                    </Text>
+                                    <Text style={styles.settingsRowSubtext}>
+                                      {scenario.description}
+                                    </Text>
+                                  </View>
+                                  {isSelected && (
+                                    <Text style={styles.previewCheckmark}>
+                                      ✓
+                                    </Text>
+                                  )}
+                                </Pressable>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    )}
                   </ScrollView>
 
                   <Pressable
@@ -1626,6 +1649,15 @@ const createStyles = (theme: ThemeConfig) =>
       fontWeight: "600",
       color: theme.primaryText,
       lineHeight: 21,
+    },
+    resolvedTextCol: {
+      flex: 1,
+      gap: 2,
+    },
+    resolvedSupportingText: {
+      fontSize: 13,
+      color: theme.secondaryText,
+      lineHeight: 18,
     },
 
     /* 4. Mine and Ours Spaces (Asymmetric: Mine ~34%, Ours ~66%) */
@@ -2310,6 +2342,19 @@ const createStyles = (theme: ThemeConfig) =>
       color: theme.accentText,
       fontSize: 14,
       fontWeight: "600",
+    },
+    previewScenarioSelectedRow: {
+      backgroundColor: theme.selectedNavigation,
+    },
+    previewScenarioSelectedHeading: {
+      color: theme.accent,
+      fontWeight: "700",
+    },
+    previewCheckmark: {
+      fontSize: 16,
+      color: theme.accent,
+      fontWeight: "700",
+      marginLeft: 8,
     },
 
     /* Fixed Visual Bottom Navigation */
