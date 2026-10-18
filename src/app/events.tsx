@@ -193,10 +193,17 @@ export default function EventsScreen() {
   }
 
   function openEvent(eventId: string) {
+    const currentScope = isMineMode
+      ? "mine"
+      : isOursMode
+      ? "ours"
+      : "moments";
+
     router.push({
       pathname: "/event/[id]",
       params: {
         id: eventId,
+        scope: currentScope,
       },
     });
   }

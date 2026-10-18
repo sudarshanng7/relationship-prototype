@@ -170,7 +170,7 @@ export default function RecordMomentScreen() {
 
       router.replace({
         pathname: "/event/[id]",
-        params: { id: eventId },
+        params: { id: eventId, scope: finalVisibility },
       });
     } catch (error) {
       console.error("Failed to save moment:", error);

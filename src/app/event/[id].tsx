@@ -41,9 +41,13 @@ export default function EventDetailScreen() {
 
   const params = useLocalSearchParams<{
     id?: string | string[];
+    scope?: string;
   }>();
 
   const eventId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const scopeParam = Array.isArray(params.scope)
+    ? params.scope[0]
+    : params.scope;
 
   const [event, setEvent] = useState<RelationshipEvent | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -246,6 +250,37 @@ export default function EventDetailScreen() {
     router.back();
   }
 
+  const returnScope =
+    scopeParam === "mine" || scopeParam === "ours" || scopeParam === "moments"
+      ? scopeParam
+      : event?.visibility === "mine" || event?.visibility === "ours"
+      ? event.visibility
+      : null;
+
+  const backLabel =
+    returnScope === "mine"
+      ? "‹ Back to Mine"
+      : returnScope === "ours"
+      ? "‹ Back to Our Space"
+      : "‹ Back to Moments";
+
+  const backAccessibilityLabel =
+    returnScope === "mine"
+      ? "Back to Mine"
+      : returnScope === "ours"
+      ? "Back to Our Space"
+      : "Back to Moments";
+
+  function handleBack() {
+    if (returnScope === "mine") {
+      router.replace("/events?scope=mine");
+    } else if (returnScope === "ours") {
+      router.replace("/events?scope=ours");
+    } else {
+      router.replace("/events");
+    }
+  }
+
   if (!event) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -253,11 +288,11 @@ export default function EventDetailScreen() {
           <Text style={styles.centerStatusText}>{statusMessage}</Text>
           <Pressable
             style={styles.centerBackButton}
-            onPress={() => router.replace("/events")}
+            onPress={handleBack}
             accessibilityRole="button"
-            accessibilityLabel="Back to Moments"
+            accessibilityLabel={backAccessibilityLabel}
           >
-            <Text style={styles.centerBackButtonText}>‹ Back to Moments</Text>
+            <Text style={styles.centerBackButtonText}>{backLabel}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -274,14 +309,14 @@ export default function EventDetailScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.column}>
-          {/* Back to Moments navigation */}
+          {/* Back navigation */}
           <Pressable
             style={styles.backButton}
-            onPress={() => router.replace("/events")}
+            onPress={handleBack}
             accessibilityRole="button"
-            accessibilityLabel="Back to Moments"
+            accessibilityLabel={backAccessibilityLabel}
           >
-            <Text style={styles.backButtonText}>‹ Back to Moments</Text>
+            <Text style={styles.backButtonText}>{backLabel}</Text>
           </Pressable>
 
           {/* Header Summary */}
@@ -307,8 +342,8 @@ export default function EventDetailScreen() {
                   ]}
                 >
                   {event.visibility === "ours"
-                    ? "♥ Ours · Shared with Sam"
-                    : "🔒 Mine · Private"}
+                    ? "Shared with Sam"
+                    : "Private to you"}
                 </Text>
               </View>
             </View>
@@ -368,8 +403,8 @@ export default function EventDetailScreen() {
               </Text>
               <Text style={styles.positiveOutcomeSubtitle}>
                 {event.visibility === "mine"
-                  ? "This stays in your private space."
-                  : "This is now part of your shared space."}
+                  ? "Kept privately for you. You can revisit this whenever you need."
+                  : "Part of your shared story with Sam."}
               </Text>
             </View>
           )}
@@ -378,13 +413,19 @@ export default function EventDetailScreen() {
           {!isPositive && (
             <View style={styles.statusDisplayCard}>
               <View style={styles.statusRow}>
-                <Text style={styles.statusLabel}>Current state</Text>
+                <Text style={styles.statusLabel}>Where this stands</Text>
                 <View style={styles.statusValueBadge}>
                   <Text style={styles.statusValueText}>
                     {formatStatus(event.status)}
                   </Text>
                 </View>
               </View>
+
+              <Text style={styles.statusGuidanceText}>
+                {event.visibility === "mine"
+                  ? "Kept privately for you. You can revisit this whenever you need."
+                  : "Tension can take time to ease. You can update this whenever things shift."}
+              </Text>
 
               {event.repair_method && (
                 <View style={[styles.statusRow, { marginTop: 10 }]}>
@@ -420,7 +461,7 @@ export default function EventDetailScreen() {
                   onPress={() => updateEventStatus("open")}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: event.status === "open" }}
-                  accessibilityLabel="Still open"
+                  accessibilityLabel="Still lingering"
                 >
                   <Text
                     style={[
@@ -428,7 +469,7 @@ export default function EventDetailScreen() {
                       event.status === "open" && styles.repairChoiceTextActive,
                     ]}
                   >
-                    Still open
+                    Still lingering
                   </Text>
                 </Pressable>
 
@@ -443,7 +484,7 @@ export default function EventDetailScreen() {
                   accessibilityState={{
                     selected: event.status === "partially_repaired",
                   }}
-                  accessibilityLabel="A little better"
+                  accessibilityLabel="Softening"
                 >
                   <Text
                     style={[
@@ -452,7 +493,7 @@ export default function EventDetailScreen() {
                       styles.repairChoiceTextActive,
                     ]}
                   >
-                    A little better
+                    Softening
                   </Text>
                 </Pressable>
 
@@ -712,9 +753,9 @@ function formatCategory(value: string) {
 function formatStatus(status: RelationshipEvent["status"]) {
   switch (status) {
     case "open":
-      return "Still open";
+      return "Still lingering";
     case "partially_repaired":
-      return "A little better";
+      return "Softening";
     case "reconnected":
       return "Reconnected";
     default:
@@ -995,6 +1036,12 @@ const styles = StyleSheet.create({
   statusSubtext: {
     fontSize: 12.5,
     color: "#6D6072",
+  },
+  statusGuidanceText: {
+    fontSize: 13,
+    color: "#6D6072",
+    lineHeight: 18,
+    marginTop: 8,
   },
 
   /* Sections */
