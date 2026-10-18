@@ -2,7 +2,8 @@ import { supabase } from "@/lib/supabase";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  Button,
+  Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -25,38 +26,14 @@ type RelationshipEvent = {
 };
 
 const repairMethods = [
-  {
-    value: "talking",
-    label: "Talking",
-  },
-  {
-    value: "space",
-    label: "Space",
-  },
-  {
-    value: "apology",
-    label: "Apology",
-  },
-  {
-    value: "affection",
-    label: "Affection",
-  },
-  {
-    value: "humour",
-    label: "Humour",
-  },
-  {
-    value: "practical_action",
-    label: "Practical action",
-  },
-  {
-    value: "time",
-    label: "Time",
-  },
-  {
-    value: "other",
-    label: "Other",
-  },
+  { value: "talking", label: "Talking" },
+  { value: "space", label: "Space" },
+  { value: "apology", label: "Apology" },
+  { value: "affection", label: "Affection" },
+  { value: "humour", label: "Humour" },
+  { value: "practical_action", label: "Practical action" },
+  { value: "time", label: "Time" },
+  { value: "other", label: "Other" },
 ];
 
 export default function EventDetailScreen() {
@@ -69,18 +46,16 @@ export default function EventDetailScreen() {
   const eventId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [event, setEvent] = useState<RelationshipEvent | null>(null);
-
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
   const [statusMessage, setStatusMessage] = useState("Loading...");
-
   const [showRepairMethods, setShowRepairMethods] = useState(false);
-
   const [privateNote, setPrivateNote] = useState<string | null>(null);
 
   const [showSharingControls, setShowSharingControls] = useState(false);
   const [sharedTopicInput, setSharedTopicInput] = useState("");
   const [changingVisibility, setChangingVisibility] = useState(false);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     loadEvent();
@@ -154,23 +129,15 @@ export default function EventDetailScreen() {
     }
 
     setPrivateNote(reflection?.note ?? null);
-
     setEvent(data);
     setStatusMessage("");
   }
 
   async function updateEventStatus(newStatus: "open" | "partially_repaired") {
-    if (!event) {
-      return;
-    }
+    if (!event) return;
 
     setStatusMessage("Updating...");
 
-    /*
-     * If a previously reconnected event is changed back to
-     * Open or A little better, its previous repair information
-     * is no longer valid.
-     */
     const { error } = await supabase
       .from("relationship_events")
       .update({
@@ -187,16 +154,12 @@ export default function EventDetailScreen() {
     }
 
     setShowRepairMethods(false);
-
     await loadEvent();
-
-    setStatusMessage("Event updated");
+    setStatusMessage("Updated");
   }
 
   async function markReconnected(repairMethod: string) {
-    if (!event) {
-      return;
-    }
+    if (!event) return;
 
     setStatusMessage("Saving repair...");
 
@@ -216,19 +179,13 @@ export default function EventDetailScreen() {
     }
 
     setShowRepairMethods(false);
-
     await loadEvent();
-
     setStatusMessage("Repair saved");
   }
 
   async function changeMomentVisibility(newVisibility: "mine" | "ours") {
     if (!event || !currentUserId) return;
-
-    // Only the event creator should see or initiate this action.
-    // The database function independently enforces ownership.
     if (event.creator_id !== currentUserId) return;
-
     if (changingVisibility) return;
 
     const topic = newVisibility === "ours" ? sharedTopicInput.trim() : null;
@@ -262,7 +219,6 @@ export default function EventDetailScreen() {
       );
     } catch (error) {
       console.error("Visibility change failed:", error);
-
       setStatusMessage(
         error instanceof Error ? error.message : "Could not change visibility.",
       );
@@ -272,9 +228,7 @@ export default function EventDetailScreen() {
   }
 
   async function deleteEvent() {
-    if (!event) {
-      return;
-    }
+    if (!event) return;
 
     setStatusMessage("Deleting moment...");
 
@@ -294,227 +248,458 @@ export default function EventDetailScreen() {
 
   if (!event) {
     return (
-      <View style={styles.center}>
-        <Text>{statusMessage}</Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <Text style={styles.centerStatusText}>{statusMessage}</Text>
+          <Pressable
+            style={styles.centerBackButton}
+            onPress={() => router.replace("/events")}
+            accessibilityRole="button"
+            accessibilityLabel="Back to Moments"
+          >
+            <Text style={styles.centerBackButtonText}>‹ Back to Moments</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
     );
   }
 
   const isCreator = event.creator_id === currentUserId;
+  const isPositive = event.event_type === "positive";
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>{formatCategory(event.category)}</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.column}>
+          {/* Back to Moments navigation */}
+          <Pressable
+            style={styles.backButton}
+            onPress={() => router.replace("/events")}
+            accessibilityRole="button"
+            accessibilityLabel="Back to Moments"
+          >
+            <Text style={styles.backButtonText}>‹ Back to Moments</Text>
+          </Pressable>
 
-      <Text style={styles.meta}>
-        {event.event_type === "friction" ? "Friction" : "Positive moment"}
-        {" · "}
-        {event.visibility === "mine" ? "Mine" : "Ours"}
-      </Text>
-
-      <View style={styles.section}>
-        <Text style={styles.label}>Recorded</Text>
-
-        <Text>{formatDate(event.created_at)}</Text>
-      </View>
-
-      {event.intensity !== null && (
-        <View style={styles.section}>
-          <Text style={styles.label}>Intensity</Text>
-
-          <Text>{event.intensity} / 5</Text>
-        </View>
-      )}
-
-      {event.visibility === "ours" && event.shared_topic && (
-        <View style={styles.section}>
-          <Text style={styles.label}>Shared topic</Text>
-          <Text>{event.shared_topic}</Text>
-        </View>
-      )}
-
-      {privateNote && (
-        <View style={styles.section}>
-          <Text style={styles.label}>My private reflection</Text>
-          <Text>{privateNote}</Text>
-          <Text style={styles.helperText}>
-            Only you can see this reflection.
-          </Text>
-        </View>
-      )}
-
-      {event.event_type === "friction" && (
-        <View style={styles.section}>
-          <Text style={styles.label}>Current state</Text>
-
-          <Text>{formatStatus(event.status)}</Text>
-        </View>
-      )}
-
-      {event.repair_method && (
-        <View style={styles.section}>
-          <Text style={styles.label}>What helped</Text>
-
-          <Text>{formatCategory(event.repair_method)}</Text>
-        </View>
-      )}
-
-      {event.reconnected_at && (
-        <View style={styles.section}>
-          <Text style={styles.label}>Marked reconnected</Text>
-
-          <Text>{formatDate(event.reconnected_at)}</Text>
-        </View>
-      )}
-
-      <View style={styles.section}>
-        <Text style={styles.label}>Recorded by</Text>
-
-        <Text>{isCreator ? "You" : "Your partner"}</Text>
-      </View>
-
-      {event.event_type === "friction" && isCreator && (
-        <View style={styles.repairSection}>
-          <Text style={styles.sectionTitle}>How does this feel now?</Text>
-
-          <View style={styles.button}>
-            <Button
-              title="Still unresolved"
-              onPress={() => updateEventStatus("open")}
-            />
-          </View>
-
-          <View style={styles.button}>
-            <Button
-              title="A little better"
-              onPress={() => updateEventStatus("partially_repaired")}
-            />
-          </View>
-
-          <View style={styles.button}>
-            <Button
-              title="I feel reconnected"
-              onPress={() => setShowRepairMethods(true)}
-            />
-          </View>
-
-          {showRepairMethods && (
-            <View style={styles.repairMethods}>
-              <Text style={styles.sectionTitle}>What helped?</Text>
-
-              <Text style={styles.helperText}>
-                Choose the main thing that helped this time.
+          {/* Header Summary */}
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryTopRow}>
+              <Text style={styles.momentTypeHeading}>
+                {isPositive ? "A good moment" : "Something felt off"}
               </Text>
+              <View
+                style={[
+                  styles.visibilityBadge,
+                  event.visibility === "ours"
+                    ? styles.visibilityBadgeOurs
+                    : styles.visibilityBadgeMine,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.visibilityBadgeText,
+                    event.visibility === "ours"
+                      ? styles.visibilityBadgeTextOurs
+                      : styles.visibilityBadgeTextMine,
+                  ]}
+                >
+                  {event.visibility === "ours"
+                    ? "♥ Ours · Shared with Sam"
+                    : "🔒 Mine · Private"}
+                </Text>
+              </View>
+            </View>
 
-              {repairMethods.map((method) => (
-                <View key={method.value} style={styles.button}>
-                  <Button
-                    title={method.label}
-                    onPress={() => markReconnected(method.value)}
-                  />
+            <Text style={styles.categoryTitle}>
+              {formatCategory(event.category)}
+            </Text>
+
+            <View style={styles.summaryMetaRow}>
+              <Text style={styles.metaRecordedDate}>
+                Recorded {formatDate(event.created_at)}
+              </Text>
+              {!isPositive && event.intensity !== null && (
+                <View style={styles.intensityPill}>
+                  <Text style={styles.intensityPillText}>
+                    It weighed on you: {event.intensity} of 5
+                  </Text>
                 </View>
-              ))}
+              )}
+            </View>
+          </View>
 
-              <View style={styles.cancelButton}>
-                <Button
-                  title="Cancel"
-                  onPress={() => setShowRepairMethods(false)}
-                />
+          {/* Private reflection card (if exists) */}
+          {privateNote && (
+            <View style={styles.privateCard}>
+              <View style={styles.contentCardHeader}>
+                <View style={styles.privateDot} />
+                <View style={styles.contentCardTitleGroup}>
+                  <Text style={styles.privateCardHeading}>For your eyes</Text>
+                  <Text style={styles.privateCardSubtitle}>
+                    Only you can see this.
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.noteBodyText}>{privateNote}</Text>
+            </View>
+          )}
+
+          {/* Shared wording card (if Ours & topic exists) */}
+          {event.visibility === "ours" && event.shared_topic && (
+            <View style={styles.sharedCard}>
+              <View style={styles.contentCardHeader}>
+                <View style={styles.sharedDot} />
+                <View style={styles.contentCardTitleGroup}>
+                  <Text style={styles.sharedCardHeading}>Shared with Sam</Text>
+                </View>
+              </View>
+              <Text style={styles.noteBodyText}>{event.shared_topic}</Text>
+            </View>
+          )}
+
+          {/* Positive moment outcome */}
+          {isPositive && (
+            <View style={styles.positiveOutcomeCard}>
+              <Text style={styles.positiveOutcomeTitle}>
+                A good moment, kept with care.
+              </Text>
+              <Text style={styles.positiveOutcomeSubtitle}>
+                {event.visibility === "mine"
+                  ? "This stays in your private space."
+                  : "This is now part of your shared space."}
+              </Text>
+            </View>
+          )}
+
+          {/* Friction current state */}
+          {!isPositive && (
+            <View style={styles.statusDisplayCard}>
+              <View style={styles.statusRow}>
+                <Text style={styles.statusLabel}>Current state</Text>
+                <View style={styles.statusValueBadge}>
+                  <Text style={styles.statusValueText}>
+                    {formatStatus(event.status)}
+                  </Text>
+                </View>
+              </View>
+
+              {event.repair_method && (
+                <View style={[styles.statusRow, { marginTop: 10 }]}>
+                  <Text style={styles.statusLabel}>What helped</Text>
+                  <Text style={styles.statusMethodText}>
+                    {formatCategory(event.repair_method)}
+                  </Text>
+                </View>
+              )}
+
+              {event.reconnected_at && (
+                <View style={[styles.statusRow, { marginTop: 8 }]}>
+                  <Text style={styles.statusLabel}>Reconnected</Text>
+                  <Text style={styles.statusSubtext}>
+                    {formatDate(event.reconnected_at)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Friction repair controls (creator only) */}
+          {!isPositive && isCreator && (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionHeading}>How does this feel now?</Text>
+
+              <View style={styles.repairChoicesRow}>
+                <Pressable
+                  style={[
+                    styles.repairChoiceButton,
+                    event.status === "open" && styles.repairChoiceButtonActive,
+                  ]}
+                  onPress={() => updateEventStatus("open")}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: event.status === "open" }}
+                  accessibilityLabel="Still open"
+                >
+                  <Text
+                    style={[
+                      styles.repairChoiceText,
+                      event.status === "open" && styles.repairChoiceTextActive,
+                    ]}
+                  >
+                    Still open
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.repairChoiceButton,
+                    event.status === "partially_repaired" &&
+                    styles.repairChoiceButtonActive,
+                  ]}
+                  onPress={() => updateEventStatus("partially_repaired")}
+                  accessibilityRole="radio"
+                  accessibilityState={{
+                    selected: event.status === "partially_repaired",
+                  }}
+                  accessibilityLabel="A little better"
+                >
+                  <Text
+                    style={[
+                      styles.repairChoiceText,
+                      event.status === "partially_repaired" &&
+                      styles.repairChoiceTextActive,
+                    ]}
+                  >
+                    A little better
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.repairChoiceButton,
+                    event.status === "reconnected" &&
+                    styles.repairChoiceButtonActive,
+                  ]}
+                  onPress={() => setShowRepairMethods(true)}
+                  accessibilityRole="radio"
+                  accessibilityState={{
+                    selected: event.status === "reconnected",
+                  }}
+                  accessibilityLabel="I feel reconnected"
+                >
+                  <Text
+                    style={[
+                      styles.repairChoiceText,
+                      event.status === "reconnected" &&
+                      styles.repairChoiceTextActive,
+                    ]}
+                  >
+                    I feel reconnected
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Repair method selection sub-panel */}
+              {showRepairMethods && (
+                <View style={styles.repairMethodsSubcard}>
+                  <Text style={styles.repairMethodsTitle}>What helped?</Text>
+                  <Text style={styles.repairMethodsSubtitle}>
+                    Choose the main thing that helped this time.
+                  </Text>
+
+                  <View style={styles.methodsWrap}>
+                    {repairMethods.map((method) => {
+                      const isSelected = event.repair_method === method.value;
+                      return (
+                        <Pressable
+                          key={method.value}
+                          style={[
+                            styles.methodChip,
+                            isSelected && styles.methodChipSelected,
+                          ]}
+                          onPress={() => markReconnected(method.value)}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: isSelected }}
+                          accessibilityLabel={method.label}
+                        >
+                          <Text
+                            style={[
+                              styles.methodChipText,
+                              isSelected && styles.methodChipTextSelected,
+                            ]}
+                          >
+                            {method.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <Pressable
+                    style={styles.cancelLinkButton}
+                    onPress={() => setShowRepairMethods(false)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel repair selection"
+                  >
+                    <Text style={styles.cancelLinkText}>Cancel</Text>
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Sharing controls (creator only) */}
+          {isCreator && (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionHeading}>Sharing</Text>
+
+              <View style={styles.sharingCard}>
+                <Text style={styles.sharingExplanationText}>
+                  {event.visibility === "mine"
+                    ? "This is private to you. Sam will only see the version you choose to share."
+                    : "Sam can see the shared wording below. Your private reflection remains private."}
+                </Text>
+
+                {!showSharingControls ? (
+                  <Pressable
+                    style={styles.secondaryActionButton}
+                    onPress={() => {
+                      setSharedTopicInput("");
+                      setShowSharingControls(true);
+                      setStatusMessage("");
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      event.visibility === "mine"
+                        ? "Choose what to share with Sam"
+                        : "Change sharing"
+                    }
+                  >
+                    <Text style={styles.secondaryActionText}>
+                      {event.visibility === "mine"
+                        ? "Choose what to share with Sam"
+                        : "Change sharing"}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <View style={styles.sharingActivePanel}>
+                    {event.visibility === "mine" ? (
+                      <>
+                        <Text style={styles.sharingFieldLabel}>
+                          What would you like Sam to know?
+                        </Text>
+                        <TextInput
+                          style={styles.sharingInput}
+                          value={sharedTopicInput}
+                          onChangeText={setSharedTopicInput}
+                          placeholder="Enter a gentle topic Sam can see"
+                          placeholderTextColor="#9A8D9D"
+                          multiline
+                          editable={!changingVisibility}
+                        />
+
+                        <Pressable
+                          style={[
+                            styles.primaryConfirmButton,
+                            (changingVisibility || !sharedTopicInput.trim()) &&
+                            styles.buttonDisabled,
+                          ]}
+                          disabled={
+                            changingVisibility || !sharedTopicInput.trim()
+                          }
+                          onPress={() => changeMomentVisibility("ours")}
+                          accessibilityRole="button"
+                          accessibilityLabel="Confirm sharing"
+                        >
+                          <Text style={styles.primaryConfirmText}>
+                            {changingVisibility
+                              ? "Updating..."
+                              : "Confirm sharing"}
+                          </Text>
+                        </Pressable>
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.warningNoticeBox}>
+                          <Text style={styles.warningNoticeText}>
+                            Moving this to Mine removes Sam’s future access.
+                            Anything already seen cannot be taken back.
+                          </Text>
+                        </View>
+
+                        <Pressable
+                          style={[
+                            styles.primaryConfirmButton,
+                            changingVisibility && styles.buttonDisabled,
+                          ]}
+                          disabled={changingVisibility}
+                          onPress={() => changeMomentVisibility("mine")}
+                          accessibilityRole="button"
+                          accessibilityLabel="Confirm move to Mine"
+                        >
+                          <Text style={styles.primaryConfirmText}>
+                            {changingVisibility
+                              ? "Updating..."
+                              : "Confirm move to Mine"}
+                          </Text>
+                        </Pressable>
+                      </>
+                    )}
+
+                    <Pressable
+                      style={styles.cancelLinkButton}
+                      disabled={changingVisibility}
+                      onPress={() => {
+                        setSharedTopicInput("");
+                        setShowSharingControls(false);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancel sharing change"
+                    >
+                      <Text style={styles.cancelLinkText}>Cancel</Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
             </View>
           )}
-        </View>
-      )}
 
-      {isCreator && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sharing</Text>
-
-          <Text style={styles.helperText}>
-            This moment is currently{" "}
-            {event.visibility === "mine" ? "Mine" : "Ours"}. Your private
-            reflection is never shared.
-          </Text>
-
-          {!showSharingControls ? (
-            <Button
-              title={
-                event.visibility === "mine"
-                  ? "Share with partner"
-                  : "Change sharing"
-              }
-              onPress={() => {
-                setSharedTopicInput("");
-                setShowSharingControls(true);
-                setStatusMessage("");
-              }}
-            />
-          ) : (
-            <View>
-              {event.visibility === "mine" ? (
-                <>
-                  <Text style={styles.label}>
-                    What would you like to share?
-                  </Text>
-
-                  <TextInput
-                    style={styles.sharingInput}
-                    value={sharedTopicInput}
-                    onChangeText={setSharedTopicInput}
-                    placeholder="Enter a topic your partner can see"
-                    multiline
-                    editable={!changingVisibility}
-                  />
-
-                  <View style={styles.button}>
-                    <Button
-                      title="Confirm sharing"
-                      disabled={changingVisibility || !sharedTopicInput.trim()}
-                      onPress={() => changeMomentVisibility("ours")}
-                    />
-                  </View>
-                </>
+          {/* Delete section with local confirmation (creator only) */}
+          {isCreator && (
+            <View style={styles.deleteContainer}>
+              {!showDeleteConfirm ? (
+                <Pressable
+                  style={styles.quietDeleteButton}
+                  onPress={() => setShowDeleteConfirm(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete this moment"
+                >
+                  <Text style={styles.quietDeleteText}>Delete this moment</Text>
+                </Pressable>
               ) : (
-                <>
-                  <Text style={styles.helperText}>
-                    Moving this moment to Mine removes your partner's access and
-                    clears the shared topic. Information already seen cannot be
-                    recalled.
+                <View style={styles.deleteConfirmCard}>
+                  <Text style={styles.deleteConfirmTitle}>
+                    Delete this moment permanently?
+                  </Text>
+                  <Text style={styles.deleteConfirmSubtitle}>
+                    This cannot be undone.
                   </Text>
 
-                  <View style={styles.button}>
-                    <Button
-                      title="Confirm move to Mine"
-                      disabled={changingVisibility}
-                      onPress={() => changeMomentVisibility("mine")}
-                    />
-                  </View>
-                </>
-              )}
+                  <View style={styles.deleteActionsRow}>
+                    <Pressable
+                      style={styles.deleteCancelButton}
+                      onPress={() => setShowDeleteConfirm(false)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancel deletion"
+                    >
+                      <Text style={styles.deleteCancelText}>Cancel</Text>
+                    </Pressable>
 
-              <Button
-                title="Cancel"
-                disabled={changingVisibility}
-                onPress={() => {
-                  setSharedTopicInput("");
-                  setShowSharingControls(false);
-                }}
-              />
+                    <Pressable
+                      style={styles.deleteFinalButton}
+                      onPress={deleteEvent}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete moment permanently"
+                    >
+                      <Text style={styles.deleteFinalText}>Delete moment</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Status feedback message */}
+          {statusMessage !== "" && (
+            <View style={styles.statusBanner}>
+              <Text style={styles.statusBannerText}>{statusMessage}</Text>
             </View>
           )}
         </View>
-      )}
-
-      {isCreator && (
-        <View style={styles.deleteSection}>
-          <Button title="Delete moment" onPress={deleteEvent} />
-        </View>
-      )}
-
-      {statusMessage !== "" && (
-        <Text style={styles.status}>{statusMessage}</Text>
-      )}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -527,103 +712,545 @@ function formatCategory(value: string) {
 function formatStatus(status: RelationshipEvent["status"]) {
   switch (status) {
     case "open":
-      return "Open";
-
+      return "Still open";
     case "partially_repaired":
       return "A little better";
-
     case "reconnected":
       return "Reconnected";
-
     default:
       return "—";
   }
 }
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleString();
+  try {
+    const d = new Date(value);
+    return (
+      d.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }) +
+      " at " +
+      d.toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    );
+  } catch {
+    return value;
+  }
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    paddingBottom: 48,
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FBF7FC",
   },
-
-  center: {
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 64,
+  },
+  column: {
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
+    gap: 18,
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    minHeight: 44,
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    marginBottom: -6,
+  },
+  backButtonText: {
+    fontSize: 14.5,
+    fontWeight: "600",
+    color: "#6E416D",
+  },
+  centerContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
+    gap: 12,
   },
-
-  title: {
-    fontSize: 30,
-    fontWeight: "bold",
-  },
-
-  meta: {
-    marginTop: 6,
+  centerStatusText: {
     fontSize: 15,
+    color: "#6D6072",
+    textAlign: "center",
+  },
+  centerBackButton: {
+    minHeight: 44,
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: "#F1EDF7",
+  },
+  centerBackButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6E416D",
   },
 
-  section: {
-    marginTop: 24,
+  /* 1. Summary Card */
+  summaryCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1.2,
+    borderColor: "#E8DCE9",
+    shadowColor: "#39203B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    gap: 8,
   },
-
-  label: {
-    fontWeight: "bold",
-    marginBottom: 6,
+  summaryTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-
-  sectionTitle: {
-    fontSize: 19,
-    fontWeight: "bold",
-    marginBottom: 10,
+  momentTypeHeading: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#6E416D",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
   },
-
-  helperText: {
-    marginBottom: 14,
+  categoryTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#3D3040",
+    letterSpacing: -0.3,
   },
-
-  repairSection: {
-    marginTop: 32,
-  },
-
-  repairMethods: {
-    marginTop: 24,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#ddd",
-  },
-
-  button: {
-    marginBottom: 10,
-  },
-
-  cancelButton: {
-    marginTop: 8,
-  },
-
-  sharingInput: {
-    minHeight: 90,
+  visibilityBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#bbb",
+  },
+  visibilityBadgeMine: {
+    backgroundColor: "#F1EDF7",
+    borderColor: "#E5D8E6",
+  },
+  visibilityBadgeOurs: {
+    backgroundColor: "#FBEFF7",
+    borderColor: "#EAD6E8",
+  },
+  visibilityBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  visibilityBadgeTextMine: {
+    color: "#5D4F62",
+  },
+  visibilityBadgeTextOurs: {
+    color: "#6E416D",
+  },
+  summaryMetaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  metaRecordedDate: {
+    fontSize: 13,
+    color: "#6D6072",
+  },
+  intensityPill: {
+    backgroundColor: "#F7EEF7",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#EADAEB",
+  },
+  intensityPillText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6E416D",
+  },
+
+  /* Content Cards */
+  contentCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  contentCardTitleGroup: {
+    flex: 1,
+  },
+  privateDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#6E416D",
+  },
+  sharedDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#9A457D",
+  },
+  privateCard: {
+    backgroundColor: "#F1EDF7",
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1.2,
+    borderColor: "#E5DCE8",
+  },
+  privateCardHeading: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#3D3040",
+  },
+  privateCardSubtitle: {
+    fontSize: 12,
+    color: "#6D6072",
+    marginTop: 1,
+  },
+  sharedCard: {
+    backgroundColor: "#FBEFF7",
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1.2,
+    borderColor: "#EBD8E8",
+  },
+  sharedCardHeading: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#6E416D",
+  },
+  noteBodyText: {
+    fontSize: 14.5,
+    color: "#3D3040",
+    lineHeight: 22,
+    marginTop: 4,
+  },
+
+  /* Outcomes */
+  positiveOutcomeCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.2,
+    borderColor: "#E8DCE9",
+    alignItems: "center",
+    gap: 4,
+  },
+  positiveOutcomeTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#6E416D",
+    textAlign: "center",
+  },
+  positiveOutcomeSubtitle: {
+    fontSize: 13.5,
+    color: "#6D6072",
+    textAlign: "center",
+  },
+
+  statusDisplayCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.2,
+    borderColor: "#E8DCE9",
+  },
+  statusRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  statusLabel: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: "#6D6072",
+  },
+  statusValueBadge: {
+    backgroundColor: "#F1E8F3",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E0D0E2",
+  },
+  statusValueText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#6E416D",
+  },
+  statusMethodText: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: "#3D3040",
+  },
+  statusSubtext: {
+    fontSize: 12.5,
+    color: "#6D6072",
+  },
+
+  /* Sections */
+  sectionContainer: {
+    gap: 10,
+  },
+  sectionHeading: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#3D3040",
+    letterSpacing: -0.2,
+  },
+  repairChoicesRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  repairChoiceButton: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.2,
+    borderColor: "#E8DCE9",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 46,
+  },
+  repairChoiceButtonActive: {
+    borderColor: "#6E416D",
+    backgroundColor: "#F1E8F3",
+  },
+  repairChoiceText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#3D3040",
+    textAlign: "center",
+  },
+  repairChoiceTextActive: {
+    color: "#6E416D",
+    fontWeight: "700",
+  },
+
+  repairMethodsSubcard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.2,
+    borderColor: "#E8DCE9",
+    gap: 10,
+    marginTop: 6,
+  },
+  repairMethodsTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#3D3040",
+  },
+  repairMethodsSubtitle: {
+    fontSize: 13,
+    color: "#6D6072",
+  },
+  methodsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 4,
+  },
+  methodChip: {
+    backgroundColor: "#FBF7FC",
+    borderWidth: 1.2,
+    borderColor: "#E8DCE9",
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 13,
+  },
+  methodChipSelected: {
+    backgroundColor: "#F1E8F3",
+    borderColor: "#6E416D",
+  },
+  methodChipText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#3D3040",
+  },
+  methodChipTextSelected: {
+    fontWeight: "600",
+    color: "#6E416D",
+  },
+
+  /* Sharing card */
+  sharingCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.2,
+    borderColor: "#E8DCE9",
+    gap: 12,
+  },
+  sharingExplanationText: {
+    fontSize: 13.5,
+    color: "#6D6072",
+    lineHeight: 19,
+  },
+  secondaryActionButton: {
+    backgroundColor: "#F1EDF7",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryActionText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6E416D",
+  },
+  sharingActivePanel: {
+    gap: 12,
+    paddingTop: 6,
+  },
+  sharingFieldLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#3D3040",
+  },
+  sharingInput: {
+    minHeight: 80,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1.2,
+    borderColor: "#E8DCE9",
     padding: 12,
+    fontSize: 14,
+    color: "#3D3040",
     textAlignVertical: "top",
-    marginBottom: 12,
+  },
+  warningNoticeBox: {
+    backgroundColor: "#FAF0EB",
+    borderColor: "#ECD8CF",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  warningNoticeText: {
+    fontSize: 13,
+    color: "#784433",
+    lineHeight: 18,
+  },
+  primaryConfirmButton: {
+    backgroundColor: "#6E416D",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryConfirmText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  cancelLinkButton: {
+    paddingVertical: 6,
+    alignItems: "center",
+  },
+  cancelLinkText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6D6072",
   },
 
-  deleteSection: {
-    marginTop: 36,
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: "#ddd",
+  /* Delete */
+  deleteContainer: {
+    paddingTop: 8,
+    alignItems: "center",
+  },
+  quietDeleteButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  quietDeleteText: {
+    fontSize: 13.5,
+    color: "#9C4155",
+    fontWeight: "500",
+    textDecorationLine: "underline",
+  },
+  deleteConfirmCard: {
+    width: "100%",
+    backgroundColor: "#FFF5F7",
+    borderColor: "#F0D5DA",
+    borderWidth: 1.2,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    gap: 6,
+  },
+  deleteConfirmTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#8B2E42",
+  },
+  deleteConfirmSubtitle: {
+    fontSize: 13,
+    color: "#7B4650",
+    marginBottom: 8,
+  },
+  deleteActionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+    marginTop: 4,
+  },
+  deleteCancelButton: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E0CCD0",
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteCancelText: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: "#6D6072",
+  },
+  deleteFinalButton: {
+    flex: 1,
+    backgroundColor: "#9C4155",
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteFinalText: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 
-  status: {
-    marginTop: 20,
+  /* Status message */
+  statusBanner: {
+    backgroundColor: "#F7EEF7",
+    borderColor: "#E8DCE9",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+  },
+  statusBannerText: {
+    fontSize: 13,
+    color: "#6E416D",
+    fontWeight: "500",
     textAlign: "center",
   },
 });

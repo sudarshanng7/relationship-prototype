@@ -1,7 +1,15 @@
+import { AppBottomNav } from "@/components/AppBottomNav";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 type RelationshipEvent = {
   id: string;
@@ -14,6 +22,8 @@ type RelationshipEvent = {
   created_at: string;
 };
 
+type FilterOption = "all" | "mine" | "ours";
+
 export default function EventsScreen() {
   const router = useRouter();
 
@@ -22,6 +32,7 @@ export default function EventsScreen() {
 
   const [events, setEvents] = useState<RelationshipEvent[]>([]);
   const [status, setStatus] = useState("Loading...");
+  const [filter, setFilter] = useState<FilterOption>("all");
 
   useFocusEffect(
     useCallback(() => {
@@ -34,24 +45,48 @@ export default function EventsScreen() {
       return;
     }
 
-    const channel = supabase
-      .channel(`relationship-events-${coupleId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "relationship_events",
-          filter: `couple_id=eq.${coupleId}`,
-        },
-        () => {
-          loadEvents(coupleId);
-        },
-      )
-      .subscribe();
+    const channelName = `relationship-events-${coupleId}`;
+    let isDisposed = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    const startRealtime = async () => {
+      const existingChannel = supabase
+        .getChannels()
+        .find((candidate) => candidate.topic === `realtime:${channelName}`);
+
+      if (existingChannel) {
+        await supabase.removeChannel(existingChannel);
+      }
+
+      if (isDisposed) {
+        return;
+      }
+
+      channel = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "relationship_events",
+            filter: `couple_id=eq.${coupleId}`,
+          },
+          () => {
+            loadEvents(coupleId);
+          },
+        )
+        .subscribe();
+    };
+
+    void startRealtime();
 
     return () => {
-      supabase.removeChannel(channel);
+      isDisposed = true;
+
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
   }, [coupleId]);
 
@@ -157,93 +192,282 @@ export default function EventsScreen() {
     });
   }
 
+  const visibleEvents = events.filter((event) => {
+    if (filter === "mine") {
+      return event.visibility === "mine";
+    }
+    if (filter === "ours") {
+      return event.visibility === "ours";
+    }
+    return true;
+  });
+
+  const isLoading = status === "Loading...";
+  const hasSpaceError = status === "You do not belong to a relationship space.";
+  const hasGenericError =
+    status !== "" &&
+    !isLoading &&
+    !hasSpaceError &&
+    !status.includes("test event");
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Relationship Moments</Text>
-
-      <Text style={styles.description}>
-        Record moments and review the events you are allowed to see.
-      </Text>
-
-      {/* Real application flow */}
-      <View style={styles.primarySection}>
-        <Button
-          title="Record a Moment"
-          onPress={() => router.push("/record-moment")}
-        />
-      </View>
-
-      {/* Temporary development controls */}
-      <View style={styles.testSection}>
-        <Text style={styles.testHeading}>Development privacy tests</Text>
-
-        <Text style={styles.testDescription}>
-          These buttons are temporary and help us verify Mine/Ours security.
-        </Text>
-
-        <View style={styles.button}>
-          <Button
-            title="Create Mine test event"
-            onPress={() => createTestEvent("mine")}
-          />
-        </View>
-
-        <View style={styles.button}>
-          <Button
-            title="Create Ours test event"
-            onPress={() => createTestEvent("ours")}
-          />
-        </View>
-      </View>
-
-      <Text style={styles.heading}>Moments I can see</Text>
-
-      {events.length === 0 && status === "" && (
-        <Text style={styles.emptyText}>No visible moments yet.</Text>
-      )}
-
-      {events.map((event) => {
-        const isCreator = event.creator_id === currentUserId;
-
-        return (
-          <View key={event.id} style={styles.event}>
-            <View style={styles.eventHeader}>
-              <Text style={styles.eventTitle}>
-                {formatCategory(event.category)}
-              </Text>
-
-              <Text style={styles.eventType}>
-                {event.event_type === "friction" ? "Friction" : "Positive"}
-              </Text>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.mainColumn}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerTextWrap}>
+              <Text style={styles.title}>Moments</Text>
+              <Text style={styles.subtitle}>“A place to return to what mattered.”</Text>
             </View>
 
-            <Text>
-              Visibility: {event.visibility === "mine" ? "Mine" : "Ours"}
-            </Text>
-
-            {event.intensity !== null && (
-              <Text>Intensity: {event.intensity} / 5</Text>
-            )}
-
-            {event.event_type === "friction" && (
-              <Text>Status: {formatStatus(event.status)}</Text>
-            )}
-
-            <Text style={styles.small}>
-              Recorded by: {isCreator ? "You" : "Your partner"}
-            </Text>
-
-            <Text style={styles.small}>{formatDate(event.created_at)}</Text>
-
-            <View style={styles.viewButton}>
-              <Button title="View moment" onPress={() => openEvent(event.id)} />
-            </View>
+            <Pressable
+              onPress={() => router.push("/record-moment")}
+              style={({ pressed }) => [
+                styles.recordHeaderButton,
+                pressed && styles.pressedState,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Record a moment"
+            >
+              <Text style={styles.recordHeaderButtonText}>+ Record a moment</Text>
+            </Pressable>
           </View>
-        );
-      })}
 
-      {status !== "" && <Text style={styles.status}>{status}</Text>}
-    </ScrollView>
+          {/* Local segmented filter: All / Mine / Ours */}
+          <View style={styles.segmentedFilterContainer} role="tablist">
+            {(["all", "mine", "ours"] as const).map((seg) => {
+              const isSelected = filter === seg;
+              const label =
+                seg === "all" ? "All" : seg === "mine" ? "Mine" : "Ours";
+
+              return (
+                <Pressable
+                  key={seg}
+                  onPress={() => setFilter(seg)}
+                  style={[
+                    styles.segmentButton,
+                    isSelected && styles.segmentButtonActive,
+                  ]}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={`Show ${label} moments`}
+                >
+                  <Text
+                    style={[
+                      styles.segmentButtonText,
+                      isSelected && styles.segmentButtonTextActive,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Relationship space error */}
+          {hasSpaceError && (
+            <View style={styles.centeredNoticeCard}>
+              <Text style={styles.centeredNoticeTitle}>Relationship Space</Text>
+              <Text style={styles.centeredNoticeText}>
+                You do not belong to a relationship space.
+              </Text>
+            </View>
+          )}
+
+          {/* Generic backend error banner */}
+          {hasGenericError && (
+            <View style={styles.errorNoticeCard}>
+              <Text style={styles.errorNoticeText}>{status}</Text>
+            </View>
+          )}
+
+          {/* Calm loading skeleton layout */}
+          {isLoading && (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Restoring your moments...</Text>
+              <View style={styles.skeletonCard} />
+              <View style={[styles.skeletonCard, { opacity: 0.55 }]} />
+            </View>
+          )}
+
+          {/* Empty states */}
+          {!isLoading && visibleEvents.length === 0 && !hasSpaceError && (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>
+                {filter === "all" && "No moments here yet."}
+                {filter === "mine" && "Your private space is quiet for now."}
+                {filter === "ours" && "Nothing has been shared yet."}
+              </Text>
+
+              <Text style={styles.emptySubtitle}>
+                {filter === "all" &&
+                  "You can record something good or something that felt off whenever it matters."}
+                {filter === "mine" &&
+                  "Private reflections you keep will appear here."}
+                {filter === "ours" &&
+                  "Only moments you intentionally share with Sam will appear here."}
+              </Text>
+
+              {filter === "all" && (
+                <Pressable
+                  onPress={() => router.push("/record-moment")}
+                  style={({ pressed }) => [
+                    styles.emptyActionButton,
+                    pressed && styles.pressedState,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Record a moment"
+                >
+                  <Text style={styles.emptyActionText}>Record a moment</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
+          {/* List of redesigned moment cards */}
+          {!isLoading &&
+            visibleEvents.map((event) => {
+              const isCreator = event.creator_id === currentUserId;
+              const naturalDate = formatNaturalDate(event.created_at);
+              const isPositive = event.event_type === "positive";
+              const privacyLabel =
+                event.visibility === "mine" ? "Mine · Private" : "Ours · Shared";
+              const attribution = isCreator ? "Recorded by you" : "Shared by Sam";
+              const accessiblePrivacy =
+                event.visibility === "mine" ? "private" : "shared";
+
+              return (
+                <Pressable
+                  key={event.id}
+                  onPress={() => openEvent(event.id)}
+                  style={({ pressed }) => [
+                    styles.card,
+                    pressed && styles.cardPressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${accessiblePrivacy} ${formatCategory(
+                    event.category,
+                  )} moment recorded ${naturalDate.toLowerCase()}.`}
+                >
+                  {/* Top card row: Icon + Category + Attribution & Date + Chevron */}
+                  <View style={styles.cardHeaderRow}>
+                    <View style={styles.cardHeaderLeft}>
+                      <View
+                        style={[
+                          styles.iconBadge,
+                          isPositive
+                            ? styles.positiveIconBadge
+                            : styles.frictionIconBadge,
+                        ]}
+                      >
+                        <Text style={styles.iconSymbol}>
+                          {isPositive ? "✦" : "〰"}
+                        </Text>
+                      </View>
+
+                      <View style={styles.categoryWrap}>
+                        <Text style={styles.categoryTitle}>
+                          {formatCategory(event.category)}
+                        </Text>
+                        <Text style={styles.attributionText}>{attribution}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.cardHeaderRight}>
+                      <Text style={styles.dateText}>{naturalDate}</Text>
+                      <Text style={styles.chevron}>›</Text>
+                    </View>
+                  </View>
+
+                  {/* Bottom card row: Privacy badge & calm friction status */}
+                  <View style={styles.cardFooterRow}>
+                    <View
+                      style={[
+                        styles.privacyBadge,
+                        event.visibility === "mine"
+                          ? styles.minePrivacyBadge
+                          : styles.oursPrivacyBadge,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.privacyBadgeText,
+                          event.visibility === "mine"
+                            ? styles.minePrivacyText
+                            : styles.oursPrivacyText,
+                        ]}
+                      >
+                        {privacyLabel}
+                      </Text>
+                    </View>
+
+                    {!isPositive && (
+                      <View style={styles.statusBadge}>
+                        <Text style={styles.statusBadgeText}>
+                          {formatStatus(event.status)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </Pressable>
+              );
+            })}
+
+          {/* Development privacy tests (Only rendered when __DEV__ is true) */}
+          {__DEV__ && (
+            <View style={styles.devSection}>
+              <View style={styles.devHeaderRow}>
+                <Text style={styles.devHeading}>Development privacy tests</Text>
+                <Text style={styles.devTag}>DEV ONLY</Text>
+              </View>
+
+              <Text style={styles.devDescription}>
+                These controls are temporary and help verify Mine/Ours security.
+                They are never shown in production builds.
+              </Text>
+
+              <View style={styles.devButtonsRow}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.devButton,
+                    pressed && styles.pressedState,
+                  ]}
+                  onPress={() => createTestEvent("mine")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create Mine test event"
+                >
+                  <Text style={styles.devButtonText}>Create Mine test event</Text>
+                </Pressable>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.devButton,
+                    pressed && styles.pressedState,
+                  ]}
+                  onPress={() => createTestEvent("ours")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create Ours test event"
+                >
+                  <Text style={styles.devButtonText}>Create Ours test event</Text>
+                </Pressable>
+              </View>
+
+              {status.includes("test event") && (
+                <Text style={styles.devStatusText}>{status}</Text>
+              )}
+            </View>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Fixed bottom navigation */}
+      <AppBottomNav activeTab="moments" />
+    </SafeAreaView>
   );
 }
 
@@ -256,21 +480,46 @@ function formatCategory(category: string) {
 function formatStatus(status: RelationshipEvent["status"]) {
   switch (status) {
     case "open":
-      return "Open";
-
+      return "Still open";
     case "partially_repaired":
       return "A little better";
-
     case "reconnected":
       return "Reconnected";
-
     default:
-      return "—";
+      return "Still open";
   }
 }
 
-function formatDate(createdAt: string) {
-  return new Date(createdAt).toLocaleString();
+function formatNaturalDate(createdAt: string) {
+  try {
+    const date = new Date(createdAt);
+    if (isNaN(date.getTime())) {
+      return createdAt;
+    }
+
+    const now = new Date();
+    const isToday =
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear();
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday =
+      date.getDate() === yesterday.getDate() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getFullYear() === yesterday.getFullYear();
+
+    if (isToday) return "Today";
+    if (isYesterday) return "Yesterday";
+
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return createdAt;
+  }
 }
 
 function capitalize(value: string) {
@@ -278,92 +527,439 @@ function capitalize(value: string) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FAF7FC",
+  },
+
+  scrollContent: {
     flexGrow: 1,
-    padding: 24,
-    paddingBottom: 48,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 110,
+    backgroundColor: "#FAF7FC",
+  },
+
+  mainColumn: {
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
+  },
+
+  /* Header */
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 16,
+  },
+
+  headerTextWrap: {
+    flex: 1,
   },
 
   title: {
-    fontSize: 30,
-    fontWeight: "bold",
-    marginBottom: 8,
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#3D3040",
+    letterSpacing: -0.4,
   },
 
-  description: {
-    marginBottom: 24,
+  subtitle: {
+    fontSize: 13.5,
+    color: "#6D6072",
+    fontStyle: "italic",
+    marginTop: 4,
+    lineHeight: 18,
   },
 
-  primarySection: {
-    marginBottom: 28,
-  },
-
-  testSection: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 28,
-  },
-
-  testHeading: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 6,
-  },
-
-  testDescription: {
-    fontSize: 13,
-    marginBottom: 16,
-  },
-
-  heading: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 14,
-  },
-
-  event: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-
-  eventHeader: {
-    marginBottom: 10,
-  },
-
-  eventTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-
-  eventType: {
-    fontSize: 13,
+  recordHeaderButton: {
+    backgroundColor: "#F3EDF7",
+    borderColor: "#E2D3E5",
+    borderWidth: 1.2,
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 13,
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 2,
   },
 
-  viewButton: {
-    marginTop: 16,
+  recordHeaderButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6E416D",
   },
 
-  button: {
-    marginBottom: 10,
+  /* Segmented control */
+  segmentedFilterContainer: {
+    flexDirection: "row",
+    backgroundColor: "#EFE8F2",
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 20,
   },
 
-  small: {
-    fontSize: 12,
-    marginTop: 6,
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  emptyText: {
-    marginTop: 8,
+  segmentButtonActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
 
-  status: {
-    marginTop: 20,
+  segmentButtonText: {
+    fontSize: 13.5,
+    fontWeight: "500",
+    color: "#6D6072",
+  },
+
+  segmentButtonTextActive: {
+    fontWeight: "700",
+    color: "#3D3040",
+  },
+
+  /* Cards */
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1.2,
+    borderColor: "#EAE0EC",
+    shadowColor: "#2A1828",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+
+  cardPressed: {
+    opacity: 0.88,
+    backgroundColor: "#FCFAFD",
+  },
+
+  cardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+
+  cardHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 12,
+  },
+
+  iconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  positiveIconBadge: {
+    backgroundColor: "#F9EEF6",
+    borderWidth: 1,
+    borderColor: "#EDD6E6",
+  },
+
+  frictionIconBadge: {
+    backgroundColor: "#F1EDF8",
+    borderWidth: 1,
+    borderColor: "#DDD6EB",
+  },
+
+  iconSymbol: {
+    fontSize: 16,
+    color: "#6E416D",
+  },
+
+  categoryWrap: {
+    flex: 1,
+  },
+
+  categoryTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#3D3040",
+    letterSpacing: -0.2,
+  },
+
+  attributionText: {
+    fontSize: 12.5,
+    color: "#7E6F86",
+    marginTop: 2,
+  },
+
+  cardHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  dateText: {
+    fontSize: 12.5,
+    color: "#7E6F86",
+    fontWeight: "500",
+  },
+
+  chevron: {
+    fontSize: 18,
+    color: "#B2A3B8",
+    fontWeight: "600",
+    marginTop: -2,
+  },
+
+  cardFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F4EDF5",
+  },
+
+  privacyBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderWidth: 1,
+  },
+
+  minePrivacyBadge: {
+    backgroundColor: "#F3EDF7",
+    borderColor: "#E3D5E7",
+  },
+
+  oursPrivacyBadge: {
+    backgroundColor: "#FBEFF7",
+    borderColor: "#EBD8E8",
+  },
+
+  privacyBadgeText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+  },
+
+  minePrivacyText: {
+    color: "#533C64",
+  },
+
+  oursPrivacyText: {
+    color: "#6E416D",
+  },
+
+  statusBadge: {
+    backgroundColor: "#F6F1F8",
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderWidth: 1,
+    borderColor: "#E5DAE8",
+  },
+
+  statusBadgeText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#6D6072",
+  },
+
+  /* Empty states */
+  emptyContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    marginTop: 12,
+    marginBottom: 20,
+    borderWidth: 1.2,
+    borderColor: "#EAE0EC",
+    gap: 8,
+  },
+
+  emptyTitle: {
+    fontSize: 16.5,
+    fontWeight: "700",
+    color: "#3D3040",
     textAlign: "center",
+  },
+
+  emptySubtitle: {
+    fontSize: 13.5,
+    color: "#6D6072",
+    textAlign: "center",
+    lineHeight: 19,
+    maxWidth: 280,
+  },
+
+  emptyActionButton: {
+    marginTop: 12,
+    backgroundColor: "#F3EDF7",
+    borderColor: "#E0D0E2",
+    borderWidth: 1.2,
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  emptyActionText: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: "#6E416D",
+  },
+
+  /* Loading */
+  loadingContainer: {
+    marginTop: 8,
+    gap: 12,
+  },
+
+  loadingText: {
+    fontSize: 14,
+    color: "#6D6072",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+
+  skeletonCard: {
+    backgroundColor: "#FFFFFF",
+    height: 94,
+    borderRadius: 18,
+    borderWidth: 1.2,
+    borderColor: "#EAE0EC",
+  },
+
+  /* Notices & Errors */
+  centeredNoticeCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 24,
+    alignItems: "center",
+    marginVertical: 16,
+    borderWidth: 1.2,
+    borderColor: "#EAE0EC",
+    gap: 6,
+  },
+
+  centeredNoticeTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#3D3040",
+  },
+
+  centeredNoticeText: {
+    fontSize: 13.5,
+    color: "#6D6072",
+    textAlign: "center",
+  },
+
+  errorNoticeCard: {
+    backgroundColor: "#FFF5F7",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1.2,
+    borderColor: "#F0D5DA",
+  },
+
+  errorNoticeText: {
+    fontSize: 13,
+    color: "#8B2E42",
+    textAlign: "center",
+  },
+
+  /* Development section */
+  devSection: {
+    marginTop: 32,
+    borderWidth: 1.2,
+    borderColor: "#DCD0DF",
+    borderRadius: 16,
+    padding: 16,
+    backgroundColor: "#FAF5FB",
+  },
+
+  devHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+
+  devHeading: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#5B4D60",
+  },
+
+  devTag: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#6E416D",
+    backgroundColor: "#EBDDEE",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    letterSpacing: 0.5,
+  },
+
+  devDescription: {
+    fontSize: 12,
+    color: "#7E6F86",
+    lineHeight: 16,
+    marginBottom: 14,
+  },
+
+  devButtonsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+
+  devButton: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.2,
+    borderColor: "#D8C9DB",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  devButtonText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: "#5B4D60",
+    textAlign: "center",
+  },
+
+  devStatusText: {
+    marginTop: 10,
+    fontSize: 12,
+    color: "#6E416D",
+    fontStyle: "italic",
+    textAlign: "center",
+  },
+
+  pressedState: {
+    opacity: 0.75,
   },
 });

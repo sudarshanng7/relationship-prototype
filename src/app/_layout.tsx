@@ -24,7 +24,7 @@ export default function RootLayout() {
       <Stack.Screen
         name="events"
         options={{
-          title: "Relationship Events",
+          headerShown: false,
         }}
       />
       <Stack.Screen

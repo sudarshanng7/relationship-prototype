@@ -1,4 +1,6 @@
+import { AppBottomNav } from "@/components/AppBottomNav";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   Image,
@@ -214,125 +216,6 @@ const FEELING_OPTIONS: FeelingOption[] = [
   },
 ];
 
-type BottomNavItem = "rhythm" | "our_space" | "moments" | "settings";
-
-interface NavItemConfig {
-  key: BottomNavItem;
-  label: string;
-  isActive: boolean;
-}
-
-const NAV_ITEMS: NavItemConfig[] = [
-  { key: "rhythm", label: "My Rhythm", isActive: true },
-  { key: "our_space", label: "Our Space", isActive: false },
-  { key: "moments", label: "Moments", isActive: false },
-  { key: "settings", label: "Settings", isActive: false },
-];
-
-function NavIcon({
-  itemKey,
-  color,
-}: {
-  itemKey: BottomNavItem;
-  color: string;
-}) {
-  if (itemKey === "rhythm") {
-    return (
-      <View style={navIconStyles.container}>
-        <Text style={[navIconStyles.glyph, { color }]}>♡</Text>
-      </View>
-    );
-  }
-  if (itemKey === "our_space") {
-    return (
-      <View style={navIconStyles.container}>
-        <View style={navIconStyles.peopleWrapper}>
-          <View style={[navIconStyles.personHead, { borderColor: color, left: 1 }]} />
-          <View style={[navIconStyles.personBody, { borderColor: color, left: 0 }]} />
-          <View style={[navIconStyles.personHead, { borderColor: color, right: 1 }]} />
-          <View style={[navIconStyles.personBody, { borderColor: color, right: 0 }]} />
-        </View>
-      </View>
-    );
-  }
-  if (itemKey === "moments") {
-    return (
-      <View style={navIconStyles.container}>
-        <View style={[navIconStyles.momentsFrame, { borderColor: color }]}>
-          <View style={[navIconStyles.momentsDot, { backgroundColor: color }]} />
-          <View style={[navIconStyles.momentsLine, { backgroundColor: color }]} />
-        </View>
-      </View>
-    );
-  }
-  return (
-    <View style={navIconStyles.container}>
-      <Text style={[navIconStyles.glyph, { color }]}>⚙︎</Text>
-    </View>
-  );
-}
-
-const navIconStyles = StyleSheet.create({
-  container: {
-    width: 22,
-    height: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 2,
-  },
-  glyph: {
-    fontSize: 17,
-    lineHeight: 19,
-    textAlign: "center",
-  },
-  peopleWrapper: {
-    width: 20,
-    height: 16,
-    position: "relative",
-  },
-  personHead: {
-    position: "absolute",
-    top: 0,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    borderWidth: 1.3,
-  },
-  personBody: {
-    position: "absolute",
-    bottom: 0,
-    width: 10,
-    height: 7,
-    borderTopLeftRadius: 5,
-    borderTopRightRadius: 5,
-    borderWidth: 1.3,
-    borderBottomWidth: 0,
-  },
-  momentsFrame: {
-    width: 16,
-    height: 16,
-    borderWidth: 1.3,
-    borderRadius: 3,
-    position: "relative",
-  },
-  momentsDot: {
-    position: "absolute",
-    top: 2,
-    right: 2,
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-  },
-  momentsLine: {
-    position: "absolute",
-    bottom: 2,
-    left: 2,
-    right: 2,
-    height: 1.2,
-    borderRadius: 0.6,
-  },
-});
-
 function getDeviceGreeting(): string {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) {
@@ -348,6 +231,7 @@ function getDeviceGreeting(): string {
 }
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [selectedThemeKey, setSelectedThemeKey] =
     useState<ThemeKey>("lavender");
   const [personalCoverUri, setPersonalCoverUri] = useState<string | null>(null);
@@ -387,10 +271,11 @@ export default function HomeScreen() {
 
   const handleRecordAction = (type: "good" | "off") => {
     setIsRecordSheetOpen(false);
-    const label = type === "good" ? "Something good" : "Something felt off";
-    setLocalFeedback(
-      `Preview action: "${label}" selected. In the future, this opens the guided recording flow. No record created.`
-    );
+    const eventType = type === "good" ? "positive" : "friction";
+    router.push({
+      pathname: "/record-moment",
+      params: { type: eventType },
+    });
   };
 
   const handleOpenRecordSheet = () => {
@@ -472,18 +357,7 @@ export default function HomeScreen() {
     );
   };
 
-  const handleNavPress = (item: NavItemConfig) => {
-    if (item.key === "settings") {
-      setSettingsDetailView(null);
-      setIsSettingsOpen(true);
-      return;
-    }
-    if (item.isActive) {
-      setLocalFeedback("My Rhythm: Current active home space.");
-    } else {
-      setLocalFeedback(`${item.label}: Navigation tab preview only.`);
-    }
-  };
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -1367,41 +1241,22 @@ export default function HomeScreen() {
       )}
 
       {/* Fixed Visual Bottom Navigation */}
-      <View style={styles.fixedBottomNav}>
-        <View style={styles.bottomNavInner}>
-          {NAV_ITEMS.map((item) => (
-            <Pressable
-              key={item.key}
-              style={[
-                styles.navItem,
-                item.isActive && styles.navItemActivePill,
-              ]}
-              onPress={() => handleNavPress(item)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: item.isActive }}
-              accessibilityLabel={`${item.label}${item.isActive ? ", active tab" : ""
-                }`}
-            >
-              <NavIcon
-                itemKey={item.key}
-                color={
-                  item.isActive ? theme.accent : theme.iconMuted
-                }
-              />
-              <Text
-                style={[
-                  styles.navItemLabel,
-                  item.isActive
-                    ? styles.navItemLabelActive
-                    : styles.navItemLabelInactive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
+      <AppBottomNav
+        activeTab="rhythm"
+        themeColors={{
+          surface: theme.surface,
+          border: theme.border,
+          accent: theme.accent,
+          iconMuted: theme.iconMuted,
+          selectedNavigation: theme.selectedNavigation,
+          secondaryText: theme.secondaryText,
+        }}
+        onSettingsPress={() => {
+          setSettingsDetailView(null);
+          setIsSettingsOpen(true);
+        }}
+        onPreviewPress={(msg) => setLocalFeedback(msg)}
+      />
     </SafeAreaView>
   );
 }
