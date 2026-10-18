@@ -353,7 +353,7 @@ export default function HomeScreen() {
   const [personalCoverUri, setPersonalCoverUri] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsDetailView, setSettingsDetailView] = useState<
-    "sharing" | "help" | null
+    "appearance" | "sharing" | "help" | null
   >(null);
   const [eveningReflectionEnabled, setEveningReflectionEnabled] =
     useState(true);
@@ -990,6 +990,91 @@ export default function HomeScreen() {
             <View style={styles.settingsSheetContent}>
               <View style={styles.sheetHandle} />
 
+              {/* Sub-view: Appearance */}
+              {settingsDetailView === "appearance" && (
+                <View style={styles.settingsDetailWrapper}>
+                  <View style={styles.settingsDetailHeader}>
+                    <Pressable
+                      onPress={() => setSettingsDetailView(null)}
+                      style={styles.settingsBackBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel="Back to settings"
+                    >
+                      <Text style={styles.settingsBackBtnText}>‹ Settings</Text>
+                    </Pressable>
+                    <Text style={styles.settingsSheetHeading}>Appearance</Text>
+                    <Pressable
+                      style={styles.settingsCloseCircle}
+                      onPress={() => {
+                        setIsSettingsOpen(false);
+                        setSettingsDetailView(null);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Close settings"
+                    >
+                      <Text style={styles.settingsCloseCircleText}>✕</Text>
+                    </Pressable>
+                  </View>
+
+                  <ScrollView
+                    style={styles.settingsScrollView}
+                    contentContainerStyle={styles.settingsScrollContent}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <Text style={styles.appearanceIntroText}>
+                      Choose the look that feels right for you.
+                    </Text>
+
+                    <View style={styles.themeRowsContainer}>
+                      {THEME_LIST.map((t) => {
+                        const isSelected = t.key === selectedThemeKey;
+                        return (
+                          <Pressable
+                            key={t.key}
+                            style={[
+                              styles.themeOptionRow,
+                              isSelected && styles.themeOptionRowSelected,
+                            ]}
+                            onPress={() => setSelectedThemeKey(t.key)}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected: isSelected }}
+                            accessibilityLabel={`${t.name}: ${t.description}`}
+                          >
+                            <View style={styles.themeOptionLeft}>
+                              <View style={styles.paletteCirclesGroup}>
+                                {t.paletteCircles.map((circleCol, idx) => (
+                                  <View
+                                    key={idx}
+                                    style={[
+                                      styles.paletteMiniCircle,
+                                      { backgroundColor: circleCol },
+                                    ]}
+                                  />
+                                ))}
+                              </View>
+                              <View style={styles.themeTextGroup}>
+                                <Text style={styles.themeNameText}>{t.name}</Text>
+                                <Text style={styles.themeDescText}>
+                                  {t.description}
+                                </Text>
+                              </View>
+                            </View>
+                            <View
+                              style={[
+                                styles.themeRadioOuter,
+                                isSelected && styles.themeRadioOuterSelected,
+                              ]}
+                            >
+                              {isSelected && <View style={styles.themeRadioInner} />}
+                            </View>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </ScrollView>
+                </View>
+              )}
+
               {/* Sub-view: Sharing choices */}
               {settingsDetailView === "sharing" && (
                 <View style={styles.settingsDetailWrapper}>
@@ -1102,55 +1187,37 @@ export default function HomeScreen() {
                     {/* 1. Appearance */}
                     <View style={styles.settingsSection}>
                       <Text style={styles.settingsSectionTitle}>Appearance</Text>
-                      <View style={styles.themeRowsContainer}>
-                        {THEME_LIST.map((t) => {
-                          const isSelected = t.key === selectedThemeKey;
-                          return (
-                            <Pressable
-                              key={t.key}
-                              style={[
-                                styles.themeOptionRow,
-                                isSelected && styles.themeOptionRowSelected,
-                              ]}
-                              onPress={() => setSelectedThemeKey(t.key)}
-                              accessibilityRole="radio"
-                              accessibilityState={{ selected: isSelected }}
-                              accessibilityLabel={`${t.name}: ${t.description}`}
-                            >
-                              <View style={styles.themeOptionLeft}>
-                                <View style={styles.paletteCirclesGroup}>
-                                  {t.paletteCircles.map((circleCol, idx) => (
-                                    <View
-                                      key={idx}
-                                      style={[
-                                        styles.paletteMiniCircle,
-                                        { backgroundColor: circleCol },
-                                      ]}
-                                    />
-                                  ))}
-                                </View>
-                                <View style={styles.themeTextGroup}>
-                                  <Text style={styles.themeNameText}>{t.name}</Text>
-                                  <Text style={styles.themeDescText}>
-                                    {t.description}
-                                  </Text>
-                                </View>
-                              </View>
-                              <View
-                                style={[
-                                  styles.themeRadioOuter,
-                                  isSelected && styles.themeRadioOuterSelected,
-                                ]}
-                              >
-                                {isSelected && <View style={styles.themeRadioInner} />}
-                              </View>
-                            </Pressable>
-                          );
-                        })}
+                      <View style={styles.settingsCard}>
+                        <Pressable
+                          style={styles.settingsActionRow}
+                          onPress={() => setSettingsDetailView("appearance")}
+                          accessibilityRole="button"
+                          accessibilityLabel="Open appearance settings"
+                        >
+                          <View style={styles.settingsOptionLeft}>
+                            <View style={styles.paletteCirclesGroup}>
+                              {theme.paletteCircles.map((circleCol, idx) => (
+                                <View
+                                  key={idx}
+                                  style={[
+                                    styles.paletteMiniCircle,
+                                    { backgroundColor: circleCol },
+                                  ]}
+                                />
+                              ))}
+                            </View>
+                            <View style={styles.settingsRowTextGroup}>
+                              <Text style={styles.settingsRowHeading}>
+                                Appearance
+                              </Text>
+                              <Text style={styles.settingsRowSubtext}>
+                                {theme.name}
+                              </Text>
+                            </View>
+                          </View>
+                          <Text style={styles.settingsChevron}>›</Text>
+                        </Pressable>
                       </View>
-                      <Text style={styles.settingsInfoNote}>
-                        Your appearance is personal to you.
-                      </Text>
                     </View>
 
                     {/* 2. Your rhythm */}
@@ -2247,6 +2314,19 @@ const createStyles = (theme: ThemeConfig) =>
       height: 10,
       borderRadius: 5,
       backgroundColor: theme.accent,
+    },
+    appearanceIntroText: {
+      fontSize: 14,
+      color: theme.secondaryText,
+      marginBottom: 14,
+      paddingHorizontal: 4,
+      lineHeight: 20,
+    },
+    settingsOptionLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      flex: 1,
     },
     settingsCard: {
       backgroundColor: theme.background,
