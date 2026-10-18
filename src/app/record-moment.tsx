@@ -42,7 +42,13 @@ const frictionCategories = [
 
 export default function RecordMomentScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ type?: string }>();
+  const params = useLocalSearchParams<{
+    type?: string;
+    visibility?: "mine" | "ours" | string;
+  }>();
+
+  const isPrivateReflectionMode = params.visibility === "mine";
+  const isSharedMomentMode = params.visibility === "ours";
 
   const [coupleId, setCoupleId] = useState<string | null>(null);
 
@@ -56,7 +62,9 @@ export default function RecordMomentScreen() {
   const [sharedTopic, setSharedTopic] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [visibility, setVisibility] = useState<Visibility>("mine");
+  const [visibility, setVisibility] = useState<Visibility>(
+    params.visibility === "ours" ? "ours" : "mine"
+  );
 
   const [status, setStatus] = useState("");
 
@@ -70,6 +78,14 @@ export default function RecordMomentScreen() {
       setCategory("");
     }
   }, [params.type]);
+
+  useEffect(() => {
+    if (params.visibility === "ours") {
+      setVisibility("ours");
+    } else if (params.visibility === "mine") {
+      setVisibility("mine");
+    }
+  }, [params.visibility]);
 
   async function loadCouple() {
     const {
@@ -126,6 +142,12 @@ export default function RecordMomentScreen() {
     setStatus("Saving...");
 
     try {
+      const finalVisibility: Visibility = isPrivateReflectionMode
+        ? "mine"
+        : isSharedMomentMode
+        ? "ours"
+        : visibility;
+
       const { data: eventId, error } = await supabase.rpc(
         "create_relationship_moment",
         {
@@ -133,10 +155,10 @@ export default function RecordMomentScreen() {
           p_event_type: eventType,
           p_category: category,
           p_intensity: eventType === "friction" ? intensity : null,
-          p_visibility: visibility,
+          p_visibility: finalVisibility,
           p_private_note: privateNote.trim() || null,
           p_shared_topic:
-            visibility === "ours" ? sharedTopic.trim() || null : null,
+            finalVisibility === "ours" ? sharedTopic.trim() || null : null,
         },
       );
 
@@ -166,9 +188,13 @@ export default function RecordMomentScreen() {
 
   const saveButtonLabel = saving
     ? "Saving..."
-    : visibility === "mine"
-      ? "Save to Mine"
-      : "Share with Sam";
+    : isPrivateReflectionMode
+      ? "Save privately"
+      : isSharedMomentMode
+        ? "Share with Sam"
+        : visibility === "mine"
+          ? "Save to Mine"
+          : "Share with Sam";
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -191,7 +217,13 @@ export default function RecordMomentScreen() {
 
           {/* Header */}
           <View style={styles.headerBlock}>
-            <Text style={styles.title}>Record a moment</Text>
+            <Text style={styles.title}>
+              {isPrivateReflectionMode
+                ? "Write a reflection"
+                : isSharedMomentMode
+                ? "Share a moment"
+                : "Record a moment"}
+            </Text>
             <Text style={styles.subtitle}>
               A small place to notice what mattered.
             </Text>
@@ -340,15 +372,23 @@ export default function RecordMomentScreen() {
 
           {/* Private reflection */}
           <View style={styles.sectionBlock}>
-            <Text style={styles.sectionTitle}>For your eyes</Text>
+            <Text style={styles.sectionTitle}>
+              {isPrivateReflectionMode ? "Your reflection" : "For your eyes"}
+            </Text>
             <Text style={styles.sectionSubtitle}>
-              Write what happened or how it felt. This stays private.
+              {isPrivateReflectionMode
+                ? "Put it into words in whatever way helps."
+                : "Write what happened or how it felt. This stays private."}
             </Text>
             <TextInput
               style={styles.textInput}
               value={privateNote}
               onChangeText={setPrivateNote}
-              placeholder="What happened? How did you feel?"
+              placeholder={
+                isPrivateReflectionMode
+                  ? "What happened? What are you feeling?"
+                  : "What happened? How did you feel?"
+              }
               placeholderTextColor="#9A8D9D"
               multiline
               editable={!saving}
@@ -356,59 +396,76 @@ export default function RecordMomentScreen() {
           </View>
 
           {/* Sharing decision */}
-          <View style={styles.sectionBlock}>
-            <Text style={styles.sectionTitle}>Where should this live?</Text>
-            <View style={styles.visibilityCardsRow}>
-              <Pressable
-                style={[
-                  styles.visibilityCard,
-                  visibility === "mine" && styles.visibilityCardMineSelected,
-                ]}
-                onPress={() => setVisibility("mine")}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: visibility === "mine" }}
-                accessibilityLabel="Mine: Keep this reflection private."
-              >
-                <Text
-                  style={[
-                    styles.visibilityCardTitle,
-                    visibility === "mine" && styles.visibilityCardTitleSelected,
-                  ]}
-                >
-                  Mine
-                </Text>
-                <Text style={styles.visibilityCardSubtitle}>
-                  Keep this reflection private.
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.visibilityCard,
-                  visibility === "ours" && styles.visibilityCardOursSelected,
-                ]}
-                onPress={() => setVisibility("ours")}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: visibility === "ours" }}
-                accessibilityLabel="Ours: Share a gentle version with Sam."
-              >
-                <Text
-                  style={[
-                    styles.visibilityCardTitle,
-                    visibility === "ours" && styles.visibilityCardTitleSelected,
-                  ]}
-                >
-                  Ours
-                </Text>
-                <Text style={styles.visibilityCardSubtitle}>
-                  Share a gentle version with Sam.
-                </Text>
-              </Pressable>
+          {isPrivateReflectionMode ? (
+            <View style={styles.privacyMessageBlock}>
+              <Text style={styles.privacyMessageText}>
+                Only you can see this. It will not be shared with Sam.
+              </Text>
             </View>
-          </View>
+          ) : isSharedMomentMode ? (
+            <View style={styles.sharedContextBlock}>
+              <Text style={styles.sharedContextHeading}>Sharing with Sam</Text>
+              <Text style={styles.sharedContextText}>
+                This moment will be shared with Sam. Your private reflection
+                remains only for you.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.sectionBlock}>
+              <Text style={styles.sectionTitle}>Where should this live?</Text>
+              <View style={styles.visibilityCardsRow}>
+                <Pressable
+                  style={[
+                    styles.visibilityCard,
+                    visibility === "mine" && styles.visibilityCardMineSelected,
+                  ]}
+                  onPress={() => setVisibility("mine")}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: visibility === "mine" }}
+                  accessibilityLabel="Mine: Keep this reflection private."
+                >
+                  <Text
+                    style={[
+                      styles.visibilityCardTitle,
+                      visibility === "mine" && styles.visibilityCardTitleSelected,
+                    ]}
+                  >
+                    Mine
+                  </Text>
+                  <Text style={styles.visibilityCardSubtitle}>
+                    Keep this reflection private.
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.visibilityCard,
+                    visibility === "ours" && styles.visibilityCardOursSelected,
+                  ]}
+                  onPress={() => setVisibility("ours")}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: visibility === "ours" }}
+                  accessibilityLabel="Ours: Share a gentle version with Sam."
+                >
+                  <Text
+                    style={[
+                      styles.visibilityCardTitle,
+                      visibility === "ours" && styles.visibilityCardTitleSelected,
+                    ]}
+                  >
+                    Ours
+                  </Text>
+                  <Text style={styles.visibilityCardSubtitle}>
+                    Share a gentle version with Sam.
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
 
           {/* Ours shared topic */}
-          {visibility === "ours" && (
+          {(isSharedMomentMode ||
+            (!isPrivateReflectionMode && visibility === "ours")) && (
             <View style={styles.sectionBlock}>
               <Text style={styles.sectionTitle}>
                 What would you like Sam to know?
@@ -724,5 +781,38 @@ const styles = StyleSheet.create({
     color: "#6E416D",
     fontWeight: "500",
     textAlign: "center",
+  },
+  privacyMessageBlock: {
+    backgroundColor: "#F7EEF7",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#E8DCE9",
+  },
+  privacyMessageText: {
+    fontSize: 13.5,
+    color: "#6E416D",
+    lineHeight: 18,
+    fontWeight: "500",
+  },
+  sharedContextBlock: {
+    backgroundColor: "#F7EEF7",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#E8DCE9",
+    gap: 4,
+  },
+  sharedContextHeading: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#3D3040",
+  },
+  sharedContextText: {
+    fontSize: 13,
+    color: "#6D6072",
+    lineHeight: 18,
   },
 });

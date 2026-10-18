@@ -287,6 +287,20 @@ export default function HomeScreen() {
   };
 
   const handleSpaceAction = (spaceName: "Mine" | "Ours") => {
+    if (spaceName === "Mine") {
+      router.push({
+        pathname: "/events",
+        params: { scope: "mine" },
+      });
+      return;
+    }
+    if (spaceName === "Ours") {
+      router.push({
+        pathname: "/events",
+        params: { scope: "ours" },
+      });
+      return;
+    }
     setLocalFeedback(`${spaceName} space: Feature preview only.`);
   };
 

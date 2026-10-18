@@ -14,6 +14,7 @@ export interface BottomNavThemeColors {
 
 export interface AppBottomNavProps {
   activeTab: BottomNavTab;
+  isRootTab?: boolean;
   themeColors?: BottomNavThemeColors;
   onSettingsPress?: () => void;
   onPreviewPress?: (label: string) => void;
@@ -97,6 +98,7 @@ function NavIcon({
 
 export function AppBottomNav({
   activeTab,
+  isRootTab = true,
   themeColors,
   onSettingsPress,
   onPreviewPress,
@@ -110,7 +112,7 @@ export function AppBottomNav({
 
   const handleItemPress = (key: BottomNavTab, label: string) => {
     if (key === "rhythm") {
-      if (activeTab !== "rhythm") {
+      if (activeTab !== "rhythm" || !isRootTab) {
         router.replace("/home");
       } else {
         onPreviewPress?.("My Rhythm: Current active home space.");
@@ -132,7 +134,7 @@ export function AppBottomNav({
       return;
     }
     if (key === "our_space") {
-      onPreviewPress?.("Our Space: Navigation tab preview only.");
+      router.replace("/events?scope=ours");
       return;
     }
   };

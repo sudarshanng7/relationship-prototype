@@ -1,6 +1,6 @@
 import { AppBottomNav } from "@/components/AppBottomNav";
 import { supabase } from "@/lib/supabase";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   Pressable,
@@ -26,6 +26,9 @@ type FilterOption = "all" | "mine" | "ours";
 
 export default function EventsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ scope?: string }>();
+  const isMineMode = params.scope === "mine";
+  const isOursMode = params.scope === "ours";
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [coupleId, setCoupleId] = useState<string | null>(null);
@@ -33,6 +36,7 @@ export default function EventsScreen() {
   const [events, setEvents] = useState<RelationshipEvent[]>([]);
   const [status, setStatus] = useState("Loading...");
   const [filter, setFilter] = useState<FilterOption>("all");
+  const [hasFinishedInitialLoad, setHasFinishedInitialLoad] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -92,6 +96,7 @@ export default function EventsScreen() {
 
   async function loadPage() {
     setStatus("Loading...");
+    setHasFinishedInitialLoad(false);
 
     const {
       data: { user },
@@ -124,7 +129,10 @@ export default function EventsScreen() {
 
     setCoupleId(membership.couple_id);
 
-    await loadEvents(membership.couple_id);
+    const didLoadEvents = await loadEvents(membership.couple_id);
+    if (didLoadEvents) {
+      setHasFinishedInitialLoad(true);
+    }
   }
 
   async function loadEvents(currentCoupleId: string) {
@@ -148,11 +156,12 @@ export default function EventsScreen() {
     if (error) {
       console.error(error);
       setStatus(error.message);
-      return;
+      return false;
     }
 
     setEvents(data ?? []);
     setStatus("");
+    return true;
   }
 
   async function createTestEvent(visibility: "mine" | "ours") {
@@ -193,6 +202,15 @@ export default function EventsScreen() {
   }
 
   const visibleEvents = events.filter((event) => {
+    if (isMineMode) {
+      return (
+        event.visibility === "mine" &&
+        event.creator_id === currentUserId
+      );
+    }
+    if (isOursMode) {
+      return event.visibility === "ours";
+    }
     if (filter === "mine") {
       return event.visibility === "mine";
     }
@@ -210,6 +228,13 @@ export default function EventsScreen() {
     !hasSpaceError &&
     !status.includes("test event");
 
+  const shouldShowLoading =
+    isLoading ||
+    ((isMineMode || isOursMode) &&
+      !hasFinishedInitialLoad &&
+      !hasSpaceError &&
+      !hasGenericError);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -220,54 +245,98 @@ export default function EventsScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTextWrap}>
-              <Text style={styles.title}>Moments</Text>
-              <Text style={styles.subtitle}>“A place to return to what mattered.”</Text>
+              <Text style={styles.title}>
+                {isMineMode ? "Mine" : isOursMode ? "Our Space" : "Moments"}
+              </Text>
+              <Text style={styles.subtitle}>
+                {isMineMode
+                  ? "A private place to understand what you feel."
+                  : isOursMode
+                  ? "Moments shared between you and Sam."
+                  : "“A place to return to what mattered.”"}
+              </Text>
             </View>
 
             <Pressable
-              onPress={() => router.push("/record-moment")}
+              onPress={() =>
+                router.push(
+                  isMineMode
+                    ? "/record-moment?visibility=mine"
+                    : isOursMode
+                    ? "/record-moment?visibility=ours"
+                    : "/record-moment"
+                )
+              }
               style={({ pressed }) => [
                 styles.recordHeaderButton,
                 pressed && styles.pressedState,
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Record a moment"
+              accessibilityLabel={
+                isMineMode
+                  ? "+ Write a reflection"
+                  : isOursMode
+                  ? "+ Share a moment"
+                  : "Record a moment"
+              }
             >
-              <Text style={styles.recordHeaderButtonText}>+ Record a moment</Text>
+              <Text style={styles.recordHeaderButtonText}>
+                {isMineMode
+                  ? "+ Write a reflection"
+                  : isOursMode
+                  ? "+ Share a moment"
+                  : "+ Record a moment"}
+              </Text>
             </Pressable>
           </View>
 
-          {/* Local segmented filter: All / Mine / Ours */}
-          <View style={styles.segmentedFilterContainer} role="tablist">
-            {(["all", "mine", "ours"] as const).map((seg) => {
-              const isSelected = filter === seg;
-              const label =
-                seg === "all" ? "All" : seg === "mine" ? "Mine" : "Ours";
+          {/* Mine / Ours mode quiet action vs normal segmented filter */}
+          {isMineMode || isOursMode ? (
+            <View style={styles.mineNavRow}>
+              <Pressable
+                onPress={() => router.push("/events")}
+                style={({ pressed }) => [
+                  styles.viewAllButton,
+                  pressed && styles.pressedState,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="View all moments"
+              >
+                <Text style={styles.viewAllButtonText}>View all moments</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.segmentedFilterContainer} role="tablist">
+              {(["all", "mine", "ours"] as const).map((seg) => {
+                const isSelected = filter === seg;
+                const label =
+                  seg === "all" ? "All" : seg === "mine" ? "Mine" : "Ours";
 
-              return (
-                <Pressable
-                  key={seg}
-                  onPress={() => setFilter(seg)}
-                  style={[
-                    styles.segmentButton,
-                    isSelected && styles.segmentButtonActive,
-                  ]}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: isSelected }}
-                  accessibilityLabel={`Show ${label} moments`}
-                >
-                  <Text
+                return (
+                  <Pressable
+                    key={seg}
+                    onPress={() => setFilter(seg)}
                     style={[
-                      styles.segmentButtonText,
-                      isSelected && styles.segmentButtonTextActive,
+                      styles.segmentButton,
+                      isSelected && styles.segmentButtonActive,
                     ]}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isSelected }}
+                    accessibilityLabel={`Show ${label} moments`}
                   >
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                    <Text
+                      style={[
+                        styles.segmentButtonText,
+                        isSelected && styles.segmentButtonTextActive,
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
 
           {/* Relationship space error */}
           {hasSpaceError && (
@@ -287,7 +356,7 @@ export default function EventsScreen() {
           )}
 
           {/* Calm loading skeleton layout */}
-          {isLoading && (
+          {shouldShowLoading && (
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>Restoring your moments...</Text>
               <View style={styles.skeletonCard} />
@@ -296,24 +365,36 @@ export default function EventsScreen() {
           )}
 
           {/* Empty states */}
-          {!isLoading && visibleEvents.length === 0 && !hasSpaceError && (
+          {!shouldShowLoading &&
+            ((!isMineMode && !isOursMode) || hasFinishedInitialLoad) &&
+            visibleEvents.length === 0 &&
+            !hasSpaceError && (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyTitle}>
-                {filter === "all" && "No moments here yet."}
-                {filter === "mine" && "Your private space is quiet for now."}
-                {filter === "ours" && "Nothing has been shared yet."}
+                {isMineMode
+                  ? "Your private space is quiet for now."
+                  : isOursMode
+                  ? "Nothing has been shared yet."
+                  : filter === "all"
+                  ? "No moments here yet."
+                  : filter === "mine"
+                  ? "Your private space is quiet for now."
+                  : "Nothing has been shared yet."}
               </Text>
 
               <Text style={styles.emptySubtitle}>
-                {filter === "all" &&
-                  "You can record something good or something that felt off whenever it matters."}
-                {filter === "mine" &&
-                  "Private reflections you keep will appear here."}
-                {filter === "ours" &&
-                  "Only moments you intentionally share with Sam will appear here."}
+                {isMineMode
+                  ? "Private reflections you keep will appear here."
+                  : isOursMode
+                  ? "Only moments you intentionally share with Sam will appear here."
+                  : filter === "all"
+                  ? "You can record something good or something that felt off whenever it matters."
+                  : filter === "mine"
+                  ? "Private reflections you keep will appear here."
+                  : "Only moments you intentionally share with Sam will appear here."}
               </Text>
 
-              {filter === "all" && (
+              {!isMineMode && !isOursMode && filter === "all" && (
                 <Pressable
                   onPress={() => router.push("/record-moment")}
                   style={({ pressed }) => [
@@ -330,7 +411,7 @@ export default function EventsScreen() {
           )}
 
           {/* List of redesigned moment cards */}
-          {!isLoading &&
+          {!shouldShowLoading &&
             visibleEvents.map((event) => {
               const isCreator = event.creator_id === currentUserId;
               const naturalDate = formatNaturalDate(event.created_at);
@@ -466,7 +547,12 @@ export default function EventsScreen() {
       </ScrollView>
 
       {/* Fixed bottom navigation */}
-      <AppBottomNav activeTab="moments" />
+      <AppBottomNav
+        activeTab={
+          isOursMode ? "our_space" : isMineMode ? "rhythm" : "moments"
+        }
+        isRootTab={!isMineMode}
+      />
     </SafeAreaView>
   );
 }
@@ -587,6 +673,28 @@ const styles = StyleSheet.create({
   },
 
   recordHeaderButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6E416D",
+  },
+
+  /* Mine mode navigation */
+  mineNavRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+
+  viewAllButton: {
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "#F3EDF7",
+    borderWidth: 1,
+    borderColor: "#E2D3E5",
+  },
+
+  viewAllButtonText: {
     fontSize: 13,
     fontWeight: "600",
     color: "#6E416D",
