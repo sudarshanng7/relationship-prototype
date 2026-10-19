@@ -46,6 +46,18 @@ export default function RootLayout() {
           headerBackVisible: false,
         }}
       />
+      <Stack.Screen
+        name="playful-reframe"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="challenge-lifecycle-preview"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

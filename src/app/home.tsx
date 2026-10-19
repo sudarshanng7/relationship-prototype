@@ -1257,6 +1257,48 @@ export default function HomeScreen() {
                               </View>
                             );
                           })}
+
+                          <View style={styles.settingsDivider} />
+                          <Pressable
+                            style={styles.settingsActionRow}
+                            onPress={() => {
+                              setIsSettingsOpen(false);
+                              router.push("/playful-reframe");
+                            }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Dev preview: Playful Reframe"
+                          >
+                            <View style={styles.settingsRowTextGroup}>
+                              <Text style={styles.settingsRowHeading}>
+                                Dev preview: Playful Reframe
+                              </Text>
+                              <Text style={styles.settingsRowSubtext}>
+                                A lighthearted way to look at a small everyday irritation.
+                              </Text>
+                            </View>
+                            <Text style={styles.settingsChevron}>›</Text>
+                          </Pressable>
+
+                          <View style={styles.settingsDivider} />
+                          <Pressable
+                            style={styles.settingsActionRow}
+                            onPress={() => {
+                              setIsSettingsOpen(false);
+                              router.push("/challenge-lifecycle-preview");
+                            }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Dev preview: Challenge Lifecycle"
+                          >
+                            <View style={styles.settingsRowTextGroup}>
+                              <Text style={styles.settingsRowHeading}>
+                                Dev preview: Challenge Lifecycle
+                              </Text>
+                              <Text style={styles.settingsRowSubtext}>
+                                Sample outcomes: waiting, accepted, declined, expired, and won.
+                              </Text>
+                            </View>
+                            <Text style={styles.settingsChevron}>›</Text>
+                          </Pressable>
                         </View>
                       </View>
                     )}
