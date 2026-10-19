@@ -95,7 +95,13 @@ export default function ChallengeLifecyclePreviewScreen() {
           {/* Top navigation row */}
           <View style={styles.topNavRow}>
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace("/home");
+                }
+              }}
               style={styles.backButton}
               accessibilityRole="button"
               accessibilityLabel="Back"

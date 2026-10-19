@@ -172,6 +172,7 @@ interface FeelingOption {
   label: string;
   symbol: string;
   accentColor: string;
+  description: string;
 }
 
 const FEELING_OPTIONS: FeelingOption[] = [
@@ -180,30 +181,35 @@ const FEELING_OPTIONS: FeelingOption[] = [
     label: "Special",
     symbol: "✦",
     accentColor: "#6E416D",
+    description: "Something felt warm or meaningful",
   },
   {
     key: "regular",
     label: "Regular",
     symbol: "☼",
     accentColor: "#564458",
+    description: "It was an ordinary day",
   },
   {
     key: "distant",
     label: "Distant",
     symbol: "〰",
     accentColor: "#756777",
+    description: "You felt a little apart",
   },
   {
     key: "annoyed",
     label: "Annoyed",
     symbol: "⏺",
     accentColor: "#9E6326",
+    description: "Something small got under your skin",
   },
   {
     key: "friction",
     label: "Friction",
     symbol: "∿",
     accentColor: "#934762",
+    description: "Something needs care",
   },
 ];
 
@@ -268,6 +274,9 @@ export default function HomeScreen() {
     useState<PreviewState>("calm_day");
   const [selectedFeeling, setSelectedFeeling] =
     useState<ReflectionFeeling | null>(null);
+  const [eveningClosureState, setEveningClosureState] = useState<
+    "done" | "remind" | "skip" | null
+  >(null);
   const [localFeedback, setLocalFeedback] = useState<string | null>(null);
   const [isRecordSheetOpen, setIsRecordSheetOpen] = useState(false);
 
@@ -282,29 +291,17 @@ export default function HomeScreen() {
 
   const handleSelectFeeling = (feeling: FeelingOption) => {
     setSelectedFeeling(feeling.key);
-    if (feeling.key === "special") {
-      router.push({
-        pathname: "/record-moment",
-        params: { type: "positive" },
-      });
-      return;
-    }
-    if (feeling.key === "friction") {
-      router.push({
-        pathname: "/record-moment",
-        params: { type: "friction" },
-      });
-      return;
-    }
-    setLocalFeedback(
-      "Preview only — daily reflections will be connected later."
-    );
+    setEveningClosureState(null);
   };
 
-  const handleReflectionAction = (_actionName: string) => {
-    setLocalFeedback(
-      "Preview only — daily reflections will be connected later."
-    );
+  const handleReflectionAction = (action: "remind" | "skip") => {
+    setEveningClosureState(action);
+    setSelectedFeeling(null);
+  };
+
+  const handleUndoEveningState = () => {
+    setEveningClosureState(null);
+    setSelectedFeeling(null);
   };
 
   const handleRecordAction = (type: "good" | "off") => {
@@ -472,64 +469,314 @@ export default function HomeScreen() {
             {/* Evening reflection state */}
             {previewState === "evening_reflection" && (
               <View style={styles.reflectionContent}>
-                <Text style={styles.reflectionHeading}>
-                  A moment before the day ends
-                </Text>
-                <Text style={styles.reflectionQuestion}>
-                  How did things feel between you and Sam today?
-                </Text>
-
-                <View style={styles.feelingsRow}>
-                  {FEELING_OPTIONS.map((option) => (
+                {eveningClosureState === "done" ? (
+                  <View style={styles.reflectionClosureCard}>
+                    <Text style={styles.reflectionClosureHeading}>
+                      Thank you for checking in.
+                    </Text>
+                    <Text style={styles.reflectionClosureText}>
+                      There is nothing else you need to do tonight.
+                    </Text>
+                    <Text style={styles.reflectionClosureNote}>
+                      This is a local preview and will not be saved yet.
+                    </Text>
                     <Pressable
-                      key={option.key}
-                      style={styles.feelingButton}
-                      onPress={() => handleSelectFeeling(option)}
+                      style={styles.reflectionUndoBtn}
+                      onPress={handleUndoEveningState}
                       accessibilityRole="button"
-                      accessibilityLabel={`Feeling option: ${option.label}`}
+                      accessibilityLabel="Undo and restore choices"
                     >
-                      <Text
-                        style={[
-                          styles.feelingSymbol,
-                          { color: option.accentColor },
-                        ]}
-                      >
-                        {option.symbol}
-                      </Text>
-                      <Text style={styles.feelingLabel}>
-                        {option.label}
-                      </Text>
+                      <Text style={styles.reflectionUndoBtnText}>Undo</Text>
                     </Pressable>
-                  ))}
-                </View>
+                  </View>
+                ) : eveningClosureState === "remind" ? (
+                  <View style={styles.reflectionClosureCard}>
+                    <Text style={styles.reflectionClosureHeading}>Got it.</Text>
+                    <Text style={styles.reflectionClosureText}>
+                      We’ll leave you in peace for now.
+                    </Text>
+                    <Text style={styles.reflectionClosureNote}>
+                      No reminder has actually been scheduled.
+                    </Text>
+                    <Pressable
+                      style={styles.reflectionUndoBtn}
+                      onPress={handleUndoEveningState}
+                      accessibilityRole="button"
+                      accessibilityLabel="Undo and restore choices"
+                    >
+                      <Text style={styles.reflectionUndoBtnText}>Undo</Text>
+                    </Pressable>
+                  </View>
+                ) : eveningClosureState === "skip" ? (
+                  <View style={styles.reflectionClosureCard}>
+                    <Text style={styles.reflectionClosureHeading}>
+                      No problem at all.
+                    </Text>
+                    <Text style={styles.reflectionClosureText}>
+                      You can return whenever something matters.
+                    </Text>
+                    <Text style={styles.reflectionClosureNote}>
+                      Nothing was saved.
+                    </Text>
+                    <Pressable
+                      style={styles.reflectionUndoBtn}
+                      onPress={handleUndoEveningState}
+                      accessibilityRole="button"
+                      accessibilityLabel="Undo and restore choices"
+                    >
+                      <Text style={styles.reflectionUndoBtnText}>Undo</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={styles.reflectionHeading}>
+                      A moment before the day ends
+                    </Text>
+                    <Text style={styles.reflectionQuestion}>
+                      How did things feel between you and Sam today?
+                    </Text>
 
-                <View style={styles.reflectionSecondaryActions}>
-                  <Pressable
-                    style={styles.quietSecondaryButton}
-                    onPress={() =>
-                      handleReflectionAction("Remind me later")
-                    }
-                    accessibilityRole="button"
-                    accessibilityLabel="Remind me later"
-                  >
-                    <Text style={styles.quietSecondaryText}>
-                      Remind me later
-                    </Text>
-                  </Pressable>
-                  <View style={styles.quietSeparatorDot} />
-                  <Pressable
-                    style={styles.quietSecondaryButton}
-                    onPress={() =>
-                      handleReflectionAction("Skip tonight")
-                    }
-                    accessibilityRole="button"
-                    accessibilityLabel="Skip tonight"
-                  >
-                    <Text style={styles.quietSecondaryText}>
-                      Skip tonight
-                    </Text>
-                  </Pressable>
-                </View>
+                    <View style={styles.feelingsList}>
+                      {FEELING_OPTIONS.map((option) => {
+                        const isSelected = selectedFeeling === option.key;
+                        return (
+                          <Pressable
+                            key={option.key}
+                            style={[
+                              styles.feelingCard,
+                              isSelected && styles.feelingCardSelected,
+                            ]}
+                            onPress={() => handleSelectFeeling(option)}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: isSelected }}
+                            accessibilityLabel={`${option.label}: ${option.description}`}
+                          >
+                            <View
+                              style={[
+                                styles.feelingIconBubble,
+                                isSelected && styles.feelingIconBubbleSelected,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.feelingSymbolText,
+                                  { color: option.accentColor },
+                                ]}
+                              >
+                                {option.symbol}
+                              </Text>
+                            </View>
+                            <View style={styles.feelingTextGroup}>
+                              <Text
+                                style={[
+                                  styles.feelingTitle,
+                                  isSelected && styles.feelingTitleSelected,
+                                ]}
+                              >
+                                {option.label}
+                              </Text>
+                              <Text style={styles.feelingDescription}>
+                                {option.description}
+                              </Text>
+                            </View>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+
+                    {/* Inline outcome card beneath choices */}
+                    {selectedFeeling !== null && (
+                      <View style={styles.reflectionOutcomeCard}>
+                        {selectedFeeling === "special" && (
+                          <>
+                            <Text style={styles.reflectionOutcomeHeading}>
+                              That sounds worth keeping.
+                            </Text>
+                            <Text style={styles.reflectionOutcomeText}>
+                              If you would like, you can add it as a good moment in your relationship space.
+                            </Text>
+                            <View style={styles.reflectionActionsRow}>
+                              <Pressable
+                                style={styles.reflectionPrimaryBtn}
+                                onPress={() =>
+                                  router.push({
+                                    pathname: "/record-moment",
+                                    params: { type: "positive", lockType: "true" },
+                                  })
+                                }
+                                accessibilityRole="button"
+                                accessibilityLabel="Record something good"
+                              >
+                                <Text style={styles.reflectionPrimaryBtnText}>
+                                  Record something good
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                style={styles.reflectionSecondaryBtn}
+                                onPress={() => setEveningClosureState("done")}
+                                accessibilityRole="button"
+                                accessibilityLabel="Done for tonight"
+                              >
+                                <Text style={styles.reflectionSecondaryBtnText}>
+                                  Done for tonight
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </>
+                        )}
+
+                        {selectedFeeling === "regular" && (
+                          <>
+                            <Text style={styles.reflectionOutcomeHeading}>
+                              Thank you for noticing.
+                            </Text>
+                            <Text style={styles.reflectionOutcomeText}>
+                              Ordinary, steady days can be the quiet foundation of a relationship.
+                            </Text>
+                            <View style={styles.reflectionActionsRow}>
+                              <Pressable
+                                style={styles.reflectionPrimaryBtn}
+                                onPress={() => setEveningClosureState("done")}
+                                accessibilityRole="button"
+                                accessibilityLabel="Done for tonight"
+                              >
+                                <Text style={styles.reflectionPrimaryBtnText}>
+                                  Done for tonight
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </>
+                        )}
+
+                        {selectedFeeling === "distant" && (
+                          <>
+                            <Text style={styles.reflectionOutcomeHeading}>
+                              Thank you for noticing.
+                            </Text>
+                            <Text style={styles.reflectionOutcomeText}>
+                              Closeness can ebb and flow. Noticing a little distance is already a gentle first step.
+                            </Text>
+                            <View style={styles.reflectionActionsRow}>
+                              <Pressable
+                                style={styles.reflectionPrimaryBtn}
+                                onPress={() => setEveningClosureState("done")}
+                                accessibilityRole="button"
+                                accessibilityLabel="Done for tonight"
+                              >
+                                <Text style={styles.reflectionPrimaryBtnText}>
+                                  Done for tonight
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </>
+                        )}
+
+                        {selectedFeeling === "annoyed" && (
+                          <>
+                            <Text style={styles.reflectionOutcomeHeading}>
+                              That is okay to notice.
+                            </Text>
+                            <Text style={styles.reflectionOutcomeText}>
+                              Little irritations are normal. You can let this settle for now.
+                            </Text>
+                            <View style={styles.reflectionActionsRow}>
+                              <Pressable
+                                style={styles.reflectionPrimaryBtn}
+                                onPress={() => setEveningClosureState("done")}
+                                accessibilityRole="button"
+                                accessibilityLabel="Done for tonight"
+                              >
+                                <Text style={styles.reflectionPrimaryBtnText}>
+                                  Done for tonight
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </>
+                        )}
+
+                        {selectedFeeling === "friction" && (
+                          <>
+                            <Text style={styles.reflectionOutcomeHeading}>
+                              Give this a little care.
+                            </Text>
+                            <Text style={styles.reflectionOutcomeText}>
+                              If it would help, you can take a quiet moment to record what felt off.
+                            </Text>
+                            <View style={styles.reflectionActionsRow}>
+                              <Pressable
+                                style={styles.reflectionPrimaryBtn}
+                                onPress={() =>
+                                  router.push({
+                                    pathname: "/record-moment",
+                                    params: { type: "friction", lockType: "true" },
+                                  })
+                                }
+                                accessibilityRole="button"
+                                accessibilityLabel="Record what felt off"
+                              >
+                                <Text style={styles.reflectionPrimaryBtnText}>
+                                  Record what felt off
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                style={styles.reflectionSecondaryBtn}
+                                onPress={() => setEveningClosureState("done")}
+                                accessibilityRole="button"
+                                accessibilityLabel="Done for tonight"
+                              >
+                                <Text style={styles.reflectionSecondaryBtnText}>
+                                  Done for tonight
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </>
+                        )}
+
+                        <Text style={styles.reflectionOutcomePreviewNote}>
+                          For now, this daily check-in stays only on this screen.
+                        </Text>
+
+                        <Pressable
+                          style={styles.reflectionChangeBtn}
+                          onPress={() => setSelectedFeeling(null)}
+                          accessibilityRole="button"
+                          accessibilityLabel="Change answer"
+                        >
+                          <Text style={styles.reflectionChangeBtnText}>
+                            Change answer
+                          </Text>
+                        </Pressable>
+                      </View>
+                    )}
+
+                    {/* Secondary actions before choosing a feeling */}
+                    {selectedFeeling === null && (
+                      <View style={styles.reflectionSecondaryActions}>
+                        <Pressable
+                          style={styles.quietSecondaryButton}
+                          onPress={() => handleReflectionAction("remind")}
+                          accessibilityRole="button"
+                          accessibilityLabel="Remind me later"
+                        >
+                          <Text style={styles.quietSecondaryText}>
+                            Remind me later
+                          </Text>
+                        </Pressable>
+                        <View style={styles.quietSeparatorDot} />
+                        <Pressable
+                          style={styles.quietSecondaryButton}
+                          onPress={() => handleReflectionAction("skip")}
+                          accessibilityRole="button"
+                          accessibilityLabel="Skip tonight"
+                        >
+                          <Text style={styles.quietSecondaryText}>
+                            Skip tonight
+                          </Text>
+                        </Pressable>
+                      </View>
+                    )}
+                  </>
+                )}
               </View>
             )}
 
@@ -1576,34 +1823,169 @@ const createStyles = (theme: ThemeConfig) =>
       color: theme.primaryText,
       lineHeight: 21,
     },
-    feelingsRow: {
-      flexDirection: "row",
-      flexWrap: "wrap",
+    feelingsList: {
       gap: 8,
       marginTop: 4,
     },
-    feelingButton: {
-      flexGrow: 1,
-      flexBasis: "17%",
-      minWidth: 56,
+    feelingCard: {
       backgroundColor: theme.surface,
+      borderRadius: 16,
       paddingVertical: 12,
-      paddingHorizontal: 8,
-      borderRadius: 14,
+      paddingHorizontal: 14,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      minHeight: 56,
+    },
+    feelingCardSelected: {
+      borderColor: theme.accent,
+      backgroundColor: theme.sharedSurface,
+    },
+    feelingIconBubble: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: theme.privateSurface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    feelingIconBubbleSelected: {
+      backgroundColor: theme.surface,
+    },
+    feelingSymbolText: {
+      fontSize: 18,
+    },
+    feelingTextGroup: {
+      flex: 1,
+      gap: 2,
+    },
+    feelingTitle: {
+      fontSize: 14.5,
+      fontWeight: "700",
+      color: theme.primaryText,
+    },
+    feelingTitleSelected: {
+      color: theme.accent,
+    },
+    feelingDescription: {
+      fontSize: 12.5,
+      color: theme.secondaryText,
+      lineHeight: 17,
+    },
+
+    /* Evening Reflection Inline Outcome */
+    reflectionOutcomeCard: {
+      backgroundColor: theme.sharedSurface,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: theme.sharedBorder,
+      marginTop: 10,
+      gap: 8,
+    },
+    reflectionOutcomeHeading: {
+      fontSize: 15.5,
+      fontWeight: "700",
+      color: theme.primaryText,
+    },
+    reflectionOutcomeText: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      lineHeight: 20,
+    },
+    reflectionOutcomePreviewNote: {
+      fontSize: 12,
+      color: theme.mutedText,
+      fontStyle: "italic",
+      marginTop: 2,
+    },
+    reflectionActionsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginTop: 8,
+      flexWrap: "wrap",
+    },
+    reflectionPrimaryBtn: {
+      backgroundColor: theme.accent,
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    reflectionPrimaryBtnText: {
+      fontSize: 13.5,
+      fontWeight: "600",
+      color: theme.accentText,
+    },
+    reflectionSecondaryBtn: {
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
       borderWidth: 1,
       borderColor: theme.border,
       alignItems: "center",
       justifyContent: "center",
-      minHeight: 56,
     },
-    feelingSymbol: {
-      fontSize: 17,
-      marginBottom: 3,
-    },
-    feelingLabel: {
-      fontSize: 12.5,
+    reflectionSecondaryBtnText: {
+      fontSize: 13,
       fontWeight: "600",
       color: theme.primaryText,
+    },
+    reflectionChangeBtn: {
+      alignSelf: "flex-start",
+      paddingVertical: 6,
+      paddingHorizontal: 4,
+      marginTop: 2,
+    },
+    reflectionChangeBtnText: {
+      fontSize: 12.5,
+      fontWeight: "600",
+      color: theme.accent,
+    },
+
+    /* Evening Reflection Closure States */
+    reflectionClosureCard: {
+      backgroundColor: theme.sharedSurface,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: theme.sharedBorder,
+      gap: 8,
+    },
+    reflectionClosureHeading: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: theme.primaryText,
+    },
+    reflectionClosureText: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      lineHeight: 20,
+    },
+    reflectionClosureNote: {
+      fontSize: 12,
+      color: theme.mutedText,
+      fontStyle: "italic",
+    },
+    reflectionUndoBtn: {
+      alignSelf: "flex-start",
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginTop: 4,
+    },
+    reflectionUndoBtnText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: theme.accent,
     },
     reflectionSecondaryActions: {
       flexDirection: "row",

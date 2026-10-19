@@ -45,10 +45,14 @@ export default function RecordMomentScreen() {
   const params = useLocalSearchParams<{
     type?: string;
     visibility?: "mine" | "ours" | string;
+    lockType?: string;
   }>();
 
   const isPrivateReflectionMode = params.visibility === "mine";
   const isSharedMomentMode = params.visibility === "ours";
+  const isTypeLocked =
+    params.lockType === "true" &&
+    (params.type === "positive" || params.type === "friction");
 
   const [coupleId, setCoupleId] = useState<string | null>(null);
 
@@ -230,71 +234,73 @@ export default function RecordMomentScreen() {
           </View>
 
           {/* Moment type */}
-          <View style={styles.sectionBlock}>
-            <View style={styles.typeCardsRow}>
-              <Pressable
-                style={[
-                  styles.typeCard,
-                  eventType === "positive" && styles.typeCardSelected,
-                ]}
-                onPress={() => changeEventType("positive")}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: eventType === "positive" }}
-                accessibilityLabel="Something good: A kind moment, appreciation, or small joy."
-              >
-                <View
+          {!isTypeLocked && (
+            <View style={styles.sectionBlock}>
+              <View style={styles.typeCardsRow}>
+                <Pressable
                   style={[
-                    styles.typeIconBubble,
-                    eventType === "positive" && styles.typeIconBubbleSelected,
+                    styles.typeCard,
+                    eventType === "positive" && styles.typeCardSelected,
                   ]}
+                  onPress={() => changeEventType("positive")}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: eventType === "positive" }}
+                  accessibilityLabel="Something good: A kind moment, appreciation, or small joy."
                 >
-                  <Text style={styles.typeIcon}>🌷</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.typeCardTitle,
-                    eventType === "positive" && styles.typeCardTitleSelected,
-                  ]}
-                >
-                  Something good
-                </Text>
-                <Text style={styles.typeCardSubtitle}>
-                  A kind moment, appreciation, or small joy.
-                </Text>
-              </Pressable>
+                  <View
+                    style={[
+                      styles.typeIconBubble,
+                      eventType === "positive" && styles.typeIconBubbleSelected,
+                    ]}
+                  >
+                    <Text style={styles.typeIcon}>🌷</Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.typeCardTitle,
+                      eventType === "positive" && styles.typeCardTitleSelected,
+                    ]}
+                  >
+                    Something good
+                  </Text>
+                  <Text style={styles.typeCardSubtitle}>
+                    A kind moment, appreciation, or small joy.
+                  </Text>
+                </Pressable>
 
-              <Pressable
-                style={[
-                  styles.typeCard,
-                  eventType === "friction" && styles.typeCardSelected,
-                ]}
-                onPress={() => changeEventType("friction")}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: eventType === "friction" }}
-                accessibilityLabel="Something felt off: Tension, hesitation, or a disconnect."
-              >
-                <View
+                <Pressable
                   style={[
-                    styles.typeIconBubble,
-                    eventType === "friction" && styles.typeIconBubbleSelected,
+                    styles.typeCard,
+                    eventType === "friction" && styles.typeCardSelected,
                   ]}
+                  onPress={() => changeEventType("friction")}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: eventType === "friction" }}
+                  accessibilityLabel="Something felt off: Tension, hesitation, or a disconnect."
                 >
-                  <Text style={styles.typeIcon}>🌧️</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.typeCardTitle,
-                    eventType === "friction" && styles.typeCardTitleSelected,
-                  ]}
-                >
-                  Something felt off
-                </Text>
-                <Text style={styles.typeCardSubtitle}>
-                  Tension, hesitation, or a disconnect.
-                </Text>
-              </Pressable>
+                  <View
+                    style={[
+                      styles.typeIconBubble,
+                      eventType === "friction" && styles.typeIconBubbleSelected,
+                    ]}
+                  >
+                    <Text style={styles.typeIcon}>🌧️</Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.typeCardTitle,
+                      eventType === "friction" && styles.typeCardTitleSelected,
+                    ]}
+                  >
+                    Something felt off
+                  </Text>
+                  <Text style={styles.typeCardSubtitle}>
+                    Tension, hesitation, or a disconnect.
+                  </Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Category */}
           <View style={styles.sectionBlock}>
