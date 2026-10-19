@@ -422,7 +422,9 @@ export default function EventDetailScreen() {
               </View>
 
               <Text style={styles.statusGuidanceText}>
-                {event.visibility === "mine"
+                {event.status === "reconnected"
+                  ? "Taking time to repair helps you stay close."
+                  : event.visibility === "mine"
                   ? "Kept privately for you. You can revisit this whenever you need."
                   : "Tension can take time to ease. You can update this whenever things shift."}
               </Text>
@@ -447,77 +449,98 @@ export default function EventDetailScreen() {
             </View>
           )}
 
+          {/* Non-creator partner informational card (Ours friction only) */}
+          {!isPositive && !isCreator && event.visibility === "ours" && (
+            <View style={styles.partnerNoticeCard}>
+              <Text style={styles.partnerNoticeHeading}>
+                A moment to reconnect
+              </Text>
+              <Text style={styles.partnerNoticeText}>
+                This was shared so you can reconnect when you feel ready. There’s
+                nothing you need to do in the app right now.
+              </Text>
+            </View>
+          )}
+
           {/* Friction repair controls (creator only) */}
           {!isPositive && isCreator && (
             <View style={styles.sectionContainer}>
               <Text style={styles.sectionHeading}>How does this feel now?</Text>
 
-              <View style={styles.repairChoicesRow}>
+              <View style={styles.repairCardsContainer}>
                 <Pressable
                   style={[
-                    styles.repairChoiceButton,
-                    event.status === "open" && styles.repairChoiceButtonActive,
+                    styles.repairCard,
+                    event.status === "open" && styles.repairCardActive,
                   ]}
                   onPress={() => updateEventStatus("open")}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: event.status === "open" }}
-                  accessibilityLabel="Still lingering"
+                  accessibilityLabel="Still lingering: This is still with us. Giving it time."
                 >
                   <Text
                     style={[
-                      styles.repairChoiceText,
-                      event.status === "open" && styles.repairChoiceTextActive,
+                      styles.repairCardTitle,
+                      event.status === "open" && styles.repairCardTitleActive,
                     ]}
                   >
                     Still lingering
+                  </Text>
+                  <Text style={styles.repairCardSubtitle}>
+                    This is still with us. Giving it time.
                   </Text>
                 </Pressable>
 
                 <Pressable
                   style={[
-                    styles.repairChoiceButton,
+                    styles.repairCard,
                     event.status === "partially_repaired" &&
-                    styles.repairChoiceButtonActive,
+                      styles.repairCardActive,
                   ]}
                   onPress={() => updateEventStatus("partially_repaired")}
                   accessibilityRole="radio"
                   accessibilityState={{
                     selected: event.status === "partially_repaired",
                   }}
-                  accessibilityLabel="Softening"
+                  accessibilityLabel="Softening: It is beginning to ease."
                 >
                   <Text
                     style={[
-                      styles.repairChoiceText,
+                      styles.repairCardTitle,
                       event.status === "partially_repaired" &&
-                      styles.repairChoiceTextActive,
+                        styles.repairCardTitleActive,
                     ]}
                   >
                     Softening
+                  </Text>
+                  <Text style={styles.repairCardSubtitle}>
+                    It is beginning to ease.
                   </Text>
                 </Pressable>
 
                 <Pressable
                   style={[
-                    styles.repairChoiceButton,
-                    event.status === "reconnected" &&
-                    styles.repairChoiceButtonActive,
+                    styles.repairCard,
+                    event.status === "reconnected" && styles.repairCardActive,
                   ]}
                   onPress={() => setShowRepairMethods(true)}
                   accessibilityRole="radio"
                   accessibilityState={{
                     selected: event.status === "reconnected",
                   }}
-                  accessibilityLabel="I feel reconnected"
+                  accessibilityLabel="Reconnected: We found our way back."
                 >
                   <Text
                     style={[
-                      styles.repairChoiceText,
+                      styles.repairCardTitle,
                       event.status === "reconnected" &&
-                      styles.repairChoiceTextActive,
+                        styles.repairCardTitleActive,
                     ]}
                   >
-                    I feel reconnected
+                    Reconnected
+                  </Text>
+                  <Text style={styles.repairCardSubtitle}>
+                    We found our way back.
                   </Text>
                 </Pressable>
               </View>
@@ -525,7 +548,9 @@ export default function EventDetailScreen() {
               {/* Repair method selection sub-panel */}
               {showRepairMethods && (
                 <View style={styles.repairMethodsSubcard}>
-                  <Text style={styles.repairMethodsTitle}>What helped?</Text>
+                  <Text style={styles.repairMethodsTitle}>
+                    What helped you reconnect?
+                  </Text>
                   <Text style={styles.repairMethodsSubtitle}>
                     Choose the main thing that helped this time.
                   </Text>
@@ -1054,35 +1079,56 @@ const styles = StyleSheet.create({
     color: "#3D3040",
     letterSpacing: -0.2,
   },
-  repairChoicesRow: {
-    flexDirection: "row",
-    gap: 8,
+  /* Non-creator partner informational card */
+  partnerNoticeCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.2,
+    borderColor: "#E8DCE9",
+    gap: 6,
   },
-  repairChoiceButton: {
-    flex: 1,
+  partnerNoticeHeading: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#3D3040",
+  },
+  partnerNoticeText: {
+    fontSize: 13.5,
+    color: "#6D6072",
+    lineHeight: 20,
+  },
+
+  /* Friction repair reflection cards */
+  repairCardsContainer: {
+    gap: 10,
+  },
+  repairCard: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1.2,
     borderColor: "#E8DCE9",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    alignItems: "center",
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     justifyContent: "center",
-    minHeight: 46,
   },
-  repairChoiceButtonActive: {
+  repairCardActive: {
     borderColor: "#6E416D",
-    backgroundColor: "#F1E8F3",
+    backgroundColor: "#FBEFF7",
   },
-  repairChoiceText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#3D3040",
-    textAlign: "center",
-  },
-  repairChoiceTextActive: {
-    color: "#6E416D",
+  repairCardTitle: {
+    fontSize: 15,
     fontWeight: "700",
+    color: "#3D3040",
+    marginBottom: 2,
+  },
+  repairCardTitleActive: {
+    color: "#6E416D",
+  },
+  repairCardSubtitle: {
+    fontSize: 13,
+    color: "#6D6072",
+    lineHeight: 18,
   },
 
   repairMethodsSubcard: {

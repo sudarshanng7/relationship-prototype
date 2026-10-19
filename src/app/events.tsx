@@ -573,13 +573,13 @@ function formatCategory(category: string) {
 function formatStatus(status: RelationshipEvent["status"]) {
   switch (status) {
     case "open":
-      return "Still open";
+      return "Still lingering";
     case "partially_repaired":
-      return "A little better";
+      return "Softening";
     case "reconnected":
       return "Reconnected";
     default:
-      return "Still open";
+      return "Still lingering";
   }
 }
 
