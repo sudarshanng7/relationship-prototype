@@ -24,6 +24,13 @@ type RelationshipEvent = {
   created_at: string;
 };
 
+type EventPerspective = {
+  id: string;
+  author_id: string;
+  perspective_text: string;
+  sharing_status: "submitted" | "suspended";
+};
+
 const repairMethods = [
   {
     value: "talking",
@@ -81,6 +88,12 @@ export default function EventDetailScreen() {
   const [showSharingControls, setShowSharingControls] = useState(false);
   const [sharedTopicInput, setSharedTopicInput] = useState("");
   const [changingVisibility, setChangingVisibility] = useState(false);
+  const [perspectives, setPerspectives] = useState<EventPerspective[]>([]);
+  const [perspectivesLoading, setPerspectivesLoading] = useState(true);
+  const [perspectiveInput, setPerspectiveInput] = useState("");
+  const [editingPerspective, setEditingPerspective] = useState(false);
+  const [confirmWithdraw, setConfirmWithdraw] = useState(false);
+  const [savingPerspective, setSavingPerspective] = useState(false);
 
   useEffect(() => {
     loadEvent();
@@ -131,6 +144,7 @@ export default function EventDetailScreen() {
     }
 
     if (!data) {
+      setPerspectives([]);
       setEvent(null);
       setStatusMessage(
         "Event not found or you do not have permission to view it.",
@@ -156,7 +170,24 @@ export default function EventDetailScreen() {
     setPrivateNote(reflection?.note ?? null);
 
     setEvent(data);
-    setStatusMessage("");
+    // RLS exposes only the author's own perspective and submitted partner
+    // perspectives. A suspended record is not visible to the partner.
+    const { data: perspectiveRows, error: perspectiveError } = await supabase
+      .from("event_perspectives")
+      .select("id, author_id, perspective_text, sharing_status")
+      .eq("event_id", eventId);
+
+    if (perspectiveError) {
+      console.error("Failed to load perspectives:", perspectiveError);
+      setPerspectives([]);
+      setStatusMessage(
+        `Could not load perspectives: ${perspectiveError.message}`,
+      );
+    } else {
+      setPerspectives((perspectiveRows ?? []) as EventPerspective[]);
+      setStatusMessage("");
+    }
+    setPerspectivesLoading(false);
   }
 
   async function updateEventStatus(newStatus: "open" | "partially_repaired") {
@@ -271,6 +302,65 @@ export default function EventDetailScreen() {
     }
   }
 
+  async function submitPerspective() {
+    if (!event || event.visibility !== "ours" || savingPerspective) return;
+    const text = perspectiveInput.trim();
+    if (!text) {
+      setStatusMessage("Write a perspective before sharing.");
+      return;
+    }
+
+    setSavingPerspective(true);
+    setStatusMessage("Saving perspective...");
+    try {
+      const { error } = await supabase.rpc("submit_event_perspective", {
+        p_event_id: event.id,
+        p_perspective_text: text,
+      });
+      if (error) throw error;
+      setPerspectiveInput("");
+      setEditingPerspective(false);
+      setConfirmWithdraw(false);
+      await loadEvent();
+      setStatusMessage("Your perspective was shared.");
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error ? error.message : "Could not share perspective.",
+      );
+    } finally {
+      setSavingPerspective(false);
+    }
+  }
+
+  async function withdrawPerspective() {
+    if (!event || savingPerspective) return;
+    setSavingPerspective(true);
+    setStatusMessage("Withdrawing perspective...");
+    try {
+      const { data, error } = await supabase.rpc("withdraw_event_perspective", {
+        p_event_id: event.id,
+      });
+      if (error) throw error;
+      setPerspectiveInput("");
+      setEditingPerspective(false);
+      setConfirmWithdraw(false);
+      await loadEvent();
+      setStatusMessage(
+        data === true
+          ? "Your perspective was withdrawn."
+          : "No perspective was available to withdraw.",
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not withdraw perspective.",
+      );
+    } finally {
+      setSavingPerspective(false);
+    }
+  }
+
   async function deleteEvent() {
     if (!event) {
       return;
@@ -301,6 +391,10 @@ export default function EventDetailScreen() {
   }
 
   const isCreator = event.creator_id === currentUserId;
+  const myPerspective = perspectives.find((p) => p.author_id === currentUserId);
+  const partnerPerspective = perspectives.find(
+    (p) => p.author_id !== currentUserId && p.sharing_status === "submitted",
+  );
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -511,6 +605,133 @@ export default function EventDetailScreen() {
         </View>
       )}
 
+      {event.visibility === "ours" && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Our Perspectives</Text>
+          <Text style={styles.helperText}>
+            Each perspective belongs to its author. Sharing does not imply
+            agreement or repair.
+          </Text>
+
+          {perspectivesLoading ? (
+            <Text>Loading perspectives...</Text>
+          ) : (
+            <>
+              <Text style={styles.label}>Your perspective</Text>
+              {myPerspective ? (
+                <View style={styles.perspectiveCard}>
+                  <Text style={styles.helperText}>
+                    {myPerspective.sharing_status === "suspended"
+                      ? "Not shared — only you can see this text."
+                      : "Shared with your partner"}
+                  </Text>
+                  <Text>{myPerspective.perspective_text}</Text>
+                </View>
+              ) : (
+                <Text style={styles.helperText}>
+                  You have not shared a perspective.
+                </Text>
+              )}
+
+              {!editingPerspective ? (
+                <View style={styles.button}>
+                  <Button
+                    title={
+                      myPerspective?.sharing_status === "submitted"
+                        ? "Edit my perspective"
+                        : "Write my perspective"
+                    }
+                    onPress={() => {
+                      // Deliberate resubmission must not reuse suspended text.
+                      setPerspectiveInput(
+                        myPerspective?.sharing_status === "submitted"
+                          ? myPerspective.perspective_text
+                          : "",
+                      );
+                      setEditingPerspective(true);
+                      setConfirmWithdraw(false);
+                    }}
+                  />
+                </View>
+              ) : (
+                <View>
+                  <Text style={styles.helperText}>
+                    Only text you explicitly submit will be shared.
+                  </Text>
+                  <TextInput
+                    style={styles.sharingInput}
+                    value={perspectiveInput}
+                    onChangeText={setPerspectiveInput}
+                    placeholder="Describe your experience in your own words"
+                    multiline
+                    editable={!savingPerspective}
+                  />
+                  <View style={styles.button}>
+                    <Button
+                      title="Share my perspective"
+                      onPress={submitPerspective}
+                      disabled={savingPerspective || !perspectiveInput.trim()}
+                    />
+                  </View>
+                  <Button
+                    title="Cancel"
+                    disabled={savingPerspective}
+                    onPress={() => {
+                      setPerspectiveInput("");
+                      setEditingPerspective(false);
+                    }}
+                  />
+                </View>
+              )}
+
+              {myPerspective && !confirmWithdraw && (
+                <View style={styles.button}>
+                  <Button
+                    title="Withdraw my perspective"
+                    color="#a33"
+                    disabled={savingPerspective}
+                    onPress={() => setConfirmWithdraw(true)}
+                  />
+                </View>
+              )}
+              {myPerspective && confirmWithdraw && (
+                <View style={styles.perspectiveCard}>
+                  <Text style={styles.helperText}>
+                    Withdraw permanently deletes your perspective. Continue?
+                  </Text>
+                  <View style={styles.button}>
+                    <Button
+                      title="Yes, withdraw"
+                      color="#a33"
+                      disabled={savingPerspective}
+                      onPress={withdrawPerspective}
+                    />
+                  </View>
+                  <Button
+                    title="Keep my perspective"
+                    disabled={savingPerspective}
+                    onPress={() => setConfirmWithdraw(false)}
+                  />
+                </View>
+              )}
+
+              <Text style={[styles.label, styles.partnerLabel]}>
+                Your partner's perspective
+              </Text>
+              {partnerPerspective ? (
+                <View style={styles.perspectiveCard}>
+                  <Text>{partnerPerspective.perspective_text}</Text>
+                </View>
+              ) : (
+                <Text style={styles.helperText}>
+                  No perspective has been shared by your partner.
+                </Text>
+              )}
+            </>
+          )}
+        </View>
+      )}
+
       {statusMessage !== "" && (
         <Text style={styles.status}>{statusMessage}</Text>
       )}
@@ -613,6 +834,17 @@ const styles = StyleSheet.create({
     padding: 12,
     textAlignVertical: "top",
     marginBottom: 12,
+  },
+
+  perspectiveCard: {
+    padding: 14,
+    marginBottom: 12,
+    backgroundColor: "#f2f2f2",
+    borderRadius: 8,
+  },
+
+  partnerLabel: {
+    marginTop: 20,
   },
 
   deleteSection: {
