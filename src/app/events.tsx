@@ -1,5 +1,6 @@
+import { AppBottomNav } from "@/components/AppBottomNav";
 import { supabase } from "@/lib/supabase";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -16,12 +17,22 @@ type RelationshipEvent = {
 
 export default function EventsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    scope?: string | string[];
+  }>();
+
+  const scope = Array.isArray(params.scope) ? params.scope[0] : params.scope;
+
+  const sharedOnly = scope === "ours";
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [coupleId, setCoupleId] = useState<string | null>(null);
 
   const [events, setEvents] = useState<RelationshipEvent[]>([]);
   const [status, setStatus] = useState("Loading...");
+  const visibleEvents = sharedOnly
+    ? events.filter((event) => event.visibility === "ours")
+    : events;
 
   useFocusEffect(
     useCallback(() => {
@@ -56,6 +67,9 @@ export default function EventsScreen() {
   }, [coupleId]);
 
   async function loadPage() {
+    setEvents([]);
+    setCurrentUserId(null);
+    setCoupleId(null);
     setStatus("Loading...");
 
     const {
@@ -158,92 +172,107 @@ export default function EventsScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Relationship Moments</Text>
-
-      <Text style={styles.description}>
-        Record moments and review the events you are allowed to see.
-      </Text>
-
-      {/* Real application flow */}
-      <View style={styles.primarySection}>
-        <Button
-          title="Record a Moment"
-          onPress={() => router.push("/record-moment")}
-        />
-      </View>
-
-      {/* Temporary development controls */}
-      <View style={styles.testSection}>
-        <Text style={styles.testHeading}>Development privacy tests</Text>
-
-        <Text style={styles.testDescription}>
-          These buttons are temporary and help us verify Mine/Ours security.
+    <View style={{ flex: 1 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
+        <Text style={styles.title}>
+          {sharedOnly ? "Our Space" : "Relationship Moments"}
         </Text>
 
-        <View style={styles.button}>
+        <Text style={styles.description}>
+          {sharedOnly
+            ? "Moments you and your partner have chosen to share."
+            : "Record moments and review the events you are allowed to see."}
+        </Text>
+
+        {/* Real application flow */}
+        <View style={styles.primarySection}>
           <Button
-            title="Create Mine test event"
-            onPress={() => createTestEvent("mine")}
+            title="Record a Moment"
+            onPress={() => router.push("/record-moment")}
           />
         </View>
 
-        <View style={styles.button}>
-          <Button
-            title="Create Ours test event"
-            onPress={() => createTestEvent("ours")}
-          />
-        </View>
-      </View>
+        {/* Temporary development controls */}
+        {!sharedOnly && (
+          <View style={styles.testSection}>
+            <Text style={styles.testHeading}>Development privacy tests</Text>
 
-      <Text style={styles.heading}>Moments I can see</Text>
+            <Text style={styles.testDescription}>
+              These buttons are temporary and help us verify Mine/Ours security.
+            </Text>
 
-      {events.length === 0 && status === "" && (
-        <Text style={styles.emptyText}>No visible moments yet.</Text>
-      )}
-
-      {events.map((event) => {
-        const isCreator = event.creator_id === currentUserId;
-
-        return (
-          <View key={event.id} style={styles.event}>
-            <View style={styles.eventHeader}>
-              <Text style={styles.eventTitle}>
-                {formatCategory(event.category)}
-              </Text>
-
-              <Text style={styles.eventType}>
-                {event.event_type === "friction" ? "Friction" : "Positive"}
-              </Text>
+            <View style={styles.button}>
+              <Button
+                title="Create Mine test event"
+                onPress={() => createTestEvent("mine")}
+              />
             </View>
 
-            <Text>
-              Visibility: {event.visibility === "mine" ? "Mine" : "Ours"}
-            </Text>
-
-            {event.intensity !== null && (
-              <Text>Intensity: {event.intensity} / 5</Text>
-            )}
-
-            {event.event_type === "friction" && (
-              <Text>Status: {formatStatus(event.status)}</Text>
-            )}
-
-            <Text style={styles.small}>
-              Recorded by: {isCreator ? "You" : "Your partner"}
-            </Text>
-
-            <Text style={styles.small}>{formatDate(event.created_at)}</Text>
-
-            <View style={styles.viewButton}>
-              <Button title="View moment" onPress={() => openEvent(event.id)} />
+            <View style={styles.button}>
+              <Button
+                title="Create Ours test event"
+                onPress={() => createTestEvent("ours")}
+              />
             </View>
           </View>
-        );
-      })}
+        )}
 
-      {status !== "" && <Text style={styles.status}>{status}</Text>}
-    </ScrollView>
+        <Text style={styles.heading}>Moments I can see</Text>
+
+        {visibleEvents.length === 0 && status === "" && (
+          <Text style={styles.emptyText}>
+            {sharedOnly ? "No shared moments yet." : "No visible moments yet."}
+          </Text>
+        )}
+
+        {visibleEvents.map((event) => {
+          const isCreator = event.creator_id === currentUserId;
+
+          return (
+            <View key={event.id} style={styles.event}>
+              <View style={styles.eventHeader}>
+                <Text style={styles.eventTitle}>
+                  {formatCategory(event.category)}
+                </Text>
+
+                <Text style={styles.eventType}>
+                  {event.event_type === "friction" ? "Friction" : "Positive"}
+                </Text>
+              </View>
+
+              <Text>
+                Visibility: {event.visibility === "mine" ? "Mine" : "Ours"}
+              </Text>
+
+              {event.intensity !== null && (
+                <Text>Intensity: {event.intensity} / 5</Text>
+              )}
+
+              {event.event_type === "friction" && (
+                <Text>Status: {formatStatus(event.status)}</Text>
+              )}
+
+              <Text style={styles.small}>
+                Recorded by: {isCreator ? "You" : "Your partner"}
+              </Text>
+
+              <Text style={styles.small}>{formatDate(event.created_at)}</Text>
+
+              <View style={styles.viewButton}>
+                <Button
+                  title="View moment"
+                  onPress={() => openEvent(event.id)}
+                />
+              </View>
+            </View>
+          );
+        })}
+
+        {status !== "" && <Text style={styles.status}>{status}</Text>}
+      </ScrollView>
+
+      <AppBottomNav activeTab={sharedOnly ? "our_space" : "moments"} />
+    </View>
   );
 }
 

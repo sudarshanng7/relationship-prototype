@@ -1,3 +1,4 @@
+import { AppBottomNav } from "@/components/AppBottomNav";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -54,51 +55,55 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.eyebrow}>RELATIONSHIP OS</Text>
-      <Text style={styles.title}>Your space</Text>
-      <Text style={styles.subtitle}>
-        A place to remember meaningful moments and understand your relationship
-        over time.
-      </Text>
-
-      <Pressable
-        style={styles.primaryCard}
-        onPress={() => router.push("/record-moment")}
-        accessibilityRole="button"
-      >
-        <Text style={styles.primaryTitle}>Record a moment</Text>
-        <Text style={styles.primaryDescription}>
-          Something good or something that felt difficult.
+    <View style={{ flex: 1, backgroundColor: "#FBF7FC" }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
+        <Text style={styles.eyebrow}>RELATIONSHIP OS</Text>
+        <Text style={styles.title}>Your space</Text>
+        <Text style={styles.subtitle}>
+          A place to remember meaningful moments and understand your
+          relationship over time.
         </Text>
-      </Pressable>
 
-      <Pressable
-        style={styles.card}
-        onPress={() => router.push("/events")}
-        accessibilityRole="button"
-      >
-        <Text style={styles.cardTitle}>Moments</Text>
-        <Text style={styles.cardDescription}>
-          Revisit moments you are allowed to see.
+        <Pressable
+          style={styles.primaryCard}
+          onPress={() => router.push("/record-moment")}
+          accessibilityRole="button"
+        >
+          <Text style={styles.primaryTitle}>Record a moment</Text>
+          <Text style={styles.primaryDescription}>
+            Something good or something that felt difficult.
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.card}
+          onPress={() => router.push("/events")}
+          accessibilityRole="button"
+        >
+          <Text style={styles.cardTitle}>Moments</Text>
+          <Text style={styles.cardDescription}>
+            Revisit moments you are allowed to see.
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.card}
+          onPress={() => router.push("/profile")}
+          accessibilityRole="button"
+        >
+          <Text style={styles.cardTitle}>Profile & partner connection</Text>
+          <Text style={styles.cardDescription}>
+            Manage your profile and relationship space.
+          </Text>
+        </Pressable>
+
+        <Text style={styles.footer}>
+          Private reflections stay private. You decide what belongs in Ours.
         </Text>
-      </Pressable>
+      </ScrollView>
 
-      <Pressable
-        style={styles.card}
-        onPress={() => router.push("/profile")}
-        accessibilityRole="button"
-      >
-        <Text style={styles.cardTitle}>Profile & partner connection</Text>
-        <Text style={styles.cardDescription}>
-          Manage your profile and relationship space.
-        </Text>
-      </Pressable>
-
-      <Text style={styles.footer}>
-        Private reflections stay private. You decide what belongs in Ours.
-      </Text>
-    </ScrollView>
+      <AppBottomNav activeTab="home" />
+    </View>
   );
 }
 
