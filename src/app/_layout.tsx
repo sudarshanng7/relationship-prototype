@@ -30,7 +30,7 @@ export default function RootLayout() {
       <Stack.Screen
         name="record-moment"
         options={{
-          title: "Record a Moment",
+          headerShown: false,
         }}
       />
       <Stack.Screen
