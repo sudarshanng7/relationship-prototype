@@ -27,7 +27,7 @@ export default function LoginScreen() {
     setStatus("");
 
     if (profile.onboarding_completed) {
-      router.replace("/profile");
+      router.replace("/home");
     } else {
       router.replace("/onboarding");
     }

@@ -319,6 +319,9 @@ export default function ProfileScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Your profile</Text>
+      <View style={styles.section}>
+        <Button title="Go to Home" onPress={() => router.replace("/home")} />
+      </View>
 
       {/* PROFILE INFORMATION */}
 
