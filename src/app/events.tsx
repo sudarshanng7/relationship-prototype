@@ -24,6 +24,8 @@ type RelationshipEvent = {
 
 type FilterOption = "all" | "mine" | "ours";
 
+type OursFilter = "open" | "softening" | "reconnected";
+
 export default function EventsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ scope?: string }>();
@@ -36,6 +38,7 @@ export default function EventsScreen() {
   const [events, setEvents] = useState<RelationshipEvent[]>([]);
   const [status, setStatus] = useState("Loading...");
   const [filter, setFilter] = useState<FilterOption>("all");
+  const [oursFilter, setOursFilter] = useState<OursFilter | null>(null);
   const [hasFinishedInitialLoad, setHasFinishedInitialLoad] = useState(false);
 
   useFocusEffect(
@@ -216,7 +219,24 @@ export default function EventsScreen() {
       );
     }
     if (isOursMode) {
-      return event.visibility === "ours";
+      if (event.visibility !== "ours") {
+        return false;
+      }
+      if (oursFilter === "open") {
+        return event.event_type === "friction" && event.status === "open";
+      }
+      if (oursFilter === "softening") {
+        return (
+          event.event_type === "friction" &&
+          event.status === "partially_repaired"
+        );
+      }
+      if (oursFilter === "reconnected") {
+        return (
+          event.event_type === "friction" && event.status === "reconnected"
+        );
+      }
+      return true;
     }
     if (filter === "mine") {
       return event.visibility === "mine";
@@ -345,6 +365,60 @@ export default function EventsScreen() {
             </View>
           )}
 
+          {/* Ours status filter chips */}
+          {isOursMode && (
+            <View style={styles.oursFilterSection}>
+              <View style={styles.oursFilterRow} role="tablist">
+                {(
+                  [
+                    { key: "open", label: "Open" },
+                    { key: "softening", label: "Softening" },
+                    { key: "reconnected", label: "Reconnected" },
+                  ] as const
+                ).map(({ key, label }) => {
+                  const isSelected = oursFilter === key;
+
+                  return (
+                    <Pressable
+                      key={key}
+                      onPress={() => setOursFilter(isSelected ? null : key)}
+                      style={[
+                        styles.oursFilterChip,
+                        isSelected && styles.oursFilterChipActive,
+                      ]}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={`Filter by ${label}`}
+                    >
+                      <Text
+                        style={[
+                          styles.oursFilterChipText,
+                          isSelected && styles.oursFilterChipTextActive,
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Quiet text action only when a filter is active */}
+              {oursFilter !== null && (
+                <Pressable
+                  style={styles.clearFilterButton}
+                  onPress={() => setOursFilter(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear shared moment status filter"
+                >
+                  <Text style={styles.clearFilterButtonText}>
+                    Show all shared moments
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
           {/* Relationship space error */}
           {hasSpaceError && (
             <View style={styles.centeredNoticeCard}>
@@ -381,7 +455,13 @@ export default function EventsScreen() {
                 {isMineMode
                   ? "Your private space is quiet for now."
                   : isOursMode
-                  ? "Nothing has been shared yet."
+                  ? oursFilter === "open"
+                    ? "No moments are currently lingering."
+                    : oursFilter === "softening"
+                    ? "No moments are softening right now."
+                    : oursFilter === "reconnected"
+                    ? "No reconnected moments yet."
+                    : "Nothing has been shared yet."
                   : filter === "all"
                   ? "No moments here yet."
                   : filter === "mine"
@@ -393,7 +473,13 @@ export default function EventsScreen() {
                 {isMineMode
                   ? "Private reflections you keep will appear here."
                   : isOursMode
-                  ? "Only moments you intentionally share with Sam will appear here."
+                  ? oursFilter === "open"
+                    ? "Frictions that feel unresolved will appear here when recorded."
+                    : oursFilter === "softening"
+                    ? "Moments where care or space is opening up will appear here."
+                    : oursFilter === "reconnected"
+                    ? "Moments where you two found your way back will be kept here."
+                    : "Only moments you intentionally share with Sam will appear here."
                   : filter === "all"
                   ? "You can record something good or something that felt off whenever it matters."
                   : filter === "mine"
@@ -435,6 +521,7 @@ export default function EventsScreen() {
                   onPress={() => openEvent(event.id)}
                   style={({ pressed }) => [
                     styles.card,
+                    isPositive && styles.positiveCard,
                     pressed && styles.cardPressed,
                   ]}
                   accessibilityRole="button"
@@ -453,7 +540,12 @@ export default function EventsScreen() {
                             : styles.frictionIconBadge,
                         ]}
                       >
-                        <Text style={styles.iconSymbol}>
+                        <Text
+                          style={[
+                            styles.iconSymbol,
+                            isPositive && styles.positiveIconSymbol,
+                          ]}
+                        >
                           {isPositive ? "✦" : "〰"}
                         </Text>
                       </View>
@@ -472,13 +564,22 @@ export default function EventsScreen() {
                     </View>
                   </View>
 
-                  {/* Bottom card row: Privacy badge & calm friction status */}
-                  <View style={styles.cardFooterRow}>
+                  {/* Bottom card row: Privacy badge & calm friction status / celebration badge */}
+                  <View
+                    style={[
+                      styles.cardFooterRow,
+                      isPositive && styles.positiveCardFooterRow,
+                    ]}
+                  >
                     <View
                       style={[
                         styles.privacyBadge,
                         event.visibility === "mine"
-                          ? styles.minePrivacyBadge
+                          ? isPositive
+                            ? styles.minePositivePrivacyBadge
+                            : styles.minePrivacyBadge
+                          : isPositive
+                          ? styles.oursPositivePrivacyBadge
                           : styles.oursPrivacyBadge,
                       ]}
                     >
@@ -486,7 +587,11 @@ export default function EventsScreen() {
                         style={[
                           styles.privacyBadgeText,
                           event.visibility === "mine"
-                            ? styles.minePrivacyText
+                            ? isPositive
+                              ? styles.minePositivePrivacyText
+                              : styles.minePrivacyText
+                            : isPositive
+                            ? styles.oursPositivePrivacyText
                             : styles.oursPrivacyText,
                         ]}
                       >
@@ -494,7 +599,13 @@ export default function EventsScreen() {
                       </Text>
                     </View>
 
-                    {!isPositive && (
+                    {isPositive ? (
+                      <View style={styles.positiveBadge}>
+                        <Text style={styles.positiveBadgeText}>
+                          Celebration
+                        </Text>
+                      </View>
+                    ) : (
                       <View style={styles.statusBadge}>
                         <Text style={styles.statusBadgeText}>
                           {formatStatus(event.status)}
@@ -744,6 +855,57 @@ const styles = StyleSheet.create({
     color: "#3D3040",
   },
 
+  /* Ours mode status filter chips */
+  oursFilterSection: {
+    marginBottom: 16,
+    gap: 8,
+  },
+
+  oursFilterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  clearFilterButton: {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+
+  clearFilterButtonText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: "#6E416D",
+  },
+
+  oursFilterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: "#F3EDF7",
+    borderWidth: 1,
+    borderColor: "#E2D3E5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  oursFilterChipActive: {
+    backgroundColor: "#6E416D",
+    borderColor: "#6E416D",
+  },
+
+  oursFilterChipText: {
+    fontSize: 12.5,
+    fontWeight: "500",
+    color: "#6D6072",
+  },
+
+  oursFilterChipTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+
   /* Cards */
   card: {
     backgroundColor: "#FFFFFF",
@@ -757,6 +919,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 1,
+  },
+
+  positiveCard: {
+    backgroundColor: "#FDF8F5",
+    borderColor: "#F2DFD4",
   },
 
   cardPressed: {
@@ -801,6 +968,10 @@ const styles = StyleSheet.create({
   iconSymbol: {
     fontSize: 16,
     color: "#6E416D",
+  },
+
+  positiveIconSymbol: {
+    color: "#9E4D38",
   },
 
   categoryWrap: {
@@ -849,6 +1020,10 @@ const styles = StyleSheet.create({
     borderTopColor: "#F4EDF5",
   },
 
+  positiveCardFooterRow: {
+    borderTopColor: "#F5E6DC",
+  },
+
   privacyBadge: {
     borderRadius: 10,
     paddingHorizontal: 9,
@@ -861,9 +1036,19 @@ const styles = StyleSheet.create({
     borderColor: "#E3D5E7",
   },
 
+  minePositivePrivacyBadge: {
+    backgroundColor: "#FDF4EE",
+    borderColor: "#EEDAD0",
+  },
+
   oursPrivacyBadge: {
     backgroundColor: "#FBEFF7",
     borderColor: "#EBD8E8",
+  },
+
+  oursPositivePrivacyBadge: {
+    backgroundColor: "#FDF0EB",
+    borderColor: "#F4D9CE",
   },
 
   privacyBadgeText: {
@@ -875,8 +1060,16 @@ const styles = StyleSheet.create({
     color: "#533C64",
   },
 
+  minePositivePrivacyText: {
+    color: "#7E4938",
+  },
+
   oursPrivacyText: {
     color: "#6E416D",
+  },
+
+  oursPositivePrivacyText: {
+    color: "#8B412D",
   },
 
   statusBadge: {
@@ -892,6 +1085,21 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: "600",
     color: "#6D6072",
+  },
+
+  positiveBadge: {
+    backgroundColor: "#FDF0EB",
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderWidth: 1,
+    borderColor: "#F4D9CE",
+  },
+
+  positiveBadgeText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#8B412D",
   },
 
   /* Empty states */
