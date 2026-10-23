@@ -459,10 +459,10 @@ export default function MakeChallengePreviewScreen() {
                 style={styles.lifecycleButton}
                 onPress={() => router.push("/challenge-lifecycle-preview")}
                 accessibilityRole="button"
-                accessibilityLabel="Explore sample lifecycle outcomes"
+                accessibilityLabel="Preview the partner invitation experience"
               >
                 <Text style={styles.lifecycleButtonText}>
-                  Explore lifecycle outcomes ›
+                  Preview recipient experience ›
                 </Text>
               </Pressable>
             </View>
