@@ -806,6 +806,16 @@ export default function HomeScreen() {
                     Continue when ready
                   </Text>
                 </Pressable>
+                <Pressable
+                  style={[styles.quietSecondaryButton, { marginTop: 6 }]}
+                  onPress={() => router.push("/repair-response-preview" as any)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Preview repair response flow"
+                >
+                  <Text style={styles.quietSecondaryText}>
+                    Preview repair response flow ›
+                  </Text>
+                </Pressable>
               </View>
             )}
 
@@ -1563,6 +1573,27 @@ export default function HomeScreen() {
                               </Text>
                               <Text style={styles.settingsRowSubtext}>
                                 Compose a small, kind invitation with optional timing and preview.
+                              </Text>
+                            </View>
+                            <Text style={styles.settingsChevron}>›</Text>
+                          </Pressable>
+
+                          <View style={styles.settingsDivider} />
+                          <Pressable
+                            style={styles.settingsActionRow}
+                            onPress={() => {
+                              setIsSettingsOpen(false);
+                              router.push("/repair-response-preview" as any);
+                            }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Dev preview: Shared Repair Response"
+                          >
+                            <View style={styles.settingsRowTextGroup}>
+                              <Text style={styles.settingsRowHeading}>
+                                Dev preview: Shared Repair Response
+                              </Text>
+                              <Text style={styles.settingsRowSubtext}>
+                                Explore how a shared friction invites care, breathing room, and mutual closure.
                               </Text>
                             </View>
                             <Text style={styles.settingsChevron}>›</Text>

@@ -64,6 +64,12 @@ export default function RootLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="repair-response-preview"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }
