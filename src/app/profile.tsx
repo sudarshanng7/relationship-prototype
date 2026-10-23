@@ -1,3 +1,4 @@
+import { AppBottomNav } from "@/components/AppBottomNav";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -317,163 +318,176 @@ export default function ProfileScreen() {
   // ---------------------------
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Your profile</Text>
+    <View style={{ flex: 1 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Your profile</Text>
+        <View style={styles.section}>
+          <Button title="Go to Home" onPress={() => router.replace("/home")} />
+        </View>
 
-      {/* PROFILE INFORMATION */}
+        {/* PROFILE INFORMATION */}
 
-      <View style={styles.profileCard}>
-        {!isEditing ? (
-          <>
-            <View style={styles.profileHeader}>
-              <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>
-                  {displayName || "Add your name"}
-                </Text>
-
-                <Text style={styles.email}>{email}</Text>
-              </View>
-
-              <Pressable style={styles.editButton} onPress={startEditing}>
-                <Text style={styles.editButtonText}>Edit</Text>
-              </Pressable>
-            </View>
-          </>
-        ) : (
-          <>
-            <Text style={styles.label}>Display name</Text>
-
-            <TextInput
-              style={styles.input}
-              value={editedName}
-              onChangeText={setEditedName}
-              placeholder="Your preferred name"
-              autoCapitalize="words"
-              autoFocus
-              maxLength={60}
-              editable={!isSaving}
-            />
-
-            <Text style={styles.helperText}>
-              This is the name your partner will see.
-            </Text>
-
-            <View style={styles.editActions}>
-              <View style={styles.actionButton}>
-                <Button
-                  title={isSaving ? "Saving..." : "Save"}
-                  onPress={saveProfile}
-                  disabled={
-                    isSaving ||
-                    !editedName.trim() ||
-                    editedName.trim() === displayName
-                  }
-                />
-              </View>
-
-              <View style={styles.actionButton}>
-                <Button
-                  title="Cancel"
-                  onPress={cancelEditing}
-                  disabled={isSaving}
-                />
-              </View>
-            </View>
-          </>
-        )}
-      </View>
-
-      <View style={styles.divider} />
-
-      {/* RELATIONSHIP SPACE */}
-
-      <Text style={styles.sectionTitle}>Relationship space</Text>
-
-      {coupleId ? (
-        <>
-          {partnerConnected ? (
+        <View style={styles.profileCard}>
+          {!isEditing ? (
             <>
-              <Text style={styles.connectedText}>
-                {partnerName
-                  ? `✓ Connected with ${partnerName}`
-                  : "✓ Connected with your partner"}
-              </Text>
+              <View style={styles.profileHeader}>
+                <View style={styles.profileInfo}>
+                  <Text style={styles.profileName}>
+                    {displayName || "Add your name"}
+                  </Text>
 
-              <Text style={styles.description}>
-                You now share a relationship space.
-              </Text>
-            </>
-          ) : inviteCode ? (
-            <>
-              <Text style={styles.waitingText}>Waiting for your partner</Text>
+                  <Text style={styles.email}>{email}</Text>
+                </View>
 
-              <Text style={styles.description}>
-                Share this invitation code with your partner.
-              </Text>
-
-              <View style={styles.inviteBox}>
-                <Text style={styles.label}>Partner invite code</Text>
-
-                <Text style={styles.inviteCode}>{inviteCode}</Text>
+                <Pressable style={styles.editButton} onPress={startEditing}>
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </Pressable>
               </View>
             </>
           ) : (
             <>
-              <Text style={styles.description}>
-                Your relationship space is ready. Invite your partner when
-                you're ready.
+              <Text style={styles.label}>Display name</Text>
+
+              <TextInput
+                style={styles.input}
+                value={editedName}
+                onChangeText={setEditedName}
+                placeholder="Your preferred name"
+                autoCapitalize="words"
+                autoFocus
+                maxLength={60}
+                editable={!isSaving}
+              />
+
+              <Text style={styles.helperText}>
+                This is the name your partner will see.
               </Text>
 
-              <View style={styles.section}>
-                <Button title="Invite partner" onPress={createPartnerInvite} />
+              <View style={styles.editActions}>
+                <View style={styles.actionButton}>
+                  <Button
+                    title={isSaving ? "Saving..." : "Save"}
+                    onPress={saveProfile}
+                    disabled={
+                      isSaving ||
+                      !editedName.trim() ||
+                      editedName.trim() === displayName
+                    }
+                  />
+                </View>
+
+                <View style={styles.actionButton}>
+                  <Button
+                    title="Cancel"
+                    onPress={cancelEditing}
+                    disabled={isSaving}
+                  />
+                </View>
               </View>
             </>
           )}
+        </View>
 
-          <View style={styles.section}>
-            <Button
-              title="Test relationship events"
-              onPress={() => router.push("/events")}
+        <View style={styles.divider} />
+
+        {/* RELATIONSHIP SPACE */}
+
+        <Text style={styles.sectionTitle}>Relationship space</Text>
+
+        {coupleId ? (
+          <>
+            {partnerConnected ? (
+              <>
+                <Text style={styles.connectedText}>
+                  {partnerName
+                    ? `✓ Connected with ${partnerName}`
+                    : "✓ Connected with your partner"}
+                </Text>
+
+                <Text style={styles.description}>
+                  You now share a relationship space.
+                </Text>
+              </>
+            ) : inviteCode ? (
+              <>
+                <Text style={styles.waitingText}>Waiting for your partner</Text>
+
+                <Text style={styles.description}>
+                  Share this invitation code with your partner.
+                </Text>
+
+                <View style={styles.inviteBox}>
+                  <Text style={styles.label}>Partner invite code</Text>
+
+                  <Text style={styles.inviteCode}>{inviteCode}</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.description}>
+                  Your relationship space is ready. Invite your partner when
+                  you're ready.
+                </Text>
+
+                <View style={styles.section}>
+                  <Button
+                    title="Invite partner"
+                    onPress={createPartnerInvite}
+                  />
+                </View>
+              </>
+            )}
+
+            <View style={styles.section}>
+              <Button
+                title="View moments"
+                onPress={() => router.push("/events")}
+              />
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.description}>
+              Create a new relationship space or join your partner using an
+              invitation code.
+            </Text>
+
+            <View style={styles.section}>
+              <Button
+                title="Create relationship space"
+                onPress={createCouple}
+              />
+            </View>
+
+            <Text style={styles.orText}>or</Text>
+
+            <Text style={styles.label}>Have a partner invite?</Text>
+
+            <TextInput
+              style={styles.input}
+              value={joinCode}
+              onChangeText={setJoinCode}
+              placeholder="Enter invite code"
+              autoCapitalize="characters"
             />
-          </View>
-        </>
-      ) : (
-        <>
-          <Text style={styles.description}>
-            Create a new relationship space or join your partner using an
-            invitation code.
-          </Text>
 
-          <View style={styles.section}>
-            <Button title="Create relationship space" onPress={createCouple} />
-          </View>
+            <View style={styles.section}>
+              <Button title="Join partner" onPress={acceptPartnerInvite} />
+            </View>
+          </>
+        )}
 
-          <Text style={styles.orText}>or</Text>
+        <View style={styles.divider} />
 
-          <Text style={styles.label}>Have a partner invite?</Text>
+        <View style={styles.section}>
+          <Button title="Sign out" onPress={signOut} />
+        </View>
 
-          <TextInput
-            style={styles.input}
-            value={joinCode}
-            onChangeText={setJoinCode}
-            placeholder="Enter invite code"
-            autoCapitalize="characters"
-          />
+        {status !== "" && <Text style={styles.status}>{status}</Text>}
+      </ScrollView>
 
-          <View style={styles.section}>
-            <Button title="Join partner" onPress={acceptPartnerInvite} />
-          </View>
-        </>
-      )}
-
-      <View style={styles.divider} />
-
-      <View style={styles.section}>
-        <Button title="Sign out" onPress={signOut} />
-      </View>
-
-      {status !== "" && <Text style={styles.status}>{status}</Text>}
-    </ScrollView>
+      <AppBottomNav activeTab="settings" />
+    </View>
   );
 }
 

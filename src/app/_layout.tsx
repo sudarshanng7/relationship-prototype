@@ -10,6 +10,12 @@ export default function RootLayout() {
         }}
       />
       <Stack.Screen
+        name="home"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="profile"
         options={{
           title: "Profile",
@@ -18,13 +24,13 @@ export default function RootLayout() {
       <Stack.Screen
         name="events"
         options={{
-          title: "Relationship Events",
+          headerShown: false,
         }}
       />
       <Stack.Screen
         name="record-moment"
         options={{
-          title: "Record a Moment",
+          headerShown: false,
         }}
       />
       <Stack.Screen
