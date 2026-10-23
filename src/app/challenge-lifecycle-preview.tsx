@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Pressable,
@@ -30,8 +30,61 @@ const TWEAK_OPTIONS: TweakOption[] = [
   "Could we make it even simpler?",
 ];
 
+function getDisplayIcon(title: string): string {
+  const lower = title.toLowerCase();
+  if (
+    lower.includes("tea") ||
+    lower.includes("coffee") ||
+    lower.includes("mug")
+  ) {
+    return "☕";
+  }
+  if (lower.includes("walk")) {
+    return "🚶";
+  }
+  if (lower.includes("sock")) {
+    return "🧦";
+  }
+  if (lower.includes("pause") || lower.includes("breath")) {
+    return "🌱";
+  }
+  if (
+    lower.includes("song") ||
+    lower.includes("playlist") ||
+    lower.includes("music")
+  ) {
+    return "🎵";
+  }
+  if (lower.includes("screen") || lower.includes("sofa")) {
+    return "🛋️";
+  }
+  return "✨";
+}
+
 export default function ChallengeLifecyclePreviewScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    idea?: string;
+    participant?: string;
+    timeframe?: string;
+    reward?: string;
+  }>();
+
+  const passedIdea =
+    typeof params.idea === "string" ? params.idea.trim() : "";
+  const displayTitle = passedIdea || "Bring the mug home";
+  const displayContext = passedIdea
+    ? "A small reset chosen together"
+    : "A warm drink together after a long day";
+  const displayTimeframe =
+    typeof params.timeframe === "string" && params.timeframe.trim().length > 0
+      ? params.timeframe
+      : "Whenever / no rush";
+  const displayReward =
+    typeof params.reward === "string" && params.reward.trim().length > 0
+      ? params.reward
+      : "Coffee together";
+  const displayIcon = passedIdea ? getDisplayIcon(passedIdea) : "☕";
 
   const [perspective, setPerspective] = useState<Perspective>("sam");
   const [responseState, setResponseState] = useState<ResponseState>("none");
@@ -177,16 +230,14 @@ export default function ChallengeLifecyclePreviewScreen() {
           <View style={styles.invitationCard}>
             <View style={styles.invitationHeaderRow}>
               <View style={styles.invitationIconBubble}>
-                <Text style={styles.invitationIconEmoji}>☕</Text>
+                <Text style={styles.invitationIconEmoji}>{displayIcon}</Text>
               </View>
               <View style={styles.invitationHeaderTextGroup}>
                 <Text style={styles.invitationOverline}>
                   A tiny invitation from Alex
                 </Text>
-                <Text style={styles.invitationTitle}>Bring the mug home</Text>
-                <Text style={styles.invitationContext}>
-                  A warm drink together after a long day
-                </Text>
+                <Text style={styles.invitationTitle}>{displayTitle}</Text>
+                <Text style={styles.invitationContext}>{displayContext}</Text>
               </View>
             </View>
 
@@ -194,10 +245,10 @@ export default function ChallengeLifecyclePreviewScreen() {
 
             <View style={styles.pillsRow}>
               <View style={styles.pillBadge}>
-                <Text style={styles.pillBadgeText}>Whenever / no rush</Text>
+                <Text style={styles.pillBadgeText}>{displayTimeframe}</Text>
               </View>
               <View style={styles.pillBadge}>
-                <Text style={styles.pillBadgeText}>Coffee together</Text>
+                <Text style={styles.pillBadgeText}>{displayReward}</Text>
               </View>
             </View>
           </View>
@@ -255,10 +306,10 @@ export default function ChallengeLifecyclePreviewScreen() {
                       <Text style={styles.mockMemoryDate}>Just now</Text>
                     </View>
                     <Text style={styles.mockMemoryTitle}>
-                      A warm drink together after a long day
+                      {displayTitle}
                     </Text>
                     <Text style={styles.mockMemoryDetails}>
-                      Tiny challenge · completed together
+                      {displayContext} · completed together
                     </Text>
                     <View style={styles.mockMemoryNotice}>
                       <Text style={styles.mockMemoryNoticeText}>

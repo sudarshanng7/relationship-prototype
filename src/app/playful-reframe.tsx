@@ -251,6 +251,22 @@ export default function PlayfulReframeScreen() {
     ? CUSTOM_CHALLENGES
     : currentPreset.challenges;
 
+  function getStarterIdea(): string {
+    if (isCustomActive) {
+      return "Take a five-minute quiet pause together";
+    }
+    switch (selectedSampleKey) {
+      case "coffee_mug":
+        return "Have a tea or coffee together";
+      case "socks":
+        return "Find one matching pair together";
+      case "directions":
+        return "Take a five-minute walking reset";
+      default:
+        return "Take a five-minute quiet pause together";
+    }
+  }
+
   function handleResetAll() {
     setSelectedSampleKey("coffee_mug");
     setCustomText("");
@@ -580,9 +596,15 @@ export default function PlayfulReframeScreen() {
                     A lighter way to see it.
                   </Text>
                   <Text style={styles.outcomeSubtext}>
-                    This is only a local preview. Nothing has been saved or
-                    shared.
+                    This doesn’t mean your feeling wasn’t real. It is simply one
+                    gentle angle to smile at. Nothing is saved or shared.
                   </Text>
+                  <View style={styles.outcomeNoteBox}>
+                    <Text style={styles.outcomeNoteText}>
+                      A playful reframe is never a way to ignore what matters.
+                      It simply offers a soft pause before moving forward.
+                    </Text>
+                  </View>
 
                   <View style={styles.outcomeActionsRow}>
                     <Pressable
@@ -779,6 +801,36 @@ export default function PlayfulReframeScreen() {
                             </Pressable>
                           );
                         })}
+
+                        <Pressable
+                          style={styles.customChallengeBridgeCard}
+                          onPress={() => {
+                            router.push({
+                              pathname: "/make-challenge-preview",
+                              params: {
+                                idea: getStarterIdea(),
+                                participant: participantChoice ?? "sam",
+                                source: "reframe",
+                              },
+                            } as any);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Make your own tiny challenge with playful reframe context"
+                        >
+                          <View style={styles.customChallengeBridgeIconBubble}>
+                            <Text style={styles.customChallengeBridgeEmoji}>
+                              ✍️
+                            </Text>
+                          </View>
+                          <View style={styles.customChallengeBridgeTextCol}>
+                            <Text style={styles.customChallengeBridgeTitle}>
+                              Make your own tiny challenge ›
+                            </Text>
+                            <Text style={styles.customChallengeBridgeDesc}>
+                              Write a small reset that fits your home today.
+                            </Text>
+                          </View>
+                        </Pressable>
                       </View>
                     </View>
                   )}
@@ -958,6 +1010,27 @@ export default function PlayfulReframeScreen() {
                           </Text>
                         </Pressable>
                       </View>
+
+                      <Pressable
+                        style={styles.recipientBridgeButton}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/challenge-lifecycle-preview",
+                            params: {
+                              idea: selectedIdea ?? "",
+                              participant: participantChoice ?? "sam",
+                              timeframe: selectedTimeframe ?? "Today",
+                              reward: selectedReward ?? "No reward — just the moment",
+                            },
+                          } as any)
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel="Preview recipient experience"
+                      >
+                        <Text style={styles.recipientBridgeButtonText}>
+                          Preview recipient experience ›
+                        </Text>
+                      </Pressable>
                     </View>
                   )}
                 </View>
@@ -1693,6 +1766,69 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   finalSecondaryButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6E416D",
+  },
+  outcomeNoteBox: {
+    backgroundColor: "#FAF5FB",
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#F0E4F1",
+    width: "100%",
+    marginTop: 2,
+  },
+  outcomeNoteText: {
+    fontSize: 12.5,
+    color: "#6D6072",
+    lineHeight: 17,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  customChallengeBridgeCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1.2,
+    borderColor: "#E8DCE9",
+    borderStyle: "dashed",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 4,
+  },
+  customChallengeBridgeIconBubble: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F1EDF7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  customChallengeBridgeEmoji: {
+    fontSize: 16,
+  },
+  customChallengeBridgeTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  customChallengeBridgeTitle: {
+    fontSize: 14.5,
+    fontWeight: "700",
+    color: "#6E416D",
+  },
+  customChallengeBridgeDesc: {
+    fontSize: 12.5,
+    color: "#6D6072",
+  },
+  recipientBridgeButton: {
+    alignSelf: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 4,
+  },
+  recipientBridgeButtonText: {
     fontSize: 13,
     fontWeight: "600",
     color: "#6E416D",

@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -81,10 +81,23 @@ const REWARD_OPTIONS = [
 
 export default function MakeChallengePreviewScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    idea?: string;
+    participant?: string;
+    source?: string;
+  }>();
 
-  const [challengeText, setChallengeText] = useState("");
+  const initialIdea = typeof params.idea === "string" ? params.idea : "";
+  const initialParticipant: ParticipantKey =
+    params.participant === "me" ||
+    params.participant === "sam" ||
+    params.participant === "both"
+      ? params.participant
+      : "sam";
+
+  const [challengeText, setChallengeText] = useState(initialIdea);
   const [participantChoice, setParticipantChoice] =
-    useState<ParticipantKey>("sam");
+    useState<ParticipantKey>(initialParticipant);
   const [selectedTimeframe, setSelectedTimeframe] = useState<string>("Today");
   const [selectedReward, setSelectedReward] = useState<string>(
     "No reward — just the moment",
@@ -154,6 +167,21 @@ export default function MakeChallengePreviewScreen() {
                 Nothing has been sent or saved.
               </Text>
             </View>
+
+            {/* Context banner when arriving from playful reframe */}
+            {params.source === "reframe" && (
+              <View style={styles.reframeContextBanner}>
+                <View style={styles.reframeContextBadge}>
+                  <Text style={styles.reframeContextBadgeText}>
+                    FROM YOUR REFRAME
+                  </Text>
+                </View>
+                <Text style={styles.reframeContextText}>
+                  A small, kind idea to help you two reset. You can change every
+                  detail below.
+                </Text>
+              </View>
+            )}
 
             {/* Step 1: Challenge Idea */}
             <View style={styles.sectionBlock}>
@@ -457,7 +485,17 @@ export default function MakeChallengePreviewScreen() {
               </View>
               <Pressable
                 style={styles.lifecycleButton}
-                onPress={() => router.push("/challenge-lifecycle-preview")}
+                onPress={() =>
+                  router.push({
+                    pathname: "/challenge-lifecycle-preview",
+                    params: {
+                      idea: challengeText.trim(),
+                      participant: participantChoice,
+                      timeframe: selectedTimeframe,
+                      reward: selectedReward,
+                    },
+                  } as any)
+                }
                 accessibilityRole="button"
                 accessibilityLabel="Preview the partner invitation experience"
               >
@@ -919,5 +957,33 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#6E416D",
+  },
+  reframeContextBanner: {
+    backgroundColor: "#FAF5FB",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1.2,
+    borderColor: "#EBD8EA",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  reframeContextBadge: {
+    backgroundColor: "#F4E5F2",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  reframeContextBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#6E416D",
+    textTransform: "uppercase",
+  },
+  reframeContextText: {
+    flex: 1,
+    fontSize: 12.5,
+    color: "#6D6072",
+    lineHeight: 17,
   },
 });
