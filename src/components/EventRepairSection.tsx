@@ -137,6 +137,59 @@ export function EventRepairSection({ eventId, userId, visibility }: Props) {
     mine.sharing_status === "private" &&
     mine.status_origin === "explicit" && !dirty,
   );
+  // A new or edited report can be saved privately OR saved and shared.
+  // An existing, unchanged private report can be shared without saving again.
+  const canSaveAndShare = visibility === "ours" && draftStatus !== null &&
+    (canSave || canShare);
+
+  async function saveAndShare() {
+    if (busy || loading || !canSaveAndShare || draftStatus === null) return;
+
+    // Capture exactly the draft reviewed in the confirmation. The save RPC
+    // increments report_version by one on both inserts and updates.
+    // Never re-read a version after save and blindly share it: another device
+    // might have edited the report between the requests.
+    const reviewedStatus = draftStatus;
+    const reviewedMethod = currentMethod;
+    const needsSave = canSave;
+    const expectedVersion = (mine?.report_version ?? 0) + (needsSave ? 1 : 0);
+    let savedPrivately = false;
+
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const { data: before } = await supabase.auth.getUser();
+      if (before.user?.id !== userId) {
+        throw new Error("Your session changed. Reopen this moment.");
+      }
+
+      if (needsSave) {
+        await saveMyRepairState(eventId, reviewedStatus, reviewedMethod);
+        savedPrivately = true;
+      }
+
+      // Check again because these are two RPCs, not one atomic transaction.
+      const { data: afterSave } = await supabase.auth.getUser();
+      if (afterSave.user?.id !== userId) {
+        throw new Error("Your session changed. Reopen this moment.");
+      }
+
+      // Server refuses to share a stale version, legacy/unconfirmed report,
+      // a Mine event, or a report not owned by this authenticated caller.
+      await shareMyRepairState(eventId, expectedVersion);
+      await refresh();
+      setNotice("Your update was saved and shared with your partner.");
+    } catch (e) {
+      const detail = errorText(e);
+      await refresh();
+      setError(savedPrivately
+        ? `Your update was saved privately but was NOT shared. ${detail}`
+        : `Your update was NOT shared. ${detail}`);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function execute(action: () => Promise<unknown>, success: string) {
     if (busy || loading) return;
@@ -164,7 +217,7 @@ export function EventRepairSection({ eventId, userId, visibility }: Props) {
     <View style={styles.section}>
       <Text style={styles.title}>Your repair update</Text>
       <Text style={styles.helper}>
-        Your experience belongs to you. Saving is private; sharing with your partner is a separate choice.
+        Your experience belongs to you. Choose to save privately or explicitly share your update with your partner.
       </Text>
 
       {loading ? (
@@ -190,7 +243,7 @@ export function EventRepairSection({ eventId, userId, visibility }: Props) {
               {mine.status_origin !== "explicit" && (
                 <Text style={styles.legacyNote}>
                   This was imported from an earlier version. It may include an automatic default.
-                  Review and save it deliberately before sharing.
+                  Review your selection before saving or sharing. An imported Open value may be an automatic default.
                 </Text>
               )}
             </View>
@@ -247,9 +300,12 @@ export function EventRepairSection({ eventId, userId, visibility }: Props) {
 
           {mine?.sharing_status === "shared" && canSave && (
             <Text style={styles.helper}>
-              Saving a change will withdraw the currently shared update. Your partner may have already seen it.
+              Saving privately withdraws your previous shared update. Save &amp; share replaces it with your new choice.
+              Your partner may already have seen the earlier update.
             </Text>
           )}
+
+          {/* Two clear choices at the moment of saving; sharing is NEVER the default. */}
           {canSave && (
             <Pressable
               style={[styles.primaryButton, busy && styles.disabled]}
@@ -259,7 +315,7 @@ export function EventRepairSection({ eventId, userId, visibility }: Props) {
                 if (!draftStatus) return;
                 void execute(
                   () => saveMyRepairState(eventId, draftStatus, currentMethod),
-                  "Saved privately. You can share it separately when ready.",
+                  "Saved privately. It was not shared with your partner.",
                 );
               }}
             >
@@ -267,75 +323,89 @@ export function EventRepairSection({ eventId, userId, visibility }: Props) {
             </Pressable>
           )}
 
-          {visibility === "ours" && Boolean(mine) && (
+          {canSaveAndShare && (
+            !confirmShare ? (
+              <Pressable
+                style={[styles.outlineButton, busy && styles.disabled]}
+                accessibilityRole="button"
+                disabled={busy}
+                onPress={() => setConfirmShare(true)}
+              >
+                <Text style={styles.buttonLabel}>
+                  {canSave ? "Save & share with partner" : "Share saved update"}
+                </Text>
+              </Pressable>
+            ) : (
+              <View style={styles.confirm}>
+                <Text style={styles.helper}>
+                  Share “{statusLabel(draftStatus!)}”
+                  {currentMethod ? ` (what helped: ${methodLabel(currentMethod)})` : ""} with your partner?
+                  {mine?.status_origin !== "explicit"
+                    ? " This confirms that your selected state reflects how you feel now, not just an old imported default."
+                    : ""}
+                  {" "}Your partner will be able to see this report. It does not imply they agree or feel reconnected.
+                </Text>
+                <Pressable
+                  style={[styles.primaryButton, busy && styles.disabled]}
+                  accessibilityRole="button"
+                  disabled={busy}
+                  onPress={() => void saveAndShare()}
+                >
+                  <Text style={styles.primaryLabel}>
+                    {busy ? "Working…" : "Confirm save & share"}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={styles.outlineButton}
+                  accessibilityRole="button"
+                  disabled={busy}
+                  onPress={() => setConfirmShare(false)}
+                >
+                  <Text style={styles.buttonLabel}>Cancel</Text>
+                </Pressable>
+              </View>
+            )
+          )}
+
+          {visibility === "ours" && mine?.sharing_status === "shared" && (
             <View style={styles.shareSection}>
               <Text style={styles.subheading}>Sharing your update</Text>
-              {dirty && <Text style={styles.helper}>Save your changes privately before sharing.</Text>}
-              {mine?.status_origin !== "explicit" && (
-                <Text style={styles.helper}>Confirm the imported state with Save privately before sharing.</Text>
-              )}
-              {mine?.sharing_status === "shared" ? (
-                <>
-                  <Text style={styles.helper}>Your current saved update is visible to your partner.</Text>
-                  {!confirmWithdraw ? (
-                    <Pressable
-                      style={[styles.outlineButton, busy && styles.disabled]}
-                      accessibilityRole="button"
-                      disabled={busy}
-                      onPress={() => setConfirmWithdraw(true)}
-                    >
-                      <Text style={styles.buttonLabel}>Withdraw shared update</Text>
-                    </Pressable>
-                  ) : (
-                    <View style={styles.confirm}>
-                      <Text style={styles.helper}>
-                        Withdraw sharing? Your private record will remain, but your partner will no longer be able to fetch it.
-                      </Text>
-                      <Pressable
-                        style={[styles.primaryButton, busy && styles.disabled]}
-                        disabled={busy}
-                        accessibilityRole="button"
-                        onPress={() => void execute(
-                          () => withdrawMyRepairState(eventId),
-                          "Update withdrawn from sharing; your personal record remains.",
-                        )}
-                      >
-                        <Text style={styles.primaryLabel}>Confirm withdrawal</Text>
-                      </Pressable>
-                      <Pressable style={styles.outlineButton} disabled={busy} onPress={() => setConfirmWithdraw(false)}>
-                        <Text style={styles.buttonLabel}>Cancel</Text>
-                      </Pressable>
-                    </View>
-                  )}
-                </>
-              ) : canShare ? (
-                !confirmShare ? (
-                  <Pressable style={[styles.outlineButton, busy && styles.disabled]} disabled={busy} accessibilityRole="button" onPress={() => setConfirmShare(true)}>
-                    <Text style={styles.buttonLabel}>Share my saved update</Text>
+              <Text style={styles.helper}>Your current saved update is visible to your partner.</Text>
+              {!confirmWithdraw ? (
+                <Pressable
+                  style={[styles.outlineButton, busy && styles.disabled]}
+                  accessibilityRole="button"
+                  disabled={busy}
+                  onPress={() => setConfirmWithdraw(true)}
+                >
+                  <Text style={styles.buttonLabel}>Withdraw shared update</Text>
+                </Pressable>
+              ) : (
+                <View style={styles.confirm}>
+                  <Text style={styles.helper}>
+                    Withdraw sharing? Your private record will remain, but your partner will no longer be able to fetch it.
+                  </Text>
+                  <Pressable
+                    style={[styles.primaryButton, busy && styles.disabled]}
+                    accessibilityRole="button"
+                    disabled={busy}
+                    onPress={() => void execute(
+                      () => withdrawMyRepairState(eventId),
+                      "Update withdrawn from sharing; your personal record remains.",
+                    )}
+                  >
+                    <Text style={styles.primaryLabel}>Confirm withdrawal</Text>
                   </Pressable>
-                ) : (
-                  <View style={styles.confirm}>
-                    <Text style={styles.helper}>
-                      Share “{statusLabel(mine!.repair_status)}”{mine!.what_helped ? ` (what helped: ${methodLabel(mine!.what_helped)})` : ""} with your partner?
-                      This does not mean your partner agrees or feels repaired.
-                    </Text>
-                    <Pressable
-                      style={[styles.primaryButton, busy && styles.disabled]}
-                      disabled={busy}
-                      accessibilityRole="button"
-                      onPress={() => void execute(
-                        () => shareMyRepairState(eventId, mine!.report_version),
-                        "Your update was shared with your partner.",
-                      )}
-                    >
-                      <Text style={styles.primaryLabel}>Confirm sharing</Text>
-                    </Pressable>
-                    <Pressable style={styles.outlineButton} disabled={busy} onPress={() => setConfirmShare(false)}>
-                      <Text style={styles.buttonLabel}>Cancel</Text>
-                    </Pressable>
-                  </View>
-                )
-              ) : null}
+                  <Pressable
+                    style={styles.outlineButton}
+                    accessibilityRole="button"
+                    disabled={busy}
+                    onPress={() => setConfirmWithdraw(false)}
+                  >
+                    <Text style={styles.buttonLabel}>Cancel</Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
           )}
         </>
