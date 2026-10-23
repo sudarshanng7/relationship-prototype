@@ -51,3 +51,8 @@ example
 
 # Local Supabase SQL Editor snippets
 supabase/snippets/
+
+# Local product reference documents
+/docs/product/*.docx
+/docs/product/*.odt
+/docs/product/*.png

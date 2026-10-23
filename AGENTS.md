@@ -39,3 +39,49 @@ Docs: https://docs.expo.dev/eas/index.md
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+
+## Relationship OS — Project-specific instructions
+
+This repository implements Relationship OS, an early-stage
+product for couples already in a relationship.
+
+Product thesis:
+Help couples understand how their particular relationship works,
+rather than providing generic relationship advice.
+
+Core lifecycle:
+Meaningful moment -> Context -> Intent -> Conversation ->
+Two perspectives -> Repair -> Learning.
+
+Product guardrails:
+
+- Each partner owns their own experience.
+- Never treat one partner's report as joint truth.
+- Never infer mutual repair from one partner's status.
+- Private data must not leak through UI, RPCs, RLS,
+  summaries or analytics.
+- Mine and Ours have distinct visibility rules.
+- Sharing must be explicit, not automatic.
+- No relationship-health scores or conflict gamification.
+- Do not introduce diagnosis or therapist-like authority.
+- Preserve useful functionality when only one partner participates.
+
+Engineering rules:
+
+- Read the relevant product and engineering context before
+  making architectural or privacy-related changes.
+- Preserve existing RLS, RPC and trigger protections.
+- Never replace tested SQL authorization with UI-only checks.
+- Do not silently change approved product behavior.
+- Prefer small, reviewable changes.
+- Distinguish confirmed decisions from hypotheses.
+- Do not merge TestBranch wholesale.
+- Do not run destructive migrations, database resets or
+  hosted Supabase operations without explicit approval.
+- Do not push or merge to main without explicit approval.
+- Never commit environment secrets, tokens or private user data.
+- Run pnpm exec tsc --noEmit, pnpm exec expo lint,
+  and git diff --check after code changes.
+
+For ROS-03C changes, read the current engineering handoff
+and the relevant docs/events/ros-03c-review documents.
