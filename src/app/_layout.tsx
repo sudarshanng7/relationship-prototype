@@ -58,6 +58,12 @@ export default function RootLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="make-challenge-preview"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

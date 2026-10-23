@@ -1546,6 +1546,27 @@ export default function HomeScreen() {
                             </View>
                             <Text style={styles.settingsChevron}>›</Text>
                           </Pressable>
+
+                          <View style={styles.settingsDivider} />
+                          <Pressable
+                            style={styles.settingsActionRow}
+                            onPress={() => {
+                              setIsSettingsOpen(false);
+                              router.push("/make-challenge-preview" as any);
+                            }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Dev preview: Make Your Own Tiny Challenge"
+                          >
+                            <View style={styles.settingsRowTextGroup}>
+                              <Text style={styles.settingsRowHeading}>
+                                Dev preview: Make Your Own Tiny Challenge
+                              </Text>
+                              <Text style={styles.settingsRowSubtext}>
+                                Compose a small, kind invitation with optional timing and preview.
+                              </Text>
+                            </View>
+                            <Text style={styles.settingsChevron}>›</Text>
+                          </Pressable>
                         </View>
                       </View>
                     )}
