@@ -1,3 +1,4 @@
+import { EventRepairSection } from "@/components/EventRepairSection";
 import { supabase } from "@/lib/supabase";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -18,9 +19,6 @@ type RelationshipEvent = {
   intensity: number | null;
   shared_topic: string | null;
   visibility: "mine" | "ours";
-  status: "open" | "partially_repaired" | "reconnected" | null;
-  repair_method: string | null;
-  reconnected_at: string | null;
   created_at: string;
 };
 
@@ -30,41 +28,6 @@ type EventPerspective = {
   perspective_text: string;
   sharing_status: "submitted" | "suspended";
 };
-
-const repairMethods = [
-  {
-    value: "talking",
-    label: "Talking",
-  },
-  {
-    value: "space",
-    label: "Space",
-  },
-  {
-    value: "apology",
-    label: "Apology",
-  },
-  {
-    value: "affection",
-    label: "Affection",
-  },
-  {
-    value: "humour",
-    label: "Humour",
-  },
-  {
-    value: "practical_action",
-    label: "Practical action",
-  },
-  {
-    value: "time",
-    label: "Time",
-  },
-  {
-    value: "other",
-    label: "Other",
-  },
-];
 
 export default function EventDetailScreen() {
   const router = useRouter();
@@ -81,7 +44,6 @@ export default function EventDetailScreen() {
 
   const [statusMessage, setStatusMessage] = useState("Loading...");
 
-  const [showRepairMethods, setShowRepairMethods] = useState(false);
 
   const [privateNote, setPrivateNote] = useState<string | null>(null);
 
@@ -128,9 +90,6 @@ export default function EventDetailScreen() {
         intensity,
         shared_topic,
         visibility,
-        status,
-        repair_method,
-        reconnected_at,
         created_at
       `,
       )
@@ -188,69 +147,6 @@ export default function EventDetailScreen() {
       setStatusMessage("");
     }
     setPerspectivesLoading(false);
-  }
-
-  async function updateEventStatus(newStatus: "open" | "partially_repaired") {
-    if (!event) {
-      return;
-    }
-
-    setStatusMessage("Updating...");
-
-    /*
-     * If a previously reconnected event is changed back to
-     * Open or A little better, its previous repair information
-     * is no longer valid.
-     */
-    const { error } = await supabase
-      .from("relationship_events")
-      .update({
-        status: newStatus,
-        repair_method: null,
-        reconnected_at: null,
-      })
-      .eq("id", event.id);
-
-    if (error) {
-      console.error(error);
-      setStatusMessage(error.message);
-      return;
-    }
-
-    setShowRepairMethods(false);
-
-    await loadEvent();
-
-    setStatusMessage("Event updated");
-  }
-
-  async function markReconnected(repairMethod: string) {
-    if (!event) {
-      return;
-    }
-
-    setStatusMessage("Saving repair...");
-
-    const { error } = await supabase
-      .from("relationship_events")
-      .update({
-        status: "reconnected",
-        repair_method: repairMethod,
-        reconnected_at: new Date().toISOString(),
-      })
-      .eq("id", event.id);
-
-    if (error) {
-      console.error(error);
-      setStatusMessage(error.message);
-      return;
-    }
-
-    setShowRepairMethods(false);
-
-    await loadEvent();
-
-    setStatusMessage("Repair saved");
   }
 
   async function changeMomentVisibility(newVisibility: "mine" | "ours") {
@@ -437,40 +333,13 @@ export default function EventDetailScreen() {
         </View>
       )}
 
-      {event.event_type === "friction" && (
-        <View style={styles.section}>
-          <Text style={styles.label}>
-            {isCreator
-              ? "Your reported state"
-              : "The recorder's reported state"}
-          </Text>
-
-          <Text>{formatStatus(event.status)}</Text>
-        </View>
-      )}
-
-      {event.repair_method && (
-        <View style={styles.section}>
-          <Text style={styles.label}>
-            {isCreator
-              ? "What helped you"
-              : "What the recorder reported helped"}
-          </Text>
-
-          <Text>{formatCategory(event.repair_method)}</Text>
-        </View>
-      )}
-
-      {event.reconnected_at && (
-        <View style={styles.section}>
-          <Text style={styles.label}>
-            {isCreator
-              ? "You marked this reconnected"
-              : "The recorder marked this reconnected"}
-          </Text>
-
-          <Text>{formatDate(event.reconnected_at)}</Text>
-        </View>
+      {event.event_type === "friction" && currentUserId && (
+        <EventRepairSection
+          key={`${event.id}:${currentUserId}`}
+          eventId={event.id}
+          userId={currentUserId}
+          visibility={event.visibility}
+        />
       )}
 
       <View style={styles.section}>
@@ -478,59 +347,6 @@ export default function EventDetailScreen() {
 
         <Text>{isCreator ? "You" : "Your partner"}</Text>
       </View>
-
-      {event.event_type === "friction" && isCreator && (
-        <View style={styles.repairSection}>
-          <Text style={styles.sectionTitle}>How does this feel now?</Text>
-
-          <View style={styles.button}>
-            <Button
-              title="Still unresolved"
-              onPress={() => updateEventStatus("open")}
-            />
-          </View>
-
-          <View style={styles.button}>
-            <Button
-              title="A little better"
-              onPress={() => updateEventStatus("partially_repaired")}
-            />
-          </View>
-
-          <View style={styles.button}>
-            <Button
-              title="I feel reconnected"
-              onPress={() => setShowRepairMethods(true)}
-            />
-          </View>
-
-          {showRepairMethods && (
-            <View style={styles.repairMethods}>
-              <Text style={styles.sectionTitle}>What helped?</Text>
-
-              <Text style={styles.helperText}>
-                Choose the main thing that helped this time.
-              </Text>
-
-              {repairMethods.map((method) => (
-                <View key={method.value} style={styles.button}>
-                  <Button
-                    title={method.label}
-                    onPress={() => markReconnected(method.value)}
-                  />
-                </View>
-              ))}
-
-              <View style={styles.cancelButton}>
-                <Button
-                  title="Cancel"
-                  onPress={() => setShowRepairMethods(false)}
-                />
-              </View>
-            </View>
-          )}
-        </View>
-      )}
 
       {isCreator && (
         <View style={styles.section}>
@@ -757,22 +573,6 @@ function formatCategory(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function formatStatus(status: RelationshipEvent["status"]) {
-  switch (status) {
-    case "open":
-      return "Open";
-
-    case "partially_repaired":
-      return "A little better";
-
-    case "reconnected":
-      return "Reconnected";
-
-    default:
-      return "—";
-  }
-}
-
 function formatDate(value: string) {
   return new Date(value).toLocaleString();
 }
@@ -819,23 +619,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  repairSection: {
-    marginTop: 32,
-  },
-
-  repairMethods: {
-    marginTop: 24,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#ddd",
-  },
-
   button: {
     marginBottom: 10,
-  },
-
-  cancelButton: {
-    marginTop: 8,
   },
 
   sharingInput: {

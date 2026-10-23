@@ -19,7 +19,6 @@ type RelationshipEvent = {
   category: string;
   intensity: number | null;
   visibility: "mine" | "ours";
-  status: "open" | "partially_repaired" | "reconnected" | null;
   created_at: string;
 };
 
@@ -121,7 +120,7 @@ export default function EventsScreen() {
         const { data, error } = await supabase
           .from("relationship_events")
           .select(
-            "id, creator_id, event_type, category, intensity, visibility, status, created_at",
+            "id, creator_id, event_type, category, intensity, visibility, created_at",
           )
           .eq("couple_id", membership.couple_id)
           .order("created_at", { ascending: false });
@@ -375,8 +374,7 @@ export default function EventsScreen() {
 
                     {!isPositive && (
                       <Text style={styles.repairStatus}>
-                        {isCreator ? "Your update" : "Creator's update"}:{" "}
-                        {formatStatus(event.status)}
+                        Repair updates are shared by choice · Open for details
                       </Text>
                     )}
                   </Pressable>
@@ -395,19 +393,6 @@ function formatCategory(category: string) {
   return category
     .replaceAll("_", " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function formatStatus(status: RelationshipEvent["status"]) {
-  switch (status) {
-    case "open":
-      return "Still unresolved";
-    case "partially_repaired":
-      return "A little better";
-    case "reconnected":
-      return "Feels reconnected";
-    default:
-      return "No update";
-  }
 }
 
 function formatDate(iso: string) {
