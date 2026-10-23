@@ -439,7 +439,11 @@ export default function EventDetailScreen() {
 
       {event.event_type === "friction" && (
         <View style={styles.section}>
-          <Text style={styles.label}>Current state</Text>
+          <Text style={styles.label}>
+            {isCreator
+              ? "Your reported state"
+              : "The recorder's reported state"}
+          </Text>
 
           <Text>{formatStatus(event.status)}</Text>
         </View>
@@ -447,7 +451,11 @@ export default function EventDetailScreen() {
 
       {event.repair_method && (
         <View style={styles.section}>
-          <Text style={styles.label}>What helped</Text>
+          <Text style={styles.label}>
+            {isCreator
+              ? "What helped you"
+              : "What the recorder reported helped"}
+          </Text>
 
           <Text>{formatCategory(event.repair_method)}</Text>
         </View>
@@ -455,7 +463,11 @@ export default function EventDetailScreen() {
 
       {event.reconnected_at && (
         <View style={styles.section}>
-          <Text style={styles.label}>Marked reconnected</Text>
+          <Text style={styles.label}>
+            {isCreator
+              ? "You marked this reconnected"
+              : "The recorder marked this reconnected"}
+          </Text>
 
           <Text>{formatDate(event.reconnected_at)}</Text>
         </View>

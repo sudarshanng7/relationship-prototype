@@ -440,7 +440,7 @@ export default function ProfileScreen() {
 
             <View style={styles.section}>
               <Button
-                title="Test relationship events"
+                title="View moments"
                 onPress={() => router.push("/events")}
               />
             </View>

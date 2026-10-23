@@ -40,7 +40,6 @@ export default function LoginScreen() {
       setStatus("Please enter your email and password.");
       return;
     }
-    9;
     setStatus("Signing in...");
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -76,8 +75,6 @@ export default function LoginScreen() {
     }
 
     setStatus("Creating account...");
-
-    console.log("Signing up with:", cleanEmail);
 
     const { data, error } = await supabase.auth.signUp({
       email: cleanEmail,
