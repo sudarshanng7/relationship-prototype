@@ -1,4 +1,5 @@
 import { AppBottomNav } from "@/components/AppBottomNav";
+import type { EventRepairState } from "@/lib/repair-states";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -22,11 +23,19 @@ type RelationshipEvent = {
   created_at: string;
 };
 
+// Only the fields required for Moments cards are selected.
+// The database's repair RLS governs which records can reach this screen.
+type RepairCardState = Pick<
+  EventRepairState,
+  "event_id" | "user_id" | "repair_status" | "what_helped" | "sharing_status" | "status_origin"
+>;
+
 type MomentFilter = "all" | "mine" | "ours";
 
 type EventsState = {
   loading: boolean;
   events: RelationshipEvent[];
+  repairStates: RepairCardState[];
   userId: string | null;
   coupleId: string | null;
   error: string | null;
@@ -35,6 +44,7 @@ type EventsState = {
 const EMPTY_STATE: EventsState = {
   loading: true,
   events: [],
+  repairStates: [],
   userId: null,
   coupleId: null,
   error: null,
@@ -56,6 +66,7 @@ export default function EventsScreen() {
   const [filter, setFilter] = useState<MomentFilter>("all");
   const [state, setState] = useState<EventsState>(EMPTY_STATE);
   const [authEpoch, setAuthEpoch] = useState(0);
+  const [reloadEpoch, setReloadEpoch] = useState(0);
 
   // Switching between Our Space and Moments starts with the right filter.
   useEffect(() => {
@@ -108,6 +119,7 @@ export default function EventsScreen() {
           setState({
             loading: false,
             events: [],
+            repairStates: [],
             userId: user.id,
             coupleId: null,
             error: membershipError
@@ -117,6 +129,7 @@ export default function EventsScreen() {
           return;
         }
 
+        // Event RLS is the first boundary. Do not read legacy repair columns.
         const { data, error } = await supabase
           .from("relationship_events")
           .select(
@@ -126,31 +139,72 @@ export default function EventsScreen() {
           .order("created_at", { ascending: false });
         if (!active || thisRequest !== requestNumber) return;
 
-        // A pending request must never render after a different account logs in.
-        const { data: latestAuth } = await supabase.auth.getUser();
-        if (!active || thisRequest !== requestNumber) return;
-        if (latestAuth.user?.id !== user.id) {
-          removeRealtimeChannel();
-          void refresh();
-          return;
-        }
-
         if (error) {
           removeRealtimeChannel();
           setState({
             loading: false,
             events: [],
+            repairStates: [],
             userId: user.id,
             coupleId: membership.couple_id,
-            error:
-              "Could not load moments. Please return to this screen to retry.",
+            error: "Could not load moments. Please return to this screen to retry.",
           });
+          return;
+        }
+
+        // Client-side authorization is defense-in-depth; Supabase RLS is mandatory.
+        const events = ((data ?? []) as RelationshipEvent[]).filter(
+          (event) => event.visibility === "ours" || event.creator_id === user.id,
+        );
+        const frictionIds = events
+          .filter((event) => event.event_type === "friction")
+          .map((event) => event.id);
+
+        let repairStates: RepairCardState[] = [];
+        if (frictionIds.length > 0) {
+          // One batched read, not one query per card. RLS exposes own records
+          // and deliberately shared partner records only.
+          const { data: repairData, error: repairError } = await supabase
+            .from("event_repair_states")
+            .select(
+              "event_id, user_id, repair_status, what_helped, sharing_status, status_origin",
+            )
+            .in("event_id", frictionIds);
+          if (!active || thisRequest !== requestNumber) return;
+
+          // Fail closed: never display half-loaded or stale repair details.
+          if (repairError) {
+            removeRealtimeChannel();
+            setState({
+              loading: false,
+              events: [],
+              repairStates: [],
+              userId: user.id,
+              coupleId: membership.couple_id,
+              error: "Could not load repair updates. Please refresh to retry.",
+            });
+            return;
+          }
+          repairStates = (repairData ?? []) as RepairCardState[];
+        }
+
+        // Recheck the account AFTER both requests, before rendering anything.
+        const { data: latestAuth, error: latestAuthError } =
+          await supabase.auth.getUser();
+        if (!active || thisRequest !== requestNumber) return;
+        if (latestAuthError || latestAuth.user?.id !== user.id) {
+          requestNumber++;
+          removeRealtimeChannel();
+          setState({ ...EMPTY_STATE });
+          if (latestAuth.user) void refresh();
+          else router.replace("/");
           return;
         }
 
         setState({
           loading: false,
-          events: (data ?? []) as RelationshipEvent[],
+          events,
+          repairStates,
           userId: user.id,
           coupleId: membership.couple_id,
           error: null,
@@ -204,7 +258,7 @@ export default function EventsScreen() {
         authListener.subscription.unsubscribe();
         removeRealtimeChannel();
       };
-    }, [router, authEpoch]),
+    }, [router, authEpoch, reloadEpoch]),
   );
 
   // UI filtering is not a substitute for Supabase Row Level Security.
@@ -253,6 +307,19 @@ export default function EventsScreen() {
               <Text style={styles.recordButtonText}>+ Record</Text>
             </Pressable>
           </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Refresh moments and repair updates"
+            accessibilityState={{ disabled: state.loading }}
+            disabled={state.loading}
+            onPress={() => setReloadEpoch((value) => value + 1)}
+            style={styles.refreshLink}
+          >
+            <Text style={styles.refreshText}>
+              {state.loading ? "Refreshing…" : "↻ Refresh updates"}
+            </Text>
+          </Pressable>
 
           {!isOursSpace && !isMineSpace && (
             <View style={styles.filters}>
@@ -319,6 +386,19 @@ export default function EventsScreen() {
               {visibleEvents.map((event) => {
                 const isCreator = event.creator_id === state.userId;
                 const isPositive = event.event_type === "positive";
+                const relevantRepairs = state.repairStates.filter(
+                  (repair) => repair.event_id === event.id,
+                );
+                const myRepair = relevantRepairs.find(
+                  (repair) => repair.user_id === state.userId,
+                );
+                const partnerRepair = event.visibility === "ours"
+                  ? relevantRepairs.find(
+                      (repair) => repair.user_id !== state.userId &&
+                        repair.sharing_status === "shared" &&
+                        repair.status_origin === "explicit",
+                    )
+                  : undefined;
                 return (
                   <Pressable
                     key={event.id}
@@ -373,9 +453,25 @@ export default function EventsScreen() {
                     </View>
 
                     {!isPositive && (
-                      <Text style={styles.repairStatus}>
-                        Repair updates are shared by choice · Open for details
-                      </Text>
+                      <View style={styles.repairSummary}>
+                        <Text style={styles.repairStatus}>
+                          {myRepair
+                            ? myRepair.status_origin === "legacy_default_unconfirmed"
+                              ? "Your update: Imported Open (not confirmed)"
+                              : myRepair.status_origin !== "explicit"
+                                ? `Your earlier update: ${formatRepairStatus(myRepair.repair_status)} (review before sharing)`
+                                : `Your update: ${formatRepairStatus(myRepair.repair_status)} · ${myRepair.sharing_status === "shared" ? "Shared" : "Private"}`
+                            : "Your update: Not recorded yet"}
+                        </Text>
+                        {partnerRepair && (
+                          <Text style={styles.repairStatus}>
+                            {`Partner shared: ${formatRepairStatus(partnerRepair.repair_status)}`}
+                            {partnerRepair.what_helped
+                              ? ` · ${formatCategory(partnerRepair.what_helped)} helped`
+                              : ""}
+                          </Text>
+                        )}
+                      </View>
                     )}
                   </Pressable>
                 );
@@ -393,6 +489,17 @@ function formatCategory(category: string) {
   return category
     .replaceAll("_", " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatRepairStatus(status: RepairCardState["repair_status"]): string {
+  switch (status) {
+    case "open":
+      return "Still unresolved";
+    case "partially_repaired":
+      return "A little better";
+    case "reconnected":
+      return "I feel reconnected";
+  }
 }
 
 function formatDate(iso: string) {
@@ -514,5 +621,8 @@ const styles = StyleSheet.create({
   sharedTag: { backgroundColor: "#FBEFF7" },
   privacyTagText: { color: "#6E416D", fontSize: 12, fontWeight: "700" },
   eventType: { color: "#6D6072", fontSize: 12 },
+  refreshLink: { alignSelf: "flex-end", paddingVertical: 4 },
+  refreshText: { color: "#6E416D", fontSize: 13, fontWeight: "600" },
+  repairSummary: { gap: 4 },
   repairStatus: { color: "#6D6072", fontSize: 12, lineHeight: 18 },
 });
