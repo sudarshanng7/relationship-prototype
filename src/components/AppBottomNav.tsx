@@ -128,9 +128,11 @@ export function AppBottomNav({
     if (key === "settings") {
       if (onSettingsPress) {
         onSettingsPress();
-      } else {
-        onPreviewPress?.("Settings: Navigation tab preview only.");
       }
+      router.push({
+        pathname: "/home",
+        params: { settings: "true" },
+      });
       return;
     }
     if (key === "our_space") {

@@ -1,4 +1,5 @@
 import { useRepairPreview } from "@/context/RepairPreviewContext";
+import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -96,6 +97,21 @@ export default function EventDetailScreen() {
   const [statusMessage, setStatusMessage] = useState("Loading...");
   const [showRepairMethods, setShowRepairMethods] = useState(false);
   const [privateNote, setPrivateNote] = useState<string | null>(null);
+
+  const { displayName, partnerName, partnerRef } = useUserIdentity();
+
+  const isCurrentUserCreator = event
+    ? event.creator_id === currentUserId
+    : true;
+  const creatorLabel = isCurrentUserCreator
+    ? displayName || "You"
+    : partnerName || "Your partner";
+  const recipientLabel = isCurrentUserCreator
+    ? partnerName || "your partner"
+    : displayName || "You";
+  const recipientCapitalized = isCurrentUserCreator
+    ? partnerName || "Your partner"
+    : displayName || "You";
 
   const [showSharingControls, setShowSharingControls] = useState(false);
   const [sharedTopicInput, setSharedTopicInput] = useState("");
@@ -509,7 +525,7 @@ export default function EventDetailScreen() {
                   ]}
                 >
                   {event.visibility === "ours"
-                    ? "Shared with Sam"
+                    ? `Shared with ${partnerRef}`
                     : "Private to you"}
                 </Text>
               </View>
@@ -566,7 +582,9 @@ export default function EventDetailScreen() {
               <View style={styles.contentCardHeader}>
                 <View style={styles.sharedDot} />
                 <View style={styles.contentCardTitleGroup}>
-                  <Text style={styles.sharedCardHeading}>Shared with Sam</Text>
+                  <Text style={styles.sharedCardHeading}>
+                    Shared with {partnerRef}
+                  </Text>
                 </View>
               </View>
               <Text style={styles.noteBodyText}>{event.shared_topic}</Text>
@@ -582,7 +600,7 @@ export default function EventDetailScreen() {
               <Text style={styles.positiveOutcomeSubtitle}>
                 {event.visibility === "mine"
                   ? "Kept privately for you. You can revisit this whenever you need."
-                  : "Part of your shared story with Sam."}
+                  : `Part of your shared story with ${partnerRef}.`}
               </Text>
             </View>
           )}
@@ -611,7 +629,7 @@ export default function EventDetailScreen() {
                     ? "You both feel ready to leave this moment here."
                     : isInCare
                     ? "Tension can take time to ease. You can update this whenever things shift."
-                    : "You shared this moment with Sam. They can respond whenever it feels right."
+                    : `You shared this moment with ${partnerRef}. They can respond whenever it feels right.`
                   : event.status === "reconnected"
                   ? "Taking time to repair helps you stay close."
                   : event.visibility === "mine"
@@ -661,7 +679,7 @@ export default function EventDetailScreen() {
                 </Text>
               </View>
 
-              {/* Alex / Sam Perspective Switcher */}
+              {/* Perspective Switcher */}
               <View style={styles.perspectiveContainer}>
                 <Pressable
                   style={[
@@ -674,7 +692,7 @@ export default function EventDetailScreen() {
                   accessibilityState={{
                     selected: previewPerspective === "alex",
                   }}
-                  accessibilityLabel="View as Alex: Who shared the moment"
+                  accessibilityLabel={`View as ${creatorLabel}: Who shared the moment`}
                 >
                   <View style={styles.perspectiveHeaderRow}>
                     <Text style={styles.perspectiveEmoji}>✍️</Text>
@@ -685,7 +703,7 @@ export default function EventDetailScreen() {
                           styles.perspectiveTitleSelected,
                       ]}
                     >
-                      Viewing as Alex
+                      Viewing as {creatorLabel}
                     </Text>
                   </View>
                   <Text style={styles.perspectiveSubtext}>
@@ -704,7 +722,7 @@ export default function EventDetailScreen() {
                   accessibilityState={{
                     selected: previewPerspective === "sam",
                   }}
-                  accessibilityLabel="View as Sam: Partner responding"
+                  accessibilityLabel={`View as ${recipientCapitalized}: Partner responding`}
                 >
                   <View style={styles.perspectiveHeaderRow}>
                     <Text style={styles.perspectiveEmoji}>🌿</Text>
@@ -715,7 +733,7 @@ export default function EventDetailScreen() {
                           styles.perspectiveTitleSelected,
                       ]}
                     >
-                      Viewing as Sam
+                      Viewing as {recipientCapitalized}
                     </Text>
                   </View>
                   <Text style={styles.perspectiveSubtext}>
@@ -730,16 +748,18 @@ export default function EventDetailScreen() {
                   {previewPerspective === "alex" ? (
                     <View style={styles.openAlexBlock}>
                       <Text style={styles.journeyHeading}>
-                        Waiting quietly for Sam
+                        Waiting quietly for {recipientLabel}
                       </Text>
                       <Text style={styles.journeyText}>
-                        You shared this moment with Sam. They can respond whenever
+                        You shared this moment with {recipientLabel}. They can respond whenever
                         it feels right.
                       </Text>
                     </View>
                   ) : (
                     <View style={styles.openSamBlock}>
-                      <Text style={styles.journeyHeading}>Sam’s Response</Text>
+                      <Text style={styles.journeyHeading}>
+                        {recipientCapitalized}’s Response
+                      </Text>
                       <Text style={styles.journeyText}>
                         Respond in your own rhythm. There is no deadline, score,
                         or requirement to fix anything right away.
@@ -828,11 +848,11 @@ export default function EventDetailScreen() {
                           `🌿 You suggested: ${suggestedStep || "A quiet chat"}`
                         )
                       ) : partnerResponse === "heard" ? (
-                        "🤍 Sam saw this: 'I hear you'"
+                        `🤍 ${recipientCapitalized} saw this: 'I hear you'`
                       ) : partnerResponse === "need_time" ? (
-                        "⏳ Sam needs a little time right now"
+                        `⏳ ${recipientCapitalized} needs a little time right now`
                       ) : (
-                        `🌿 Sam suggested: ${suggestedStep || "A quiet chat"}`
+                        `🌿 ${recipientCapitalized} suggested: ${suggestedStep || "A quiet chat"}`
                       )}
                     </Text>
 
@@ -840,14 +860,14 @@ export default function EventDetailScreen() {
                       {partnerResponse === "need_time"
                         ? previewPerspective === "sam"
                           ? "Taking quiet space to process emotions gently. Nothing needs to happen immediately."
-                          : "Sam needs a little quiet space right now. Giving each other time protects emotional safety."
+                          : `${recipientCapitalized} needs a little quiet space right now. Giving each other time protects emotional safety.`
                         : partnerResponse === "heard"
                         ? previewPerspective === "sam"
-                          ? "Alex knows you received this with care and no defense. You can talk when ready."
+                          ? `${creatorLabel} knows you received this with care and no defense. You can talk when ready.`
                           : "Your shared thoughts were received with openness. Connection is softening."
                         : previewPerspective === "sam"
                         ? "Offering a kind, low-pressure gesture to help you both reconnect."
-                        : "Sam offered a gentle next step whenever you both feel ready."}
+                        : `${recipientCapitalized} offered a gentle next step whenever you both feel ready.`}
                     </Text>
 
                     {previewPerspective === "sam" && (
@@ -991,8 +1011,8 @@ export default function EventDetailScreen() {
                       <View style={styles.oneSidedNoticeCard}>
                         <Text style={styles.oneSidedNoticeHeading}>
                           {previewPerspective === "alex"
-                            ? "Sam feels settled."
-                            : "Alex feels settled."}
+                            ? `${recipientCapitalized} feels settled.`
+                            : `${creatorLabel} feels settled.`}
                         </Text>
                         <Text style={styles.oneSidedNoticeText}>
                           You do not have to match that. This moment can stay
@@ -1097,13 +1117,13 @@ export default function EventDetailScreen() {
                         </Text>
                       </Pressable>
 
-                      {/* Creator-only Takeaway Prompt for Alex */}
+                      {/* Creator-only Takeaway Prompt */}
                       {previewPerspective === "alex" &&
                         !isTakeawaySaved &&
                         !takeawayDismissed && (
                           <View style={styles.takeawayPromptCard}>
                             <Text style={styles.takeawayPromptHeading}>
-                              Leave a small note for Sam?
+                              Leave a small note for {recipientLabel}?
                             </Text>
                             <Text style={styles.takeawayPromptText}>
                               Share one gentle thought about what helped this
@@ -1202,12 +1222,12 @@ export default function EventDetailScreen() {
                             </View>
 
                             <Text style={styles.takeawayPrivacyReassuranceText}>
-                              Sam will see only this note. Private reflections stay private.
+                              {recipientCapitalized} will see only this note. Private reflections stay private.
                             </Text>
                           </View>
                         )}
 
-                      {/* After Alex shares: Alex's perspective view */}
+                      {/* After creator shares: creator's perspective view */}
                       {isTakeawaySaved &&
                         authoredTakeawayText.length > 0 &&
                         previewPerspective === "alex" && (
@@ -1216,7 +1236,7 @@ export default function EventDetailScreen() {
                               SHARED IN THIS PREVIEW
                             </Text>
                             <Text style={styles.sharedTakeawaySupporting}>
-                              In this preview, Sam would see this small takeaway in the moment.
+                              In this preview, {recipientLabel} would see this small takeaway in the moment.
                             </Text>
                             {takeawayTag && takeawayNote.trim().length > 0 && (
                               <View style={styles.sharedTakeawayPill}>
@@ -1234,13 +1254,13 @@ export default function EventDetailScreen() {
                           </View>
                         )}
 
-                      {/* After Alex shares: Sam's perspective read-only card */}
+                      {/* After creator shares: recipient's perspective read-only card */}
                       {isTakeawaySaved &&
                         authoredTakeawayText.length > 0 &&
                         previewPerspective === "sam" && (
                           <View style={styles.sharedTakeawayCard}>
                             <Text style={styles.sharedTakeawayOverline}>
-                              A SMALL TAKEAWAY FROM ALEX
+                              A SMALL TAKEAWAY FROM {creatorLabel.toUpperCase()}
                             </Text>
                             {takeawayTag && takeawayNote.trim().length > 0 && (
                               <View style={styles.sharedTakeawayPill}>
@@ -1253,7 +1273,7 @@ export default function EventDetailScreen() {
                               "{authoredTakeawayText}"
                             </Text>
                             <Text style={styles.sharedTakeawaySupporting}>
-                              In this preview, Alex shared this as a gentle closing note.
+                              In this preview, {creatorLabel} shared this as a gentle closing note.
                             </Text>
                             <Text style={styles.takeawayPreviewNoticeText}>
                               Preview only — this has not been saved or shared outside this browser.
@@ -1434,8 +1454,8 @@ export default function EventDetailScreen() {
               <View style={styles.sharingCard}>
                 <Text style={styles.sharingExplanationText}>
                   {event.visibility === "mine"
-                    ? "This is private to you. Sam will only see the version you choose to share."
-                    : "Sam can see the shared wording below. Your private reflection remains private."}
+                    ? `This is private to you. ${partnerRef} will only see the version you choose to share.`
+                    : `${partnerRef} can see the shared wording below. Your private reflection remains private.`}
                 </Text>
 
                 {!showSharingControls ? (
@@ -1449,13 +1469,13 @@ export default function EventDetailScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={
                       event.visibility === "mine"
-                        ? "Choose what to share with Sam"
+                        ? `Choose what to share with ${partnerRef}`
                         : "Change sharing"
                     }
                   >
                     <Text style={styles.secondaryActionText}>
                       {event.visibility === "mine"
-                        ? "Choose what to share with Sam"
+                        ? `Choose what to share with ${partnerRef}`
                         : "Change sharing"}
                     </Text>
                   </Pressable>
@@ -1464,13 +1484,13 @@ export default function EventDetailScreen() {
                     {event.visibility === "mine" ? (
                       <>
                         <Text style={styles.sharingFieldLabel}>
-                          What would you like Sam to know?
+                          What would you like {partnerRef} to know?
                         </Text>
                         <TextInput
                           style={styles.sharingInput}
                           value={sharedTopicInput}
                           onChangeText={setSharedTopicInput}
-                          placeholder="Enter a gentle topic Sam can see"
+                          placeholder={`Enter a gentle topic ${partnerRef} can see`}
                           placeholderTextColor="#9A8D9D"
                           multiline
                           editable={!changingVisibility}
@@ -1500,7 +1520,7 @@ export default function EventDetailScreen() {
                       <>
                         <View style={styles.warningNoticeBox}>
                           <Text style={styles.warningNoticeText}>
-                            Moving this to Mine removes Sam’s future access.
+                            Moving this to Mine removes {partnerName ? `${partnerName}’s` : "your partner’s"} future access.
                             Anything already seen cannot be taken back.
                           </Text>
                         </View>

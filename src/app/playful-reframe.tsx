@@ -1,3 +1,4 @@
+import { useUserIdentity } from "@/context/UserIdentityContext";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -202,7 +203,7 @@ const PARTICIPANT_OPTIONS: {
   icon: string;
 }[] = [
   { key: "me", label: "For me", icon: "🙋" },
-  { key: "sam", label: "Invite Sam", icon: "💌" },
+  { key: "sam", label: "Invite partner", icon: "💌" },
   { key: "both", label: "Both of us", icon: "🤝" },
 ];
 
@@ -221,6 +222,17 @@ const TIMEFRAME_OPTIONS: TimeframeKey[] = [
 
 export default function PlayfulReframeScreen() {
   const router = useRouter();
+  const { partnerName, partnerRef } = useUserIdentity();
+
+  const participantOptions = [
+    { key: "me" as ParticipantKey, label: "For me", icon: "🙋" },
+    {
+      key: "sam" as ParticipantKey,
+      label: partnerName ? `Invite ${partnerName}` : "Invite partner",
+      icon: "💌",
+    },
+    { key: "both" as ParticipantKey, label: "Both of us", icon: "🤝" },
+  ];
 
   const [selectedSampleKey, setSelectedSampleKey] =
     useState<SampleKey>("coffee_mug");
@@ -334,7 +346,7 @@ export default function PlayfulReframeScreen() {
     participantChoice === "me"
       ? "Your small reset"
       : participantChoice === "sam"
-      ? "What Sam would see"
+      ? `What ${partnerName || "your partner"} would see`
       : "Your shared little reset";
 
   return (
@@ -728,7 +740,7 @@ export default function PlayfulReframeScreen() {
                     </Text>
 
                     <View style={styles.participantsRow}>
-                      {PARTICIPANT_OPTIONS.map((item) => {
+                      {participantOptions.map((item) => {
                         const isSelected = participantChoice === item.key;
                         return (
                           <Pressable
@@ -1083,7 +1095,7 @@ export default function PlayfulReframeScreen() {
                       {/* Reassurance text */}
                       <Text style={styles.finalReassuranceText}>
                         {participantChoice === "sam"
-                          ? "Sam could accept, suggest a small change, or simply choose not today."
+                          ? `${partnerName || "Your partner"} could accept, suggest a small change, or simply choose not today.`
                           : participantChoice === "both"
                           ? "Both of you would need to choose this together."
                           : "A quiet personal commitment, just for your own peace of mind."}

@@ -1,3 +1,4 @@
+import { useUserIdentity } from "@/context/UserIdentityContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -24,9 +25,9 @@ interface ParticipantOption {
 const PARTICIPANT_OPTIONS: ParticipantOption[] = [
   {
     key: "sam",
-    label: "Invite Sam",
+    label: "Invite partner",
     icon: "💌",
-    description: "A gentle, optional invitation for Sam",
+    description: "A gentle, optional invitation for your partner",
   },
   {
     key: "both",
@@ -81,6 +82,30 @@ const REWARD_OPTIONS = [
 
 export default function MakeChallengePreviewScreen() {
   const router = useRouter();
+  const { partnerName, partnerRef } = useUserIdentity();
+
+  const participantOptions: ParticipantOption[] = [
+    {
+      key: "sam",
+      label: partnerName ? `Invite ${partnerName}` : "Invite partner",
+      icon: "💌",
+      description: partnerName
+        ? `A gentle, optional invitation for ${partnerName}`
+        : "A gentle, optional invitation for your partner",
+    },
+    {
+      key: "both",
+      label: "Both of us",
+      icon: "🤝",
+      description: "Something to choose together",
+    },
+    {
+      key: "me",
+      label: "For me",
+      icon: "🙋",
+      description: "A personal reset for your own peace of mind",
+    },
+  ];
   const params = useLocalSearchParams<{
     idea?: string;
     participant?: string;
@@ -343,7 +368,7 @@ export default function MakeChallengePreviewScreen() {
               </Text>
 
               <View style={styles.participantsColumn}>
-                {PARTICIPANT_OPTIONS.map((item) => {
+                {participantOptions.map((item) => {
                   const isSelected = participantChoice === item.key;
                   return (
                     <Pressable
@@ -488,7 +513,7 @@ export default function MakeChallengePreviewScreen() {
                       {participantChoice === "me"
                         ? "A personal reset"
                         : participantChoice === "sam"
-                        ? "A tiny invitation for Sam"
+                        ? `A tiny invitation for ${partnerRef}`
                         : "A shared invitation"}
                     </Text>
                     <Text style={styles.previewChallengeTitle}>
@@ -516,7 +541,7 @@ export default function MakeChallengePreviewScreen() {
                       {participantChoice === "me"
                         ? "Just me"
                         : participantChoice === "sam"
-                        ? "Sam"
+                        ? partnerName || "Your partner"
                         : "Both of us"}
                     </Text>
                   </View>
@@ -555,7 +580,7 @@ export default function MakeChallengePreviewScreen() {
                 <View style={styles.reassuranceNoteBox}>
                   <Text style={styles.reassuranceNoteText}>
                     {participantChoice === "sam"
-                      ? "Sam can choose to join, suggest a tweak, or quietly let it pass. No countdowns, streaks, or notifications are created."
+                      ? `${partnerName || "Your partner"} can choose to join, suggest a tweak, or quietly let it pass. No countdowns, streaks, or notifications are created.`
                       : participantChoice === "both"
                       ? "Both of you choose this together. Shared moments feel lightest when both feel free to decline easily."
                       : "A quiet personal commitment, just for your own peace of mind."}

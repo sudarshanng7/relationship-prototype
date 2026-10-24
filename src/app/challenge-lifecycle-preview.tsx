@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useUserIdentity } from "@/context/UserIdentityContext";
 
 type Perspective = "sam" | "alex";
 
@@ -63,6 +64,10 @@ function getDisplayIcon(title: string): string {
 
 export default function ChallengeLifecyclePreviewScreen() {
   const router = useRouter();
+  const { displayName, partnerName, partnerRef } = useUserIdentity();
+  const creatorLabel = displayName || "You";
+  const recipientCapitalized = partnerName || "Your partner";
+  const recipientLabel = partnerRef;
   const params = useLocalSearchParams<{
     idea?: string;
     participant?: string;
@@ -180,7 +185,7 @@ export default function ChallengeLifecyclePreviewScreen() {
             </View>
             <Text style={styles.devNoticeText}>
               Everything on this screen is a local example. Nothing is sent,
-              saved, or shown to Sam.
+              saved, or shown to {recipientLabel}.
             </Text>
           </View>
 
@@ -194,7 +199,7 @@ export default function ChallengeLifecyclePreviewScreen() {
               onPress={() => setPerspective("sam")}
               accessibilityRole="button"
               accessibilityState={{ selected: perspective === "sam" }}
-              accessibilityLabel="View as Sam: Receiving the invitation"
+              accessibilityLabel={`View as ${recipientCapitalized}: Receiving the invitation`}
             >
               <View style={styles.perspectiveHeaderRow}>
                 <Text style={styles.perspectiveEmoji}>💌</Text>
@@ -204,7 +209,7 @@ export default function ChallengeLifecyclePreviewScreen() {
                     perspective === "sam" && styles.perspectiveTitleSelected,
                   ]}
                 >
-                  Viewing as Sam
+                  Viewing as {recipientCapitalized}
                 </Text>
               </View>
               <Text style={styles.perspectiveSubtext}>
@@ -220,7 +225,7 @@ export default function ChallengeLifecyclePreviewScreen() {
               onPress={() => setPerspective("alex")}
               accessibilityRole="button"
               accessibilityState={{ selected: perspective === "alex" }}
-              accessibilityLabel="View as Alex: Seeing the outcome"
+              accessibilityLabel={`View as ${creatorLabel}: Seeing the outcome`}
             >
               <View style={styles.perspectiveHeaderRow}>
                 <Text style={styles.perspectiveEmoji}>🙋</Text>
@@ -230,7 +235,7 @@ export default function ChallengeLifecyclePreviewScreen() {
                     perspective === "alex" && styles.perspectiveTitleSelected,
                   ]}
                 >
-                  Viewing as Alex
+                  Viewing as {creatorLabel}
                 </Text>
               </View>
               <Text style={styles.perspectiveSubtext}>Seeing the outcome</Text>
@@ -245,7 +250,7 @@ export default function ChallengeLifecyclePreviewScreen() {
               </View>
               <View style={styles.invitationHeaderTextGroup}>
                 <Text style={styles.invitationOverline}>
-                  A tiny invitation from Alex
+                  A tiny invitation from {creatorLabel}
                 </Text>
                 <Text style={styles.invitationTitle}>{displayTitle}</Text>
                 <Text style={styles.invitationContext}>{displayContext}</Text>
@@ -256,7 +261,7 @@ export default function ChallengeLifecyclePreviewScreen() {
               <View style={styles.lighterThoughtCard}>
                 <View style={styles.lighterThoughtHeaderRow}>
                   <Text style={styles.lighterThoughtOverline}>
-                    A LIGHTER THOUGHT FROM ALEX
+                    A LIGHTER THOUGHT FROM {creatorLabel.toUpperCase()}
                   </Text>
                   {displayReframeTone.length > 0 && (
                     <View style={styles.lighterThoughtTonePill}>
@@ -364,11 +369,15 @@ export default function ChallengeLifecyclePreviewScreen() {
                   }
                   accessibilityRole="button"
                   accessibilityLabel={
-                    perspective === "sam" ? "View as Alex" : "View as Sam"
+                    perspective === "sam"
+                      ? `View as ${creatorLabel}`
+                      : `View as ${recipientCapitalized}`
                   }
                 >
                   <Text style={styles.secondaryButtonText}>
-                    {perspective === "sam" ? "View as Alex" : "View as Sam"}
+                    {perspective === "sam"
+                      ? `View as ${creatorLabel}`
+                      : `View as ${recipientCapitalized}`}
                   </Text>
                 </Pressable>
 
@@ -457,8 +466,8 @@ export default function ChallengeLifecyclePreviewScreen() {
 
                   <View style={styles.truthfulNoteBox}>
                     <Text style={styles.truthfulNoteText}>
-                      In this preview, Alex would see that you are open to the
-                      idea.
+                      In this preview, {creatorLabel} would see that you are open
+                      to the idea.
                     </Text>
                   </View>
 
@@ -478,10 +487,10 @@ export default function ChallengeLifecyclePreviewScreen() {
                       style={styles.secondaryButton}
                       onPress={() => setPerspective("alex")}
                       accessibilityRole="button"
-                      accessibilityLabel="View as Alex"
+                      accessibilityLabel={`View as ${creatorLabel}`}
                     >
                       <Text style={styles.secondaryButtonText}>
-                        View as Alex
+                        View as {creatorLabel}
                       </Text>
                     </Pressable>
 
@@ -582,8 +591,8 @@ export default function ChallengeLifecyclePreviewScreen() {
                   </View>
 
                   <Text style={styles.outcomeBodyText}>
-                    In this preview, Alex would see your suggestion and could
-                    take it from there.
+                    In this preview, {creatorLabel} would see your suggestion
+                    and could take it from there.
                   </Text>
 
                   <View style={styles.selectedTweakBox}>
@@ -606,10 +615,10 @@ export default function ChallengeLifecyclePreviewScreen() {
                       style={styles.primaryWideButton}
                       onPress={() => setPerspective("alex")}
                       accessibilityRole="button"
-                      accessibilityLabel="View as Alex"
+                      accessibilityLabel={`View as ${creatorLabel}`}
                     >
                       <Text style={styles.primaryWideButtonText}>
-                        View as Alex
+                        View as {creatorLabel}
                       </Text>
                     </Pressable>
 
@@ -643,8 +652,8 @@ export default function ChallengeLifecyclePreviewScreen() {
 
                   <View style={styles.truthfulNoteBox}>
                     <Text style={styles.truthfulNoteText}>
-                      In this preview, Alex sees this as a gentle pass. Nothing
-                      has been sent or saved.
+                      In this preview, {creatorLabel} sees this as a gentle
+                      pass. Nothing has been sent or saved.
                     </Text>
                   </View>
 
@@ -653,10 +662,10 @@ export default function ChallengeLifecyclePreviewScreen() {
                       style={styles.primaryWideButton}
                       onPress={() => setPerspective("alex")}
                       accessibilityRole="button"
-                      accessibilityLabel="View as Alex"
+                      accessibilityLabel={`View as ${creatorLabel}`}
                     >
                       <Text style={styles.primaryWideButtonText}>
-                        View as Alex
+                        View as {creatorLabel}
                       </Text>
                     </Pressable>
 
@@ -690,8 +699,8 @@ export default function ChallengeLifecyclePreviewScreen() {
                   </View>
 
                   <Text style={styles.outcomeBodyText}>
-                    Sam can respond whenever it feels right, or simply let it
-                    pass.
+                    {recipientCapitalized} can respond whenever it feels right,
+                    or simply let it pass.
                   </Text>
 
                   <View style={styles.truthfulNoteBox}>
@@ -716,10 +725,10 @@ export default function ChallengeLifecyclePreviewScreen() {
                       style={styles.secondaryButton}
                       onPress={() => setPerspective("sam")}
                       accessibilityRole="button"
-                      accessibilityLabel="View as Sam"
+                      accessibilityLabel={`View as ${recipientCapitalized}`}
                     >
                       <Text style={styles.secondaryButtonText}>
-                        View as Sam
+                        View as {recipientCapitalized}
                       </Text>
                     </Pressable>
                   </View>
@@ -771,7 +780,9 @@ export default function ChallengeLifecyclePreviewScreen() {
                     <View style={styles.outcomeIconBubble}>
                       <Text style={styles.outcomeIconEmoji}>🤝</Text>
                     </View>
-                    <Text style={styles.outcomeHeading}>Sam is in.</Text>
+                    <Text style={styles.outcomeHeading}>
+                      {recipientCapitalized} is in.
+                    </Text>
                   </View>
 
                   <Text style={styles.outcomeBodyText}>
@@ -820,7 +831,7 @@ export default function ChallengeLifecyclePreviewScreen() {
                       <Text style={styles.outcomeIconEmoji}>💬</Text>
                     </View>
                     <Text style={styles.outcomeHeading}>
-                      Sam suggested a gentler version.
+                      {recipientCapitalized} suggested a gentler version.
                     </Text>
                   </View>
 
@@ -858,7 +869,7 @@ export default function ChallengeLifecyclePreviewScreen() {
                       <Text style={styles.outcomeIconEmoji}>🌱</Text>
                     </View>
                     <Text style={styles.outcomeHeading}>
-                      Sam chose not today.
+                      {recipientCapitalized} chose not today.
                     </Text>
                   </View>
 

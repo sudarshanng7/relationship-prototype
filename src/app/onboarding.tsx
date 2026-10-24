@@ -1,16 +1,18 @@
+import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Button,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-
-import { supabase } from "@/lib/supabase";
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -50,7 +52,7 @@ export default function OnboardingScreen() {
       }
 
       if (data.onboarding_completed) {
-        router.replace("/profile");
+        router.replace("/home");
         return;
       }
 
@@ -98,7 +100,7 @@ export default function OnboardingScreen() {
         return;
       }
 
-      router.replace("/profile");
+      router.replace("/home");
     } catch (error) {
       console.error("Onboarding failed:", error);
       setErrorMessage("Could not save your setup.");
@@ -109,172 +111,366 @@ export default function OnboardingScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.helpText}>Loading your setup...</Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#6E416D" />
+          <Text style={styles.loadingText}>Loading your setup...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.step}>GETTING STARTED</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.column}>
+            {/* Header / Brand Area */}
+            <View style={styles.headerContainer}>
+              <View style={styles.logoRow}>
+                <Text style={styles.logoHeart}>♡</Text>
+                <Text style={styles.brandTitle}>Couply</Text>
+              </View>
+              <Text style={styles.mainHeading}>Welcome to your space</Text>
+              <Text style={styles.supportingText}>
+                A calm, private place to notice, reflect, and reconnect.
+              </Text>
+            </View>
 
-      <Text style={styles.title}>Welcome to Relationship OS</Text>
+            {/* Name Card */}
+            <View style={styles.card}>
+              <View style={styles.cardHeaderGroup}>
+                <Text style={styles.cardHeading}>What should we call you?</Text>
+                <Text style={styles.cardDescription}>
+                  Use your first name or a nickname. You can change this anytime.
+                </Text>
+              </View>
 
-      <Text style={styles.description}>
-        We're not here to tell you how relationships work. We're here to help
-        you understand how yours works.
-      </Text>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>Preferred name (optional)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Your preferred name"
+                  placeholderTextColor="#8E7E94"
+                  value={displayName}
+                  onChangeText={setDisplayName}
+                  maxLength={60}
+                  autoCapitalize="words"
+                  returnKeyType="done"
+                  editable={!saving}
+                  accessibilityLabel="Preferred name (optional)"
+                  onSubmitEditing={completeOnboarding}
+                />
+              </View>
+            </View>
 
-      <View style={styles.section}>
-        <Text style={styles.heading}>What should we call you?</Text>
+            {/* Privacy Card */}
+            <View style={styles.card}>
+              <View style={styles.cardHeaderGroup}>
+                <Text style={styles.cardHeading}>
+                  Two spaces, designed for trust
+                </Text>
+              </View>
 
-        <Text style={styles.helpText}>
-          Use the name or nickname you prefer. You can change it later.
-        </Text>
+              <View style={styles.spacesBlock}>
+                {/* Mine Space */}
+                <View style={styles.spaceCardMine}>
+                  <Text style={styles.spaceBadgeMine}>Mine</Text>
+                  <Text style={styles.spaceText}>
+                    Only you can see this. A quiet place for private thoughts and
+                    personal reflections.
+                  </Text>
+                </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Your preferred name"
-          value={displayName}
-          onChangeText={setDisplayName}
-          maxLength={60}
-          autoCapitalize="words"
-          editable={!saving}
-        />
+                {/* Ours Space */}
+                <View style={styles.spaceCardOurs}>
+                  <Text style={styles.spaceBadgeOurs}>Ours</Text>
+                  <Text style={styles.spaceText}>
+                    Shared with your partner. Moments only become shared when you
+                    intentionally choose to share them.
+                  </Text>
+                </View>
+              </View>
 
-        <Text style={styles.optional}>Optional</Text>
-      </View>
+              <View style={styles.reassuranceRow}>
+                <Text style={styles.reassuranceIcon}>🔒</Text>
+                <Text style={styles.reassuranceText}>
+                  Nothing is shared automatically. You are always in control.
+                </Text>
+              </View>
+            </View>
 
-      <View style={styles.section}>
-        <Text style={styles.heading}>
-          A space for you, and a space for both of you
-        </Text>
+            {/* Error Message Card if any */}
+            {errorMessage !== "" && (
+              <View
+                style={styles.errorCard}
+                accessibilityLiveRegion="polite"
+                accessibilityRole="alert"
+              >
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            )}
 
-        <View style={styles.privacyCard}>
-          <Text style={styles.privacyTitle}>Mine</Text>
-          <Text style={styles.helpText}>
-            A private moment stays visible only to you. It won't be shared with
-            your partner.
-          </Text>
-        </View>
-
-        <View style={styles.privacyCard}>
-          <Text style={styles.privacyTitle}>Ours</Text>
-          <Text style={styles.helpText}>
-            A shared moment can be seen by your connected partner.
-          </Text>
-        </View>
-
-        <Text style={styles.helpText}>
-          You'll choose who can see a moment before saving it.
-        </Text>
-      </View>
-
-      <View style={styles.buttonSection}>
-        <Button
-          title={saving ? "Saving..." : "Continue"}
-          onPress={completeOnboarding}
-          disabled={saving}
-        />
-      </View>
-
-      <Text style={styles.optional}>
-        You can continue without adding a name.
-      </Text>
-
-      {errorMessage !== "" && <Text style={styles.error}>{errorMessage}</Text>}
-    </ScrollView>
+            {/* Continue Action */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.primaryButton,
+                pressed && styles.primaryButtonPressed,
+                saving && styles.primaryButtonDisabled,
+              ]}
+              onPress={completeOnboarding}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: saving, busy: saving }}
+              accessibilityLabel={
+                saving ? "Setting up your space" : "Continue to your space"
+              }
+            >
+              {saving ? (
+                <View style={styles.buttonLoadingRow}>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={styles.primaryButtonText}>
+                    Setting up your space...
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.primaryButtonText}>
+                  Continue to your space
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FBF7FC",
+  },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollContent: {
     flexGrow: 1,
-    padding: 24,
-    paddingBottom: 48,
+    justifyContent: "center",
+  },
+  column: {
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 40,
+    gap: 18,
   },
 
-  center: {
+  /* Center / Loading State */
+  centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14.5,
+    color: "#6D6072",
+    fontWeight: "500",
   },
 
-  step: {
-    fontSize: 12,
+  /* Brand / Header */
+  headerContainer: {
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+  },
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  logoHeart: {
+    fontSize: 24,
+    color: "#6E416D",
+    lineHeight: 28,
+  },
+  brandTitle: {
+    fontSize: 26,
     fontWeight: "700",
-    color: "#537F76",
-    marginBottom: 12,
+    color: "#3D3040",
+    letterSpacing: -0.4,
   },
-
-  title: {
-    fontSize: 29,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-
-  description: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-
-  section: {
-    marginTop: 32,
-  },
-
-  heading: {
-    fontSize: 19,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-
-  helpText: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: "#666",
-    marginBottom: 12,
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: "#bbb",
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
-    marginTop: 8,
-  },
-
-  optional: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 10,
+  mainHeading: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#3D3040",
+    letterSpacing: -0.3,
     textAlign: "center",
   },
+  supportingText: {
+    fontSize: 14.5,
+    color: "#6D6072",
+    textAlign: "center",
+    lineHeight: 21,
+    paddingHorizontal: 10,
+  },
 
-  privacyCard: {
+  /* White Card */
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 12,
+    borderColor: "#E8DCE9",
+    padding: 22,
+    gap: 16,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardHeaderGroup: {
+    gap: 4,
+  },
+  cardHeading: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#3D3040",
+    letterSpacing: -0.2,
+  },
+  cardDescription: {
+    fontSize: 14,
+    color: "#6D6072",
+    lineHeight: 20,
   },
 
-  privacyTitle: {
-    fontSize: 16,
+  /* Field Block */
+  fieldBlock: {
+    gap: 6,
+  },
+  fieldLabel: {
+    fontSize: 13.5,
     fontWeight: "600",
-    marginBottom: 5,
+    color: "#3D3040",
+  },
+  input: {
+    height: 50,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1.2,
+    borderColor: "#E8DCE9",
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: "#3D3040",
   },
 
-  buttonSection: {
-    marginTop: 32,
+  /* Privacy Spaces Block */
+  spacesBlock: {
+    gap: 10,
+  },
+  spaceCardMine: {
+    backgroundColor: "#F1EDF7",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E3DBEB",
+    padding: 14,
+    gap: 4,
+  },
+  spaceBadgeMine: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#4E3F50",
+    letterSpacing: 0.2,
+  },
+  spaceCardOurs: {
+    backgroundColor: "#FBEFF7",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#EEDCEB",
+    padding: 14,
+    gap: 4,
+  },
+  spaceBadgeOurs: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#703866",
+    letterSpacing: 0.2,
+  },
+  spaceText: {
+    fontSize: 13.5,
+    color: "#6D6072",
+    lineHeight: 19,
+  },
+  reassuranceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingTop: 2,
+  },
+  reassuranceIcon: {
+    fontSize: 13,
+  },
+  reassuranceText: {
+    fontSize: 12.5,
+    color: "#6D6072",
+    lineHeight: 17,
+    flex: 1,
   },
 
-  error: {
-    marginTop: 16,
+  /* Primary Button */
+  primaryButton: {
+    backgroundColor: "#6E416D",
+    height: 50,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+  },
+  primaryButtonPressed: {
+    backgroundColor: "#593258",
+  },
+  primaryButtonDisabled: {
+    opacity: 0.75,
+  },
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+    letterSpacing: -0.1,
+  },
+  buttonLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  /* Error Feedback Card */
+  errorCard: {
+    backgroundColor: "#F7EEF7",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E8DCE9",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorText: {
+    fontSize: 13.5,
     color: "#B42318",
     textAlign: "center",
+    lineHeight: 19,
+    fontWeight: "500",
   },
 });

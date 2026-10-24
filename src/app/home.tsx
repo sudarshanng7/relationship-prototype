@@ -1,7 +1,9 @@
 import { AppBottomNav } from "@/components/AppBottomNav";
+import { useUserIdentity } from "@/context/UserIdentityContext";
+import { supabase } from "@/lib/supabase";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Image,
   Pressable,
@@ -236,7 +238,7 @@ const PREVIEW_SCENARIOS: {
   {
     key: "positive_moment",
     label: "Shared positive moment",
-    description: "Sam shared something good with you.",
+    description: "Your partner shared something good with you.",
   },
   {
     key: "recently_resolved",
@@ -259,8 +261,18 @@ function getDeviceGreeting(): string {
   return "Welcome back";
 }
 
+type IncomingFrictionMoment = {
+  id: string;
+  creator_id: string;
+  event_type: "friction";
+  visibility: "ours";
+  status: "open" | "partially_repaired";
+  created_at: string;
+};
+
 export default function HomeScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ settings?: string | string[] }>();
   const [selectedThemeKey, setSelectedThemeKey] =
     useState<ThemeKey>("lavender");
   const [personalCoverUri, setPersonalCoverUri] = useState<string | null>(null);
@@ -268,6 +280,164 @@ export default function HomeScreen() {
   const [settingsDetailView, setSettingsDetailView] = useState<
     "appearance" | "sharing" | "help" | null
   >(null);
+  const identity = useUserIdentity();
+  const [incomingMoment, setIncomingMoment] =
+    useState<IncomingFrictionMoment | null>(null);
+  const [partnerName, setPartnerName] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [partnerConnected, setPartnerConnected] = useState(false);
+  const [isIdentityLoading, setIsIdentityLoading] = useState(true);
+
+  const effectiveDisplayName = identity.displayName ?? displayName;
+  const effectivePartnerName = identity.partnerName ?? partnerName;
+  const effectivePartnerConnected =
+    identity.partnerConnected || partnerConnected;
+  const effectivePartnerRef =
+    identity.partnerRef || effectivePartnerName || "your partner";
+
+  useFocusEffect(
+    useCallback(() => {
+      let isCancelled = false;
+
+      async function fetchHomeData() {
+        try {
+          const {
+            data: { user },
+            error: userError,
+          } = await supabase.auth.getUser();
+
+          if (userError || !user || isCancelled) {
+            if (!isCancelled) {
+              setIsIdentityLoading(false);
+            }
+            return;
+          }
+
+          // 1. Fetch current user's profile display_name
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("display_name")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if (!isCancelled) {
+            setDisplayName(profile?.display_name?.trim() || null);
+          }
+
+          // 2. Fetch couple membership
+          const { data: membership, error: membershipError } = await supabase
+            .from("couple_members")
+            .select("couple_id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (membershipError || !membership || isCancelled) {
+            if (!isCancelled) {
+              setPartnerConnected(false);
+              setPartnerName(null);
+              setIncomingMoment(null);
+              setIsIdentityLoading(false);
+            }
+            return;
+          }
+
+          const currentCoupleId = membership.couple_id;
+
+          // 3. Check if partner is connected in couple
+          const { data: members } = await supabase
+            .from("couple_members")
+            .select("user_id")
+            .eq("couple_id", currentCoupleId);
+
+          const partnerMember = members?.find(
+            (member) => member.user_id !== user.id,
+          );
+
+          if (!isCancelled) {
+            setPartnerConnected(Boolean(partnerMember));
+          }
+
+          if (partnerMember) {
+            const { data: name } = await supabase.rpc(
+              "get_partner_display_name",
+            );
+            if (
+              !isCancelled &&
+              typeof name === "string" &&
+              name.trim().length > 0
+            ) {
+              setPartnerName(name.trim());
+            } else if (!isCancelled) {
+              setPartnerName(null);
+            }
+          } else if (!isCancelled) {
+            setPartnerName(null);
+          }
+
+          // 4. Fetch incoming friction moment
+          const { data, error } = await supabase
+            .from("relationship_events")
+            .select(
+              "id, creator_id, event_type, visibility, status, created_at",
+            )
+            .eq("couple_id", currentCoupleId)
+            .eq("visibility", "ours")
+            .eq("event_type", "friction")
+            .neq("creator_id", user.id)
+            .in("status", ["open", "partially_repaired"])
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (isCancelled) {
+            return;
+          }
+
+          if (error || !data) {
+            setIncomingMoment(null);
+            return;
+          }
+
+          setIncomingMoment(data as IncomingFrictionMoment);
+        } catch {
+          if (!isCancelled) {
+            setIncomingMoment(null);
+          }
+        } finally {
+          if (!isCancelled) {
+            setIsIdentityLoading(false);
+          }
+        }
+      }
+
+      void fetchHomeData();
+
+      return () => {
+        isCancelled = true;
+      };
+    }, []),
+  );
+
+  useEffect(() => {
+    const isSettingsParam =
+      params.settings === "true" ||
+      (Array.isArray(params.settings) && params.settings[0] === "true");
+    if (isSettingsParam) {
+      setSettingsDetailView(null);
+      setIsSettingsOpen(true);
+    }
+  }, [params.settings]);
+
+  const handleCloseSettings = () => {
+    setIsSettingsOpen(false);
+    setSettingsDetailView(null);
+    const isSettingsParam =
+      params.settings === "true" ||
+      (Array.isArray(params.settings) && params.settings[0] === "true");
+    if (isSettingsParam) {
+      router.replace("/home");
+    }
+  };
   const [eveningReflectionEnabled, setEveningReflectionEnabled] =
     useState(true);
   const [previewState, setPreviewState] =
@@ -401,18 +571,37 @@ export default function HomeScreen() {
           <View style={styles.headerContainer}>
             <View style={styles.headerTopRow}>
               <View style={styles.headerGreetingBlock}>
-                <Text style={styles.greetingText}>{greeting}, Alex</Text>
-                <Text style={styles.relationshipText}>You & Sam ♡</Text>
+                {effectivePartnerConnected ? (
+                  <>
+                    <Text style={styles.greetingText}>
+                      {greeting}, {effectiveDisplayName || "there"}
+                    </Text>
+                    <Text style={styles.relationshipText}>
+                      {effectivePartnerName
+                        ? `You & ${effectivePartnerName} ♡`
+                        : "You & your partner ♡"}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.greetingText}>Your space</Text>
+                    <Text style={styles.relationshipText}>
+                      You can connect with a partner whenever you feel ready.
+                    </Text>
+                  </>
+                )}
               </View>
-              <View
-                style={styles.connectionBadge}
-                accessible={true}
-                accessibilityRole="text"
-                accessibilityLabel="Connection status: Connected"
-              >
-                <View style={styles.connectionDot} />
-                <Text style={styles.connectionLabel}>Connected</Text>
-              </View>
+              {effectivePartnerConnected && (
+                <View
+                  style={styles.connectionBadge}
+                  accessible={true}
+                  accessibilityRole="text"
+                  accessibilityLabel="Connection status: Connected"
+                >
+                  <View style={styles.connectionDot} />
+                  <Text style={styles.connectionLabel}>Connected</Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -454,8 +643,53 @@ export default function HomeScreen() {
               <Text style={styles.sectionOverline}>What matters now</Text>
             </View>
 
-            {/* Calm/default state */}
-            {previewState === "calm_day" && (
+            {incomingMoment ? (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.incomingMomentCard,
+                  pressed && styles.incomingMomentCardPressed,
+                ]}
+                onPress={() =>
+                  router.push({
+                    pathname: "/event/[id]",
+                    params: {
+                      id: incomingMoment.id,
+                      scope: "ours",
+                    },
+                  })
+                }
+                accessibilityRole="button"
+                accessibilityLabel={
+                  effectivePartnerName
+                    ? `Open the shared moment from ${effectivePartnerName} when ready`
+                    : "Open the shared moment from your partner when ready"
+                }
+              >
+                <View style={styles.incomingMomentHeader}>
+                  <Text style={styles.incomingMomentOverline}>
+                    A SHARED MOMENT
+                  </Text>
+                </View>
+                <Text style={styles.incomingMomentHeading}>
+                  {effectivePartnerName
+                    ? `${effectivePartnerName} shared a moment`
+                    : "Your partner shared a moment"}
+                </Text>
+                <Text style={styles.incomingMomentBody}>
+                  There is no rush. Take a look whenever you feel ready.
+                </Text>
+                <View style={styles.incomingMomentActionRow}>
+                  <View style={styles.incomingMomentActionBtn}>
+                    <Text style={styles.incomingMomentActionText}>
+                      Open when ready
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+            ) : (
+              <>
+                {/* Calm/default state */}
+                {previewState === "calm_day" && (
               <View style={styles.calmDayContent}>
                 <Text style={styles.calmHeading}>
                   Nothing needs your attention right now.
@@ -533,7 +767,9 @@ export default function HomeScreen() {
                       A moment before the day ends
                     </Text>
                     <Text style={styles.reflectionQuestion}>
-                      How did things feel between you and Sam today?
+                      {effectivePartnerName
+                        ? `How did things feel between you and ${effectivePartnerName} today?`
+                        : "How did things feel between you and your partner today?"}
                     </Text>
 
                     <View style={styles.feelingsList}>
@@ -817,7 +1053,9 @@ export default function HomeScreen() {
                     <Text style={styles.partnerIconMini}>🌷</Text>
                   </View>
                   <Text style={styles.partnerResponseText}>
-                    Sam shared something good with you.
+                    {effectivePartnerName
+                      ? `${effectivePartnerName} shared something good with you.`
+                      : "Your partner shared something good with you."}
                   </Text>
                 </View>
                 <Pressable
@@ -869,6 +1107,8 @@ export default function HomeScreen() {
                 </Pressable>
               </View>
             )}
+            </>
+          )}
           </View>
 
           {/* 4. Mine (~34%) and Ours (~66%) Spaces */}
@@ -928,7 +1168,11 @@ export default function HomeScreen() {
                     <Text style={styles.oursRoomTitle}>Ours</Text>
                   </View>
                   <Text style={styles.oursSharedName}>
-                    Giggle Otters (Alex & Sam)
+                    {effectivePartnerConnected
+                      ? effectivePartnerName
+                        ? `Shared with ${effectivePartnerName}`
+                        : "Shared with your partner"
+                      : "Shared space with partner"}
                   </Text>
                 </View>
               </View>
@@ -1083,10 +1327,7 @@ export default function HomeScreen() {
         <View style={styles.sheetBackdrop} pointerEvents="box-none">
           <Pressable
             style={styles.sheetBackdropTouch}
-            onPress={() => {
-              setIsSettingsOpen(false);
-              setSettingsDetailView(null);
-            }}
+            onPress={handleCloseSettings}
             accessibilityRole="button"
             accessibilityLabel="Close settings sheet"
           />
@@ -1109,10 +1350,7 @@ export default function HomeScreen() {
                     <Text style={styles.settingsSheetHeading}>Appearance</Text>
                     <Pressable
                       style={styles.settingsCloseCircle}
-                      onPress={() => {
-                        setIsSettingsOpen(false);
-                        setSettingsDetailView(null);
-                      }}
+                      onPress={handleCloseSettings}
                       accessibilityRole="button"
                       accessibilityLabel="Close settings"
                     >
@@ -1193,10 +1431,7 @@ export default function HomeScreen() {
                     </Pressable>
                     <Pressable
                       style={styles.settingsCloseCircle}
-                      onPress={() => {
-                        setIsSettingsOpen(false);
-                        setSettingsDetailView(null);
-                      }}
+                      onPress={handleCloseSettings}
                       accessibilityRole="button"
                       accessibilityLabel="Close settings"
                     >
@@ -1210,7 +1445,7 @@ export default function HomeScreen() {
                       Mine is for your private reflections, notes, and drafts.
                     </Text>
                     <Text style={[styles.settingsDetailBody, { marginTop: 12 }]}>
-                      Ours contains only moments you intentionally choose to share with Sam.
+                      Ours contains only moments you intentionally choose to share with {effectivePartnerRef}.
                     </Text>
                   </View>
 
@@ -1239,10 +1474,7 @@ export default function HomeScreen() {
                     </Pressable>
                     <Pressable
                       style={styles.settingsCloseCircle}
-                      onPress={() => {
-                        setIsSettingsOpen(false);
-                        setSettingsDetailView(null);
-                      }}
+                      onPress={handleCloseSettings}
                       accessibilityRole="button"
                       accessibilityLabel="Close settings"
                     >
@@ -1275,7 +1507,7 @@ export default function HomeScreen() {
                     <Text style={styles.settingsSheetHeading}>Settings</Text>
                     <Pressable
                       style={styles.settingsCloseCircle}
-                      onPress={() => setIsSettingsOpen(false)}
+                      onPress={handleCloseSettings}
                       accessibilityRole="button"
                       accessibilityLabel="Close settings"
                     >
@@ -1400,13 +1632,19 @@ export default function HomeScreen() {
                               Your connection
                             </Text>
                             <Text style={styles.settingsRowSubtext}>
-                              You and Sam are connected.
+                              {effectivePartnerConnected
+                                ? effectivePartnerName
+                                  ? `You and ${effectivePartnerName} are connected.`
+                                  : "You and your partner are connected."
+                                : "You can connect with a partner whenever you feel ready."}
                             </Text>
                           </View>
-                          <View style={styles.connectionBadge}>
-                            <View style={styles.connectionDot} />
-                            <Text style={styles.connectionLabel}>Connected</Text>
-                          </View>
+                          {effectivePartnerConnected && (
+                            <View style={styles.connectionBadge}>
+                              <View style={styles.connectionDot} />
+                              <Text style={styles.connectionLabel}>Connected</Text>
+                            </View>
+                          )}
                         </View>
 
                         <View style={styles.settingsDivider} />
@@ -1476,7 +1714,7 @@ export default function HomeScreen() {
                                   ]}
                                   onPress={() => {
                                     setPreviewState(scenario.key);
-                                    setIsSettingsOpen(false);
+                                    handleCloseSettings();
                                   }}
                                   accessibilityRole="button"
                                   accessibilityLabel={`Preview: ${scenario.label}`}
@@ -1509,7 +1747,7 @@ export default function HomeScreen() {
                           <Pressable
                             style={styles.settingsActionRow}
                             onPress={() => {
-                              setIsSettingsOpen(false);
+                              handleCloseSettings();
                               router.push("/playful-reframe");
                             }}
                             accessibilityRole="button"
@@ -1530,7 +1768,7 @@ export default function HomeScreen() {
                           <Pressable
                             style={styles.settingsActionRow}
                             onPress={() => {
-                              setIsSettingsOpen(false);
+                              handleCloseSettings();
                               router.push("/challenge-lifecycle-preview");
                             }}
                             accessibilityRole="button"
@@ -1551,7 +1789,7 @@ export default function HomeScreen() {
                           <Pressable
                             style={styles.settingsActionRow}
                             onPress={() => {
-                              setIsSettingsOpen(false);
+                              handleCloseSettings();
                               router.push("/make-challenge-preview" as any);
                             }}
                             accessibilityRole="button"
@@ -1575,7 +1813,7 @@ export default function HomeScreen() {
 
                   <Pressable
                     style={styles.settingsDoneButton}
-                    onPress={() => setIsSettingsOpen(false)}
+                    onPress={handleCloseSettings}
                     accessibilityRole="button"
                     accessibilityLabel="Close settings"
                   >
@@ -2104,6 +2342,62 @@ const createStyles = (theme: ThemeConfig) =>
       fontSize: 13,
       color: theme.secondaryText,
       lineHeight: 18,
+    },
+
+    /* Incoming Shared Friction Moment Card */
+    incomingMomentCard: {
+      backgroundColor: theme.sharedSurface,
+      borderColor: theme.sharedBorder,
+      borderWidth: 1.2,
+      borderRadius: 16,
+      padding: 16,
+      gap: 8,
+      marginTop: 4,
+    },
+    incomingMomentCardPressed: {
+      backgroundColor: theme.border,
+      borderColor: theme.accent,
+    },
+    incomingMomentHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    incomingMomentOverline: {
+      fontSize: 11.5,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+      color: theme.accent,
+      textTransform: "uppercase",
+    },
+    incomingMomentHeading: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.2,
+      lineHeight: 22,
+    },
+    incomingMomentBody: {
+      fontSize: 14,
+      color: theme.secondaryText,
+      lineHeight: 20,
+    },
+    incomingMomentActionRow: {
+      marginTop: 6,
+      flexDirection: "row",
+    },
+    incomingMomentActionBtn: {
+      backgroundColor: theme.accent,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    incomingMomentActionText: {
+      color: theme.accentText,
+      fontSize: 13.5,
+      fontWeight: "600",
     },
 
     /* 4. Mine and Ours Spaces (Asymmetric: Mine ~34%, Ours ~66%) */

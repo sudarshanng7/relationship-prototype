@@ -1,14 +1,16 @@
 import { RepairPreviewProvider } from "@/context/RepairPreviewContext";
+import { UserIdentityProvider } from "@/context/UserIdentityContext";
 import { Stack } from "expo-router";
 
 export default function RootLayout() {
   return (
-    <RepairPreviewProvider>
-      <Stack>
+    <UserIdentityProvider>
+      <RepairPreviewProvider>
+        <Stack>
         <Stack.Screen
           name="index"
           options={{
-            title: "Relationship OS",
+            headerShown: false,
           }}
         />
         <Stack.Screen
@@ -20,7 +22,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="profile"
           options={{
-            title: "Profile",
+            headerShown: false,
           }}
         />
         <Stack.Screen
@@ -44,8 +46,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="onboarding"
           options={{
-            title: "Getting started",
-            headerBackVisible: false,
+            headerShown: false,
           }}
         />
         <Stack.Screen
@@ -68,5 +69,6 @@ export default function RootLayout() {
         />
       </Stack>
     </RepairPreviewProvider>
+    </UserIdentityProvider>
   );
 }

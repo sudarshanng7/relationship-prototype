@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 
+import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 
 type EventType = "positive" | "friction";
@@ -54,6 +55,7 @@ export default function RecordMomentScreen() {
     params.lockType === "true" &&
     (params.type === "positive" || params.type === "friction");
 
+  const { partnerRef } = useUserIdentity();
   const [coupleId, setCoupleId] = useState<string | null>(null);
 
   const initialType: EventType =
@@ -195,10 +197,10 @@ export default function RecordMomentScreen() {
     : isPrivateReflectionMode
       ? "Save privately"
       : isSharedMomentMode
-        ? "Share with Sam"
+        ? `Share with ${partnerRef}`
         : visibility === "mine"
           ? "Save to Mine"
-          : "Share with Sam";
+          : `Share with ${partnerRef}`;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -405,14 +407,16 @@ export default function RecordMomentScreen() {
           {isPrivateReflectionMode ? (
             <View style={styles.privacyMessageBlock}>
               <Text style={styles.privacyMessageText}>
-                Only you can see this. It will not be shared with Sam.
+                Only you can see this. It will not be shared with {partnerRef}.
               </Text>
             </View>
           ) : isSharedMomentMode ? (
             <View style={styles.sharedContextBlock}>
-              <Text style={styles.sharedContextHeading}>Sharing with Sam</Text>
+              <Text style={styles.sharedContextHeading}>
+                Sharing with {partnerRef}
+              </Text>
               <Text style={styles.sharedContextText}>
-                This moment will be shared with Sam. Your private reflection
+                This moment will be shared with {partnerRef}. Your private reflection
                 remains only for you.
               </Text>
             </View>
@@ -451,7 +455,7 @@ export default function RecordMomentScreen() {
                   onPress={() => setVisibility("ours")}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: visibility === "ours" }}
-                  accessibilityLabel="Ours: Share a gentle version with Sam."
+                  accessibilityLabel={`Ours: Share a gentle version with ${partnerRef}.`}
                 >
                   <Text
                     style={[
@@ -462,7 +466,7 @@ export default function RecordMomentScreen() {
                     Ours
                   </Text>
                   <Text style={styles.visibilityCardSubtitle}>
-                    Share a gentle version with Sam.
+                    Share a gentle version with {partnerRef}.
                   </Text>
                 </Pressable>
               </View>
@@ -474,10 +478,10 @@ export default function RecordMomentScreen() {
             (!isPrivateReflectionMode && visibility === "ours")) && (
             <View style={styles.sectionBlock}>
               <Text style={styles.sectionTitle}>
-                What would you like Sam to know?
+                What would you like {partnerRef} to know?
               </Text>
               <Text style={styles.sectionSubtitle}>
-                This part is visible to Sam. Keep private details in your
+                This part is visible to {partnerRef}. Keep private details in your
                 reflection above.
               </Text>
               <TextInput

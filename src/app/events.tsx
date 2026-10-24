@@ -1,5 +1,6 @@
 import { AppBottomNav } from "@/components/AppBottomNav";
 import { useRepairPreview } from "@/context/RepairPreviewContext";
+import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -39,6 +40,7 @@ export default function EventsScreen() {
     (Array.isArray(params.scope) && params.scope[0] === "ours");
   const { previewEventId, previewStatus, hasSharedTakeaway } =
     useRepairPreview();
+  const { partnerName, partnerRef } = useUserIdentity();
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [coupleId, setCoupleId] = useState<string | null>(null);
@@ -303,7 +305,9 @@ export default function EventsScreen() {
                 {isMineMode
                   ? "A private place to understand what you feel."
                   : isOursMode
-                  ? "Moments shared between you and Sam."
+                  ? partnerName
+                    ? `Moments shared between you and ${partnerName}.`
+                    : "Moments shared with your partner."
                   : "“A place to return to what mattered.”"}
               </Text>
             </View>
@@ -516,12 +520,12 @@ export default function EventsScreen() {
                     ? "Moments where care or space is opening up will appear here."
                     : oursFilter === "reconnected"
                     ? "Moments where you two found your way back will be kept here."
-                    : "Only moments you intentionally share with Sam will appear here."
+                    : `Only moments you intentionally share with ${partnerRef} will appear here.`
                   : filter === "all"
                   ? "You can record something good or something that felt off whenever it matters."
                   : filter === "mine"
                   ? "Private reflections you keep will appear here."
-                  : "Only moments you intentionally share with Sam will appear here."}
+                  : `Only moments you intentionally share with ${partnerRef} will appear here.`}
               </Text>
 
               {!isMineMode && !isOursMode && filter === "all" && (
@@ -548,7 +552,9 @@ export default function EventsScreen() {
               const isPositive = event.event_type === "positive";
               const privacyLabel =
                 event.visibility === "mine" ? "Mine · Private" : "Ours · Shared";
-              const attribution = isCreator ? "Recorded by you" : "Shared by Sam";
+              const attribution = isCreator
+                ? "Recorded by you"
+                : `Shared by ${partnerName || "partner"}`;
               const accessiblePrivacy =
                 event.visibility === "mine" ? "private" : "shared";
 
@@ -682,7 +688,7 @@ export default function EventsScreen() {
                   {isPreviewReconnected && (
                     <View style={styles.previewCardNoticeWrap}>
                       <Text style={styles.previewCardNoticeText}>
-                        Temporary in this browser — not yet saved or shared with Sam.
+                        Temporary in this browser — not yet saved or shared with {partnerRef}.
                       </Text>
                       {hasSharedTakeaway && (
                         <Text style={styles.previewTakeawaySubtleIndicator}>
