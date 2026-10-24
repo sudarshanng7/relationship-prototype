@@ -237,6 +237,10 @@ export default function PlayfulReframeScreen() {
   const [selectedReward, setSelectedReward] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] =
     useState<TimeframeKey | null>(null);
+  const [shareLighterThought, setShareLighterThought] = useState(false);
+  const [lighterThoughtCustomText, setLighterThoughtCustomText] = useState<
+    string | null
+  >(null);
 
   const isCustomActive = customText.trim().length > 0;
   const currentPreset = SAMPLE_IRRITATIONS.find(
@@ -250,6 +254,14 @@ export default function PlayfulReframeScreen() {
   const currentChallenges = isCustomActive
     ? CUSTOM_CHALLENGES
     : currentPreset.challenges;
+
+  const selectedReframe = selectedTone ? currentReframes[selectedTone] : null;
+  const selectedToneLabel = selectedReframe?.toneLabel ?? "";
+  const selectedReframeSentence = selectedReframe?.text ?? "";
+  const effectiveLighterThought =
+    lighterThoughtCustomText !== null
+      ? lighterThoughtCustomText
+      : selectedReframeSentence;
 
   function getStarterIdea(): string {
     if (isCustomActive) {
@@ -278,6 +290,8 @@ export default function PlayfulReframeScreen() {
     setSelectedIdea(null);
     setSelectedReward(null);
     setSelectedTimeframe(null);
+    setShareLighterThought(false);
+    setLighterThoughtCustomText(null);
   }
 
   function handleTryAnotherTone() {
@@ -288,6 +302,8 @@ export default function PlayfulReframeScreen() {
     setSelectedIdea(null);
     setSelectedReward(null);
     setSelectedTimeframe(null);
+    setShareLighterThought(false);
+    setLighterThoughtCustomText(null);
   }
 
   function handleEditChallengeChoices() {
@@ -304,6 +320,8 @@ export default function PlayfulReframeScreen() {
     setSelectedIdea(null);
     setSelectedReward(null);
     setSelectedTimeframe(null);
+    setShareLighterThought(false);
+    setLighterThoughtCustomText(null);
   }
 
   const isChallengeFullyConfigured =
@@ -559,6 +577,8 @@ export default function PlayfulReframeScreen() {
                           setSelectedTone(toneKey);
                           setShowChallengeBuilder(false);
                           setChallengeDeclined(false);
+                          setShareLighterThought(false);
+                          setLighterThoughtCustomText(null);
                         }}
                         accessibilityRole="button"
                         accessibilityState={{ selected: isSelected }}
@@ -811,6 +831,9 @@ export default function PlayfulReframeScreen() {
                                 idea: getStarterIdea(),
                                 participant: participantChoice ?? "sam",
                                 source: "reframe",
+                                reframeTone: selectedToneLabel,
+                                reframeText: selectedReframeSentence,
+                                shareReframe: "false",
                               },
                             } as any);
                           }}
@@ -962,7 +985,100 @@ export default function PlayfulReframeScreen() {
                               : selectedReward}
                           </Text>
                         </View>
+                        <View style={styles.summaryDivider} />
+                        <View style={styles.summaryItemRow}>
+                          <Text style={styles.summaryItemLabel}>
+                            Lighter thought
+                          </Text>
+                          <Text style={styles.summaryItemValue}>
+                            {shareLighterThought && participantChoice !== "me"
+                              ? selectedToneLabel
+                              : "Private"}
+                          </Text>
+                        </View>
                       </View>
+
+                      {/* Optional Lighter Thought sharing section */}
+                      {(participantChoice === "sam" ||
+                        participantChoice === "both") && (
+                        <View style={styles.lighterThoughtShareSection}>
+                          <Text style={styles.lighterThoughtSectionHeading}>
+                            Include your lighter thought?
+                          </Text>
+                          <Text style={styles.lighterThoughtSectionSupporting}>
+                            Share the warm angle you chose, without sharing the
+                            original irritation.
+                          </Text>
+
+                          <Pressable
+                            style={[
+                              styles.lighterThoughtToggle,
+                              shareLighterThought &&
+                                styles.lighterThoughtToggleActive,
+                            ]}
+                            onPress={() =>
+                              setShareLighterThought(!shareLighterThought)
+                            }
+                            accessibilityRole="button"
+                            accessibilityState={{
+                              selected: shareLighterThought,
+                            }}
+                            accessibilityLabel={
+                              shareLighterThought
+                                ? "Keep this lighter thought private"
+                                : "Include this lighter thought with the invitation"
+                            }
+                          >
+                            <View style={styles.toggleIndicatorRow}>
+                              <View
+                                style={[
+                                  styles.toggleCheckbox,
+                                  shareLighterThought &&
+                                    styles.toggleCheckboxActive,
+                                ]}
+                              >
+                                {shareLighterThought && (
+                                  <Text style={styles.toggleCheckboxCheck}>
+                                    ✓
+                                  </Text>
+                                )}
+                              </View>
+                              <Text
+                                style={[
+                                  styles.lighterThoughtToggleText,
+                                  shareLighterThought &&
+                                    styles.lighterThoughtToggleTextActive,
+                                ]}
+                              >
+                                {shareLighterThought
+                                  ? "Keep this lighter thought private"
+                                  : "Include this lighter thought with the invitation"}
+                              </Text>
+                            </View>
+                          </Pressable>
+
+                          {shareLighterThought && (
+                            <View style={styles.lighterThoughtInputContainer}>
+                              <Text style={styles.lighterThoughtInputLabel}>
+                                Your lighter thought
+                              </Text>
+                              <TextInput
+                                style={styles.lighterThoughtTextInput}
+                                value={effectiveLighterThought}
+                                onChangeText={setLighterThoughtCustomText}
+                                placeholder="A warm angle to share..."
+                                placeholderTextColor="#9C8E9E"
+                                multiline
+                                accessibilityLabel="Your lighter thought"
+                              />
+                              <Text style={styles.lighterThoughtMutedNote}>
+                                Only this edited lighter thought will be shown.
+                                Your original irritation stays private.
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      )}
 
                       {/* Reassurance text */}
                       <Text style={styles.finalReassuranceText}>
@@ -1013,17 +1129,26 @@ export default function PlayfulReframeScreen() {
 
                       <Pressable
                         style={styles.recipientBridgeButton}
-                        onPress={() =>
+                        onPress={() => {
+                          const isSharing =
+                            shareLighterThought && participantChoice !== "me";
                           router.push({
                             pathname: "/challenge-lifecycle-preview",
                             params: {
                               idea: selectedIdea ?? "",
                               participant: participantChoice ?? "sam",
                               timeframe: selectedTimeframe ?? "Today",
-                              reward: selectedReward ?? "No reward — just the moment",
+                              reward:
+                                selectedReward ??
+                                "No reward — just the moment",
+                              reframeTone: selectedToneLabel,
+                              reframeText: isSharing
+                                ? effectiveLighterThought.trim()
+                                : "",
+                              shareReframe: isSharing ? "true" : "false",
                             },
-                          } as any)
-                        }
+                          } as any);
+                        }}
                         accessibilityRole="button"
                         accessibilityLabel="Preview recipient experience"
                       >
@@ -1832,5 +1957,99 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#6E416D",
+  },
+  lighterThoughtShareSection: {
+    backgroundColor: "#FDF8FC",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#EADEEB",
+    gap: 8,
+  },
+  lighterThoughtSectionHeading: {
+    fontSize: 14.5,
+    fontWeight: "700",
+    color: "#3D3040",
+  },
+  lighterThoughtSectionSupporting: {
+    fontSize: 12.5,
+    color: "#6D6072",
+    lineHeight: 17,
+  },
+  lighterThoughtToggle: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1.2,
+    borderColor: "#E0D2E3",
+    marginTop: 2,
+  },
+  lighterThoughtToggleActive: {
+    backgroundColor: "#F4ECF6",
+    borderColor: "#8B5388",
+  },
+  toggleIndicatorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  toggleCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: "#B4A2B8",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+  },
+  toggleCheckboxActive: {
+    backgroundColor: "#6E416D",
+    borderColor: "#6E416D",
+  },
+  toggleCheckboxCheck: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  lighterThoughtToggleText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#5C4F61",
+    flex: 1,
+  },
+  lighterThoughtToggleTextActive: {
+    color: "#4A154B",
+    fontWeight: "700",
+  },
+  lighterThoughtInputContainer: {
+    marginTop: 6,
+    gap: 6,
+  },
+  lighterThoughtInputLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#5C4F61",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  lighterThoughtTextInput: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    borderWidth: 1.2,
+    borderColor: "#D8C7DB",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#3D3040",
+    lineHeight: 20,
+    minHeight: 60,
+  },
+  lighterThoughtMutedNote: {
+    fontSize: 11.5,
+    color: "#857388",
+    lineHeight: 16,
+    fontStyle: "italic",
   },
 });

@@ -1,4 +1,5 @@
 import { AppBottomNav } from "@/components/AppBottomNav";
+import { useRepairPreview } from "@/context/RepairPreviewContext";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -28,9 +29,16 @@ type OursFilter = "open" | "softening" | "reconnected";
 
 export default function EventsScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ scope?: string }>();
-  const isMineMode = params.scope === "mine";
-  const isOursMode = params.scope === "ours";
+  const params = useLocalSearchParams<{ scope?: string | string[] }>();
+
+  const isMineMode =
+    params.scope === "mine" ||
+    (Array.isArray(params.scope) && params.scope[0] === "mine");
+  const isOursMode =
+    params.scope === "ours" ||
+    (Array.isArray(params.scope) && params.scope[0] === "ours");
+  const { previewEventId, previewStatus, hasSharedTakeaway } =
+    useRepairPreview();
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [coupleId, setCoupleId] = useState<string | null>(null);
@@ -222,6 +230,16 @@ export default function EventsScreen() {
       if (event.visibility !== "ours") {
         return false;
       }
+
+      const isPreviewReconnected =
+        isOursMode &&
+        previewStatus === "reconnected" &&
+        event.id === previewEventId;
+
+      if (isPreviewReconnected) {
+        return true;
+      }
+
       if (oursFilter === "open") {
         return event.event_type === "friction" && event.status === "open";
       }
@@ -246,6 +264,12 @@ export default function EventsScreen() {
     }
     return true;
   });
+
+  const isPreviewReconnectedActive =
+    isOursMode &&
+    previewStatus === "reconnected" &&
+    Boolean(previewEventId) &&
+    events.some((e) => e.id === previewEventId);
 
   const isLoading = status === "Loading...";
   const hasSpaceError = status === "You do not belong to a relationship space.";
@@ -419,6 +443,19 @@ export default function EventsScreen() {
             </View>
           )}
 
+          {/* Calm notice for local repair preview in Ours */}
+          {isPreviewReconnectedActive && (
+            <View
+              style={styles.previewNoticeBanner}
+              accessibilityRole="alert"
+              accessibilityLabel="You are viewing a local repair preview. This moment’s saved status has not changed."
+            >
+              <Text style={styles.previewNoticeBannerText}>
+                You are viewing a local repair preview. This moment’s saved status has not changed.
+              </Text>
+            </View>
+          )}
+
           {/* Relationship space error */}
           {hasSpaceError && (
             <View style={styles.centeredNoticeCard}>
@@ -515,6 +552,15 @@ export default function EventsScreen() {
               const accessiblePrivacy =
                 event.visibility === "mine" ? "private" : "shared";
 
+              const isPreviewReconnected =
+                isOursMode &&
+                previewStatus === "reconnected" &&
+                event.id === previewEventId;
+
+              const displayStatus = isPreviewReconnected
+                ? "Reconnected · preview"
+                : formatStatus(event.status);
+
               return (
                 <Pressable
                   key={event.id}
@@ -525,9 +571,15 @@ export default function EventsScreen() {
                     pressed && styles.cardPressed,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={`Open ${accessiblePrivacy} ${formatCategory(
-                    event.category,
-                  )} moment recorded ${naturalDate.toLowerCase()}.`}
+                  accessibilityLabel={
+                    isPreviewReconnected
+                      ? `Open ${accessiblePrivacy} ${formatCategory(
+                          event.category,
+                        )} moment recorded ${naturalDate.toLowerCase()}. Status: Reconnected preview.`
+                      : `Open ${accessiblePrivacy} ${formatCategory(
+                          event.category,
+                        )} moment recorded ${naturalDate.toLowerCase()}.`
+                  }
                 >
                   {/* Top card row: Icon + Category + Attribution & Date + Chevron */}
                   <View style={styles.cardHeaderRow}>
@@ -606,13 +658,39 @@ export default function EventsScreen() {
                         </Text>
                       </View>
                     ) : (
-                      <View style={styles.statusBadge}>
-                        <Text style={styles.statusBadgeText}>
-                          {formatStatus(event.status)}
+                      <View
+                        style={
+                          isPreviewReconnected
+                            ? styles.previewReconnectedBadge
+                            : styles.statusBadge
+                        }
+                      >
+                        <Text
+                          style={
+                            isPreviewReconnected
+                              ? styles.previewReconnectedBadgeText
+                              : styles.statusBadgeText
+                          }
+                        >
+                          {displayStatus}
                         </Text>
                       </View>
                     )}
                   </View>
+
+                  {/* Supporting note for local preview override */}
+                  {isPreviewReconnected && (
+                    <View style={styles.previewCardNoticeWrap}>
+                      <Text style={styles.previewCardNoticeText}>
+                        Temporary in this browser — not yet saved or shared with Sam.
+                      </Text>
+                      {hasSharedTakeaway && (
+                        <Text style={styles.previewTakeawaySubtleIndicator}>
+                          A shared takeaway is available in this preview.
+                        </Text>
+                      )}
+                    </View>
+                  )}
                 </Pressable>
               );
             })}
@@ -1100,6 +1178,54 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: "600",
     color: "#8B412D",
+  },
+
+  /* Preview Reconnected treatment */
+  previewNoticeBanner: {
+    backgroundColor: "#FAF5FB",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1.2,
+    borderColor: "#EBD8EA",
+    marginBottom: 16,
+  },
+  previewNoticeBannerText: {
+    fontSize: 12.5,
+    color: "#6D6072",
+    lineHeight: 18,
+    textAlign: "center",
+  },
+  previewReconnectedBadge: {
+    backgroundColor: "#F4ECF5",
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderWidth: 1,
+    borderColor: "#E2D3E4",
+  },
+  previewReconnectedBadgeText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#6E416D",
+  },
+  previewCardNoticeWrap: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#F3EBF4",
+  },
+  previewCardNoticeText: {
+    fontSize: 11.5,
+    color: "#8E7E94",
+    fontStyle: "italic",
+    lineHeight: 16,
+  },
+  previewTakeawaySubtleIndicator: {
+    fontSize: 11.5,
+    color: "#6E416D",
+    fontWeight: "500",
+    marginTop: 3,
   },
 
   /* Empty states */

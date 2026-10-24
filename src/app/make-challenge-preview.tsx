@@ -85,6 +85,9 @@ export default function MakeChallengePreviewScreen() {
     idea?: string;
     participant?: string;
     source?: string;
+    reframeTone?: string;
+    reframeText?: string;
+    shareReframe?: string;
   }>();
 
   const initialIdea = typeof params.idea === "string" ? params.idea : "";
@@ -95,6 +98,14 @@ export default function MakeChallengePreviewScreen() {
       ? params.participant
       : "sam";
 
+  const incomingReframeText =
+    typeof params.reframeText === "string" ? params.reframeText : "";
+  const incomingReframeTone =
+    typeof params.reframeTone === "string" ? params.reframeTone : "";
+  const hasReframeText = incomingReframeText.trim().length > 0;
+  const isFromReframe = params.source === "reframe" && hasReframeText;
+  const initialShareReframe = params.shareReframe === "true";
+
   const [challengeText, setChallengeText] = useState(initialIdea);
   const [participantChoice, setParticipantChoice] =
     useState<ParticipantKey>(initialParticipant);
@@ -102,6 +113,10 @@ export default function MakeChallengePreviewScreen() {
   const [selectedReward, setSelectedReward] = useState<string>(
     "No reward — just the moment",
   );
+  const [shareLighterThought, setShareLighterThought] =
+    useState(initialShareReframe);
+  const [lighterThoughtText, setLighterThoughtText] =
+    useState(incomingReframeText);
 
   const trimmedText = challengeText.trim();
   const effectiveTitle = trimmedText || "Bring the mug home";
@@ -112,6 +127,8 @@ export default function MakeChallengePreviewScreen() {
     setParticipantChoice("sam");
     setSelectedTimeframe("Today");
     setSelectedReward("No reward — just the moment");
+    setShareLighterThought(false);
+    setLighterThoughtText(incomingReframeText);
   }
 
   function handleSelectSuggestion(title: string) {
@@ -180,6 +197,79 @@ export default function MakeChallengePreviewScreen() {
                   A small, kind idea to help you two reset. You can change every
                   detail below.
                 </Text>
+              </View>
+            )}
+
+            {/* Optional lighter thought inclusion section */}
+            {isFromReframe && (
+              <View style={styles.lighterThoughtShareSection}>
+                <Text style={styles.lighterThoughtSectionHeading}>
+                  Include your lighter thought?
+                </Text>
+                <Text style={styles.lighterThoughtSectionSupporting}>
+                  You can add the warm angle from your reframe without sharing
+                  what originally bothered you.
+                </Text>
+
+                <Pressable
+                  style={[
+                    styles.lighterThoughtToggle,
+                    shareLighterThought && styles.lighterThoughtToggleActive,
+                  ]}
+                  onPress={() => setShareLighterThought(!shareLighterThought)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: shareLighterThought }}
+                  accessibilityLabel={
+                    shareLighterThought
+                      ? "Keep this lighter thought private"
+                      : "Include this lighter thought with the invitation"
+                  }
+                >
+                  <View style={styles.toggleIndicatorRow}>
+                    <View
+                      style={[
+                        styles.toggleCheckbox,
+                        shareLighterThought && styles.toggleCheckboxActive,
+                      ]}
+                    >
+                      {shareLighterThought && (
+                        <Text style={styles.toggleCheckboxCheck}>✓</Text>
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        styles.lighterThoughtToggleText,
+                        shareLighterThought &&
+                          styles.lighterThoughtToggleTextActive,
+                      ]}
+                    >
+                      {shareLighterThought
+                        ? "Keep this lighter thought private"
+                        : "Include this lighter thought with the invitation"}
+                    </Text>
+                  </View>
+                </Pressable>
+
+                {shareLighterThought && (
+                  <View style={styles.lighterThoughtInputContainer}>
+                    <Text style={styles.lighterThoughtInputLabel}>
+                      Your lighter thought
+                    </Text>
+                    <TextInput
+                      style={styles.lighterThoughtTextInput}
+                      value={lighterThoughtText}
+                      onChangeText={setLighterThoughtText}
+                      placeholder="A warm angle to share..."
+                      placeholderTextColor="#A89BB0"
+                      multiline
+                      accessibilityLabel="Your lighter thought"
+                    />
+                    <Text style={styles.lighterThoughtMutedNote}>
+                      Only this lighter thought is included. Your original
+                      irritation remains private.
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
 
@@ -444,6 +534,21 @@ export default function MakeChallengePreviewScreen() {
                       {selectedReward}
                     </Text>
                   </View>
+                  {isFromReframe && (
+                    <>
+                      <View style={styles.summaryDivider} />
+                      <View style={styles.summaryItemRow}>
+                        <Text style={styles.summaryItemLabel}>
+                          Lighter thought
+                        </Text>
+                        <Text style={styles.summaryItemValue}>
+                          {shareLighterThought
+                            ? incomingReframeTone || "Gentle and cute"
+                            : "Private"}
+                        </Text>
+                      </View>
+                    </>
+                  )}
                 </View>
 
                 {/* Gentle Reassurance */}
@@ -485,7 +590,8 @@ export default function MakeChallengePreviewScreen() {
               </View>
               <Pressable
                 style={styles.lifecycleButton}
-                onPress={() =>
+                onPress={() => {
+                  const isSharing = isFromReframe && shareLighterThought;
                   router.push({
                     pathname: "/challenge-lifecycle-preview",
                     params: {
@@ -493,9 +599,12 @@ export default function MakeChallengePreviewScreen() {
                       participant: participantChoice,
                       timeframe: selectedTimeframe,
                       reward: selectedReward,
+                      reframeTone: incomingReframeTone,
+                      reframeText: isSharing ? lighterThoughtText.trim() : "",
+                      shareReframe: isSharing ? "true" : "false",
                     },
-                  } as any)
-                }
+                  } as any);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Preview the partner invitation experience"
               >
@@ -985,5 +1094,99 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: "#6D6072",
     lineHeight: 17,
+  },
+  lighterThoughtShareSection: {
+    backgroundColor: "#FDF8FC",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#EADEEB",
+    gap: 8,
+  },
+  lighterThoughtSectionHeading: {
+    fontSize: 14.5,
+    fontWeight: "700",
+    color: "#3D3040",
+  },
+  lighterThoughtSectionSupporting: {
+    fontSize: 12.5,
+    color: "#6D6072",
+    lineHeight: 17,
+  },
+  lighterThoughtToggle: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1.2,
+    borderColor: "#E0D2E3",
+    marginTop: 2,
+  },
+  lighterThoughtToggleActive: {
+    backgroundColor: "#F4ECF6",
+    borderColor: "#8B5388",
+  },
+  toggleIndicatorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  toggleCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: "#B4A2B8",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+  },
+  toggleCheckboxActive: {
+    backgroundColor: "#6E416D",
+    borderColor: "#6E416D",
+  },
+  toggleCheckboxCheck: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  lighterThoughtToggleText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#5C4F61",
+    flex: 1,
+  },
+  lighterThoughtToggleTextActive: {
+    color: "#4A154B",
+    fontWeight: "700",
+  },
+  lighterThoughtInputContainer: {
+    marginTop: 6,
+    gap: 6,
+  },
+  lighterThoughtInputLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#5C4F61",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  lighterThoughtTextInput: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    borderWidth: 1.2,
+    borderColor: "#D8C7DB",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#3D3040",
+    lineHeight: 20,
+    minHeight: 60,
+  },
+  lighterThoughtMutedNote: {
+    fontSize: 11.5,
+    color: "#857388",
+    lineHeight: 16,
+    fontStyle: "italic",
   },
 });

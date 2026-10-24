@@ -68,6 +68,9 @@ export default function ChallengeLifecyclePreviewScreen() {
     participant?: string;
     timeframe?: string;
     reward?: string;
+    reframeTone?: string;
+    reframeText?: string;
+    shareReframe?: string;
   }>();
 
   const passedIdea =
@@ -85,6 +88,14 @@ export default function ChallengeLifecyclePreviewScreen() {
       ? params.reward
       : "Coffee together";
   const displayIcon = passedIdea ? getDisplayIcon(passedIdea) : "☕";
+
+  const isReframeShared = params.shareReframe === "true";
+  const displayReframeText =
+    typeof params.reframeText === "string" ? params.reframeText.trim() : "";
+  const displayReframeTone =
+    typeof params.reframeTone === "string" ? params.reframeTone.trim() : "";
+  const shouldShowLighterThought =
+    isReframeShared && displayReframeText.length > 0;
 
   const [perspective, setPerspective] = useState<Perspective>("sam");
   const [responseState, setResponseState] = useState<ResponseState>("none");
@@ -240,6 +251,29 @@ export default function ChallengeLifecyclePreviewScreen() {
                 <Text style={styles.invitationContext}>{displayContext}</Text>
               </View>
             </View>
+
+            {shouldShowLighterThought && (
+              <View style={styles.lighterThoughtCard}>
+                <View style={styles.lighterThoughtHeaderRow}>
+                  <Text style={styles.lighterThoughtOverline}>
+                    A LIGHTER THOUGHT FROM ALEX
+                  </Text>
+                  {displayReframeTone.length > 0 && (
+                    <View style={styles.lighterThoughtTonePill}>
+                      <Text style={styles.lighterThoughtTonePillText}>
+                        {displayReframeTone}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.lighterThoughtText}>
+                  {displayReframeText}
+                </Text>
+                <Text style={styles.lighterThoughtSupportingNote}>
+                  A warm angle shared with this invitation — not a criticism.
+                </Text>
+              </View>
+            )}
 
             <View style={styles.invitationDivider} />
 
@@ -1351,5 +1385,47 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 10,
+  },
+  lighterThoughtCard: {
+    backgroundColor: "#FDF8FC",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#EADEEB",
+    gap: 6,
+  },
+  lighterThoughtHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  lighterThoughtOverline: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#8B6B92",
+    letterSpacing: 0.5,
+  },
+  lighterThoughtTonePill: {
+    backgroundColor: "#F3E7F2",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  lighterThoughtTonePillText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#6E416D",
+  },
+  lighterThoughtText: {
+    fontSize: 14,
+    color: "#3D3040",
+    lineHeight: 20,
+    fontStyle: "italic",
+  },
+  lighterThoughtSupportingNote: {
+    fontSize: 11.5,
+    color: "#857388",
+    lineHeight: 16,
   },
 });
