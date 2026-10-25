@@ -131,15 +131,26 @@ export default function EventDetailScreen() {
   // Consolidated repair journey preview local state
   const [previewPerspective, setPreviewPerspective] =
     useState<PreviewPerspective>("alex");
-  const [partnerResponse, setPartnerResponse] =
+
+  // Draft vs. shared recipient initial response
+  const [draftPartnerResponse, setDraftPartnerResponse] =
     useState<PartnerResponseChoice>("none");
-  const [suggestedStep, setSuggestedStep] = useState<SuggestedNextStep | null>(
+  const [sharedPartnerResponse, setSharedPartnerResponse] =
+    useState<PartnerResponseChoice>("none");
+
+  // Draft vs. shared suggested next step
+  const [draftSuggestedStep, setDraftSuggestedStep] =
+    useState<SuggestedNextStep | null>(null);
+  const [sharedSuggestedStep, setSharedSuggestedStep] =
+    useState<SuggestedNextStep | null>(null);
+
+  // Draft vs. shared individual settlement
+  const [alexDraftSettled, setAlexDraftSettled] = useState<boolean | null>(null);
+  const [alexSharedSettled, setAlexSharedSettled] = useState<boolean | null>(
     null,
   );
-
-  // Independent settlement
-  const [alexSettled, setAlexSettled] = useState<boolean | null>(null);
-  const [samSettled, setSamSettled] = useState<boolean | null>(null);
+  const [samDraftSettled, setSamDraftSettled] = useState<boolean | null>(null);
+  const [samSharedSettled, setSamSharedSettled] = useState<boolean | null>(null);
 
   // Private individual reflections (separate for Alex and Sam)
   const [alexPrivateTag, setAlexPrivateTag] = useState<PrivateHelpTag | null>(
@@ -174,10 +185,14 @@ export default function EventDetailScreen() {
   function handleResetPreview() {
     clearRepairPreview();
     setPreviewPerspective("alex");
-    setPartnerResponse("none");
-    setSuggestedStep(null);
-    setAlexSettled(null);
-    setSamSettled(null);
+    setDraftPartnerResponse("none");
+    setSharedPartnerResponse("none");
+    setDraftSuggestedStep(null);
+    setSharedSuggestedStep(null);
+    setAlexDraftSettled(null);
+    setAlexSharedSettled(null);
+    setSamDraftSettled(null);
+    setSamSharedSettled(null);
     setAlexPrivateTag(null);
     setAlexPrivateDismissed(false);
     setSamPrivateTag(null);
@@ -189,18 +204,19 @@ export default function EventDetailScreen() {
     setIsTakeawaySaved(false);
   }
 
-  const isMutuallySettled = alexSettled === true && samSettled === true;
+  const isMutuallySettled =
+    alexSharedSettled === true && samSharedSettled === true;
 
   useEffect(() => {
     if (isMutuallySettled && event?.id) {
       setReconnectedPreview(event.id);
-    } else if (alexSettled === false || samSettled === false) {
+    } else if (alexSharedSettled === false || samSharedSettled === false) {
       clearRepairPreview();
     }
   }, [
     isMutuallySettled,
-    alexSettled,
-    samSettled,
+    alexSharedSettled,
+    samSharedSettled,
     event?.id,
     setReconnectedPreview,
     clearRepairPreview,
@@ -209,9 +225,12 @@ export default function EventDetailScreen() {
   useEffect(() => {
     if (event?.id && event.id === previewEventId) {
       if (previewStatus === "reconnected") {
-        setAlexSettled(true);
-        setSamSettled(true);
-        setPartnerResponse((prev) => (prev === "none" ? "heard" : prev));
+        setAlexDraftSettled(true);
+        setAlexSharedSettled(true);
+        setSamDraftSettled(true);
+        setSamSharedSettled(true);
+        setDraftPartnerResponse((prev) => (prev === "none" ? "heard" : prev));
+        setSharedPartnerResponse((prev) => (prev === "none" ? "heard" : prev));
       }
       if (hasSharedTakeaway) {
         setIsTakeawaySaved(true);
@@ -486,13 +505,17 @@ export default function EventDetailScreen() {
   const isPositive = event.event_type === "positive";
   const isSharedFriction = !isPositive && event.visibility === "ours";
 
-  const isInCare = partnerResponse !== "none" && !isMutuallySettled;
-  const isOpen = partnerResponse === "none";
+  const isInCare = sharedPartnerResponse !== "none" && !isMutuallySettled;
+  const isOpen = sharedPartnerResponse === "none";
 
-  const currentSettled =
-    previewPerspective === "alex" ? alexSettled : samSettled;
-  const otherSettled =
-    previewPerspective === "alex" ? samSettled : alexSettled;
+  const currentDraftSettled =
+    previewPerspective === "alex" ? alexDraftSettled : samDraftSettled;
+  const currentSharedSettled =
+    previewPerspective === "alex" ? alexSharedSettled : samSharedSettled;
+  const otherSharedSettled =
+    previewPerspective === "alex" ? samSharedSettled : alexSharedSettled;
+  const partnerNameForCurrent =
+    previewPerspective === "alex" ? recipientCapitalized : creatorLabel;
 
   const currentPrivateTag =
     previewPerspective === "alex" ? alexPrivateTag : samPrivateTag;
@@ -796,35 +819,127 @@ export default function EventDetailScreen() {
                           <CouplyChoiceCard
                             title="🤍 I hear you"
                             description="Acknowledge without feeling pushed to debate or solve right now"
-                            selected={(partnerResponse as string) === "heard"}
-                            onPress={() => setPartnerResponse("heard")}
+                            selected={draftPartnerResponse === "heard"}
+                            onPress={() => setDraftPartnerResponse("heard")}
                             accessibilityLabel="I hear you: Acknowledge without feeling pushed to debate or solve right now"
                           />
                           <CouplyChoiceCard
                             title="⏳ I need a little time"
                             description="Signal care while taking gentle breathing room"
-                            selected={
-                              (partnerResponse as string) === "need_time"
-                            }
-                            onPress={() => setPartnerResponse("need_time")}
+                            selected={draftPartnerResponse === "need_time"}
+                            onPress={() => setDraftPartnerResponse("need_time")}
                             accessibilityLabel="I need a little time: Signal care while taking gentle breathing room"
                           />
                           <CouplyChoiceCard
                             title="🌿 Suggest a small next step"
                             description="Propose a kind, concrete step to help you both soften"
                             selected={
-                              (partnerResponse as string) ===
-                              "suggest_next_step"
+                              draftPartnerResponse === "suggest_next_step"
                             }
                             onPress={() => {
-                              setPartnerResponse("suggest_next_step");
-                              if (!suggestedStep) {
-                                setSuggestedStep("A quiet chat");
+                              setDraftPartnerResponse("suggest_next_step");
+                              if (!draftSuggestedStep) {
+                                setDraftSuggestedStep("A quiet chat");
                               }
                             }}
                             accessibilityLabel="Suggest a small next step: Propose a kind, concrete step to help you both soften"
                           />
                         </View>
+
+                        {/* Optional step chooser if Sam drafted suggest_next_step */}
+                        {draftPartnerResponse === "suggest_next_step" && (
+                          <View style={styles.nextStepChooserBlock}>
+                            <Text style={styles.nextStepChooserHeading}>
+                              What might feel easier?
+                            </Text>
+                            <View style={styles.stepChipsRow}>
+                              {SUGGESTED_NEXT_STEPS.map((step) => {
+                                const isSelected =
+                                  (draftSuggestedStep || "A quiet chat") ===
+                                  step;
+                                return (
+                                  <Pressable
+                                    key={step}
+                                    style={[
+                                      styles.stepChip,
+                                      isSelected && styles.stepChipSelected,
+                                    ]}
+                                    onPress={() => setDraftSuggestedStep(step)}
+                                    accessibilityRole="button"
+                                    accessibilityState={{
+                                      selected: isSelected,
+                                    }}
+                                    accessibilityLabel={step}
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.stepChipText,
+                                        isSelected &&
+                                          styles.stepChipTextSelected,
+                                      ]}
+                                    >
+                                      {step}
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        )}
+
+                        {/* Review Card for Recipient Initial Response */}
+                        {draftPartnerResponse !== "none" && (
+                          <View style={styles.reviewCard}>
+                            <Text style={styles.reviewCardOverline}>
+                              YOUR RESPONSE
+                            </Text>
+                            <Text style={styles.reviewCardHeading}>
+                              {draftPartnerResponse === "heard"
+                                ? "You chose to acknowledge this."
+                                : draftPartnerResponse === "need_time"
+                                ? "You chose to take a little time."
+                                : "You chose to suggest a small next step."}
+                            </Text>
+                            <Text style={styles.reviewCardBody}>
+                              Choose whether to share this with {creatorLabel}.
+                            </Text>
+                            <View style={styles.reviewCardActionsRow}>
+                              <CouplyPrimaryButton
+                                label={
+                                  draftPartnerResponse === "suggest_next_step"
+                                    ? `Share suggestion with ${creatorLabel}`
+                                    : `Share with ${creatorLabel}`
+                                }
+                                onPress={() => {
+                                  setSharedPartnerResponse(
+                                    draftPartnerResponse,
+                                  );
+                                  if (
+                                    draftPartnerResponse === "suggest_next_step"
+                                  ) {
+                                    setSharedSuggestedStep(
+                                      draftSuggestedStep || "A quiet chat",
+                                    );
+                                  }
+                                }}
+                                accessibilityLabel={
+                                  draftPartnerResponse === "suggest_next_step"
+                                    ? `Share suggestion with ${creatorLabel}`
+                                    : `Share with ${creatorLabel}`
+                                }
+                              />
+                              <CouplyQuietButton
+                                variant="text"
+                                label="Keep deciding"
+                                onPress={() => {
+                                  setDraftPartnerResponse("none");
+                                  setDraftSuggestedStep(null);
+                                }}
+                                accessibilityLabel="Keep deciding"
+                              />
+                            </View>
+                          </View>
+                        )}
                       </View>
                     )}
                   </View>
@@ -837,40 +952,57 @@ export default function EventDetailScreen() {
                     <View style={styles.responseDisplayBanner}>
                       <Text style={styles.responseDisplayTitle}>
                         {previewPerspective === "sam" ? (
-                          partnerResponse === "heard" ? (
+                          sharedPartnerResponse === "heard" ? (
                             "🤍 You acknowledged this in preview: 'I hear you'"
-                          ) : partnerResponse === "need_time" ? (
+                          ) : sharedPartnerResponse === "need_time" ? (
                             "⏳ You signaled in preview: 'I need a little time'"
                           ) : (
-                            `🌿 You suggested in preview: ${suggestedStep || "A quiet chat"}`
+                            `🌿 You suggested in preview: ${sharedSuggestedStep || "A quiet chat"}`
                           )
-                        ) : partnerResponse === "heard" ? (
-                          `🤍 In this preview, ${recipientCapitalized} saw this: 'I hear you'`
-                        ) : partnerResponse === "need_time" ? (
-                          `⏳ In this preview, ${recipientCapitalized} needs a little time`
+                        ) : sharedPartnerResponse === "heard" ? (
+                          `🤍 ${recipientCapitalized} hears you.`
+                        ) : sharedPartnerResponse === "need_time" ? (
+                          `⏳ ${recipientCapitalized} needs a little time.`
                         ) : (
-                          `🌿 In this preview, ${recipientCapitalized} suggested: ${suggestedStep || "A quiet chat"}`
+                          `🌿 ${recipientCapitalized} suggested a small next step.`
                         )}
                       </Text>
 
                       <Text style={styles.responseDisplayBody}>
-                        {partnerResponse === "need_time"
+                        {sharedPartnerResponse === "need_time"
                           ? previewPerspective === "sam"
                             ? "Taking quiet space to process emotions gently. Nothing needs to happen immediately."
                             : `${recipientCapitalized} needs a little quiet space right now. Giving each other time protects emotional safety.`
-                          : partnerResponse === "heard"
+                          : sharedPartnerResponse === "heard"
                           ? previewPerspective === "sam"
                             ? `${creatorLabel} knows you received this with care and no defense. You can talk when ready.`
                             : "Your shared thoughts were received with openness. Connection is softening."
                           : previewPerspective === "sam"
                           ? "Offering a kind, low-pressure gesture to help you both reconnect."
-                          : `${recipientCapitalized} offered a gentle next step whenever you both feel ready.`}
+                          : `${recipientCapitalized} suggested: "${sharedSuggestedStep || "A quiet chat"}". ${recipientCapitalized} offered a gentle next step whenever you both feel ready.`}
                       </Text>
+
+                      {/* Compact confirmation for Sam */}
+                      {previewPerspective === "sam" && (
+                        <View style={styles.sharedConfirmationCard}>
+                          <Text style={styles.sharedConfirmationText}>
+                            Shared with {creatorLabel} in this walkthrough.
+                          </Text>
+                          <Text style={styles.sharedConfirmationTruthNote}>
+                            Only visible in this browser. Nothing has been sent or saved.
+                          </Text>
+                        </View>
+                      )}
 
                       {previewPerspective === "sam" && !isMutuallySettled && (
                         <Pressable
                           style={styles.changeResponseButton}
-                          onPress={() => setPartnerResponse("none")}
+                          onPress={() => {
+                            setDraftPartnerResponse("none");
+                            setSharedPartnerResponse("none");
+                            setDraftSuggestedStep(null);
+                            setSharedSuggestedStep(null);
+                          }}
                           accessibilityRole="button"
                           accessibilityLabel="Change your response"
                         >
@@ -881,8 +1013,8 @@ export default function EventDetailScreen() {
                       )}
                     </View>
 
-                    {/* Optional step chooser if Sam selected suggest_next_step */}
-                    {partnerResponse === "suggest_next_step" &&
+                    {/* Step chooser if Sam selected suggest_next_step */}
+                    {sharedPartnerResponse === "suggest_next_step" &&
                       previewPerspective === "sam" && (
                         <View style={styles.nextStepChooserBlock}>
                           <Text style={styles.nextStepChooserHeading}>
@@ -890,7 +1022,10 @@ export default function EventDetailScreen() {
                           </Text>
                           <View style={styles.stepChipsRow}>
                             {SUGGESTED_NEXT_STEPS.map((step) => {
-                              const isSelected = suggestedStep === step;
+                              const isSelected =
+                                (draftSuggestedStep ||
+                                  sharedSuggestedStep ||
+                                  "A quiet chat") === step;
                               return (
                                 <Pressable
                                   key={step}
@@ -898,7 +1033,7 @@ export default function EventDetailScreen() {
                                     styles.stepChip,
                                     isSelected && styles.stepChipSelected,
                                   ]}
-                                  onPress={() => setSuggestedStep(step)}
+                                  onPress={() => setDraftSuggestedStep(step)}
                                   accessibilityRole="button"
                                   accessibilityState={{ selected: isSelected }}
                                   accessibilityLabel={step}
@@ -915,6 +1050,43 @@ export default function EventDetailScreen() {
                               );
                             })}
                           </View>
+
+                          {/* Review card if Sam chooses a new draft suggestion */}
+                          {draftSuggestedStep !== null &&
+                            draftSuggestedStep !== sharedSuggestedStep && (
+                              <View style={styles.reviewCard}>
+                                <Text style={styles.reviewCardOverline}>
+                                  YOUR RESPONSE
+                                </Text>
+                                <Text style={styles.reviewCardHeading}>
+                                  You chose to suggest a small next step.
+                                </Text>
+                                <Text style={styles.reviewCardBody}>
+                                  Choose whether to share this with {creatorLabel}.
+                                </Text>
+                                <View style={styles.reviewCardActionsRow}>
+                                  <CouplyPrimaryButton
+                                    label={`Share suggestion with ${creatorLabel}`}
+                                    onPress={() => {
+                                      setSharedSuggestedStep(
+                                        draftSuggestedStep,
+                                      );
+                                    }}
+                                    accessibilityLabel={`Share suggestion with ${creatorLabel}`}
+                                  />
+                                  <CouplyQuietButton
+                                    variant="text"
+                                    label="Keep deciding"
+                                    onPress={() => {
+                                      setDraftSuggestedStep(
+                                        sharedSuggestedStep,
+                                      );
+                                    }}
+                                    accessibilityLabel="Keep deciding"
+                                  />
+                                </View>
+                              </View>
+                            )}
                         </View>
                       )}
 
@@ -933,12 +1105,12 @@ export default function EventDetailScreen() {
                           style={styles.settleChoiceCardFlex}
                           title="🤝 This feels settled to me"
                           description="I feel ready to let this moment rest."
-                          selected={currentSettled === true}
+                          selected={currentDraftSettled === true}
                           onPress={() => {
                             if (previewPerspective === "alex") {
-                              setAlexSettled(true);
+                              setAlexDraftSettled(true);
                             } else {
-                              setSamSettled(true);
+                              setSamDraftSettled(true);
                             }
                           }}
                           accessibilityLabel="This feels settled to me"
@@ -947,20 +1119,84 @@ export default function EventDetailScreen() {
                           style={styles.settleChoiceCardFlex}
                           title="🌿 Not settled yet"
                           description="Keep this open with care."
-                          selected={currentSettled === false}
+                          selected={currentDraftSettled === false}
                           onPress={() => {
                             if (previewPerspective === "alex") {
-                              setAlexSettled(false);
+                              setAlexDraftSettled(false);
                             } else {
-                              setSamSettled(false);
+                              setSamDraftSettled(false);
                             }
                           }}
                           accessibilityLabel="Not settled yet"
                         />
                       </View>
 
+                      {/* Review Card for Individual Settlement */}
+                      {currentDraftSettled !== null &&
+                        currentDraftSettled !== currentSharedSettled && (
+                          <View style={styles.reviewCard}>
+                            <Text style={styles.reviewCardOverline}>
+                              YOUR CHECK-IN
+                            </Text>
+                            <Text style={styles.reviewCardHeading}>
+                              {currentDraftSettled === true
+                                ? "You feel ready to leave this here."
+                                : "You need a little more time."}
+                            </Text>
+                            <Text style={styles.reviewCardBody}>
+                              Would you like {partnerNameForCurrent} to see where you are?
+                            </Text>
+                            <View style={styles.reviewCardActionsRow}>
+                              <CouplyPrimaryButton
+                                label={
+                                  currentDraftSettled === true
+                                    ? `Share this with ${partnerNameForCurrent}`
+                                    : "Share that you need more time"
+                                }
+                                onPress={() => {
+                                  if (previewPerspective === "alex") {
+                                    setAlexSharedSettled(alexDraftSettled);
+                                  } else {
+                                    setSamSharedSettled(samDraftSettled);
+                                  }
+                                }}
+                                accessibilityLabel={
+                                  currentDraftSettled === true
+                                    ? `Share this with ${partnerNameForCurrent}`
+                                    : "Share that you need more time"
+                                }
+                              />
+                              <CouplyQuietButton
+                                variant="text"
+                                label="Keep deciding"
+                                onPress={() => {
+                                  if (previewPerspective === "alex") {
+                                    setAlexDraftSettled(alexSharedSettled);
+                                  } else {
+                                    setSamDraftSettled(samSharedSettled);
+                                  }
+                                }}
+                                accessibilityLabel="Keep deciding"
+                              />
+                            </View>
+                          </View>
+                        )}
+
+                      {/* Compact confirmation after sharing settlement */}
+                      {currentSharedSettled !== null &&
+                        currentDraftSettled === currentSharedSettled && (
+                          <View style={styles.sharedConfirmationCard}>
+                            <Text style={styles.sharedConfirmationText}>
+                              Shared with {partnerNameForCurrent} in this walkthrough.
+                            </Text>
+                            <Text style={styles.sharedConfirmationTruthNote}>
+                              Only visible in this browser. Nothing has been sent or saved.
+                            </Text>
+                          </View>
+                        )}
+
                       {/* Supportive note when selecting Not settled yet */}
-                      {currentSettled === false && (
+                      {currentDraftSettled === false && (
                         <View style={styles.calmInlineNotice}>
                           <Text style={styles.calmInlineNoticeText}>
                             This stays open with care. Nothing needs to be forced or solved right now.
@@ -968,22 +1204,35 @@ export default function EventDetailScreen() {
                         </View>
                       )}
 
-                      {/* Empathetic notice if other partner is settled and current viewer is not */}
-                      {otherSettled === true && currentSettled !== true && (
+                      {/* Empathetic notice if other partner explicitly shared settled and current viewer is not shared settled */}
+                      {otherSharedSettled === true &&
+                        currentSharedSettled !== true && (
+                          <View style={styles.oneSidedNoticeCard}>
+                            <Text style={styles.oneSidedNoticeHeading}>
+                              In this preview, {partnerNameForCurrent} feels settled.
+                            </Text>
+                            <Text style={styles.oneSidedNoticeText}>
+                              You do not have to match that. This moment can stay open until it feels right for you too.
+                            </Text>
+                          </View>
+                        )}
+
+                      {/* Empathetic notice if other partner explicitly shared not settled */}
+                      {otherSharedSettled === false && (
                         <View style={styles.oneSidedNoticeCard}>
                           <Text style={styles.oneSidedNoticeHeading}>
-                            {previewPerspective === "alex"
-                              ? `In this preview, ${recipientCapitalized} feels settled.`
-                              : `In this preview, ${creatorLabel} feels settled.`}
+                            In this preview, {partnerNameForCurrent} needs a little more time.
                           </Text>
                           <Text style={styles.oneSidedNoticeText}>
-                            You do not have to match that. This moment can stay open until it feels right for you too.
+                            This moment stays open with care. Giving each other time protects emotional safety.
                           </Text>
                         </View>
                       )}
 
                       {/* STAGE D: PRIVATE INDIVIDUAL REFLECTION */}
-                      {currentSettled === true && !currentPrivateDismissed && (
+                      {(currentDraftSettled === true ||
+                        currentSharedSettled === true) &&
+                        !currentPrivateDismissed && (
                         <View style={styles.privateReflectionCard}>
                           <View style={styles.privateReflectionBadgeRow}>
                             <View style={styles.privatePill}>
@@ -2063,6 +2312,62 @@ const styles = StyleSheet.create({
     fontSize: tokens.typeScale.caption,
     color: tokens.colors.textSecondary,
     lineHeight: 17,
+  },
+
+  /* Walkthrough Review Card */
+  reviewCard: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.card,
+    padding: 14,
+    borderWidth: 1.2,
+    borderColor: tokens.colors.borderSoft,
+    gap: 8,
+    marginTop: 8,
+  },
+  reviewCardOverline: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+    letterSpacing: 0.8,
+  },
+  reviewCardHeading: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontWeight: "700",
+    color: tokens.colors.text,
+  },
+  reviewCardBody: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
+    lineHeight: 18,
+  },
+  reviewCardActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 4,
+  },
+
+  /* Shared Walkthrough Confirmation */
+  sharedConfirmationCard: {
+    backgroundColor: tokens.colors.surfaceBlush,
+    borderRadius: tokens.radii.small,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderSoft,
+    gap: 2,
+    marginTop: 6,
+  },
+  sharedConfirmationText: {
+    fontSize: tokens.typeScale.caption,
+    fontWeight: "600",
+    color: tokens.colors.plum,
+  },
+  sharedConfirmationTruthNote: {
+    fontSize: tokens.typeScale.overline,
+    color: tokens.colors.textSecondary,
+    fontStyle: "italic",
+    lineHeight: 15,
   },
 
   /* Private reflection */

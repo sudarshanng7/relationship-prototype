@@ -1,7 +1,7 @@
 import { AppBottomNav } from "@/components/AppBottomNav";
 import {
   CouplyHeader,
-  CouplyQuietButton,
+  CouplyPrimaryButton,
   CouplySectionCard,
 } from "@/components/CouplyUI";
 import { useUserIdentity } from "@/context/UserIdentityContext";
@@ -62,15 +62,6 @@ export default function SettingsScreen() {
                 subtitle="Choose the look that feels right for you."
                 onBack={() => setSettingsDetailView(null)}
                 backLabel="‹ Settings"
-                rightSlot={
-                  <CouplyQuietButton
-                    label="Done"
-                    onPress={handleBack}
-                    accessibilityLabel="Return to previous screen"
-                    variant="soft"
-                    style={styles.detailDoneBtn}
-                  />
-                }
                 style={styles.headerCouply}
               />
 
@@ -121,12 +112,11 @@ export default function SettingsScreen() {
                 })}
               </CouplySectionCard>
 
-              <CouplyQuietButton
+              <CouplyPrimaryButton
                 label="Done"
                 onPress={() => setSettingsDetailView(null)}
-                accessibilityLabel="Done editing appearance"
-                variant="soft"
-                style={styles.doneButton}
+                accessibilityLabel="Done"
+                style={styles.detailFooterAction}
               />
             </View>
           )}
@@ -154,12 +144,11 @@ export default function SettingsScreen() {
                 </View>
               </CouplySectionCard>
 
-              <CouplyQuietButton
+              <CouplyPrimaryButton
                 label="Got it"
                 onPress={() => setSettingsDetailView(null)}
-                accessibilityLabel="Close sharing choices"
-                variant="soft"
-                style={styles.doneButton}
+                accessibilityLabel="Got it"
+                style={styles.detailFooterAction}
               />
             </View>
           )}
@@ -184,12 +173,11 @@ export default function SettingsScreen() {
                 </View>
               </CouplySectionCard>
 
-              <CouplyQuietButton
+              <CouplyPrimaryButton
                 label="Got it"
                 onPress={() => setSettingsDetailView(null)}
-                accessibilityLabel="Close help"
-                variant="soft"
-                style={styles.doneButton}
+                accessibilityLabel="Got it"
+                style={styles.detailFooterAction}
               />
             </View>
           )}
@@ -483,10 +471,6 @@ function createStyles(theme: (typeof THEMES)["lavender"]) {
       padding: 0,
       overflow: "hidden",
     },
-    detailDoneBtn: {
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-    },
     header: {
       gap: 6,
       paddingVertical: 4,
@@ -678,19 +662,10 @@ function createStyles(theme: (typeof THEMES)["lavender"]) {
       color: theme.secondaryText,
       lineHeight: 21,
     },
-    doneButton: {
-      backgroundColor: theme.accent,
-      borderRadius: 12,
-      paddingVertical: 13,
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: 4,
-    },
-    doneButtonText: {
-      color: "#FFFFFF",
-      fontSize: 14.5,
-      fontWeight: "600",
-      letterSpacing: -0.1,
+    detailFooterAction: {
+      marginTop: 20,
+      minHeight: 48,
+      width: "100%",
     },
   });
 }
