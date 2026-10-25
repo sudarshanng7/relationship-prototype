@@ -6,6 +6,7 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -1004,7 +1005,7 @@ export default function PlayfulReframeScreen() {
                           </Text>
                           <Text style={styles.summaryItemValue}>
                             {shareLighterThought && participantChoice !== "me"
-                              ? selectedToneLabel
+                              ? selectedToneLabel || "Included"
                               : "Private"}
                           </Text>
                         </View>
@@ -1014,81 +1015,66 @@ export default function PlayfulReframeScreen() {
                       {(participantChoice === "sam" ||
                         participantChoice === "both") && (
                         <View style={styles.lighterThoughtShareSection}>
-                          <Text style={styles.lighterThoughtSectionHeading}>
-                            Include your lighter thought?
-                          </Text>
-                          <Text style={styles.lighterThoughtSectionSupporting}>
-                            Share the warm angle you chose, without sharing the
-                            original irritation.
-                          </Text>
-
                           <Pressable
-                            style={[
-                              styles.lighterThoughtToggle,
-                              shareLighterThought &&
-                                styles.lighterThoughtToggleActive,
-                            ]}
+                            style={styles.lighterThoughtSwitchRow}
                             onPress={() =>
-                              setShareLighterThought(!shareLighterThought)
+                              setShareLighterThought((prev) => !prev)
                             }
-                            accessibilityRole="button"
-                            accessibilityState={{
-                              selected: shareLighterThought,
-                            }}
-                            accessibilityLabel={
-                              shareLighterThought
-                                ? "Keep this lighter thought private"
-                                : "Include this lighter thought with the invitation"
-                            }
+                            accessible={false}
                           >
-                            <View style={styles.toggleIndicatorRow}>
-                              <View
-                                style={[
-                                  styles.toggleCheckbox,
-                                  shareLighterThought &&
-                                    styles.toggleCheckboxActive,
-                                ]}
-                              >
-                                {shareLighterThought && (
-                                  <Text style={styles.toggleCheckboxCheck}>
-                                    ✓
-                                  </Text>
-                                )}
-                              </View>
+                            <View style={styles.lighterThoughtSwitchTextGroup}>
+                              <Text style={styles.lighterThoughtSwitchTitle}>
+                                Include your lighter thought
+                              </Text>
                               <Text
-                                style={[
-                                  styles.lighterThoughtToggleText,
-                                  shareLighterThought &&
-                                    styles.lighterThoughtToggleTextActive,
-                                ]}
+                                style={styles.lighterThoughtSwitchSupporting}
                               >
                                 {shareLighterThought
-                                  ? "Keep this lighter thought private"
-                                  : "Include this lighter thought with the invitation"}
+                                  ? "Your edited lighter thought will appear with this invitation."
+                                  : "It stays private. Your original irritation is never shared."}
                               </Text>
                             </View>
+                            <Pressable
+                              style={styles.switchWrapper}
+                              onPress={(e) => e.stopPropagation()}
+                              accessible={false}
+                            >
+                              <Switch
+                                value={shareLighterThought}
+                                onValueChange={setShareLighterThought}
+                                trackColor={{
+                                  false: "#E2D9E4",
+                                  true: "#6E416D",
+                                }}
+                                thumbColor="#FFFFFF"
+                                accessibilityRole="switch"
+                                accessibilityLabel="Include lighter thought with invitation"
+                                accessibilityState={{
+                                  checked: shareLighterThought,
+                                }}
+                              />
+                            </Pressable>
                           </Pressable>
 
-                          {shareLighterThought && (
-                            <View style={styles.lighterThoughtInputContainer}>
-                              <Text style={styles.lighterThoughtInputLabel}>
-                                Your lighter thought
-                              </Text>
-                              <TextInput
-                                style={styles.lighterThoughtTextInput}
-                                value={effectiveLighterThought}
-                                onChangeText={setLighterThoughtCustomText}
-                                placeholder="A warm angle to share..."
-                                placeholderTextColor="#9C8E9E"
-                                multiline
-                                accessibilityLabel="Your lighter thought"
-                              />
-                              <Text style={styles.lighterThoughtMutedNote}>
-                                Only this edited lighter thought will be shown.
-                                Your original irritation stays private.
-                              </Text>
-                            </View>
-                          )}
+                          <View style={styles.lighterThoughtInputContainer}>
+                            <Text style={styles.lighterThoughtInputLabel}>
+                              Your lighter thought
+                            </Text>
+                            <TextInput
+                              style={styles.lighterThoughtTextInput}
+                              value={effectiveLighterThought}
+                              onChangeText={setLighterThoughtCustomText}
+                              placeholder="A warm angle to share..."
+                              placeholderTextColor="#9C8E9E"
+                              multiline
+                              accessibilityLabel="Your lighter thought"
+                            />
+                            <Text style={styles.lighterThoughtMutedNote}>
+                              {shareLighterThought
+                                ? "Only this edited lighter thought will be shown. Your original irritation stays private."
+                                : "This stays only with you. Your original irritation stays private."}
+                            </Text>
+                          </View>
                         </View>
                       )}
 
@@ -1978,62 +1964,31 @@ const styles = StyleSheet.create({
     borderColor: "#EADEEB",
     gap: 8,
   },
-  lighterThoughtSectionHeading: {
-    fontSize: 14.5,
+  lighterThoughtSwitchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 2,
+  },
+  lighterThoughtSwitchTextGroup: {
+    flex: 1,
+    gap: 3,
+  },
+  lighterThoughtSwitchTitle: {
+    fontSize: 14,
     fontWeight: "700",
     color: "#3D3040",
+    letterSpacing: -0.1,
   },
-  lighterThoughtSectionSupporting: {
+  lighterThoughtSwitchSupporting: {
     fontSize: 12.5,
     color: "#6D6072",
     lineHeight: 17,
   },
-  lighterThoughtToggle: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderWidth: 1.2,
-    borderColor: "#E0D2E3",
-    marginTop: 2,
-  },
-  lighterThoughtToggleActive: {
-    backgroundColor: "#F4ECF6",
-    borderColor: "#8B5388",
-  },
-  toggleIndicatorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  toggleCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: "#B4A2B8",
-    alignItems: "center",
+  switchWrapper: {
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-  },
-  toggleCheckboxActive: {
-    backgroundColor: "#6E416D",
-    borderColor: "#6E416D",
-  },
-  toggleCheckboxCheck: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  lighterThoughtToggleText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#5C4F61",
-    flex: 1,
-  },
-  lighterThoughtToggleTextActive: {
-    color: "#4A154B",
-    fontWeight: "700",
+    alignItems: "center",
   },
   lighterThoughtInputContainer: {
     marginTop: 6,

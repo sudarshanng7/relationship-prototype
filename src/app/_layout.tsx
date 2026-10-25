@@ -1,3 +1,4 @@
+import { ChallengePreviewProvider } from "@/context/ChallengePreviewContext";
 import { RepairPreviewProvider } from "@/context/RepairPreviewContext";
 import { UserIdentityProvider } from "@/context/UserIdentityContext";
 import { Stack } from "expo-router";
@@ -6,7 +7,8 @@ export default function RootLayout() {
   return (
     <UserIdentityProvider>
       <RepairPreviewProvider>
-        <Stack>
+        <ChallengePreviewProvider>
+          <Stack>
         <Stack.Screen
           name="index"
           options={{
@@ -68,7 +70,8 @@ export default function RootLayout() {
           }}
         />
       </Stack>
-    </RepairPreviewProvider>
+        </ChallengePreviewProvider>
+      </RepairPreviewProvider>
     </UserIdentityProvider>
   );
 }

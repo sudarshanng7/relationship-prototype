@@ -1,3 +1,5 @@
+import { useChallengePreview } from "@/context/ChallengePreviewContext";
+import { useUserIdentity } from "@/context/UserIdentityContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -8,7 +10,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { useUserIdentity } from "@/context/UserIdentityContext";
 
 type Perspective = "sam" | "alex";
 
@@ -65,9 +66,7 @@ function getDisplayIcon(title: string): string {
 export default function ChallengeLifecyclePreviewScreen() {
   const router = useRouter();
   const { displayName, partnerName, partnerRef } = useUserIdentity();
-  const creatorLabel = displayName || "You";
-  const recipientCapitalized = partnerName || "Your partner";
-  const recipientLabel = partnerRef;
+  const { activeInvitation, updateInvitationStatus } = useChallengePreview();
   const params = useLocalSearchParams<{
     idea?: string;
     participant?: string;
@@ -76,36 +75,100 @@ export default function ChallengeLifecyclePreviewScreen() {
     reframeTone?: string;
     reframeText?: string;
     shareReframe?: string;
+    source?: string;
   }>();
 
+  const isFromPreviewFlow =
+    params.source === "home-preview" || params.source === "challenge-preview";
+  const shouldUseActiveInvitation =
+    Boolean(activeInvitation) && isFromPreviewFlow;
+
+  const creatorLabel =
+    shouldUseActiveInvitation && activeInvitation
+      ? activeInvitation.creatorName || "You"
+      : displayName || "You";
+
+  const recipientCapitalized =
+    shouldUseActiveInvitation && activeInvitation
+      ? activeInvitation.partnerName || partnerName || "Your partner"
+      : partnerName || "Your partner";
+
+  const recipientLabel =
+    shouldUseActiveInvitation && activeInvitation
+      ? activeInvitation.partnerName || partnerRef || "your partner"
+      : partnerRef;
+
   const passedIdea =
-    typeof params.idea === "string" ? params.idea.trim() : "";
+    shouldUseActiveInvitation && activeInvitation
+      ? activeInvitation.idea.trim()
+      : typeof params.idea === "string"
+      ? params.idea.trim()
+      : "";
+
   const displayTitle = passedIdea || "Bring the mug home";
   const displayContext = passedIdea
     ? "A small reset chosen together"
     : "A warm drink together after a long day";
+
   const displayTimeframe =
-    typeof params.timeframe === "string" && params.timeframe.trim().length > 0
+    shouldUseActiveInvitation && activeInvitation
+      ? activeInvitation.timeframe
+      : typeof params.timeframe === "string" &&
+        params.timeframe.trim().length > 0
       ? params.timeframe
       : "Whenever / no rush";
+
   const displayReward =
-    typeof params.reward === "string" && params.reward.trim().length > 0
+    shouldUseActiveInvitation && activeInvitation
+      ? activeInvitation.reward
+      : typeof params.reward === "string" && params.reward.trim().length > 0
       ? params.reward
       : "Coffee together";
+
   const displayIcon = passedIdea ? getDisplayIcon(passedIdea) : "☕";
 
-  const isReframeShared = params.shareReframe === "true";
-  const displayReframeText =
-    typeof params.reframeText === "string" ? params.reframeText.trim() : "";
-  const displayReframeTone =
-    typeof params.reframeTone === "string" ? params.reframeTone.trim() : "";
   const shouldShowLighterThought =
-    isReframeShared && displayReframeText.length > 0;
+    shouldUseActiveInvitation && activeInvitation
+      ? Boolean(
+          activeInvitation.shareReframe &&
+            activeInvitation.reframeText &&
+            activeInvitation.reframeText.trim().length > 0,
+        )
+      : params.shareReframe === "true" &&
+        typeof params.reframeText === "string" &&
+        params.reframeText.trim().length > 0;
+
+  const displayReframeText =
+    shouldUseActiveInvitation && activeInvitation
+      ? activeInvitation.reframeText?.trim() || ""
+      : typeof params.reframeText === "string"
+      ? params.reframeText.trim()
+      : "";
+
+  const displayReframeTone =
+    shouldUseActiveInvitation && activeInvitation
+      ? activeInvitation.reframeTone?.trim() || ""
+      : typeof params.reframeTone === "string"
+      ? params.reframeTone.trim()
+      : "";
+
+  const initialResponseState: ResponseState = (() => {
+    if (shouldUseActiveInvitation && activeInvitation) {
+      if (activeInvitation.status === "accepted") return "in";
+      if (activeInvitation.status === "tweaked") return "tweak_shared";
+      if (activeInvitation.status === "declined") return "not_today";
+    }
+    return "none";
+  })();
+
+  const initialCompleted =
+    shouldUseActiveInvitation && activeInvitation?.status === "completed";
 
   const [perspective, setPerspective] = useState<Perspective>("sam");
-  const [responseState, setResponseState] = useState<ResponseState>("none");
+  const [responseState, setResponseState] =
+    useState<ResponseState>(initialResponseState);
   const [selectedTweak, setSelectedTweak] = useState<TweakOption | null>(null);
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(initialCompleted);
   const [showSharedMemoryPreview, setShowSharedMemoryPreview] = useState(false);
 
   function handleResetAll() {
@@ -114,10 +177,16 @@ export default function ChallengeLifecyclePreviewScreen() {
     setSelectedTweak(null);
     setIsCompleted(false);
     setShowSharedMemoryPreview(false);
+    if (shouldUseActiveInvitation) {
+      updateInvitationStatus("pending");
+    }
   }
 
   function handleAccept() {
     setResponseState("in");
+    if (shouldUseActiveInvitation) {
+      updateInvitationStatus("accepted");
+    }
   }
 
   function handleStartTweak() {
@@ -129,10 +198,16 @@ export default function ChallengeLifecyclePreviewScreen() {
 
   function handleShareTweak() {
     setResponseState("tweak_shared");
+    if (shouldUseActiveInvitation) {
+      updateInvitationStatus("tweaked");
+    }
   }
 
   function handleDecline() {
     setResponseState("not_today");
+    if (shouldUseActiveInvitation) {
+      updateInvitationStatus("declined");
+    }
   }
 
   function handleTimePass() {
@@ -141,6 +216,9 @@ export default function ChallengeLifecyclePreviewScreen() {
 
   function handleComplete() {
     setIsCompleted(true);
+    if (shouldUseActiveInvitation) {
+      updateInvitationStatus("completed");
+    }
   }
 
   return (
@@ -352,8 +430,9 @@ export default function ChallengeLifecyclePreviewScreen() {
                     </Text>
                     <View style={styles.mockMemoryNotice}>
                       <Text style={styles.mockMemoryNoticeText}>
-                        This is only a visual preview. No moment has been added
-                        to Our Space.
+                        This is only a visual preview. This completion only
+                        updates the current browser session. No moment has been
+                        added to Our Space.
                       </Text>
                     </View>
                   </View>
@@ -467,7 +546,8 @@ export default function ChallengeLifecyclePreviewScreen() {
                   <View style={styles.truthfulNoteBox}>
                     <Text style={styles.truthfulNoteText}>
                       In this preview, {creatorLabel} would see that you are open
-                      to the idea.
+                      to the idea. This response only updates the current browser
+                      session.
                     </Text>
                   </View>
 
@@ -606,7 +686,8 @@ export default function ChallengeLifecyclePreviewScreen() {
 
                   <View style={styles.truthfulNoteBox}>
                     <Text style={styles.truthfulNoteText}>
-                      Nothing has been shared or saved.
+                      In this preview, this response only updates the current
+                      browser session. Nothing has been shared or saved.
                     </Text>
                   </View>
 
@@ -653,7 +734,8 @@ export default function ChallengeLifecyclePreviewScreen() {
                   <View style={styles.truthfulNoteBox}>
                     <Text style={styles.truthfulNoteText}>
                       In this preview, {creatorLabel} sees this as a gentle
-                      pass. Nothing has been sent or saved.
+                      pass. This response only updates the current browser
+                      session. Nothing has been sent or saved.
                     </Text>
                   </View>
 
@@ -791,8 +873,9 @@ export default function ChallengeLifecyclePreviewScreen() {
 
                   <View style={styles.truthfulNoteBox}>
                     <Text style={styles.truthfulNoteText}>
-                      Shared moments feel lightest when both feel free to choose
-                      them.
+                      In this preview, this response only updates the current
+                      browser session. Shared moments feel lightest when both feel
+                      free to choose them.
                     </Text>
                   </View>
 
@@ -841,7 +924,8 @@ export default function ChallengeLifecyclePreviewScreen() {
 
                   <View style={styles.truthfulNoteBox}>
                     <Text style={styles.truthfulNoteText}>
-                      In this preview, you could decide whether it still feels
+                      In this preview, this response only updates the current
+                      browser session. You could decide whether it still feels
                       right.
                     </Text>
                   </View>
@@ -880,7 +964,9 @@ export default function ChallengeLifecyclePreviewScreen() {
 
                   <View style={styles.truthfulNoteBox}>
                     <Text style={styles.truthfulNoteText}>
-                      Declining easily is what keeps invitations safe to receive.
+                      In this preview, this response only updates the current
+                      browser session. Declining easily is what keeps invitations
+                      safe to receive.
                     </Text>
                   </View>
 

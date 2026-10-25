@@ -1,3 +1,4 @@
+import { useChallengePreview } from "@/context/ChallengePreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -8,6 +9,7 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -82,7 +84,9 @@ const REWARD_OPTIONS = [
 
 export default function MakeChallengePreviewScreen() {
   const router = useRouter();
-  const { partnerName, partnerRef } = useUserIdentity();
+  const { displayName, partnerName, partnerRef } = useUserIdentity();
+  const { activeInvitation, shareInvitation, clearInvitation } =
+    useChallengePreview();
 
   const participantOptions: ParticipantOption[] = [
     {
@@ -143,9 +147,50 @@ export default function MakeChallengePreviewScreen() {
   const [lighterThoughtText, setLighterThoughtText] =
     useState(incomingReframeText);
 
+  const [createdInvitationId, setCreatedInvitationId] = useState<string | null>(
+    null,
+  );
+  const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   const trimmedText = challengeText.trim();
   const effectiveTitle = trimmedText || "Bring the mug home";
   const isCustomProvided = trimmedText.length > 0;
+
+  function handleShareInvitation() {
+    const trimmed = challengeText.trim();
+    if (!trimmed) {
+      setValidationError("Please enter an idea first, or pick a suggestion above.");
+      return;
+    }
+    setValidationError(null);
+
+    const invitationId = createdInvitationId || Date.now().toString();
+    const isSharingLighter =
+      isFromReframe &&
+      shareLighterThought &&
+      lighterThoughtText.trim().length > 0;
+
+    const mappedParticipant: "me" | "partner" | "both" =
+      participantChoice === "sam" ? "partner" : participantChoice;
+
+    shareInvitation({
+      id: invitationId,
+      idea: trimmed,
+      participant: mappedParticipant,
+      timeframe: selectedTimeframe,
+      reward: selectedReward,
+      creatorName: displayName?.trim() || "You",
+      partnerName: partnerName?.trim() || undefined,
+      reframeTone: isSharingLighter ? incomingReframeTone : undefined,
+      reframeText: isSharingLighter ? lighterThoughtText.trim() : undefined,
+      shareReframe: isSharingLighter,
+      status: "pending",
+    });
+
+    setCreatedInvitationId(invitationId);
+    setShowConfirmation(true);
+  }
 
   function handleReset() {
     setChallengeText("");
@@ -154,10 +199,19 @@ export default function MakeChallengePreviewScreen() {
     setSelectedReward("No reward — just the moment");
     setShareLighterThought(false);
     setLighterThoughtText(incomingReframeText);
+    setShowConfirmation(false);
+    setValidationError(null);
+    if (createdInvitationId && activeInvitation?.id === createdInvitationId) {
+      clearInvitation();
+    }
+    setCreatedInvitationId(null);
   }
 
   function handleSelectSuggestion(title: string) {
     setChallengeText(title);
+    if (validationError) {
+      setValidationError(null);
+    }
   }
 
   return (
@@ -228,73 +282,57 @@ export default function MakeChallengePreviewScreen() {
             {/* Optional lighter thought inclusion section */}
             {isFromReframe && (
               <View style={styles.lighterThoughtShareSection}>
-                <Text style={styles.lighterThoughtSectionHeading}>
-                  Include your lighter thought?
-                </Text>
-                <Text style={styles.lighterThoughtSectionSupporting}>
-                  You can add the warm angle from your reframe without sharing
-                  what originally bothered you.
-                </Text>
-
                 <Pressable
-                  style={[
-                    styles.lighterThoughtToggle,
-                    shareLighterThought && styles.lighterThoughtToggleActive,
-                  ]}
-                  onPress={() => setShareLighterThought(!shareLighterThought)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: shareLighterThought }}
-                  accessibilityLabel={
-                    shareLighterThought
-                      ? "Keep this lighter thought private"
-                      : "Include this lighter thought with the invitation"
-                  }
+                  style={styles.lighterThoughtSwitchRow}
+                  onPress={() => setShareLighterThought((prev) => !prev)}
+                  accessible={false}
                 >
-                  <View style={styles.toggleIndicatorRow}>
-                    <View
-                      style={[
-                        styles.toggleCheckbox,
-                        shareLighterThought && styles.toggleCheckboxActive,
-                      ]}
-                    >
-                      {shareLighterThought && (
-                        <Text style={styles.toggleCheckboxCheck}>✓</Text>
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.lighterThoughtToggleText,
-                        shareLighterThought &&
-                          styles.lighterThoughtToggleTextActive,
-                      ]}
-                    >
+                  <View style={styles.lighterThoughtSwitchTextGroup}>
+                    <Text style={styles.lighterThoughtSwitchTitle}>
+                      Include your lighter thought
+                    </Text>
+                    <Text style={styles.lighterThoughtSwitchSupporting}>
                       {shareLighterThought
-                        ? "Keep this lighter thought private"
-                        : "Include this lighter thought with the invitation"}
+                        ? "Your edited lighter thought will appear with this invitation."
+                        : "It stays private. Your original irritation is never shared."}
                     </Text>
                   </View>
+                  <Pressable
+                    style={styles.switchWrapper}
+                    onPress={(e) => e.stopPropagation()}
+                    accessible={false}
+                  >
+                    <Switch
+                      value={shareLighterThought}
+                      onValueChange={setShareLighterThought}
+                      trackColor={{ false: "#E2D9E4", true: "#6E416D" }}
+                      thumbColor="#FFFFFF"
+                      accessibilityRole="switch"
+                      accessibilityLabel="Include lighter thought with invitation"
+                      accessibilityState={{ checked: shareLighterThought }}
+                    />
+                  </Pressable>
                 </Pressable>
 
-                {shareLighterThought && (
-                  <View style={styles.lighterThoughtInputContainer}>
-                    <Text style={styles.lighterThoughtInputLabel}>
-                      Your lighter thought
-                    </Text>
-                    <TextInput
-                      style={styles.lighterThoughtTextInput}
-                      value={lighterThoughtText}
-                      onChangeText={setLighterThoughtText}
-                      placeholder="A warm angle to share..."
-                      placeholderTextColor="#A89BB0"
-                      multiline
-                      accessibilityLabel="Your lighter thought"
-                    />
-                    <Text style={styles.lighterThoughtMutedNote}>
-                      Only this lighter thought is included. Your original
-                      irritation remains private.
-                    </Text>
-                  </View>
-                )}
+                <View style={styles.lighterThoughtInputContainer}>
+                  <Text style={styles.lighterThoughtInputLabel}>
+                    Your lighter thought
+                  </Text>
+                  <TextInput
+                    style={styles.lighterThoughtTextInput}
+                    value={lighterThoughtText}
+                    onChangeText={setLighterThoughtText}
+                    placeholder="A warm angle to share..."
+                    placeholderTextColor="#A89BB0"
+                    multiline
+                    accessibilityLabel="Your lighter thought"
+                  />
+                  <Text style={styles.lighterThoughtMutedNote}>
+                    {shareLighterThought
+                      ? "Only this edited lighter thought will be shown. Your original irritation stays private."
+                      : "This stays only with you. Your original irritation stays private."}
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -310,7 +348,12 @@ export default function MakeChallengePreviewScreen() {
                 <TextInput
                   style={styles.textInput}
                   value={challengeText}
-                  onChangeText={setChallengeText}
+                  onChangeText={(text) => {
+                    setChallengeText(text);
+                    if (validationError) {
+                      setValidationError(null);
+                    }
+                  }}
                   placeholder="e.g. Brew a fresh cup of tea, or take a 5-minute quiet walk..."
                   placeholderTextColor="#A89BB0"
                   multiline
@@ -568,7 +611,7 @@ export default function MakeChallengePreviewScreen() {
                         </Text>
                         <Text style={styles.summaryItemValue}>
                           {shareLighterThought
-                            ? incomingReframeTone || "Gentle and cute"
+                            ? incomingReframeTone || "Included"
                             : "Private"}
                         </Text>
                       </View>
@@ -587,18 +630,84 @@ export default function MakeChallengePreviewScreen() {
                   </Text>
                 </View>
 
-                {/* Disabled Preview Action */}
-                <View
-                  style={styles.disabledPreviewButton}
-                  accessible={true}
+                {/* Calm validation error */}
+                {validationError && (
+                  <View style={styles.calmValidationBox}>
+                    <Text style={styles.calmValidationText}>
+                      {validationError}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Active Plum Share Button */}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.sharePreviewButton,
+                    pressed && styles.sharePreviewButtonPressed,
+                  ]}
+                  onPress={handleShareInvitation}
                   accessibilityRole="button"
-                  accessibilityState={{ disabled: true }}
-                  accessibilityLabel="Invitation preview: sending comes later"
+                  accessibilityLabel="Share invitation in preview"
                 >
-                  <Text style={styles.disabledPreviewButtonText}>
-                    Invitation preview — sending comes later
+                  <Text style={styles.sharePreviewButtonText}>
+                    Share invitation in preview
                   </Text>
-                </View>
+                </Pressable>
+
+                {/* Confirmation card */}
+                {showConfirmation && (
+                  <View style={styles.confirmationCard}>
+                    <View style={styles.confirmationHeaderRow}>
+                      <View style={styles.confirmationBadge}>
+                        <Text style={styles.confirmationBadgeText}>
+                          LOCAL PREVIEW ACTIVE
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.confirmationHeading}>
+                      Invitation shared in preview
+                    </Text>
+                    <Text style={styles.confirmationBody}>
+                      In this browser session, you can now see how this small
+                      invitation would appear for your partner.
+                    </Text>
+                    <View style={styles.confirmationTruthfulBox}>
+                      <Text style={styles.confirmationTruthfulText}>
+                        Nothing has been sent, saved, or shown to a real partner.
+                      </Text>
+                    </View>
+                    <View style={styles.confirmationActionsGroup}>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.confirmationPrimaryBtn,
+                          pressed && styles.confirmationPrimaryBtnPressed,
+                        ]}
+                        onPress={() => router.push("/home")}
+                        accessibilityRole="button"
+                        accessibilityLabel="Go to My Rhythm"
+                      >
+                        <Text style={styles.confirmationPrimaryBtnText}>
+                          Go to My Rhythm
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.confirmationSecondaryBtn}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/challenge-lifecycle-preview",
+                            params: { source: "challenge-preview" },
+                          } as any)
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel="Explore recipient experience"
+                      >
+                        <Text style={styles.confirmationSecondaryBtnText}>
+                          Explore recipient experience
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -645,9 +754,9 @@ export default function MakeChallengePreviewScreen() {
                 style={styles.resetButton}
                 onPress={handleReset}
                 accessibilityRole="button"
-                accessibilityLabel="Reset form"
+                accessibilityLabel="Reset preview"
               >
-                <Text style={styles.resetButtonText}>Reset form</Text>
+                <Text style={styles.resetButtonText}>Reset preview</Text>
               </Pressable>
             </View>
           </View>
@@ -1044,6 +1153,122 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#8E7E94",
   },
+  sharePreviewButton: {
+    backgroundColor: "#6E416D",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  sharePreviewButtonPressed: {
+    backgroundColor: "#593258",
+  },
+  sharePreviewButtonText: {
+    fontSize: 14.5,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: -0.2,
+  },
+  calmValidationBox: {
+    backgroundColor: "#FDF4F2",
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#F4D2CE",
+    marginTop: 4,
+  },
+  calmValidationText: {
+    fontSize: 12.5,
+    color: "#9E4D38",
+    lineHeight: 17,
+  },
+  confirmationCard: {
+    backgroundColor: "#FDF9FE",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1.2,
+    borderColor: "#E3D3E5",
+    gap: 10,
+    marginTop: 12,
+  },
+  confirmationHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  confirmationBadge: {
+    backgroundColor: "#F0E2F1",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  confirmationBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#6E416D",
+    letterSpacing: 0.5,
+  },
+  confirmationHeading: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#3D3040",
+    letterSpacing: -0.2,
+  },
+  confirmationBody: {
+    fontSize: 13.5,
+    color: "#6D6072",
+    lineHeight: 19,
+  },
+  confirmationTruthfulBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#EADEEB",
+  },
+  confirmationTruthfulText: {
+    fontSize: 12,
+    color: "#8E7E94",
+    lineHeight: 16,
+    fontStyle: "italic",
+  },
+  confirmationActionsGroup: {
+    gap: 8,
+    marginTop: 4,
+  },
+  confirmationPrimaryBtn: {
+    backgroundColor: "#6E416D",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmationPrimaryBtnPressed: {
+    backgroundColor: "#593258",
+  },
+  confirmationPrimaryBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  confirmationSecondaryBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    backgroundColor: "#F8F3F9",
+    borderWidth: 1,
+    borderColor: "#E5DAE6",
+  },
+  confirmationSecondaryBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6E416D",
+  },
   lifecycleCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -1128,62 +1353,31 @@ const styles = StyleSheet.create({
     borderColor: "#EADEEB",
     gap: 8,
   },
-  lighterThoughtSectionHeading: {
-    fontSize: 14.5,
+  lighterThoughtSwitchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 2,
+  },
+  lighterThoughtSwitchTextGroup: {
+    flex: 1,
+    gap: 3,
+  },
+  lighterThoughtSwitchTitle: {
+    fontSize: 14,
     fontWeight: "700",
     color: "#3D3040",
+    letterSpacing: -0.1,
   },
-  lighterThoughtSectionSupporting: {
+  lighterThoughtSwitchSupporting: {
     fontSize: 12.5,
     color: "#6D6072",
     lineHeight: 17,
   },
-  lighterThoughtToggle: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderWidth: 1.2,
-    borderColor: "#E0D2E3",
-    marginTop: 2,
-  },
-  lighterThoughtToggleActive: {
-    backgroundColor: "#F4ECF6",
-    borderColor: "#8B5388",
-  },
-  toggleIndicatorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  toggleCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: "#B4A2B8",
-    alignItems: "center",
+  switchWrapper: {
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-  },
-  toggleCheckboxActive: {
-    backgroundColor: "#6E416D",
-    borderColor: "#6E416D",
-  },
-  toggleCheckboxCheck: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  lighterThoughtToggleText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#5C4F61",
-    flex: 1,
-  },
-  lighterThoughtToggleTextActive: {
-    color: "#4A154B",
-    fontWeight: "700",
+    alignItems: "center",
   },
   lighterThoughtInputContainer: {
     marginTop: 6,

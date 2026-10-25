@@ -1,9 +1,10 @@
 import { AppBottomNav } from "@/components/AppBottomNav";
+import { useChallengePreview } from "@/context/ChallengePreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
   Pressable,
@@ -272,7 +273,11 @@ type IncomingFrictionMoment = {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ settings?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    settings?: string | string[];
+  }>();
+  const mainScrollRef = useRef<ScrollView>(null);
+  const reflectionCardY = useRef<number>(0);
   const [selectedThemeKey, setSelectedThemeKey] =
     useState<ThemeKey>("lavender");
   const [personalCoverUri, setPersonalCoverUri] = useState<string | null>(null);
@@ -281,6 +286,7 @@ export default function HomeScreen() {
     "appearance" | "sharing" | "help" | null
   >(null);
   const identity = useUserIdentity();
+  const { activeInvitation } = useChallengePreview();
   const [incomingMoment, setIncomingMoment] =
     useState<IncomingFrictionMoment | null>(null);
   const [partnerName, setPartnerName] = useState<string | null>(null);
@@ -294,6 +300,19 @@ export default function HomeScreen() {
     identity.partnerConnected || partnerConnected;
   const effectivePartnerRef =
     identity.partnerRef || effectivePartnerName || "your partner";
+
+  const hasPendingChallengePreview = Boolean(
+    activeInvitation && activeInvitation.status === "pending",
+  );
+
+  const challengeRecipientHeading = useMemo(() => {
+    if (!activeInvitation) return "";
+    const creator = activeInvitation.creatorName?.trim();
+    if (!creator || creator.toLowerCase() === "you") {
+      return "Your tiny invitation is ready to preview";
+    }
+    return `${creator} shared a tiny invitation`;
+  }, [activeInvitation]);
 
   useFocusEffect(
     useCallback(() => {
@@ -438,6 +457,7 @@ export default function HomeScreen() {
       router.replace("/home");
     }
   };
+
   const [eveningReflectionEnabled, setEveningReflectionEnabled] =
     useState(true);
   const [previewState, setPreviewState] =
@@ -447,6 +467,21 @@ export default function HomeScreen() {
   const [eveningClosureState, setEveningClosureState] = useState<
     "done" | "remind" | "skip" | null
   >(null);
+
+  const handleOpenEveningReflectionFromSettings = () => {
+    setIsSettingsOpen(false);
+    setSettingsDetailView(null);
+    setPreviewState("evening_reflection");
+    setEveningClosureState(null);
+    setSelectedFeeling(null);
+
+    requestAnimationFrame(() => {
+      mainScrollRef.current?.scrollTo({
+        y: Math.max(0, reflectionCardY.current - 16),
+        animated: true,
+      });
+    });
+  };
   const [localFeedback, setLocalFeedback] = useState<string | null>(null);
   const [isRecordSheetOpen, setIsRecordSheetOpen] = useState(false);
 
@@ -557,6 +592,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
+        ref={mainScrollRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -635,7 +671,12 @@ export default function HomeScreen() {
           </View>
 
           {/* 3. "What matters now" Dynamic Area (Primary Focus Card) */}
-          <View style={[styles.sectionCard, styles.betweenUsCard]}>
+          <View
+            style={[styles.sectionCard, styles.betweenUsCard]}
+            onLayout={(event) => {
+              reflectionCardY.current = event.nativeEvent.layout.y;
+            }}
+          >
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionHeaderBubble}>
                 <Text style={styles.sectionHeaderIcon}>✦</Text>
@@ -643,7 +684,7 @@ export default function HomeScreen() {
               <Text style={styles.sectionOverline}>What matters now</Text>
             </View>
 
-            {incomingMoment ? (
+            {incomingMoment && (
               <Pressable
                 style={({ pressed }) => [
                   styles.incomingMomentCard,
@@ -686,19 +727,67 @@ export default function HomeScreen() {
                   </View>
                 </View>
               </Pressable>
-            ) : (
-              <>
-                {/* Calm/default state */}
-                {previewState === "calm_day" && (
-              <View style={styles.calmDayContent}>
-                <Text style={styles.calmHeading}>
-                  Nothing needs your attention right now.
-                </Text>
-                <Text style={styles.calmSubheading}>
-                  Enjoy your day together.
+            )}
+
+            {hasPendingChallengePreview && (
+              <View
+                style={[
+                  styles.challengeRecipientPreviewCardContainer,
+                  incomingMoment && { marginTop: 12 },
+                ]}
+              >
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.challengeRecipientPreviewCard,
+                    pressed && styles.challengeRecipientPreviewCardPressed,
+                  ]}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/challenge-lifecycle-preview",
+                      params: { source: "home-preview" },
+                    })
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={`Recipient view preview: ${challengeRecipientHeading}. See invitation.`}
+                >
+                  <View style={styles.challengeRecipientPreviewHeader}>
+                    <Text style={styles.challengeRecipientPreviewOverline}>
+                      RECIPIENT VIEW PREVIEW
+                    </Text>
+                  </View>
+                  <Text style={styles.challengeRecipientPreviewHeading}>
+                    {challengeRecipientHeading}
+                  </Text>
+                  <Text style={styles.challengeRecipientPreviewBody}>
+                    A gentle idea to open whenever it feels right.
+                  </Text>
+                  <View style={styles.challengeRecipientPreviewActionRow}>
+                    <View style={styles.challengeRecipientPreviewActionBtn}>
+                      <Text style={styles.challengeRecipientPreviewActionText}>
+                        See invitation
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+                <Text style={styles.challengeRecipientPreviewTruthfulNote}>
+                  Preview only — this invitation is active in this browser session and has not been sent to a real partner.
                 </Text>
               </View>
             )}
+
+            {/* Calm/default state (shown when calm_day and no incoming moment or pending challenge preview) */}
+            {previewState === "calm_day" &&
+              !incomingMoment &&
+              !hasPendingChallengePreview && (
+                <View style={styles.calmDayContent}>
+                  <Text style={styles.calmHeading}>
+                    Nothing needs your attention right now.
+                  </Text>
+                  <Text style={styles.calmSubheading}>
+                    Enjoy your day together.
+                  </Text>
+                </View>
+              )}
 
             {/* Evening reflection state */}
             {previewState === "evening_reflection" && (
@@ -913,16 +1002,26 @@ export default function HomeScreen() {
                               That is okay to notice.
                             </Text>
                             <Text style={styles.reflectionOutcomeText}>
-                              Little irritations are normal. You can let this settle for now.
+                              Little irritations are normal. You can let this settle for now, or try looking at it in a lighter way.
                             </Text>
                             <View style={styles.reflectionActionsRow}>
                               <Pressable
                                 style={styles.reflectionPrimaryBtn}
+                                onPress={() => router.push("/playful-reframe")}
+                                accessibilityRole="button"
+                                accessibilityLabel="Try a playful reframe"
+                              >
+                                <Text style={styles.reflectionPrimaryBtnText}>
+                                  Try a playful reframe
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                style={styles.reflectionSecondaryBtn}
                                 onPress={() => setEveningClosureState("done")}
                                 accessibilityRole="button"
                                 accessibilityLabel="Done for tonight"
                               >
-                                <Text style={styles.reflectionPrimaryBtnText}>
+                                <Text style={styles.reflectionSecondaryBtnText}>
                                   Done for tonight
                                 </Text>
                               </Pressable>
@@ -1107,8 +1206,6 @@ export default function HomeScreen() {
                 </Pressable>
               </View>
             )}
-            </>
-          )}
           </View>
 
           {/* 4. Mine (~34%) and Ours (~66%) Spaces */}
@@ -1560,7 +1657,12 @@ export default function HomeScreen() {
                     <View style={styles.settingsSection}>
                       <Text style={styles.settingsSectionTitle}>Your rhythm</Text>
                       <View style={styles.settingsCard}>
-                        <View style={styles.settingsToggleRow}>
+                        <Pressable
+                          style={styles.settingsActionRow}
+                          onPress={handleOpenEveningReflectionFromSettings}
+                          accessibilityRole="button"
+                          accessibilityLabel="Evening reflection"
+                        >
                           <View style={styles.settingsRowTextGroup}>
                             <Text style={styles.settingsRowHeading}>
                               Evening reflection
@@ -1575,9 +1677,9 @@ export default function HomeScreen() {
                             trackColor={{ false: theme.border, true: theme.accent }}
                             thumbColor={theme.surface}
                             accessibilityRole="switch"
-                            accessibilityLabel="Evening reflection"
+                            accessibilityLabel="Toggle evening reflection"
                           />
-                        </View>
+                        </Pressable>
                       </View>
                       <Text style={styles.settingsInfoNote}>
                         You can always skip a reflection. Nothing is required every day.
@@ -1713,8 +1815,12 @@ export default function HomeScreen() {
                                       styles.previewScenarioSelectedRow,
                                   ]}
                                   onPress={() => {
-                                    setPreviewState(scenario.key);
-                                    handleCloseSettings();
+                                    if (scenario.key === "evening_reflection") {
+                                      handleOpenEveningReflectionFromSettings();
+                                    } else {
+                                      setPreviewState(scenario.key);
+                                      handleCloseSettings();
+                                    }
                                   }}
                                   accessibilityRole="button"
                                   accessibilityLabel={`Preview: ${scenario.label}`}
@@ -2398,6 +2504,72 @@ const createStyles = (theme: ThemeConfig) =>
       color: theme.accentText,
       fontSize: 13.5,
       fontWeight: "600",
+    },
+
+    /* Recipient View Preview Card (Demonstration) */
+    challengeRecipientPreviewCardContainer: {
+      gap: 8,
+      marginTop: 4,
+    },
+    challengeRecipientPreviewCard: {
+      backgroundColor: theme.sharedSurface,
+      borderColor: theme.sharedBorder,
+      borderWidth: 1.2,
+      borderRadius: 16,
+      padding: 16,
+      gap: 8,
+    },
+    challengeRecipientPreviewCardPressed: {
+      backgroundColor: theme.border,
+      borderColor: theme.accent,
+    },
+    challengeRecipientPreviewHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    challengeRecipientPreviewOverline: {
+      fontSize: 11.5,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+      color: theme.accent,
+      textTransform: "uppercase",
+    },
+    challengeRecipientPreviewHeading: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.2,
+      lineHeight: 22,
+    },
+    challengeRecipientPreviewBody: {
+      fontSize: 14,
+      color: theme.secondaryText,
+      lineHeight: 20,
+    },
+    challengeRecipientPreviewActionRow: {
+      marginTop: 6,
+      flexDirection: "row",
+    },
+    challengeRecipientPreviewActionBtn: {
+      backgroundColor: theme.accent,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    challengeRecipientPreviewActionText: {
+      color: theme.accentText,
+      fontSize: 13.5,
+      fontWeight: "600",
+    },
+    challengeRecipientPreviewTruthfulNote: {
+      fontSize: 12,
+      color: theme.mutedText,
+      lineHeight: 16,
+      fontStyle: "italic",
+      paddingHorizontal: 4,
     },
 
     /* 4. Mine and Ours Spaces (Asymmetric: Mine ~34%, Ours ~66%) */
