@@ -1,3 +1,13 @@
+import { tokens } from "@/components/couply-tokens";
+import {
+  CouplyChoiceCard,
+  CouplyHeader,
+  CouplyPage,
+  CouplyPrimaryButton,
+  CouplyQuietButton,
+  CouplySectionCard,
+  CouplyStatusPill,
+} from "@/components/CouplyUI";
 import { useRepairPreview } from "@/context/RepairPreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
@@ -5,7 +15,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -443,9 +452,21 @@ export default function EventDetailScreen() {
     }
   }
 
+  const screenTitle =
+    returnScope === "mine"
+      ? "Mine"
+      : returnScope === "ours"
+      ? "Our Space"
+      : "Moments";
+
   if (!event) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <CouplyPage>
+        <CouplyHeader
+          title={screenTitle}
+          onBack={handleBack}
+          backLabel={backLabel}
+        />
         <View style={styles.centerContainer}>
           <Text style={styles.centerStatusText}>{statusMessage}</Text>
           <Pressable
@@ -457,7 +478,7 @@ export default function EventDetailScreen() {
             <Text style={styles.centerBackButtonText}>{backLabel}</Text>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </CouplyPage>
     );
   }
 
@@ -486,54 +507,69 @@ export default function EventDetailScreen() {
       : takeawayTag ?? "";
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <CouplyPage>
+      <CouplyHeader
+        title={screenTitle}
+        onBack={handleBack}
+        backLabel={backLabel}
+      />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.column}>
-          {/* Back navigation */}
-          <Pressable
-            style={styles.backButton}
-            onPress={handleBack}
-            accessibilityRole="button"
-            accessibilityLabel={backAccessibilityLabel}
-          >
-            <Text style={styles.backButtonText}>{backLabel}</Text>
-          </Pressable>
-
-          {/* Header Summary */}
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryTopRow}>
-              <Text style={styles.momentTypeHeading}>
-                {isPositive ? "A good moment" : "Something felt off"}
+          {/* B. Moment Context Card */}
+          <CouplySectionCard>
+            <View style={styles.momentCardTopRow}>
+              <Text style={styles.momentOverline}>
+                {isSharedFriction
+                  ? "SHARED MOMENT"
+                  : isPositive
+                  ? "GOOD MOMENT"
+                  : "PRIVATE MOMENT"}
               </Text>
-              <View
-                style={[
-                  styles.visibilityBadge,
-                  event.visibility === "ours"
-                    ? styles.visibilityBadgeOurs
-                    : styles.visibilityBadgeMine,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.visibilityBadgeText,
-                    event.visibility === "ours"
-                      ? styles.visibilityBadgeTextOurs
-                      : styles.visibilityBadgeTextMine,
-                  ]}
-                >
-                  {event.visibility === "ours"
-                    ? `Shared with ${partnerRef}`
-                    : "Private to you"}
-                </Text>
-              </View>
+              <CouplyStatusPill
+                label={
+                  isSharedFriction
+                    ? isMutuallySettled
+                      ? "Reconnected"
+                      : isInCare
+                      ? "In care"
+                      : "Open"
+                    : isPositive
+                    ? "Good moment"
+                    : formatStatus(event.status)
+                }
+                variant={
+                  isSharedFriction
+                    ? isMutuallySettled
+                      ? "reconnected"
+                      : isInCare
+                      ? "softening"
+                      : "open"
+                    : isPositive
+                    ? "positive"
+                    : event.status === "reconnected"
+                    ? "reconnected"
+                    : event.status === "partially_repaired"
+                    ? "softening"
+                    : "open"
+                }
+              />
             </View>
 
             <Text style={styles.categoryTitle}>
               {formatCategory(event.category)}
             </Text>
+
+            {isSharedFriction && event.shared_topic ? (
+              <View style={styles.sharedTopicContextBox}>
+                <Text style={styles.sharedTopicContextLabel}>Shared context</Text>
+                <Text style={styles.sharedTopicContextText}>
+                  {event.shared_topic}
+                </Text>
+              </View>
+            ) : null}
 
             <View style={styles.summaryMetaRow}>
               <Text style={styles.metaRecordedDate}>
@@ -549,51 +585,49 @@ export default function EventDetailScreen() {
                   </View>
                 )}
             </View>
-          </View>
+          </CouplySectionCard>
 
-          {/* Private reflection card (if exists) */}
+          {/* C. Privacy Boundary */}
+          {/* Creator private note */}
           {privateNote && (!isSharedFriction || previewPerspective === "alex") && (
-            <View style={styles.privateCard}>
-              <View style={styles.contentCardHeader}>
-                <View style={styles.privateDot} />
-                <View style={styles.contentCardTitleGroup}>
-                  <Text style={styles.privateCardHeading}>For your eyes</Text>
-                  <Text style={styles.privateCardSubtitle}>
-                    Only you can see this.
-                  </Text>
+            <CouplySectionCard variant="lilac" style={styles.privacyCardSpacing}>
+              <View style={styles.privacyCardHeaderRow}>
+                <View style={styles.privatePill}>
+                  <Text style={styles.privatePillText}>Private to you</Text>
                 </View>
+                <Text style={styles.privacySubtext}>Only you can see this.</Text>
               </View>
               <Text style={styles.noteBodyText}>{privateNote}</Text>
-            </View>
+            </CouplySectionCard>
           )}
 
-          {/* Sam perspective privacy notice */}
+          {/* Recipient perspective privacy notice (Sam view) */}
           {isSharedFriction && previewPerspective === "sam" && (
-            <View style={styles.privacySafeNotice}>
-              <Text style={styles.privacySafeText}>
-                🔒 Private reflections remain hidden. You only see what was tenderly shared.
-              </Text>
-            </View>
+            <CouplySectionCard variant="muted" style={styles.privacyCardSpacing}>
+              <View style={styles.privacySafeNoticeRow}>
+                <Text style={styles.privacySafeIcon}>🔒</Text>
+                <Text style={styles.privacySafeText}>
+                  Private reflections remain hidden. You only see what was tenderly shared.
+                </Text>
+              </View>
+            </CouplySectionCard>
           )}
 
-          {/* Shared wording card (if Ours & topic exists) */}
+          {/* Shared wording card (Ours & topic exists) */}
           {event.visibility === "ours" && event.shared_topic && (
-            <View style={styles.sharedCard}>
-              <View style={styles.contentCardHeader}>
-                <View style={styles.sharedDot} />
-                <View style={styles.contentCardTitleGroup}>
-                  <Text style={styles.sharedCardHeading}>
-                    Shared with {partnerRef}
-                  </Text>
+            <CouplySectionCard variant="default" style={styles.privacyCardSpacing}>
+              <View style={styles.privacyCardHeaderRow}>
+                <View style={styles.sharedPill}>
+                  <Text style={styles.sharedPillText}>Shared with {partnerRef}</Text>
                 </View>
               </View>
               <Text style={styles.noteBodyText}>{event.shared_topic}</Text>
-            </View>
+            </CouplySectionCard>
           )}
 
           {/* Positive moment outcome */}
           {isPositive && (
-            <View style={styles.positiveOutcomeCard}>
+            <CouplySectionCard variant="lilac">
               <Text style={styles.positiveOutcomeTitle}>
                 A good moment, kept with care.
               </Text>
@@ -602,57 +636,44 @@ export default function EventDetailScreen() {
                   ? "Kept privately for you. You can revisit this whenever you need."
                   : `Part of your shared story with ${partnerRef}.`}
               </Text>
-            </View>
+            </CouplySectionCard>
           )}
 
-          {/* Friction current state */}
-          {!isPositive && (
-            <View style={styles.statusDisplayCard}>
+          {/* Friction current state (Mine friction only) */}
+          {!isPositive && !isSharedFriction && (
+            <CouplySectionCard>
               <View style={styles.statusRow}>
                 <Text style={styles.statusLabel}>Where this stands</Text>
-                <View style={styles.statusValueBadge}>
-                  <Text style={styles.statusValueText}>
-                    {isSharedFriction
-                      ? isMutuallySettled
-                        ? "Reconnected"
-                        : isInCare
-                        ? "In care"
-                        : "Open"
-                      : formatStatus(event.status)}
-                  </Text>
-                </View>
+                <CouplyStatusPill
+                  label={formatStatus(event.status)}
+                  variant={
+                    event.status === "reconnected"
+                      ? "reconnected"
+                      : event.status === "partially_repaired"
+                      ? "softening"
+                      : "open"
+                  }
+                />
               </View>
 
               <Text style={styles.statusGuidanceText}>
-                {isSharedFriction
-                  ? isMutuallySettled
-                    ? "You both feel ready to leave this moment here."
-                    : isInCare
-                    ? "Tension can take time to ease. You can update this whenever things shift."
-                    : `You shared this moment with ${partnerRef}. They can respond whenever it feels right.`
-                  : event.status === "reconnected"
+                {event.status === "reconnected"
                   ? "Taking time to repair helps you stay close."
                   : event.visibility === "mine"
                   ? "Kept privately for you. You can revisit this whenever you need."
                   : "Tension can take time to ease. You can update this whenever things shift."}
               </Text>
 
-              {(!isSharedFriction
-                ? event.repair_method
-                : isMutuallySettled && isTakeawaySaved && takeawayTag
-                ? takeawayTag
-                : null) && (
+              {event.repair_method && (
                 <View style={[styles.statusRow, { marginTop: 10 }]}>
                   <Text style={styles.statusLabel}>What helped</Text>
                   <Text style={styles.statusMethodText}>
-                    {formatCategory(
-                      !isSharedFriction ? event.repair_method! : takeawayTag!,
-                    )}
+                    {formatCategory(event.repair_method)}
                   </Text>
                 </View>
               )}
 
-              {!isSharedFriction && event.reconnected_at && (
+              {event.reconnected_at && (
                 <View style={[styles.statusRow, { marginTop: 8 }]}>
                   <Text style={styles.statusLabel}>Reconnected</Text>
                   <Text style={styles.statusSubtext}>
@@ -660,648 +681,562 @@ export default function EventDetailScreen() {
                   </Text>
                 </View>
               )}
-            </View>
+            </CouplySectionCard>
           )}
 
-          {/* ========================================================= */}
-          {/* Consolidated Repair Journey Preview (Shared Friction)      */}
-          {/* ========================================================= */}
+          {/* D. Consolidated Repair Journey (Shared Friction) */}
           {isSharedFriction && (
             <View style={styles.journeyContainer}>
-              {/* Visible calm preview notice */}
-              <View style={styles.previewModeNotice}>
-                <View style={styles.previewModeBadge}>
-                  <Text style={styles.previewModeBadgeText}>PREVIEW MODE</Text>
-                </View>
-                <Text style={styles.previewModeNoticeText}>
-                  Preview mode — responses here are temporary and are not yet
-                  shared with your partner.
+              {/* Journey Header */}
+              <View style={styles.journeyHeaderBlock}>
+                <Text style={styles.journeyOverline}>REPAIR JOURNEY</Text>
+                <Text style={styles.journeyHeading}>A small way forward</Text>
+                <Text style={styles.journeySupportingText}>
+                  There is no rush. Each person can respond in their own time.
                 </Text>
               </View>
 
-              {/* Perspective Switcher */}
-              <View style={styles.perspectiveContainer}>
-                <Pressable
-                  style={[
-                    styles.perspectiveCard,
-                    previewPerspective === "alex" &&
-                      styles.perspectiveCardSelected,
-                  ]}
-                  onPress={() => setPreviewPerspective("alex")}
-                  accessibilityRole="button"
-                  accessibilityState={{
-                    selected: previewPerspective === "alex",
-                  }}
-                  accessibilityLabel={`View as ${creatorLabel}: Who shared the moment`}
+              {/* Local Walkthrough Notice */}
+              <View style={styles.localWalkthroughCard}>
+                <Text style={styles.localWalkthroughOverline}>LOCAL WALKTHROUGH</Text>
+                <Text style={styles.localWalkthroughText}>
+                  Use this space to explore how a shared moment can gently move forward. Changes here are only visible in this browser.
+                </Text>
+              </View>
+
+              {/* Perspective Segmented Control */}
+              <View style={styles.segmentedControlCard}>
+                <View
+                  style={styles.segmentedControlRow}
+                  role="tablist"
+                  accessibilityRole="tablist"
                 >
-                  <View style={styles.perspectiveHeaderRow}>
-                    <Text style={styles.perspectiveEmoji}>✍️</Text>
+                  <Pressable
+                    style={[
+                      styles.segmentTab,
+                      previewPerspective === "alex" && styles.segmentTabSelected,
+                    ]}
+                    onPress={() => setPreviewPerspective("alex")}
+                    accessibilityRole="tab"
+                    accessibilityState={{
+                      selected: previewPerspective === "alex",
+                    }}
+                    accessibilityLabel={`Viewing as ${creatorLabel}`}
+                  >
                     <Text
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
                       style={[
-                        styles.perspectiveTitle,
-                        previewPerspective === "alex" &&
-                          styles.perspectiveTitleSelected,
+                        styles.segmentTabText,
+                        previewPerspective === "alex" && styles.segmentTabTextSelected,
                       ]}
                     >
                       Viewing as {creatorLabel}
                     </Text>
-                  </View>
-                  <Text style={styles.perspectiveSubtext}>
-                    Who shared the moment
-                  </Text>
-                </Pressable>
+                  </Pressable>
 
-                <Pressable
-                  style={[
-                    styles.perspectiveCard,
-                    previewPerspective === "sam" &&
-                      styles.perspectiveCardSelected,
-                  ]}
-                  onPress={() => setPreviewPerspective("sam")}
-                  accessibilityRole="button"
-                  accessibilityState={{
-                    selected: previewPerspective === "sam",
-                  }}
-                  accessibilityLabel={`View as ${recipientCapitalized}: Partner responding`}
-                >
-                  <View style={styles.perspectiveHeaderRow}>
-                    <Text style={styles.perspectiveEmoji}>🌿</Text>
+                  <Pressable
+                    style={[
+                      styles.segmentTab,
+                      previewPerspective === "sam" && styles.segmentTabSelected,
+                    ]}
+                    onPress={() => setPreviewPerspective("sam")}
+                    accessibilityRole="tab"
+                    accessibilityState={{
+                      selected: previewPerspective === "sam",
+                    }}
+                    accessibilityLabel={`Viewing as ${recipientCapitalized}`}
+                  >
                     <Text
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
                       style={[
-                        styles.perspectiveTitle,
-                        previewPerspective === "sam" &&
-                          styles.perspectiveTitleSelected,
+                        styles.segmentTabText,
+                        previewPerspective === "sam" && styles.segmentTabTextSelected,
                       ]}
                     >
                       Viewing as {recipientCapitalized}
                     </Text>
-                  </View>
-                  <Text style={styles.perspectiveSubtext}>
-                    Partner responding
-                  </Text>
-                </Pressable>
+                  </Pressable>
+                </View>
+                <Text style={styles.segmentCaption}>
+                  Explore each person’s view without changing what is saved.
+                </Text>
               </View>
 
-              {/* STAGE A: OPEN */}
-              {isOpen && (
-                <View style={styles.journeyCard}>
-                  {previewPerspective === "alex" ? (
-                    <View style={styles.openAlexBlock}>
-                      <Text style={styles.journeyHeading}>
-                        Waiting quietly for {recipientLabel}
-                      </Text>
-                      <Text style={styles.journeyText}>
-                        You shared this moment with {recipientLabel}. They can respond whenever
-                        it feels right.
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={styles.openSamBlock}>
-                      <Text style={styles.journeyHeading}>
-                        {recipientCapitalized}’s Response
-                      </Text>
-                      <Text style={styles.journeyText}>
-                        Respond in your own rhythm. There is no deadline, score,
-                        or requirement to fix anything right away.
-                      </Text>
-
-                      <View style={styles.responseOptionsGroup}>
-                        <Pressable
-                          style={[
-                            styles.responseOptionButton,
-                            (partnerResponse as PartnerResponseChoice) ===
-                              "heard" && styles.responseButtonActive,
-                          ]}
-                          onPress={() => setPartnerResponse("heard")}
-                          accessibilityRole="button"
-                          accessibilityLabel="I hear you"
-                        >
-                          <Text style={styles.responseButtonTitle}>
-                            🤍 I hear you
-                          </Text>
-                          <Text style={styles.responseButtonCaption}>
-                            Acknowledge without feeling pushed to debate or
-                            solve right now
-                          </Text>
-                        </Pressable>
-
-                        <Pressable
-                          style={[
-                            styles.responseOptionButton,
-                            (partnerResponse as PartnerResponseChoice) ===
-                              "need_time" && styles.responseButtonActive,
-                          ]}
-                          onPress={() => setPartnerResponse("need_time")}
-                          accessibilityRole="button"
-                          accessibilityLabel="I need a little time"
-                        >
-                          <Text style={styles.responseButtonTitle}>
-                            ⏳ I need a little time
-                          </Text>
-                          <Text style={styles.responseButtonCaption}>
-                            Signal care while taking gentle breathing room
-                          </Text>
-                        </Pressable>
-
-                        <Pressable
-                          style={[
-                            styles.responseOptionButton,
-                            (partnerResponse as PartnerResponseChoice) ===
-                              "suggest_next_step" &&
-                              styles.responseButtonActive,
-                          ]}
-                          onPress={() => {
-                            setPartnerResponse("suggest_next_step");
-                            if (!suggestedStep) {
-                              setSuggestedStep("A quiet chat");
-                            }
-                          }}
-                          accessibilityRole="button"
-                          accessibilityLabel="Suggest a small next step"
-                        >
-                          <Text style={styles.responseButtonTitle}>
-                            🌿 Suggest a small next step
-                          </Text>
-                          <Text style={styles.responseButtonCaption}>
-                            Propose a kind, concrete step to help you both
-                            soften
-                          </Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                  )}
+              {/* One Next Action at Each Stage: "What feels right next?" Card */}
+              <CouplySectionCard style={styles.nextActionCard}>
+                <View style={styles.nextActionHeader}>
+                  <Text style={styles.nextActionOverline}>NEXT STEP</Text>
+                  <Text style={styles.nextActionTitle}>What feels right next?</Text>
                 </View>
-              )}
 
-              {/* STAGE B: IN CARE */}
-              {!isOpen && (
-                <View style={styles.journeyCard}>
-                  {/* Selected response display for both perspectives */}
-                  <View style={styles.responseDisplayBanner}>
-                    <Text style={styles.responseDisplayTitle}>
-                      {previewPerspective === "sam" ? (
-                        partnerResponse === "heard" ? (
-                          "🤍 You acknowledged this: 'I hear you'"
-                        ) : partnerResponse === "need_time" ? (
-                          "⏳ You signaled: 'I need a little time'"
-                        ) : (
-                          `🌿 You suggested: ${suggestedStep || "A quiet chat"}`
-                        )
-                      ) : partnerResponse === "heard" ? (
-                        `🤍 ${recipientCapitalized} saw this: 'I hear you'`
-                      ) : partnerResponse === "need_time" ? (
-                        `⏳ ${recipientCapitalized} needs a little time right now`
-                      ) : (
-                        `🌿 ${recipientCapitalized} suggested: ${suggestedStep || "A quiet chat"}`
-                      )}
-                    </Text>
-
-                    <Text style={styles.responseDisplayBody}>
-                      {partnerResponse === "need_time"
-                        ? previewPerspective === "sam"
-                          ? "Taking quiet space to process emotions gently. Nothing needs to happen immediately."
-                          : `${recipientCapitalized} needs a little quiet space right now. Giving each other time protects emotional safety.`
-                        : partnerResponse === "heard"
-                        ? previewPerspective === "sam"
-                          ? `${creatorLabel} knows you received this with care and no defense. You can talk when ready.`
-                          : "Your shared thoughts were received with openness. Connection is softening."
-                        : previewPerspective === "sam"
-                        ? "Offering a kind, low-pressure gesture to help you both reconnect."
-                        : `${recipientCapitalized} offered a gentle next step whenever you both feel ready.`}
-                    </Text>
-
-                    {previewPerspective === "sam" && (
-                      <Pressable
-                        style={styles.changeResponseButton}
-                        onPress={() => setPartnerResponse("none")}
-                        accessibilityRole="button"
-                        accessibilityLabel="Change your response"
-                      >
-                        <Text style={styles.changeResponseText}>
-                          Change response
+                {/* STAGE A: OPEN */}
+                {isOpen && (
+                  <View style={styles.stageContentBlock}>
+                    {previewPerspective === "alex" ? (
+                      <View style={styles.openAlexBlock}>
+                        <Text style={styles.stageSubheading}>
+                          Waiting quietly for {recipientLabel}
                         </Text>
-                      </Pressable>
-                    )}
-                  </View>
-
-                  {/* Optional compact step chooser if Sam selected suggest_next_step */}
-                  {partnerResponse === "suggest_next_step" &&
-                    previewPerspective === "sam" && (
-                      <View style={styles.nextStepChooserBlock}>
-                        <Text style={styles.nextStepChooserHeading}>
-                          What small step feels right?
-                        </Text>
-                        <View style={styles.stepChipsRow}>
-                          {SUGGESTED_NEXT_STEPS.map((step) => {
-                            const isSelected = suggestedStep === step;
-                            return (
-                              <Pressable
-                                key={step}
-                                style={[
-                                  styles.stepChip,
-                                  isSelected && styles.stepChipSelected,
-                                ]}
-                                onPress={() => setSuggestedStep(step)}
-                                accessibilityRole="button"
-                                accessibilityState={{ selected: isSelected }}
-                                accessibilityLabel={step}
-                              >
-                                <Text
-                                  style={[
-                                    styles.stepChipText,
-                                    isSelected && styles.stepChipTextSelected,
-                                  ]}
-                                >
-                                  {step}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      </View>
-                    )}
-
-                  {/* STAGE C: INDIVIDUAL SETTLEMENT */}
-                  <View style={styles.settlementBlock}>
-                    <View style={styles.journeyDivider} />
-                    <Text style={styles.settlementHeading}>
-                      How does this feel for you now?
-                    </Text>
-                    <Text style={styles.settlementSubtext}>
-                      Both people get to name their own experience. This moment
-                      stays open unless each person genuinely feels ready.
-                    </Text>
-
-                    <View style={styles.settleChoicesRow}>
-                      <Pressable
-                        style={[
-                          styles.settleChoiceCard,
-                          currentSettled === true &&
-                            styles.settleChoiceCardActiveSettled,
-                        ]}
-                        onPress={() => {
-                          if (previewPerspective === "alex") {
-                            setAlexSettled(true);
-                          } else {
-                            setSamSettled(true);
-                          }
-                        }}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: currentSettled === true }}
-                        accessibilityLabel="This feels settled to me"
-                      >
-                        <Text
-                          style={[
-                            styles.settleChoiceTitle,
-                            currentSettled === true &&
-                              styles.settleChoiceTitleActiveSettled,
-                          ]}
-                        >
-                          🤝 This feels settled to me
-                        </Text>
-                        <Text style={styles.settleChoiceDescription}>
-                          I feel ready to let this moment rest.
-                        </Text>
-                      </Pressable>
-
-                      <Pressable
-                        style={[
-                          styles.settleChoiceCard,
-                          currentSettled === false &&
-                            styles.settleChoiceCardActiveNotSettled,
-                        ]}
-                        onPress={() => {
-                          if (previewPerspective === "alex") {
-                            setAlexSettled(false);
-                          } else {
-                            setSamSettled(false);
-                          }
-                        }}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: currentSettled === false }}
-                        accessibilityLabel="Not settled yet"
-                      >
-                        <Text
-                          style={[
-                            styles.settleChoiceTitle,
-                            currentSettled === false &&
-                              styles.settleChoiceTitleActiveNotSettled,
-                          ]}
-                        >
-                          🌿 Not settled yet
-                        </Text>
-                        <Text style={styles.settleChoiceDescription}>
-                          Keep this open with care.
-                        </Text>
-                      </Pressable>
-                    </View>
-
-                    {/* Supportive note when selecting Not settled yet */}
-                    {currentSettled === false && (
-                      <View style={styles.calmInlineNotice}>
-                        <Text style={styles.calmInlineNoticeText}>
-                          This stays open with care. Nothing needs to be forced or
-                          solved right now.
+                        <Text style={styles.stageBodyText}>
+                          You shared this moment with {recipientLabel}. In this preview, you can switch to viewing as {recipientCapitalized} above to see how they can respond in their own rhythm.
                         </Text>
                       </View>
-                    )}
-
-                    {/* Empathetic notice if other partner is settled and current viewer is not */}
-                    {otherSettled === true && currentSettled !== true && (
-                      <View style={styles.oneSidedNoticeCard}>
-                        <Text style={styles.oneSidedNoticeHeading}>
-                          {previewPerspective === "alex"
-                            ? `${recipientCapitalized} feels settled.`
-                            : `${creatorLabel} feels settled.`}
+                    ) : (
+                      <View style={styles.openSamBlock}>
+                        <Text style={styles.stageSubheading}>
+                          {recipientCapitalized}’s response
                         </Text>
-                        <Text style={styles.oneSidedNoticeText}>
-                          You do not have to match that. This moment can stay
-                          open until it feels right for you too.
-                        </Text>
-                      </View>
-                    )}
-
-                    {/* STAGE D: PRIVATE INDIVIDUAL REFLECTION */}
-                    {currentSettled === true && !currentPrivateDismissed && (
-                      <View style={styles.privateReflectionCard}>
-                        <Text style={styles.privateReflectionHeading}>
-                          What helped you feel more connected again?
-                        </Text>
-                        <Text style={styles.privateReflectionSubtext}>
-                          A small private reflection, only for you.
+                        <Text style={styles.stageBodyText}>
+                          Respond in your own rhythm. There is no deadline, score, or requirement to fix anything right away.
                         </Text>
 
-                        <View style={styles.reflectionChipsRow}>
-                          {PRIVATE_HELP_OPTIONS.map((tag) => {
-                            const isSelected = currentPrivateTag === tag;
-                            return (
-                              <Pressable
-                                key={tag}
-                                style={[
-                                  styles.reflectionChip,
-                                  isSelected && styles.reflectionChipSelected,
-                                ]}
-                                onPress={() => {
-                                  if (previewPerspective === "alex") {
-                                    setAlexPrivateTag(tag);
-                                  } else {
-                                    setSamPrivateTag(tag);
-                                  }
-                                }}
-                                accessibilityRole="button"
-                                accessibilityState={{ selected: isSelected }}
-                                accessibilityLabel={tag}
-                              >
-                                <Text
-                                  style={[
-                                    styles.reflectionChipText,
-                                    isSelected &&
-                                      styles.reflectionChipTextSelected,
-                                  ]}
-                                >
-                                  {tag}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-
-                        <View style={styles.privateReflectionFooterRow}>
-                          <Pressable
-                            style={styles.notNowButton}
+                        <View style={styles.choicesStack}>
+                          <CouplyChoiceCard
+                            title="🤍 I hear you"
+                            description="Acknowledge without feeling pushed to debate or solve right now"
+                            selected={(partnerResponse as string) === "heard"}
+                            onPress={() => setPartnerResponse("heard")}
+                            accessibilityLabel="I hear you: Acknowledge without feeling pushed to debate or solve right now"
+                          />
+                          <CouplyChoiceCard
+                            title="⏳ I need a little time"
+                            description="Signal care while taking gentle breathing room"
+                            selected={
+                              (partnerResponse as string) === "need_time"
+                            }
+                            onPress={() => setPartnerResponse("need_time")}
+                            accessibilityLabel="I need a little time: Signal care while taking gentle breathing room"
+                          />
+                          <CouplyChoiceCard
+                            title="🌿 Suggest a small next step"
+                            description="Propose a kind, concrete step to help you both soften"
+                            selected={
+                              (partnerResponse as string) ===
+                              "suggest_next_step"
+                            }
                             onPress={() => {
-                              if (previewPerspective === "alex") {
-                                setAlexPrivateDismissed(true);
-                              } else {
-                                setSamPrivateDismissed(true);
+                              setPartnerResponse("suggest_next_step");
+                              if (!suggestedStep) {
+                                setSuggestedStep("A quiet chat");
                               }
                             }}
-                            accessibilityRole="button"
-                            accessibilityLabel="Not now"
-                          >
-                            <Text style={styles.notNowButtonText}>Not now</Text>
-                          </Pressable>
-                          <Text style={styles.privateReflectionFootnote}>
-                            Private reflection — only visible in your view.
-                          </Text>
+                            accessibilityLabel="Suggest a small next step: Propose a kind, concrete step to help you both soften"
+                          />
                         </View>
                       </View>
                     )}
                   </View>
+                )}
 
-                  {/* STAGE E & F: RECONNECTED & SHARED TAKEAWAY */}
-                  {isMutuallySettled && (
-                    <View style={styles.reconnectedSection}>
-                      <View style={styles.journeyDivider} />
-                      <View style={styles.reconnectedHeaderRow}>
-                        <Text style={styles.reconnectedEmoji}>✨</Text>
-                        <Text style={styles.reconnectedHeading}>
-                          Reconnected
-                        </Text>
-                      </View>
-                      <Text style={styles.reconnectedText}>
-                        You both feel ready to leave this moment here.
+                {/* STAGE B: IN CARE */}
+                {!isOpen && (
+                  <View style={styles.stageContentBlock}>
+                    {/* Selected response banner */}
+                    <View style={styles.responseDisplayBanner}>
+                      <Text style={styles.responseDisplayTitle}>
+                        {previewPerspective === "sam" ? (
+                          partnerResponse === "heard" ? (
+                            "🤍 You acknowledged this in preview: 'I hear you'"
+                          ) : partnerResponse === "need_time" ? (
+                            "⏳ You signaled in preview: 'I need a little time'"
+                          ) : (
+                            `🌿 You suggested in preview: ${suggestedStep || "A quiet chat"}`
+                          )
+                        ) : partnerResponse === "heard" ? (
+                          `🤍 In this preview, ${recipientCapitalized} saw this: 'I hear you'`
+                        ) : partnerResponse === "need_time" ? (
+                          `⏳ In this preview, ${recipientCapitalized} needs a little time`
+                        ) : (
+                          `🌿 In this preview, ${recipientCapitalized} suggested: ${suggestedStep || "A quiet chat"}`
+                        )}
                       </Text>
 
-                      {/* Quiet action to see in Ours preview */}
-                      <Pressable
-                        style={styles.seeInOursButton}
-                        onPress={() => {
-                          router.push("/events?scope=ours");
-                        }}
-                        accessibilityRole="button"
-                        accessibilityLabel="See this in Ours"
-                      >
-                        <Text style={styles.seeInOursButtonText}>
-                          See this in Ours
-                        </Text>
-                      </Pressable>
+                      <Text style={styles.responseDisplayBody}>
+                        {partnerResponse === "need_time"
+                          ? previewPerspective === "sam"
+                            ? "Taking quiet space to process emotions gently. Nothing needs to happen immediately."
+                            : `${recipientCapitalized} needs a little quiet space right now. Giving each other time protects emotional safety.`
+                          : partnerResponse === "heard"
+                          ? previewPerspective === "sam"
+                            ? `${creatorLabel} knows you received this with care and no defense. You can talk when ready.`
+                            : "Your shared thoughts were received with openness. Connection is softening."
+                          : previewPerspective === "sam"
+                          ? "Offering a kind, low-pressure gesture to help you both reconnect."
+                          : `${recipientCapitalized} offered a gentle next step whenever you both feel ready.`}
+                      </Text>
 
-                      {/* Creator-only Takeaway Prompt */}
-                      {previewPerspective === "alex" &&
-                        !isTakeawaySaved &&
-                        !takeawayDismissed && (
-                          <View style={styles.takeawayPromptCard}>
-                            <Text style={styles.takeawayPromptHeading}>
-                              Leave a small note for {recipientLabel}?
-                            </Text>
-                            <Text style={styles.takeawayPromptText}>
-                              Share one gentle thought about what helped this
-                              moment soften. It is optional.
-                            </Text>
-
-                            <View style={styles.reflectionChipsRow}>
-                              {SHARED_TAKEAWAY_OPTIONS.map((tag) => {
-                                const isSelected = takeawayTag === tag;
-                                return (
-                                  <Pressable
-                                    key={tag}
-                                    style={[
-                                      styles.reflectionChip,
-                                      isSelected &&
-                                        styles.reflectionChipSelected,
-                                    ]}
-                                    onPress={() =>
-                                      setTakeawayTag(isSelected ? null : tag)
-                                    }
-                                    accessibilityRole="button"
-                                    accessibilityState={{
-                                      selected: isSelected,
-                                    }}
-                                    accessibilityLabel={tag}
-                                  >
-                                    <Text
-                                      style={[
-                                        styles.reflectionChipText,
-                                        isSelected &&
-                                          styles.reflectionChipTextSelected,
-                                      ]}
-                                    >
-                                      {tag}
-                                    </Text>
-                                  </Pressable>
-                                );
-                              })}
-                            </View>
-
-                            <Text style={styles.takeawayInputLabel}>
-                              Your small takeaway
-                            </Text>
-                            <TextInput
-                              style={styles.takeawayInput}
-                              placeholder="e.g., Pausing for a breath helped us hear each other."
-                              placeholderTextColor="#A89BB0"
-                              value={takeawayNote}
-                              onChangeText={setTakeawayNote}
-                              accessibilityLabel="Your small takeaway"
-                            />
-
-                            <View style={styles.takeawayActionsRow}>
-                              <Pressable
-                                style={[
-                                  styles.saveTakeawayButton,
-                                  !authoredTakeawayText &&
-                                    styles.saveTakeawayButtonDisabled,
-                                ]}
-                                disabled={!authoredTakeawayText}
-                                onPress={() => {
-                                  if (authoredTakeawayText) {
-                                    setIsTakeawaySaved(true);
-                                    setSharedTakeaway(
-                                      takeawayNote.trim(),
-                                      takeawayTag,
-                                    );
-                                  }
-                                }}
-                                accessibilityRole="button"
-                                accessibilityState={{
-                                  disabled: !authoredTakeawayText,
-                                }}
-                                accessibilityLabel="Share this takeaway"
-                              >
-                                <Text
-                                  style={[
-                                    styles.saveTakeawayButtonText,
-                                    !authoredTakeawayText &&
-                                      styles.saveTakeawayButtonTextDisabled,
-                                  ]}
-                                >
-                                  Share this takeaway
-                                </Text>
-                              </Pressable>
-                              <Pressable
-                                style={styles.notNowButton}
-                                onPress={() => setTakeawayDismissed(true)}
-                                accessibilityRole="button"
-                                accessibilityLabel="Not now"
-                              >
-                                <Text style={styles.notNowButtonText}>
-                                  Not now
-                                </Text>
-                              </Pressable>
-                            </View>
-
-                            <Text style={styles.takeawayPrivacyReassuranceText}>
-                              {recipientCapitalized} will see only this note. Private reflections stay private.
-                            </Text>
-                          </View>
-                        )}
-
-                      {/* After creator shares: creator's perspective view */}
-                      {isTakeawaySaved &&
-                        authoredTakeawayText.length > 0 &&
-                        previewPerspective === "alex" && (
-                          <View style={styles.sharedTakeawayCard}>
-                            <Text style={styles.sharedTakeawayOverline}>
-                              SHARED IN THIS PREVIEW
-                            </Text>
-                            <Text style={styles.sharedTakeawaySupporting}>
-                              In this preview, {recipientLabel} would see this small takeaway in the moment.
-                            </Text>
-                            {takeawayTag && takeawayNote.trim().length > 0 && (
-                              <View style={styles.sharedTakeawayPill}>
-                                <Text style={styles.sharedTakeawayPillText}>
-                                  🏷️ {takeawayTag}
-                                </Text>
-                              </View>
-                            )}
-                            <Text style={styles.sharedTakeawayBodyText}>
-                              "{authoredTakeawayText}"
-                            </Text>
-                            <Text style={styles.takeawayPreviewNoticeText}>
-                              Preview only — this has not been saved or shared outside this browser.
-                            </Text>
-                          </View>
-                        )}
-
-                      {/* After creator shares: recipient's perspective read-only card */}
-                      {isTakeawaySaved &&
-                        authoredTakeawayText.length > 0 &&
-                        previewPerspective === "sam" && (
-                          <View style={styles.sharedTakeawayCard}>
-                            <Text style={styles.sharedTakeawayOverline}>
-                              A SMALL TAKEAWAY FROM {creatorLabel.toUpperCase()}
-                            </Text>
-                            {takeawayTag && takeawayNote.trim().length > 0 && (
-                              <View style={styles.sharedTakeawayPill}>
-                                <Text style={styles.sharedTakeawayPillText}>
-                                  🏷️ {takeawayTag}
-                                </Text>
-                              </View>
-                            )}
-                            <Text style={styles.sharedTakeawayBodyText}>
-                              "{authoredTakeawayText}"
-                            </Text>
-                            <Text style={styles.sharedTakeawaySupporting}>
-                              In this preview, {creatorLabel} shared this as a gentle closing note.
-                            </Text>
-                            <Text style={styles.takeawayPreviewNoticeText}>
-                              Preview only — this has not been saved or shared outside this browser.
-                            </Text>
-                          </View>
-                        )}
+                      {previewPerspective === "sam" && !isMutuallySettled && (
+                        <Pressable
+                          style={styles.changeResponseButton}
+                          onPress={() => setPartnerResponse("none")}
+                          accessibilityRole="button"
+                          accessibilityLabel="Change your response"
+                        >
+                          <Text style={styles.changeResponseText}>
+                            Change response
+                          </Text>
+                        </Pressable>
+                      )}
                     </View>
-                  )}
-                </View>
-              )}
+
+                    {/* Optional step chooser if Sam selected suggest_next_step */}
+                    {partnerResponse === "suggest_next_step" &&
+                      previewPerspective === "sam" && (
+                        <View style={styles.nextStepChooserBlock}>
+                          <Text style={styles.nextStepChooserHeading}>
+                            What might feel easier?
+                          </Text>
+                          <View style={styles.stepChipsRow}>
+                            {SUGGESTED_NEXT_STEPS.map((step) => {
+                              const isSelected = suggestedStep === step;
+                              return (
+                                <Pressable
+                                  key={step}
+                                  style={[
+                                    styles.stepChip,
+                                    isSelected && styles.stepChipSelected,
+                                  ]}
+                                  onPress={() => setSuggestedStep(step)}
+                                  accessibilityRole="button"
+                                  accessibilityState={{ selected: isSelected }}
+                                  accessibilityLabel={step}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.stepChipText,
+                                      isSelected && styles.stepChipTextSelected,
+                                    ]}
+                                  >
+                                    {step}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      )}
+
+                    {/* STAGE C: INDIVIDUAL SETTLEMENT */}
+                    <View style={styles.settlementBlock}>
+                      <View style={styles.journeyDivider} />
+                      <Text style={styles.settlementHeading}>
+                        How does this feel for you?
+                      </Text>
+                      <Text style={styles.settlementSubtext}>
+                        Your answer does not decide it for anyone else.
+                      </Text>
+
+                      <View style={styles.settleChoicesRow}>
+                        <CouplyChoiceCard
+                          style={styles.settleChoiceCardFlex}
+                          title="🤝 This feels settled to me"
+                          description="I feel ready to let this moment rest."
+                          selected={currentSettled === true}
+                          onPress={() => {
+                            if (previewPerspective === "alex") {
+                              setAlexSettled(true);
+                            } else {
+                              setSamSettled(true);
+                            }
+                          }}
+                          accessibilityLabel="This feels settled to me"
+                        />
+                        <CouplyChoiceCard
+                          style={styles.settleChoiceCardFlex}
+                          title="🌿 Not settled yet"
+                          description="Keep this open with care."
+                          selected={currentSettled === false}
+                          onPress={() => {
+                            if (previewPerspective === "alex") {
+                              setAlexSettled(false);
+                            } else {
+                              setSamSettled(false);
+                            }
+                          }}
+                          accessibilityLabel="Not settled yet"
+                        />
+                      </View>
+
+                      {/* Supportive note when selecting Not settled yet */}
+                      {currentSettled === false && (
+                        <View style={styles.calmInlineNotice}>
+                          <Text style={styles.calmInlineNoticeText}>
+                            This stays open with care. Nothing needs to be forced or solved right now.
+                          </Text>
+                        </View>
+                      )}
+
+                      {/* Empathetic notice if other partner is settled and current viewer is not */}
+                      {otherSettled === true && currentSettled !== true && (
+                        <View style={styles.oneSidedNoticeCard}>
+                          <Text style={styles.oneSidedNoticeHeading}>
+                            {previewPerspective === "alex"
+                              ? `In this preview, ${recipientCapitalized} feels settled.`
+                              : `In this preview, ${creatorLabel} feels settled.`}
+                          </Text>
+                          <Text style={styles.oneSidedNoticeText}>
+                            You do not have to match that. This moment can stay open until it feels right for you too.
+                          </Text>
+                        </View>
+                      )}
+
+                      {/* STAGE D: PRIVATE INDIVIDUAL REFLECTION */}
+                      {currentSettled === true && !currentPrivateDismissed && (
+                        <View style={styles.privateReflectionCard}>
+                          <View style={styles.privateReflectionBadgeRow}>
+                            <View style={styles.privatePill}>
+                              <Text style={styles.privatePillText}>Private to you</Text>
+                            </View>
+                          </View>
+                          <Text style={styles.privateReflectionHeading}>
+                            What helped you feel more connected again?
+                          </Text>
+                          <Text style={styles.privateReflectionSubtext}>
+                            A small private reflection, only for you.
+                          </Text>
+
+                          <View style={styles.reflectionChipsRow}>
+                            {PRIVATE_HELP_OPTIONS.map((tag) => {
+                              const isSelected = currentPrivateTag === tag;
+                              return (
+                                <Pressable
+                                  key={tag}
+                                  style={[
+                                    styles.reflectionChip,
+                                    isSelected && styles.reflectionChipSelected,
+                                  ]}
+                                  onPress={() => {
+                                    if (previewPerspective === "alex") {
+                                      setAlexPrivateTag(tag);
+                                    } else {
+                                      setSamPrivateTag(tag);
+                                    }
+                                  }}
+                                  accessibilityRole="button"
+                                  accessibilityState={{ selected: isSelected }}
+                                  accessibilityLabel={tag}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.reflectionChipText,
+                                      isSelected && styles.reflectionChipTextSelected,
+                                    ]}
+                                  >
+                                    {tag}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
+
+                          <View style={styles.privateReflectionFooterRow}>
+                            <CouplyQuietButton
+                              variant="text"
+                              label="Not now"
+                              onPress={() => {
+                                if (previewPerspective === "alex") {
+                                  setAlexPrivateDismissed(true);
+                                } else {
+                                  setSamPrivateDismissed(true);
+                                }
+                              }}
+                              accessibilityLabel="Not now"
+                            />
+                            <Text style={styles.privateReflectionFootnote}>
+                              Private reflection — only visible in your view.
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* STAGE E & F: MUTUAL RECONNECTION & SHARED TAKEAWAY */}
+                    {isMutuallySettled && (
+                      <View style={styles.reconnectedSection}>
+                        <View style={styles.journeyDivider} />
+                        <View style={styles.reconnectedHeaderRow}>
+                          <Text style={styles.reconnectedEmoji}>✨</Text>
+                          <View style={styles.reconnectedTitleGroup}>
+                            <Text style={styles.reconnectedHeading}>
+                              You both feel ready to leave this moment here.
+                            </Text>
+                            <Text style={styles.reconnectedBody}>
+                              A small shared moment can be enough.
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Quiet action to see in Ours preview */}
+                        <CouplyQuietButton
+                          variant="soft"
+                          label="See this in Ours"
+                          onPress={() => {
+                            router.push("/events?scope=ours");
+                          }}
+                          accessibilityLabel="See this in Ours"
+                          style={styles.seeInOursButton}
+                        />
+
+                        {/* Creator-only Takeaway Prompt */}
+                        {previewPerspective === "alex" &&
+                          !isTakeawaySaved &&
+                          !takeawayDismissed && (
+                            <View style={styles.takeawayPromptCard}>
+                              <Text style={styles.takeawayPromptHeading}>
+                                Leave a small note for {recipientLabel}?
+                              </Text>
+                              <Text style={styles.takeawayPromptText}>
+                                Share one gentle thought about what helped this moment soften. It is optional.
+                              </Text>
+
+                              <View style={styles.reflectionChipsRow}>
+                                {SHARED_TAKEAWAY_OPTIONS.map((tag) => {
+                                  const isSelected = takeawayTag === tag;
+                                  return (
+                                    <Pressable
+                                      key={tag}
+                                      style={[
+                                        styles.reflectionChip,
+                                        isSelected && styles.reflectionChipSelected,
+                                      ]}
+                                      onPress={() =>
+                                        setTakeawayTag(isSelected ? null : tag)
+                                      }
+                                      accessibilityRole="button"
+                                      accessibilityState={{
+                                        selected: isSelected,
+                                      }}
+                                      accessibilityLabel={tag}
+                                    >
+                                      <Text
+                                        style={[
+                                          styles.reflectionChipText,
+                                          isSelected && styles.reflectionChipTextSelected,
+                                        ]}
+                                      >
+                                        {tag}
+                                      </Text>
+                                    </Pressable>
+                                  );
+                                })}
+                              </View>
+
+                              <Text style={styles.takeawayInputLabel}>
+                                Your small takeaway
+                              </Text>
+                              <TextInput
+                                style={styles.takeawayInput}
+                                placeholder="e.g., Pausing for a breath helped us hear each other."
+                                placeholderTextColor="#A89BB0"
+                                value={takeawayNote}
+                                onChangeText={setTakeawayNote}
+                                accessibilityLabel="Your small takeaway"
+                              />
+
+                              <View style={styles.takeawayActionsRow}>
+                                <CouplyPrimaryButton
+                                  label="Share this takeaway"
+                                  disabled={!authoredTakeawayText}
+                                  onPress={() => {
+                                    if (authoredTakeawayText) {
+                                      setIsTakeawaySaved(true);
+                                      setSharedTakeaway(
+                                        takeawayNote.trim(),
+                                        takeawayTag,
+                                      );
+                                    }
+                                  }}
+                                  accessibilityLabel="Share this takeaway"
+                                />
+                                <CouplyQuietButton
+                                  variant="text"
+                                  label="Not now"
+                                  onPress={() => setTakeawayDismissed(true)}
+                                  accessibilityLabel="Not now"
+                                />
+                              </View>
+
+                              <Text style={styles.takeawayPrivacyReassuranceText}>
+                                In this preview, {recipientCapitalized} will see only this note. Private reflections stay private.
+                              </Text>
+                            </View>
+                          )}
+
+                        {/* After creator shares: creator's perspective view */}
+                        {isTakeawaySaved &&
+                          authoredTakeawayText.length > 0 &&
+                          previewPerspective === "alex" && (
+                            <View style={styles.sharedTakeawayCard}>
+                              <Text style={styles.sharedTakeawayOverline}>
+                                SHARED IN THIS PREVIEW
+                              </Text>
+                              {takeawayTag && takeawayNote.trim().length > 0 && (
+                                <View style={styles.sharedTakeawayPill}>
+                                  <Text style={styles.sharedTakeawayPillText}>
+                                    🏷️ {takeawayTag}
+                                  </Text>
+                                </View>
+                              )}
+                              <Text style={styles.sharedTakeawayBodyText}>
+                                "{authoredTakeawayText}"
+                              </Text>
+                              <Text style={styles.sharedTakeawaySupporting}>
+                                In this preview, {recipientLabel} would see this small takeaway in the moment.
+                              </Text>
+                              <Text style={styles.takeawayPreviewNoticeText}>
+                                Preview only — this has not been saved or shared outside this browser.
+                              </Text>
+                            </View>
+                          )}
+
+                        {/* After creator shares: recipient's perspective read-only card */}
+                        {isTakeawaySaved &&
+                          authoredTakeawayText.length > 0 &&
+                          previewPerspective === "sam" && (
+                            <View style={styles.sharedTakeawayCard}>
+                              <Text style={styles.sharedTakeawayOverline}>
+                                A SMALL TAKEAWAY FROM {creatorLabel.toUpperCase()}
+                              </Text>
+                              {takeawayTag && takeawayNote.trim().length > 0 && (
+                                <View style={styles.sharedTakeawayPill}>
+                                  <Text style={styles.sharedTakeawayPillText}>
+                                    🏷️ {takeawayTag}
+                                  </Text>
+                                </View>
+                              )}
+                              <Text style={styles.sharedTakeawayBodyText}>
+                                "{authoredTakeawayText}"
+                              </Text>
+                              <Text style={styles.sharedTakeawaySupporting}>
+                                {creatorLabel} shared this as a gentle closing note.
+                              </Text>
+                              <Text style={styles.takeawayPreviewNoticeText}>
+                                Preview only — this has not been saved or shared outside this browser.
+                              </Text>
+                            </View>
+                          )}
+                      </View>
+                    )}
+                  </View>
+                )}
+              </CouplySectionCard>
 
               {/* Reset preview simulator action */}
-              <Pressable
-                style={styles.resetPreviewButton}
+              <CouplyQuietButton
+                variant="soft"
+                label="Start this preview again"
                 onPress={handleResetPreview}
-                accessibilityRole="button"
                 accessibilityLabel="Start this preview again"
-              >
-                <Text style={styles.resetPreviewButtonText}>
-                  Start this preview again
-                </Text>
-              </Pressable>
+                style={styles.resetPreviewButton}
+              />
             </View>
           )}
 
           {/* Non-creator partner informational card (Mine friction only - legacy) */}
           {!isPositive && !isCreator && !isSharedFriction && (
-            <View style={styles.partnerNoticeCard}>
+            <CouplySectionCard>
               <Text style={styles.partnerNoticeHeading}>
                 A moment to reconnect
               </Text>
@@ -1309,7 +1244,7 @@ export default function EventDetailScreen() {
                 This was shared so you can reconnect when you feel ready. There’s
                 nothing you need to do in the app right now.
               </Text>
-            </View>
+            </CouplySectionCard>
           )}
 
           {/* Friction repair controls (creator only, Mine friction only) */}
@@ -1615,7 +1550,7 @@ export default function EventDetailScreen() {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </CouplyPage>
   );
 }
 
@@ -1659,641 +1594,331 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FBF7FC",
-  },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
     paddingBottom: 64,
   },
   column: {
     width: "100%",
-    maxWidth: 520,
+    maxWidth: tokens.layout.maxContentWidth,
     alignSelf: "center",
-    gap: 18,
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    minHeight: 44,
-    justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    marginBottom: -6,
-  },
-  backButtonText: {
-    fontSize: 14.5,
-    fontWeight: "600",
-    color: "#6E416D",
+    gap: 14,
   },
   centerContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
-    gap: 12,
+    padding: tokens.spacing.xl,
+    gap: tokens.spacing.md,
   },
   centerStatusText: {
-    fontSize: 15,
-    color: "#6D6072",
+    fontSize: tokens.typeScale.bodyLarge,
+    color: tokens.colors.textSecondary,
     textAlign: "center",
   },
   centerBackButton: {
     minHeight: 44,
     justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: "#F1EDF7",
+    paddingVertical: tokens.spacing.sm,
+    paddingHorizontal: tokens.spacing.lg,
+    borderRadius: tokens.radii.small,
+    backgroundColor: tokens.colors.surfaceLilac,
   },
   centerBackButtonText: {
-    fontSize: 14,
+    fontSize: tokens.typeScale.body,
     fontWeight: "600",
-    color: "#6E416D",
+    color: tokens.colors.plum,
   },
 
-  /* 1. Summary Card */
-  summaryCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 18,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    shadowColor: "#39203B",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-    gap: 8,
-  },
-  summaryTopRow: {
+  /* Moment Card */
+  momentCardTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: tokens.spacing.xs,
   },
-  momentTypeHeading: {
-    fontSize: 14,
+  momentOverline: {
+    fontSize: tokens.typeScale.overline,
     fontWeight: "700",
-    color: "#6E416D",
+    letterSpacing: 0.8,
+    color: tokens.colors.plum,
     textTransform: "uppercase",
-    letterSpacing: 0.6,
   },
   categoryTitle: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#3D3040",
+    color: tokens.colors.text,
     letterSpacing: -0.3,
   },
-  visibilityBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
+  sharedTopicContextBox: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.small,
+    padding: tokens.spacing.sm + 2,
+    marginTop: tokens.spacing.sm,
     borderWidth: 1,
+    borderColor: tokens.colors.borderSoft,
   },
-  visibilityBadgeMine: {
-    backgroundColor: "#F1EDF7",
-    borderColor: "#E5D8E6",
+  sharedTopicContextLabel: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
-  visibilityBadgeOurs: {
-    backgroundColor: "#FBEFF7",
-    borderColor: "#EAD6E8",
-  },
-  visibilityBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  visibilityBadgeTextMine: {
-    color: "#5D4F62",
-  },
-  visibilityBadgeTextOurs: {
-    color: "#6E416D",
+  sharedTopicContextText: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.text,
+    lineHeight: 20,
   },
   summaryMetaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 4,
+    marginTop: tokens.spacing.md,
   },
   metaRecordedDate: {
-    fontSize: 13,
-    color: "#6D6072",
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
   },
   intensityPill: {
-    backgroundColor: "#F7EEF7",
+    backgroundColor: tokens.colors.surfaceBlush,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: tokens.radii.small,
     borderWidth: 1,
-    borderColor: "#EADAEB",
+    borderColor: tokens.colors.borderSoft,
   },
   intensityPillText: {
-    fontSize: 12,
+    fontSize: tokens.typeScale.caption,
     fontWeight: "600",
-    color: "#6E416D",
+    color: tokens.colors.plum,
   },
 
-  /* Content Cards */
-  contentCardHeader: {
+  /* Privacy boundary */
+  privacyCardSpacing: {
+    marginTop: -4,
+  },
+  privacyCardHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  contentCardTitleGroup: {
+  privatePill: {
+    backgroundColor: tokens.colors.surfaceBlush,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: tokens.radii.pill,
+  },
+  privatePillText: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  privacySubtext: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+  },
+  privacySafeNoticeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  privacySafeIcon: {
+    fontSize: 14,
+  },
+  privacySafeText: {
     flex: 1,
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    lineHeight: 18,
   },
-  privateDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#6E416D",
+  sharedPill: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: tokens.radii.pill,
   },
-  sharedDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#9A457D",
-  },
-  privateCard: {
-    backgroundColor: "#F1EDF7",
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: "#E5DCE8",
-  },
-  privateCardHeading: {
-    fontSize: 14,
+  sharedPillText: {
+    fontSize: tokens.typeScale.overline,
     fontWeight: "700",
-    color: "#3D3040",
-  },
-  privateCardSubtitle: {
-    fontSize: 12,
-    color: "#6D6072",
-    marginTop: 1,
-  },
-  sharedCard: {
-    backgroundColor: "#FBEFF7",
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: "#EBD8E8",
-  },
-  sharedCardHeading: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#6E416D",
+    color: tokens.colors.plum,
+    letterSpacing: 0.5,
   },
   noteBodyText: {
-    fontSize: 14.5,
-    color: "#3D3040",
+    fontSize: tokens.typeScale.bodyLarge,
+    color: tokens.colors.text,
     lineHeight: 22,
     marginTop: 4,
   },
 
   /* Outcomes */
-  positiveOutcomeCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    alignItems: "center",
-    gap: 4,
-  },
   positiveOutcomeTitle: {
-    fontSize: 15,
+    fontSize: tokens.typeScale.bodyLarge,
     fontWeight: "700",
-    color: "#6E416D",
+    color: tokens.colors.plum,
     textAlign: "center",
   },
   positiveOutcomeSubtitle: {
-    fontSize: 13.5,
-    color: "#6D6072",
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
     textAlign: "center",
+    marginTop: 4,
   },
 
-  statusDisplayCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-  },
+  /* Mine Friction Status Display */
   statusRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   statusLabel: {
-    fontSize: 13.5,
+    fontSize: tokens.typeScale.body,
     fontWeight: "600",
-    color: "#6D6072",
-  },
-  statusValueBadge: {
-    backgroundColor: "#F1E8F3",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E0D0E2",
-  },
-  statusValueText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#6E416D",
+    color: tokens.colors.textSecondary,
   },
   statusMethodText: {
-    fontSize: 13.5,
+    fontSize: tokens.typeScale.body,
     fontWeight: "600",
-    color: "#3D3040",
+    color: tokens.colors.text,
   },
   statusSubtext: {
-    fontSize: 12.5,
-    color: "#6D6072",
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
   },
   statusGuidanceText: {
-    fontSize: 13,
-    color: "#6D6072",
-    lineHeight: 18,
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
+    lineHeight: 20,
     marginTop: 8,
   },
 
-  /* Sections */
-  sectionContainer: {
-    gap: 10,
+  /* Journey Header & Preview Notice */
+  journeyContainer: {
+    gap: 14,
+    width: "100%",
   },
-  sectionHeading: {
-    fontSize: 16,
+  journeyHeaderBlock: {
+    marginHorizontal: tokens.spacing.page,
+    gap: 4,
+    paddingTop: tokens.spacing.sm,
+  },
+  journeyOverline: {
+    fontSize: tokens.typeScale.overline,
     fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.2,
+    letterSpacing: 0.8,
+    color: tokens.colors.plum,
+    textTransform: "uppercase",
   },
-  /* Non-creator partner informational card */
-  partnerNoticeCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    gap: 6,
-  },
-  partnerNoticeHeading: {
-    fontSize: 15,
+  journeyHeading: {
+    fontSize: 20,
     fontWeight: "700",
-    color: "#3D3040",
+    color: tokens.colors.text,
+    letterSpacing: -0.3,
   },
-  partnerNoticeText: {
-    fontSize: 13.5,
-    color: "#6D6072",
+  journeySupportingText: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
     lineHeight: 20,
   },
-
-  /* Friction repair reflection cards */
-  repairCardsContainer: {
-    gap: 10,
-  },
-  repairCard: {
-    backgroundColor: "#FFFFFF",
+  localWalkthroughCard: {
+    backgroundColor: tokens.colors.surfaceMuted,
+    borderRadius: tokens.radii.card,
     borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    justifyContent: "center",
-  },
-  repairCardActive: {
-    borderColor: "#6E416D",
-    backgroundColor: "#FBEFF7",
-  },
-  repairCardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#3D3040",
-    marginBottom: 2,
-  },
-  repairCardTitleActive: {
-    color: "#6E416D",
-  },
-  repairCardSubtitle: {
-    fontSize: 13,
-    color: "#6D6072",
-    lineHeight: 18,
-  },
-
-  repairMethodsSubcard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    gap: 10,
-    marginTop: 6,
-  },
-  repairMethodsTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#3D3040",
-  },
-  repairMethodsSubtitle: {
-    fontSize: 13,
-    color: "#6D6072",
-  },
-  methodsWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 4,
-  },
-  methodChip: {
-    backgroundColor: "#FBF7FC",
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    borderRadius: 18,
-    paddingVertical: 8,
-    paddingHorizontal: 13,
-  },
-  methodChipSelected: {
-    backgroundColor: "#F1E8F3",
-    borderColor: "#6E416D",
-  },
-  methodChipText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#3D3040",
-  },
-  methodChipTextSelected: {
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-
-  /* Sharing card */
-  sharingCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    gap: 12,
-  },
-  sharingExplanationText: {
-    fontSize: 13.5,
-    color: "#6D6072",
-    lineHeight: 19,
-  },
-  secondaryActionButton: {
-    backgroundColor: "#F1EDF7",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryActionText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-  sharingActivePanel: {
-    gap: 12,
-    paddingTop: 6,
-  },
-  sharingFieldLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#3D3040",
-  },
-  sharingInput: {
-    minHeight: 80,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    padding: 12,
-    fontSize: 14,
-    color: "#3D3040",
-    textAlignVertical: "top",
-  },
-  warningNoticeBox: {
-    backgroundColor: "#FAF0EB",
-    borderColor: "#ECD8CF",
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  warningNoticeText: {
-    fontSize: 13,
-    color: "#784433",
-    lineHeight: 18,
-  },
-  primaryConfirmButton: {
-    backgroundColor: "#6E416D",
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryConfirmText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  cancelLinkButton: {
-    paddingVertical: 6,
-    alignItems: "center",
-  },
-  cancelLinkText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6D6072",
-  },
-
-  /* Delete */
-  deleteContainer: {
-    paddingTop: 8,
-    alignItems: "center",
-  },
-  quietDeleteButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  quietDeleteText: {
-    fontSize: 13.5,
-    color: "#9C4155",
-    fontWeight: "500",
-    textDecorationLine: "underline",
-  },
-  deleteConfirmCard: {
-    width: "100%",
-    backgroundColor: "#FFF5F7",
-    borderColor: "#F0D5DA",
-    borderWidth: 1.2,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: "center",
-    gap: 6,
-  },
-  deleteConfirmTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#8B2E42",
-  },
-  deleteConfirmSubtitle: {
-    fontSize: 13,
-    color: "#7B4650",
-    marginBottom: 8,
-  },
-  deleteActionsRow: {
-    flexDirection: "row",
-    gap: 10,
-    width: "100%",
-    marginTop: 4,
-  },
-  deleteCancelButton: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E0CCD0",
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  deleteCancelText: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#6D6072",
-  },
-  deleteFinalButton: {
-    flex: 1,
-    backgroundColor: "#9C4155",
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  deleteFinalText: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-
-  /* Status message */
-  statusBanner: {
-    backgroundColor: "#F7EEF7",
-    borderColor: "#E8DCE9",
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "center",
-  },
-  statusBannerText: {
-    fontSize: 13,
-    color: "#6E416D",
-    fontWeight: "500",
-    textAlign: "center",
-  },
-
-  /* Privacy safe notice for Sam perspective */
-  privacySafeNotice: {
-    backgroundColor: "#FDF8FC",
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#EADEEB",
-  },
-  privacySafeText: {
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 18,
-    fontStyle: "italic",
-  },
-
-  /* Consolidated Journey Preview */
-  journeyContainer: {
-    gap: 16,
-    width: "100%",
-  },
-  previewModeNotice: {
-    backgroundColor: "#FAF5FB",
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1.2,
-    borderColor: "#EBD8EA",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  previewModeBadge: {
-    backgroundColor: "#F4E5F2",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  previewModeBadgeText: {
-    fontSize: 10.5,
-    fontWeight: "700",
-    color: "#6E416D",
-    letterSpacing: 0.5,
-  },
-  previewModeNoticeText: {
-    flex: 1,
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 17,
-  },
-
-  /* Perspective switcher */
-  perspectiveContainer: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  perspectiveCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
+    borderColor: tokens.colors.border,
+    padding: tokens.spacing.md,
+    marginHorizontal: tokens.spacing.page,
     gap: 4,
   },
-  perspectiveCardSelected: {
-    borderColor: "#6E416D",
-    backgroundColor: "#FAF5FB",
-  },
-  perspectiveHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  perspectiveEmoji: {
-    fontSize: 15,
-  },
-  perspectiveTitle: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#6D6072",
-  },
-  perspectiveTitleSelected: {
+  localWalkthroughOverline: {
+    fontSize: tokens.typeScale.overline,
     fontWeight: "700",
-    color: "#6E416D",
+    letterSpacing: 0.8,
+    color: tokens.colors.plum,
   },
-  perspectiveSubtext: {
-    fontSize: 11.5,
-    color: "#8E7E94",
+  localWalkthroughText: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    lineHeight: 18,
   },
 
-  /* Journey Card & Stages */
-  journeyCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
+  /* Perspective Segmented Control */
+  segmentedControlCard: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.card,
     borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    gap: 14,
+    borderColor: tokens.colors.borderSoft,
+    padding: tokens.spacing.sm,
+    marginHorizontal: tokens.spacing.page,
+    gap: tokens.spacing.xs,
+  },
+  segmentedControlRow: {
+    flexDirection: "row",
+    gap: 8,
+    backgroundColor: "#EFE8F2",
+    borderRadius: tokens.radii.card - 4,
+    padding: 4,
+  },
+  segmentTab: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: tokens.radii.card - 6,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.2,
+    borderColor: "transparent",
+  },
+  segmentTabSelected: {
+    backgroundColor: tokens.colors.surface,
+    borderColor: tokens.colors.plum,
+    shadowColor: tokens.colors.plum,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  segmentTabText: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "500",
+    color: tokens.colors.textSecondary,
+    textAlign: "center",
+  },
+  segmentTabTextSelected: {
+    fontWeight: "700",
+    color: tokens.colors.plum,
+  },
+  segmentCaption: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    textAlign: "center",
+    paddingTop: 2,
+  },
+
+  /* One Next Action Card */
+  nextActionCard: {
+    gap: tokens.spacing.md,
+  },
+  nextActionHeader: {
+    gap: 2,
+  },
+  nextActionOverline: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    color: tokens.colors.plum,
+  },
+  nextActionTitle: {
+    fontSize: tokens.typeScale.sectionTitle,
+    fontWeight: "700",
+    color: tokens.colors.text,
+  },
+  stageContentBlock: {
+    gap: tokens.spacing.md,
   },
   openAlexBlock: {
     gap: 6,
@@ -2301,62 +1926,38 @@ const styles = StyleSheet.create({
   openSamBlock: {
     gap: 10,
   },
-  journeyHeading: {
-    fontSize: 16,
+  stageSubheading: {
+    fontSize: tokens.typeScale.bodyLarge,
     fontWeight: "700",
-    color: "#3D3040",
+    color: tokens.colors.text,
   },
-  journeyText: {
-    fontSize: 13.5,
-    color: "#6D6072",
+  stageBodyText: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
     lineHeight: 20,
   },
-
-  /* Response option buttons */
-  responseOptionsGroup: {
+  choicesStack: {
     gap: 10,
     marginTop: 4,
   },
-  responseOptionButton: {
-    backgroundColor: "#FAF5FB",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    gap: 3,
-  },
-  responseButtonActive: {
-    borderColor: "#6E416D",
-    backgroundColor: "#F4E8F4",
-  },
-  responseButtonTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#3D3040",
-  },
-  responseButtonCaption: {
-    fontSize: 12,
-    color: "#6D6072",
-    lineHeight: 16,
-  },
 
-  /* In Care Banner */
+  /* Response Display Banner */
   responseDisplayBanner: {
-    backgroundColor: "#FAF5FB",
-    borderRadius: 14,
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.card,
     padding: 14,
     borderWidth: 1.2,
-    borderColor: "#E8DCE9",
+    borderColor: tokens.colors.borderSoft,
     gap: 6,
   },
   responseDisplayTitle: {
-    fontSize: 14.5,
+    fontSize: tokens.typeScale.bodyLarge,
     fontWeight: "700",
-    color: "#4A154B",
+    color: tokens.colors.plum,
   },
   responseDisplayBody: {
-    fontSize: 13,
-    color: "#5C4F61",
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
     lineHeight: 18,
   },
   changeResponseButton: {
@@ -2365,9 +1966,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   changeResponseText: {
-    fontSize: 12.5,
+    fontSize: tokens.typeScale.caption,
     fontWeight: "600",
-    color: "#6E416D",
+    color: tokens.colors.plum,
     textDecorationLine: "underline",
   },
 
@@ -2377,9 +1978,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   nextStepChooserHeading: {
-    fontSize: 13.5,
+    fontSize: tokens.typeScale.body,
     fontWeight: "600",
-    color: "#3D3040",
+    color: tokens.colors.text,
   },
   stepChipsRow: {
     flexDirection: "row",
@@ -2387,21 +1988,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   stepChip: {
-    backgroundColor: "#FAF5FB",
-    borderRadius: 10,
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.small,
     paddingVertical: 7,
     paddingHorizontal: 12,
     borderWidth: 1.2,
-    borderColor: "#E8DCE9",
+    borderColor: tokens.colors.border,
   },
   stepChipSelected: {
-    backgroundColor: "#6E416D",
-    borderColor: "#6E416D",
+    backgroundColor: tokens.colors.plum,
+    borderColor: tokens.colors.plum,
   },
   stepChipText: {
-    fontSize: 12.5,
+    fontSize: tokens.typeScale.caption,
     fontWeight: "600",
-    color: "#5C4F61",
+    color: tokens.colors.text,
   },
   stepChipTextSelected: {
     color: "#FFFFFF",
@@ -2413,105 +2014,78 @@ const styles = StyleSheet.create({
   },
   journeyDivider: {
     height: 1,
-    backgroundColor: "#F0E5F1",
+    backgroundColor: tokens.colors.borderSoft,
     marginVertical: 4,
   },
   settlementHeading: {
-    fontSize: 15,
+    fontSize: tokens.typeScale.bodyLarge,
     fontWeight: "700",
-    color: "#3D3040",
+    color: tokens.colors.text,
   },
   settlementSubtext: {
-    fontSize: 13,
-    color: "#6D6072",
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
     lineHeight: 18,
   },
   settleChoicesRow: {
     flexDirection: "row",
     gap: 10,
   },
-  settleChoiceCard: {
+  settleChoiceCardFlex: {
     flex: 1,
-    backgroundColor: "#FAF5FB",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    gap: 4,
-  },
-  settleChoiceCardActiveSettled: {
-    backgroundColor: "#EBF6EE",
-    borderColor: "#2D7738",
-  },
-  settleChoiceCardActiveNotSettled: {
-    backgroundColor: "#FAF2EA",
-    borderColor: "#C87A38",
-  },
-  settleChoiceTitle: {
-    fontSize: 13.5,
-    fontWeight: "700",
-    color: "#3D3040",
-  },
-  settleChoiceTitleActiveSettled: {
-    color: "#1E5B28",
-  },
-  settleChoiceTitleActiveNotSettled: {
-    color: "#8B4E1B",
-  },
-  settleChoiceDescription: {
-    fontSize: 11.5,
-    color: "#6D6072",
-    lineHeight: 16,
   },
   calmInlineNotice: {
-    backgroundColor: "#FAF5FB",
-    borderRadius: 10,
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.small,
     padding: 10,
     borderWidth: 1,
-    borderColor: "#E8DCE9",
+    borderColor: tokens.colors.borderSoft,
   },
   calmInlineNoticeText: {
-    fontSize: 12,
-    color: "#6D6072",
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
     lineHeight: 17,
   },
   oneSidedNoticeCard: {
-    backgroundColor: "#FDF8FC",
-    borderRadius: 12,
+    backgroundColor: tokens.colors.surfaceMuted,
+    borderRadius: tokens.radii.small,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#EADEEB",
+    borderColor: tokens.colors.border,
     gap: 4,
   },
   oneSidedNoticeHeading: {
-    fontSize: 13.5,
+    fontSize: tokens.typeScale.body,
     fontWeight: "700",
-    color: "#6E416D",
+    color: tokens.colors.plum,
   },
   oneSidedNoticeText: {
-    fontSize: 12.5,
-    color: "#6D6072",
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
     lineHeight: 17,
   },
 
   /* Private reflection */
   privateReflectionCard: {
-    backgroundColor: "#FDF8FC",
-    borderRadius: 14,
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.card,
     padding: 14,
-    borderWidth: 1,
-    borderColor: "#EADEEB",
+    borderWidth: 1.2,
+    borderColor: tokens.colors.borderSoft,
     gap: 10,
     marginTop: 4,
   },
+  privateReflectionBadgeRow: {
+    flexDirection: "row",
+  },
   privateReflectionHeading: {
-    fontSize: 14,
+    fontSize: tokens.typeScale.bodyLarge,
     fontWeight: "700",
-    color: "#3D3040",
+    color: tokens.colors.text,
   },
   privateReflectionSubtext: {
-    fontSize: 12.5,
-    color: "#6D6072",
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
   },
   reflectionChipsRow: {
     flexDirection: "row",
@@ -2519,21 +2093,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   reflectionChip: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
+    backgroundColor: tokens.colors.surface,
+    borderRadius: tokens.radii.small,
     paddingVertical: 7,
     paddingHorizontal: 12,
     borderWidth: 1.2,
-    borderColor: "#E0D2E3",
+    borderColor: tokens.colors.border,
   },
   reflectionChipSelected: {
-    backgroundColor: "#6E416D",
-    borderColor: "#6E416D",
+    backgroundColor: tokens.colors.plum,
+    borderColor: tokens.colors.plum,
   },
   reflectionChipText: {
-    fontSize: 12.5,
+    fontSize: tokens.typeScale.caption,
     fontWeight: "600",
-    color: "#5C4F61",
+    color: tokens.colors.text,
   },
   reflectionChipTextSelected: {
     color: "#FFFFFF",
@@ -2544,20 +2118,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 2,
   },
-  notNowButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: "#F1EDF5",
-  },
-  notNowButtonText: {
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: "#6D6072",
-  },
   privateReflectionFootnote: {
-    fontSize: 11,
-    color: "#8E7E94",
+    fontSize: tokens.typeScale.overline,
+    color: tokens.colors.textSecondary,
     fontStyle: "italic",
   },
 
@@ -2573,52 +2136,60 @@ const styles = StyleSheet.create({
   reconnectedEmoji: {
     fontSize: 20,
   },
-  reconnectedHeading: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#3D3040",
+  reconnectedTitleGroup: {
+    flex: 1,
+    gap: 2,
   },
-  reconnectedText: {
-    fontSize: 13.5,
-    color: "#5C4F61",
+  reconnectedHeading: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: tokens.colors.text,
+  },
+  reconnectedBody: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
     lineHeight: 19,
+  },
+  seeInOursButton: {
+    alignSelf: "flex-start",
+    marginTop: 4,
   },
 
   /* Takeaway Prompt */
   takeawayPromptCard: {
-    backgroundColor: "#FDF8FC",
-    borderRadius: 14,
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.card,
     padding: 14,
     borderWidth: 1.2,
-    borderColor: "#EADEEB",
+    borderColor: tokens.colors.borderSoft,
     gap: 8,
     marginTop: 6,
   },
   takeawayPromptHeading: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#3D3040",
+    color: tokens.colors.text,
   },
   takeawayPromptText: {
-    fontSize: 13,
-    color: "#6D6072",
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
     lineHeight: 18,
   },
   takeawayInputLabel: {
-    fontSize: 12.5,
+    fontSize: tokens.typeScale.caption,
     fontWeight: "600",
-    color: "#4A3E4E",
+    color: tokens.colors.text,
     marginTop: 2,
   },
   takeawayInput: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
+    backgroundColor: tokens.colors.surface,
+    borderRadius: tokens.radii.small,
     borderWidth: 1.2,
-    borderColor: "#D8C7DB",
+    borderColor: tokens.colors.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 13.5,
-    color: "#3D3040",
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.text,
   },
   takeawayActionsRow: {
     flexDirection: "row",
@@ -2626,33 +2197,16 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 4,
   },
-  saveTakeawayButton: {
-    backgroundColor: "#6E416D",
-    borderRadius: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-  },
-  saveTakeawayButtonDisabled: {
-    backgroundColor: "#D8CCD9",
-  },
-  saveTakeawayButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  saveTakeawayButtonTextDisabled: {
-    color: "#8E7E94",
-  },
   takeawayPrivacyReassuranceText: {
-    fontSize: 11.5,
-    color: "#8E7E94",
+    fontSize: tokens.typeScale.overline,
+    color: tokens.colors.textSecondary,
     fontStyle: "italic",
     marginTop: 2,
     lineHeight: 16,
   },
   takeawayPreviewNoticeText: {
-    fontSize: 11,
-    color: "#9A8D9F",
+    fontSize: tokens.typeScale.overline,
+    color: tokens.colors.textSecondary,
     fontStyle: "italic",
     marginTop: 4,
     lineHeight: 15,
@@ -2660,41 +2214,41 @@ const styles = StyleSheet.create({
 
   /* Shared Takeaway Display Card */
   sharedTakeawayCard: {
-    backgroundColor: "#FAF5FB",
-    borderRadius: 14,
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.card,
     padding: 14,
     borderWidth: 1.2,
-    borderColor: "#EBD8EA",
+    borderColor: tokens.colors.borderSoft,
     gap: 6,
     marginTop: 6,
   },
   sharedTakeawayOverline: {
-    fontSize: 11,
+    fontSize: tokens.typeScale.overline,
     fontWeight: "700",
-    color: "#8B6B92",
+    color: tokens.colors.plum,
     letterSpacing: 0.8,
   },
   sharedTakeawaySupporting: {
-    fontSize: 12.5,
-    color: "#7D6D82",
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
     lineHeight: 17,
   },
   sharedTakeawayPill: {
-    backgroundColor: "#F4E5F2",
+    backgroundColor: tokens.colors.surfaceBlush,
     alignSelf: "flex-start",
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: tokens.radii.pill,
   },
   sharedTakeawayPillText: {
-    fontSize: 12,
+    fontSize: tokens.typeScale.caption,
     fontWeight: "600",
-    color: "#6E416D",
+    color: tokens.colors.plum,
   },
   sharedTakeawayBodyText: {
-    fontSize: 14,
+    fontSize: tokens.typeScale.bodyLarge,
     fontWeight: "500",
-    color: "#3D3040",
+    color: tokens.colors.text,
     lineHeight: 20,
     fontStyle: "italic",
     marginVertical: 2,
@@ -2703,34 +2257,279 @@ const styles = StyleSheet.create({
   /* Reset Preview Button */
   resetPreviewButton: {
     alignSelf: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: "#F8F3F9",
-    borderWidth: 1,
-    borderColor: "#E5DAE6",
-    marginTop: 4,
-  },
-  resetPreviewButtonText: {
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: "#6E416D",
+    marginTop: 8,
   },
 
-  /* See this in Ours Action */
-  seeInOursButton: {
-    alignSelf: "flex-start",
-    backgroundColor: "#F7EEF8",
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderWidth: 1.2,
-    borderColor: "#EAD2EC",
+  /* Sections */
+  sectionContainer: {
+    gap: 10,
+    marginHorizontal: tokens.spacing.page,
+  },
+  sectionHeading: {
+    fontSize: tokens.typeScale.sectionTitle,
+    fontWeight: "700",
+    color: tokens.colors.text,
+    letterSpacing: -0.2,
+  },
+  partnerNoticeHeading: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: tokens.colors.text,
+  },
+  partnerNoticeText: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
+    lineHeight: 20,
     marginTop: 4,
   },
-  seeInOursButtonText: {
-    fontSize: 13,
+
+  /* Friction repair reflection cards */
+  repairCardsContainer: {
+    gap: 10,
+  },
+  repairCard: {
+    backgroundColor: tokens.colors.surface,
+    borderWidth: 1.2,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radii.card,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    justifyContent: "center",
+  },
+  repairCardActive: {
+    borderColor: tokens.colors.plum,
+    backgroundColor: tokens.colors.surfaceLilac,
+  },
+  repairCardTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: tokens.colors.text,
+    marginBottom: 2,
+  },
+  repairCardTitleActive: {
+    color: tokens.colors.plum,
+  },
+  repairCardSubtitle: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    lineHeight: 18,
+  },
+
+  repairMethodsSubcard: {
+    backgroundColor: tokens.colors.surface,
+    borderRadius: tokens.radii.card,
+    padding: 16,
+    borderWidth: 1.2,
+    borderColor: tokens.colors.border,
+    gap: 10,
+    marginTop: 6,
+  },
+  repairMethodsTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: tokens.colors.text,
+  },
+  repairMethodsSubtitle: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+  },
+  methodsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 4,
+  },
+  methodChip: {
+    backgroundColor: tokens.colors.pageBackground,
+    borderWidth: 1.2,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radii.pill,
+    paddingVertical: 8,
+    paddingHorizontal: 13,
+  },
+  methodChipSelected: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderColor: tokens.colors.plum,
+  },
+  methodChipText: {
+    fontSize: tokens.typeScale.caption,
+    fontWeight: "500",
+    color: tokens.colors.text,
+  },
+  methodChipTextSelected: {
     fontWeight: "600",
-    color: "#6E416D",
+    color: tokens.colors.plum,
+  },
+  cancelLinkButton: {
+    paddingVertical: 6,
+    alignItems: "center",
+  },
+  cancelLinkText: {
+    fontSize: tokens.typeScale.caption,
+    fontWeight: "600",
+    color: tokens.colors.textSecondary,
+  },
+
+  /* Sharing card */
+  sharingCard: {
+    backgroundColor: tokens.colors.surface,
+    borderRadius: tokens.radii.card,
+    padding: 16,
+    borderWidth: 1.2,
+    borderColor: tokens.colors.border,
+    gap: 12,
+  },
+  sharingExplanationText: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
+    lineHeight: 19,
+  },
+  secondaryActionButton: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.small,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryActionText: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontWeight: "600",
+    color: tokens.colors.plum,
+  },
+  sharingActivePanel: {
+    gap: 12,
+    paddingTop: 6,
+  },
+  sharingFieldLabel: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontWeight: "600",
+    color: tokens.colors.text,
+  },
+  sharingInput: {
+    minHeight: 80,
+    backgroundColor: tokens.colors.surface,
+    borderRadius: tokens.radii.small,
+    borderWidth: 1.2,
+    borderColor: tokens.colors.border,
+    padding: 12,
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.text,
+    textAlignVertical: "top",
+  },
+  warningNoticeBox: {
+    backgroundColor: tokens.colors.surfaceBlush,
+    borderColor: tokens.colors.borderSoft,
+    borderWidth: 1,
+    borderRadius: tokens.radii.small,
+    padding: 12,
+  },
+  warningNoticeText: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.plum,
+    lineHeight: 18,
+  },
+  primaryConfirmButton: {
+    backgroundColor: tokens.colors.plum,
+    borderRadius: tokens.radii.small,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryConfirmText: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+
+  /* Delete */
+  deleteContainer: {
+    paddingTop: 8,
+    alignItems: "center",
+    marginHorizontal: tokens.spacing.page,
+  },
+  quietDeleteButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  quietDeleteText: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
+    fontWeight: "500",
+    textDecorationLine: "underline",
+  },
+  deleteConfirmCard: {
+    width: "100%",
+    backgroundColor: tokens.colors.surfaceBlush,
+    borderColor: tokens.colors.borderSoft,
+    borderWidth: 1.2,
+    borderRadius: tokens.radii.card,
+    padding: 16,
+    alignItems: "center",
+    gap: 6,
+  },
+  deleteConfirmTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+  },
+  deleteConfirmSubtitle: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    marginBottom: 8,
+  },
+  deleteActionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+    marginTop: 4,
+  },
+  deleteCancelButton: {
+    flex: 1,
+    backgroundColor: tokens.colors.surface,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radii.small,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteCancelText: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "600",
+    color: tokens.colors.textSecondary,
+  },
+  deleteFinalButton: {
+    flex: 1,
+    backgroundColor: tokens.colors.plum,
+    borderRadius: tokens.radii.small,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteFinalText: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+
+  /* Status message */
+  statusBanner: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderColor: tokens.colors.borderSoft,
+    borderWidth: 1,
+    borderRadius: tokens.radii.small,
+    padding: 12,
+    alignItems: "center",
+    marginHorizontal: tokens.spacing.page,
+  },
+  statusBannerText: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.plum,
+    fontWeight: "500",
+    textAlign: "center",
   },
 });

@@ -1,4 +1,11 @@
+import { tokens } from "@/components/couply-tokens";
 import { AppBottomNav } from "@/components/AppBottomNav";
+import {
+  CouplyEmptyState,
+  CouplyHeader,
+  CouplyPrimaryButton,
+  CouplyStatusPill,
+} from "@/components/CouplyUI";
 import { useRepairPreview } from "@/context/RepairPreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
@@ -31,13 +38,6 @@ type OursFilter = "open" | "softening" | "reconnected";
 export default function EventsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ scope?: string | string[] }>();
-
-  const isMineMode =
-    params.scope === "mine" ||
-    (Array.isArray(params.scope) && params.scope[0] === "mine");
-  const isOursMode =
-    params.scope === "ours" ||
-    (Array.isArray(params.scope) && params.scope[0] === "ours");
   const { previewEventId, previewStatus, hasSharedTakeaway } =
     useRepairPreview();
   const { partnerName, partnerRef } = useUserIdentity();
@@ -47,9 +47,37 @@ export default function EventsScreen() {
 
   const [events, setEvents] = useState<RelationshipEvent[]>([]);
   const [status, setStatus] = useState("Loading...");
-  const [filter, setFilter] = useState<FilterOption>("all");
+  const [activeScope, setActiveScope] = useState<FilterOption>(() => {
+    const rawScope = Array.isArray(params.scope) ? params.scope[0] : params.scope;
+    if (rawScope === "mine") return "mine";
+    if (rawScope === "ours") return "ours";
+    return "all";
+  });
   const [oursFilter, setOursFilter] = useState<OursFilter | null>(null);
   const [hasFinishedInitialLoad, setHasFinishedInitialLoad] = useState(false);
+
+  useEffect(() => {
+    const rawScope = Array.isArray(params.scope) ? params.scope[0] : params.scope;
+    if (rawScope === "mine") {
+      setActiveScope("mine");
+    } else if (rawScope === "ours") {
+      setActiveScope("ours");
+    } else if (!rawScope) {
+      setActiveScope("all");
+    }
+  }, [params.scope]);
+
+  const isMineMode = activeScope === "mine";
+  const isOursMode = activeScope === "ours";
+
+  function handleSelectScope(nextScope: FilterOption) {
+    setActiveScope(nextScope);
+    if (nextScope === "all") {
+      router.setParams({ scope: undefined });
+    } else {
+      router.setParams({ scope: nextScope });
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -258,12 +286,6 @@ export default function EventsScreen() {
       }
       return true;
     }
-    if (filter === "mine") {
-      return event.visibility === "mine";
-    }
-    if (filter === "ours") {
-      return event.visibility === "ours";
-    }
     return true;
   });
 
@@ -296,60 +318,85 @@ export default function EventsScreen() {
       >
         <View style={styles.mainColumn}>
           {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerTextWrap}>
-              <Text style={styles.title}>
-                {isMineMode ? "Mine" : isOursMode ? "Our Space" : "Moments"}
-              </Text>
-              <Text style={styles.subtitle}>
-                {isMineMode
-                  ? "A private place to understand what you feel."
-                  : isOursMode
-                  ? partnerName
-                    ? `Moments shared between you and ${partnerName}.`
-                    : "Moments shared with your partner."
-                  : "“A place to return to what mattered.”"}
-              </Text>
-            </View>
-
-            <Pressable
-              onPress={() =>
-                router.push(
+          <CouplyHeader
+            title={isMineMode ? "Mine" : isOursMode ? "Our Space" : "Moments"}
+            subtitle={
+              isMineMode
+                ? "A private place to understand what you feel."
+                : isOursMode
+                ? partnerName
+                  ? `Moments shared between you and ${partnerName}.`
+                  : "Moments shared with your partner."
+                : "A place to return to what mattered."
+            }
+            rightSlot={
+              <CouplyPrimaryButton
+                label={
                   isMineMode
-                    ? "/record-moment?visibility=mine"
+                    ? "+ Write a reflection"
                     : isOursMode
-                    ? "/record-moment?visibility=ours"
-                    : "/record-moment"
-                )
-              }
-              style={({ pressed }) => [
-                styles.recordHeaderButton,
-                pressed && styles.pressedState,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isMineMode
-                  ? "+ Write a reflection"
-                  : isOursMode
-                  ? "+ Share a moment"
-                  : "Record a moment"
-              }
-            >
-              <Text style={styles.recordHeaderButtonText}>
-                {isMineMode
-                  ? "+ Write a reflection"
-                  : isOursMode
-                  ? "+ Share a moment"
-                  : "+ Record a moment"}
-              </Text>
-            </Pressable>
+                    ? "+ Share a moment"
+                    : "+ Record a moment"
+                }
+                onPress={() =>
+                  router.push(
+                    isMineMode
+                      ? "/record-moment?visibility=mine"
+                      : isOursMode
+                      ? "/record-moment?visibility=ours"
+                      : "/record-moment"
+                  )
+                }
+                accessibilityLabel={
+                  isMineMode
+                    ? "+ Write a reflection"
+                    : isOursMode
+                    ? "+ Share a moment"
+                    : "Record a moment"
+                }
+                style={styles.recordHeaderBtnCouply}
+                textStyle={styles.recordHeaderBtnCouplyText}
+              />
+            }
+          />
+
+          {/* Segmented filter container: All, Mine, Ours */}
+          <View style={styles.segmentedFilterContainer} role="tablist">
+            {(["all", "mine", "ours"] as const).map((seg) => {
+              const isSelected = activeScope === seg;
+              const label =
+                seg === "all" ? "All" : seg === "mine" ? "Mine" : "Ours";
+
+              return (
+                <Pressable
+                  key={seg}
+                  onPress={() => handleSelectScope(seg)}
+                  style={[
+                    styles.segmentButton,
+                    isSelected && styles.segmentButtonActive,
+                  ]}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={`Show ${label} moments`}
+                >
+                  <Text
+                    style={[
+                    styles.segmentButtonText,
+                    isSelected && styles.segmentButtonTextActive,
+                  ]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
 
-          {/* Mine / Ours mode quiet action vs normal segmented filter */}
-          {isMineMode || isOursMode ? (
+          {/* If opened via scope=ours/mine, also show a quiet "View all moments" link if desired */}
+          {(isMineMode || isOursMode) && (
             <View style={styles.mineNavRow}>
               <Pressable
-                onPress={() => router.push("/events")}
+                onPress={() => handleSelectScope("all")}
                 style={({ pressed }) => [
                   styles.viewAllButton,
                   pressed && styles.pressedState,
@@ -359,37 +406,6 @@ export default function EventsScreen() {
               >
                 <Text style={styles.viewAllButtonText}>View all moments</Text>
               </Pressable>
-            </View>
-          ) : (
-            <View style={styles.segmentedFilterContainer} role="tablist">
-              {(["all", "mine", "ours"] as const).map((seg) => {
-                const isSelected = filter === seg;
-                const label =
-                  seg === "all" ? "All" : seg === "mine" ? "Mine" : "Ours";
-
-                return (
-                  <Pressable
-                    key={seg}
-                    onPress={() => setFilter(seg)}
-                    style={[
-                      styles.segmentButton,
-                      isSelected && styles.segmentButtonActive,
-                    ]}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: isSelected }}
-                    accessibilityLabel={`Show ${label} moments`}
-                  >
-                    <Text
-                      style={[
-                        styles.segmentButtonText,
-                        isSelected && styles.segmentButtonTextActive,
-                      ]}
-                    >
-                      {label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
             </View>
           )}
 
@@ -491,9 +507,9 @@ export default function EventsScreen() {
             ((!isMineMode && !isOursMode) || hasFinishedInitialLoad) &&
             visibleEvents.length === 0 &&
             !hasSpaceError && (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>
-                {isMineMode
+            <CouplyEmptyState
+              title={
+                isMineMode
                   ? "Your private space is quiet for now."
                   : isOursMode
                   ? oursFilter === "open"
@@ -503,15 +519,14 @@ export default function EventsScreen() {
                     : oursFilter === "reconnected"
                     ? "No reconnected moments yet."
                     : "Nothing has been shared yet."
-                  : filter === "all"
+                  : activeScope === "all"
                   ? "No moments here yet."
-                  : filter === "mine"
+                  : activeScope === "mine"
                   ? "Your private space is quiet for now."
-                  : "Nothing has been shared yet."}
-              </Text>
-
-              <Text style={styles.emptySubtitle}>
-                {isMineMode
+                  : "Nothing has been shared yet."
+              }
+              body={
+                isMineMode
                   ? "Private reflections you keep will appear here."
                   : isOursMode
                   ? oursFilter === "open"
@@ -521,27 +536,22 @@ export default function EventsScreen() {
                     : oursFilter === "reconnected"
                     ? "Moments where you two found your way back will be kept here."
                     : `Only moments you intentionally share with ${partnerRef} will appear here.`
-                  : filter === "all"
+                  : activeScope === "all"
                   ? "You can record something good or something that felt off whenever it matters."
-                  : filter === "mine"
+                  : activeScope === "mine"
                   ? "Private reflections you keep will appear here."
-                  : `Only moments you intentionally share with ${partnerRef} will appear here.`}
-              </Text>
-
-              {!isMineMode && !isOursMode && filter === "all" && (
-                <Pressable
-                  onPress={() => router.push("/record-moment")}
-                  style={({ pressed }) => [
-                    styles.emptyActionButton,
-                    pressed && styles.pressedState,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Record a moment"
-                >
-                  <Text style={styles.emptyActionText}>Record a moment</Text>
-                </Pressable>
-              )}
-            </View>
+                  : `Only moments you intentionally share with ${partnerRef} will appear here.`
+              }
+              action={
+                !isMineMode && !isOursMode && activeScope === "all" ? (
+                  <CouplyPrimaryButton
+                    label="Record a moment"
+                    onPress={() => router.push("/record-moment")}
+                    accessibilityLabel="Record a moment"
+                  />
+                ) : null
+              }
+            />
           )}
 
           {/* List of redesigned moment cards */}
@@ -658,29 +668,23 @@ export default function EventsScreen() {
                     </View>
 
                     {isPositive ? (
-                      <View style={styles.positiveBadge}>
-                        <Text style={styles.positiveBadgeText}>
-                          Celebration
-                        </Text>
-                      </View>
+                      <CouplyStatusPill
+                        label="Celebration"
+                        variant="positive"
+                      />
                     ) : (
-                      <View
-                        style={
+                      <CouplyStatusPill
+                        label={displayStatus}
+                        variant={
                           isPreviewReconnected
-                            ? styles.previewReconnectedBadge
-                            : styles.statusBadge
+                            ? "preview"
+                            : event.status === "reconnected"
+                            ? "reconnected"
+                            : event.status === "partially_repaired"
+                            ? "softening"
+                            : "open"
                         }
-                      >
-                        <Text
-                          style={
-                            isPreviewReconnected
-                              ? styles.previewReconnectedBadgeText
-                              : styles.statusBadgeText
-                          }
-                        >
-                          {displayStatus}
-                        </Text>
-                      </View>
+                      />
                     )}
                   </View>
 
@@ -874,6 +878,17 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  recordHeaderBtnCouply: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+
+  recordHeaderBtnCouplyText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+  },
+
   recordHeaderButtonText: {
     fontSize: 13,
     fontWeight: "600",
@@ -930,13 +945,13 @@ const styles = StyleSheet.create({
 
   segmentButtonText: {
     fontSize: 13.5,
-    fontWeight: "500",
-    color: "#6D6072",
+    fontWeight: "600",
+    color: tokens.colors.textSecondary,
   },
 
   segmentButtonTextActive: {
     fontWeight: "700",
-    color: "#3D3040",
+    color: tokens.colors.text,
   },
 
   /* Ours mode status filter chips */
@@ -960,7 +975,7 @@ const styles = StyleSheet.create({
   clearFilterButtonText: {
     fontSize: 12.5,
     fontWeight: "600",
-    color: "#6E416D",
+    color: tokens.colors.plum,
   },
 
   oursFilterChip: {
@@ -975,14 +990,14 @@ const styles = StyleSheet.create({
   },
 
   oursFilterChipActive: {
-    backgroundColor: "#6E416D",
-    borderColor: "#6E416D",
+    backgroundColor: tokens.colors.plum,
+    borderColor: tokens.colors.plum,
   },
 
   oursFilterChipText: {
     fontSize: 12.5,
-    fontWeight: "500",
-    color: "#6D6072",
+    fontWeight: "600",
+    color: tokens.colors.textSecondary,
   },
 
   oursFilterChipTextActive: {

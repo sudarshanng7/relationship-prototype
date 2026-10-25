@@ -1,3 +1,4 @@
+import { tokens } from "@/components/couply-tokens";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -16,7 +17,6 @@ export interface AppBottomNavProps {
   activeTab: BottomNavTab;
   isRootTab?: boolean;
   themeColors?: BottomNavThemeColors;
-  onSettingsPress?: () => void;
   onPreviewPress?: (label: string) => void;
 }
 
@@ -33,12 +33,12 @@ const NAV_ITEMS: NavItemConfig[] = [
 ];
 
 const DEFAULT_THEME: Required<BottomNavThemeColors> = {
-  surface: "#FFFFFF",
-  border: "#E8DCE9",
-  accent: "#6E416D",
-  iconMuted: "#7E6F86",
-  selectedNavigation: "#F1E8F3",
-  secondaryText: "#6D6072",
+  surface: tokens.colors.surface,
+  border: tokens.colors.border,
+  accent: tokens.colors.plum,
+  iconMuted: tokens.colors.textMuted,
+  selectedNavigation: tokens.colors.surfaceLilac,
+  secondaryText: tokens.colors.textSecondary,
 };
 
 function NavIcon({
@@ -100,7 +100,6 @@ export function AppBottomNav({
   activeTab,
   isRootTab = true,
   themeColors,
-  onSettingsPress,
   onPreviewPress,
 }: AppBottomNavProps) {
   const router = useRouter();
@@ -126,13 +125,9 @@ export function AppBottomNav({
       return;
     }
     if (key === "settings") {
-      if (onSettingsPress) {
-        onSettingsPress();
+      if (activeTab !== "settings") {
+        router.replace("/settings" as any);
       }
-      router.push({
-        pathname: "/home",
-        params: { settings: "true" },
-      });
       return;
     }
     if (key === "our_space") {
@@ -270,13 +265,13 @@ const styles = StyleSheet.create({
   },
   bottomNavInner: {
     width: "100%",
-    maxWidth: 520,
+    maxWidth: tokens.layout.maxContentWidth,
     alignSelf: "center",
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingVertical: tokens.spacing.sm,
+    paddingHorizontal: tokens.spacing.sm,
   },
   navItem: {
     flex: 1,
@@ -285,10 +280,10 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 6,
     minHeight: 48,
-    borderRadius: 14,
+    borderRadius: tokens.radii.small + 2,
   },
   navItemLabel: {
-    fontSize: 12.5,
+    fontSize: tokens.typeScale.caption,
     marginTop: 3,
   },
 });

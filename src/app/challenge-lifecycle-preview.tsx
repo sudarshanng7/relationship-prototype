@@ -1,7 +1,16 @@
+import {
+  CouplyChoiceCard,
+  CouplyHeader,
+  CouplyPrimaryButton,
+  CouplyQuietButton,
+  CouplySectionCard,
+  CouplyStatusPill,
+} from "@/components/CouplyUI";
+import { tokens } from "@/components/couply-tokens";
 import { useChallengePreview } from "@/context/ChallengePreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -11,7 +20,7 @@ import {
   View,
 } from "react-native";
 
-type Perspective = "sam" | "alex";
+type Perspective = "recipient" | "creator";
 
 type ResponseState =
   | "none"
@@ -85,7 +94,7 @@ export default function ChallengeLifecyclePreviewScreen() {
 
   const creatorLabel =
     shouldUseActiveInvitation && activeInvitation
-      ? activeInvitation.creatorName || "You"
+      ? activeInvitation.creatorName || displayName || "You"
       : displayName || "You";
 
   const recipientCapitalized =
@@ -105,10 +114,10 @@ export default function ChallengeLifecyclePreviewScreen() {
       ? params.idea.trim()
       : "";
 
-  const displayTitle = passedIdea || "Bring the mug home";
+  const displayTitle = passedIdea || "A small gentle pause";
   const displayContext = passedIdea
     ? "A small reset chosen together"
-    : "A warm drink together after a long day";
+    : "A warm pause together";
 
   const displayTimeframe =
     shouldUseActiveInvitation && activeInvitation
@@ -123,7 +132,7 @@ export default function ChallengeLifecyclePreviewScreen() {
       ? activeInvitation.reward
       : typeof params.reward === "string" && params.reward.trim().length > 0
       ? params.reward
-      : "Coffee together";
+      : "No reward — just the moment";
 
   const displayIcon = passedIdea ? getDisplayIcon(passedIdea) : "☕";
 
@@ -164,7 +173,7 @@ export default function ChallengeLifecyclePreviewScreen() {
   const initialCompleted =
     shouldUseActiveInvitation && activeInvitation?.status === "completed";
 
-  const [perspective, setPerspective] = useState<Perspective>("sam");
+  const [perspective, setPerspective] = useState<Perspective>("recipient");
   const [responseState, setResponseState] =
     useState<ResponseState>(initialResponseState);
   const [selectedTweak, setSelectedTweak] = useState<TweakOption | null>(null);
@@ -172,7 +181,7 @@ export default function ChallengeLifecyclePreviewScreen() {
   const [showSharedMemoryPreview, setShowSharedMemoryPreview] = useState(false);
 
   function handleResetAll() {
-    setPerspective("sam");
+    setPerspective("recipient");
     setResponseState("none");
     setSelectedTweak(null);
     setIsCompleted(false);
@@ -221,6 +230,14 @@ export default function ChallengeLifecyclePreviewScreen() {
     }
   }
 
+  function handleBack() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/home");
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -229,181 +246,131 @@ export default function ChallengeLifecyclePreviewScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.column}>
-          {/* Top navigation row */}
-          <View style={styles.topNavRow}>
-            <Pressable
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace("/home");
-                }
-              }}
-              style={styles.backButton}
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-            >
-              <Text style={styles.backButtonText}>‹ Back</Text>
-            </Pressable>
-          </View>
+          {/* Header */}
+          <CouplyHeader
+            title="A tiny invitation"
+            subtitle="A local preview of how a small invitation can stay light for both people."
+            onBack={handleBack}
+            backLabel="‹ Back"
+          />
 
-          {/* 1. Header */}
-          <View style={styles.headerBlock}>
-            <Text style={styles.title}>A tiny invitation</Text>
-            <Text style={styles.subtitle}>
-              A local preview of how a small invitation can stay light for both
-              people.
+          {/* Purpose notice */}
+          <CouplySectionCard variant="muted" style={styles.purposeCard}>
+            <Text style={styles.purposeOverline}>
+              INVITATION EXPERIENCE PREVIEW
             </Text>
-          </View>
-
-          {/* Local-only dev preview notice */}
-          <View style={styles.devNoticeCard}>
-            <View style={styles.devNoticeBadge}>
-              <Text style={styles.devNoticeBadgeText}>DEV PREVIEW</Text>
-            </View>
-            <Text style={styles.devNoticeText}>
-              Everything on this screen is a local example. Nothing is sent,
-              saved, or shown to {recipientLabel}.
+            <Text style={styles.purposeBody}>
+              Explore how this small invitation can stay optional and kind for
+              both people.
             </Text>
-          </View>
-
-          {/* 2. Perspective Selector */}
-          <View style={styles.perspectiveContainer}>
-            <Pressable
-              style={[
-                styles.perspectiveCard,
-                perspective === "sam" && styles.perspectiveCardSelected,
-              ]}
-              onPress={() => setPerspective("sam")}
-              accessibilityRole="button"
-              accessibilityState={{ selected: perspective === "sam" }}
-              accessibilityLabel={`View as ${recipientCapitalized}: Receiving the invitation`}
-            >
-              <View style={styles.perspectiveHeaderRow}>
-                <Text style={styles.perspectiveEmoji}>💌</Text>
-                <Text
-                  style={[
-                    styles.perspectiveTitle,
-                    perspective === "sam" && styles.perspectiveTitleSelected,
-                  ]}
-                >
-                  Viewing as {recipientCapitalized}
-                </Text>
-              </View>
-              <Text style={styles.perspectiveSubtext}>
-                Receiving the invitation
+            <View style={styles.purposeTruthfulBox}>
+              <Text style={styles.purposeTruthfulText}>
+                Everything on this screen is a local preview in this browser
+                session. Nothing is sent, saved, or shown to {recipientLabel}.
               </Text>
-            </Pressable>
+            </View>
+          </CouplySectionCard>
 
-            <Pressable
-              style={[
-                styles.perspectiveCard,
-                perspective === "alex" && styles.perspectiveCardSelected,
-              ]}
-              onPress={() => setPerspective("alex")}
-              accessibilityRole="button"
-              accessibilityState={{ selected: perspective === "alex" }}
-              accessibilityLabel={`View as ${creatorLabel}: Seeing the outcome`}
-            >
-              <View style={styles.perspectiveHeaderRow}>
-                <Text style={styles.perspectiveEmoji}>🙋</Text>
-                <Text
-                  style={[
-                    styles.perspectiveTitle,
-                    perspective === "alex" && styles.perspectiveTitleSelected,
-                  ]}
-                >
-                  Viewing as {creatorLabel}
-                </Text>
-              </View>
-              <Text style={styles.perspectiveSubtext}>Seeing the outcome</Text>
-            </Pressable>
+          {/* Perspective Switcher */}
+          <View style={styles.perspectiveSection}>
+            <View style={styles.perspectiveHeaderRow}>
+              <Text style={styles.perspectiveSectionTitle}>Viewpoint</Text>
+              <Text style={styles.perspectiveCaption}>
+                Explore each view without sending anything.
+              </Text>
+            </View>
+            <View style={styles.perspectiveCardsRow}>
+              <CouplyChoiceCard
+                title={`Viewing as ${recipientCapitalized}`}
+                description="Receiving the invitation"
+                selected={perspective === "recipient"}
+                onPress={() => setPerspective("recipient")}
+                icon={<Text style={styles.perspectiveEmoji}>💌</Text>}
+                accessibilityLabel={`View as ${recipientCapitalized}: Receiving the invitation`}
+                style={styles.perspectiveCard}
+              />
+              <CouplyChoiceCard
+                title={`Viewing as ${creatorLabel}`}
+                description="Seeing the outcome"
+                selected={perspective === "creator"}
+                onPress={() => setPerspective("creator")}
+                icon={<Text style={styles.perspectiveEmoji}>🙋</Text>}
+                accessibilityLabel={`View as ${creatorLabel}: Seeing the outcome`}
+                style={styles.perspectiveCard}
+              />
+            </View>
           </View>
 
-          {/* 3. Shared sample invitation context card */}
-          <View style={styles.invitationCard}>
-            <View style={styles.invitationHeaderRow}>
-              <View style={styles.invitationIconBubble}>
-                <Text style={styles.invitationIconEmoji}>{displayIcon}</Text>
-              </View>
+          {/* Invitation Context Card */}
+          <CouplySectionCard style={styles.invitationCard}>
+            <View style={styles.invitationHeader}>
+              <Text style={styles.invitationIcon}>{displayIcon}</Text>
               <View style={styles.invitationHeaderTextGroup}>
                 <Text style={styles.invitationOverline}>
                   A tiny invitation from {creatorLabel}
                 </Text>
                 <Text style={styles.invitationTitle}>{displayTitle}</Text>
-                <Text style={styles.invitationContext}>{displayContext}</Text>
+                <Text style={styles.invitationSubtitle}>{displayContext}</Text>
               </View>
             </View>
 
+            {/* Lighter Thought Card: only if shared & non-empty */}
             {shouldShowLighterThought && (
-              <View style={styles.lighterThoughtCard}>
+              <CouplySectionCard variant="lilac" style={styles.lighterThoughtCard}>
                 <View style={styles.lighterThoughtHeaderRow}>
                   <Text style={styles.lighterThoughtOverline}>
                     A LIGHTER THOUGHT FROM {creatorLabel.toUpperCase()}
                   </Text>
                   {displayReframeTone.length > 0 && (
-                    <View style={styles.lighterThoughtTonePill}>
-                      <Text style={styles.lighterThoughtTonePillText}>
-                        {displayReframeTone}
-                      </Text>
-                    </View>
+                    <CouplyStatusPill
+                      label={displayReframeTone}
+                      variant="preview"
+                    />
                   )}
                 </View>
                 <Text style={styles.lighterThoughtText}>
-                  {displayReframeText}
+                  "{displayReframeText}"
                 </Text>
-                <Text style={styles.lighterThoughtSupportingNote}>
+                <Text style={styles.lighterThoughtSupport}>
                   A warm angle shared with this invitation — not a criticism.
                 </Text>
-              </View>
+              </CouplySectionCard>
             )}
 
-            <View style={styles.invitationDivider} />
-
             <View style={styles.pillsRow}>
-              <View style={styles.pillBadge}>
-                <Text style={styles.pillBadgeText}>{displayTimeframe}</Text>
-              </View>
-              <View style={styles.pillBadge}>
-                <Text style={styles.pillBadgeText}>{displayReward}</Text>
-              </View>
+              <CouplyStatusPill label={displayTimeframe} variant="neutral" />
+              <CouplyStatusPill label={displayReward} variant="neutral" />
             </View>
-          </View>
+          </CouplySectionCard>
 
-          {/* ========================================================= */}
-          {/* 9. Shared completion preview (Visible in both perspectives) */}
-          {/* ========================================================= */}
+          {/* COMPLETED STATE (both perspectives) */}
           {isCompleted ? (
-            <View style={styles.outcomeCard}>
+            <CouplySectionCard variant="lilac" style={styles.outcomeCard}>
               <View style={styles.outcomeHeaderRow}>
-                <View style={styles.outcomeIconBubble}>
-                  <Text style={styles.outcomeIconEmoji}>✨</Text>
-                </View>
+                <Text style={styles.outcomeEmoji}>✨</Text>
                 <Text style={styles.outcomeHeading}>A little win.</Text>
               </View>
-
-              <Text style={styles.outcomeBodyText}>
+              <Text style={styles.outcomeBody}>
                 You two made a small moment feel lighter.
               </Text>
 
-              {/* Keepsake memory toggle */}
-              <View style={styles.completionToggleSection}>
+              {/* Keepsake memory preview */}
+              <View style={styles.memorySection}>
                 <Pressable
                   style={[
-                    styles.toggleButton,
-                    showSharedMemoryPreview && styles.toggleButtonSelected,
+                    styles.memoryToggleButton,
+                    showSharedMemoryPreview && styles.memoryToggleButtonActive,
                   ]}
                   onPress={() =>
                     setShowSharedMemoryPreview(!showSharedMemoryPreview)
                   }
                   accessibilityRole="button"
-                  accessibilityState={{ selected: showSharedMemoryPreview }}
                   accessibilityLabel="Preview as a shared good moment"
                 >
                   <Text
                     style={[
-                      styles.toggleButtonText,
-                      showSharedMemoryPreview && styles.toggleButtonTextSelected,
+                      styles.memoryToggleText,
+                      showSharedMemoryPreview && styles.memoryToggleTextActive,
                     ]}
                   >
                     {showSharedMemoryPreview
@@ -413,198 +380,148 @@ export default function ChallengeLifecyclePreviewScreen() {
                 </Pressable>
 
                 {showSharedMemoryPreview && (
-                  <View style={styles.mockMemoryCard}>
-                    <View style={styles.mockMemoryHeaderRow}>
-                      <View style={styles.mockMemoryBadge}>
-                        <Text style={styles.mockMemoryBadgeText}>
-                          Ours · Shared
-                        </Text>
-                      </View>
-                      <Text style={styles.mockMemoryDate}>Just now</Text>
+                  <View style={styles.memoryCard}>
+                    <View style={styles.memoryCardHeader}>
+                      <CouplyStatusPill
+                        label="Ours · Shared"
+                        variant="positive"
+                      />
+                      <Text style={styles.memoryDate}>Just now</Text>
                     </View>
-                    <Text style={styles.mockMemoryTitle}>
-                      {displayTitle}
-                    </Text>
-                    <Text style={styles.mockMemoryDetails}>
+                    <Text style={styles.memoryTitle}>{displayTitle}</Text>
+                    <Text style={styles.memoryDetails}>
                       {displayContext} · completed together
                     </Text>
-                    <View style={styles.mockMemoryNotice}>
-                      <Text style={styles.mockMemoryNoticeText}>
-                        This is only a visual preview. This completion only
-                        updates the current browser session. No moment has been
-                        added to Our Space.
+                    <View style={styles.memoryTruthfulBox}>
+                      <Text style={styles.memoryTruthfulText}>
+                        This is only a visual preview in this browser session.
+                        No moment has been added to Our Space.
                       </Text>
                     </View>
                   </View>
                 )}
               </View>
 
-              {/* Perspective switch or reset */}
-              <View style={styles.actionButtonGroup}>
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={() =>
-                    setPerspective(perspective === "sam" ? "alex" : "sam")
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    perspective === "sam"
+              <View style={styles.actionsStack}>
+                <CouplyQuietButton
+                  label={
+                    perspective === "recipient"
                       ? `View as ${creatorLabel}`
                       : `View as ${recipientCapitalized}`
                   }
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    {perspective === "sam"
-                      ? `View as ${creatorLabel}`
-                      : `View as ${recipientCapitalized}`}
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  style={styles.quietResetButton}
+                  variant="soft"
+                  onPress={() =>
+                    setPerspective(
+                      perspective === "recipient" ? "creator" : "recipient",
+                    )
+                  }
+                  style={styles.actionButton}
+                />
+                <CouplyQuietButton
+                  label="Start this preview again"
+                  variant="text"
                   onPress={handleResetAll}
-                  accessibilityRole="button"
-                  accessibilityLabel="Start this preview again"
-                >
-                  <Text style={styles.quietResetButtonText}>
-                    Start this preview again
-                  </Text>
-                </Pressable>
+                  style={styles.actionButton}
+                />
               </View>
-            </View>
-          ) : perspective === "sam" ? (
-            /* ========================================================= */
-            /* 4, 5, 6, 7. SAM'S RECIPIENT VIEW                          */
-            /* ========================================================= */
-            <View style={styles.flowSection}>
+            </CouplySectionCard>
+          ) : perspective === "recipient" ? (
+            /* RECIPIENT VIEW */
+            <View style={styles.stateContainer}>
+              {/* Choice area: None chosen yet */}
               {responseState === "none" && (
-                <View style={styles.responseContainer}>
-                  <View style={styles.recipientPromptBlock}>
-                    <Text style={styles.recipientHeadline}>
-                      Up for a small reset together?
+                <CouplySectionCard style={styles.responseSectionCard}>
+                  <Text style={styles.recipientPromptTitle}>
+                    Up for a small reset together?
+                  </Text>
+                  <View style={styles.reassuranceBox}>
+                    <Text style={styles.reassuranceText}>
+                      Take your time. An invitation is never an obligation, and
+                      choosing not today is always completely okay.
                     </Text>
-                    <View style={styles.reassuranceCard}>
-                      <Text style={styles.reassuranceText}>
-                        Take your time. An invitation is never an obligation,
-                        and choosing not today is always completely okay.
-                      </Text>
-                    </View>
                   </View>
 
-                  <View style={styles.responseButtonsRow}>
-                    <Pressable
-                      style={styles.primaryActionButton}
+                  <View style={styles.choicesList}>
+                    <CouplyChoiceCard
+                      title="I’m in"
+                      description="Accept this tiny invitation"
+                      icon={<Text style={styles.choiceEmoji}>🤝</Text>}
                       onPress={handleAccept}
-                      accessibilityRole="button"
                       accessibilityLabel="Accept this tiny invitation"
-                    >
-                      <Text style={styles.primaryActionEmoji}>🤝</Text>
-                      <Text style={styles.primaryActionButtonText}>I’m in</Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={styles.tweakActionButton}
+                      style={styles.recipientChoiceCard}
+                    />
+                    <CouplyChoiceCard
+                      title="Suggest a tweak"
+                      description="Suggest a gentler alternative or timing"
+                      icon={<Text style={styles.choiceEmoji}>💬</Text>}
                       onPress={handleStartTweak}
-                      accessibilityRole="button"
                       accessibilityLabel="Suggest a gentler alternative"
-                    >
-                      <Text style={styles.tweakActionEmoji}>💬</Text>
-                      <Text style={styles.tweakActionButtonText}>
-                        Suggest a tweak
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={styles.declineActionButton}
+                      style={styles.recipientChoiceCard}
+                    />
+                    <CouplyChoiceCard
+                      title="Not today"
+                      description="A gentle, completely safe pass"
+                      icon={<Text style={styles.choiceEmoji}>🌱</Text>}
                       onPress={handleDecline}
-                      accessibilityRole="button"
                       accessibilityLabel="Decline this invitation for now"
-                    >
-                      <Text style={styles.declineActionEmoji}>🌱</Text>
-                      <Text style={styles.declineActionButtonText}>
-                        Not today
-                      </Text>
-                    </Pressable>
+                      style={styles.recipientChoiceCard}
+                    />
                   </View>
-                </View>
+                </CouplySectionCard>
               )}
 
-              {/* 5. Sam accepts */}
+              {/* Recipient accepted */}
               {responseState === "in" && (
-                <View style={styles.outcomeCard}>
+                <CouplySectionCard variant="lilac" style={styles.outcomeCard}>
                   <View style={styles.outcomeHeaderRow}>
-                    <View style={styles.outcomeIconBubble}>
-                      <Text style={styles.outcomeIconEmoji}>🤝</Text>
-                    </View>
+                    <Text style={styles.outcomeEmoji}>🤝</Text>
                     <Text style={styles.outcomeHeading}>You’re in.</Text>
                   </View>
-
-                  <Text style={styles.outcomeBodyText}>
+                  <Text style={styles.outcomeBody}>
                     Enjoy this little reset together whenever it feels right.
                   </Text>
-
-                  <View style={styles.truthfulNoteBox}>
-                    <Text style={styles.truthfulNoteText}>
-                      In this preview, {creatorLabel} would see that you are open
-                      to the idea. This response only updates the current browser
-                      session.
+                  <View style={styles.truthfulBox}>
+                    <Text style={styles.truthfulText}>
+                      In this preview, {creatorLabel} would see that you are
+                      open to the idea. This response only updates the current
+                      browser session.
                     </Text>
                   </View>
-
-                  <View style={styles.actionButtonGroup}>
-                    <Pressable
-                      style={styles.primaryWideButton}
+                  <View style={styles.actionsStack}>
+                    <CouplyPrimaryButton
+                      label="✨ We did this together"
                       onPress={handleComplete}
-                      accessibilityRole="button"
-                      accessibilityLabel="We did this together: mark as completed"
-                    >
-                      <Text style={styles.primaryWideButtonText}>
-                        ✨ We did this together
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={styles.secondaryButton}
-                      onPress={() => setPerspective("alex")}
-                      accessibilityRole="button"
-                      accessibilityLabel={`View as ${creatorLabel}`}
-                    >
-                      <Text style={styles.secondaryButtonText}>
-                        View as {creatorLabel}
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={styles.quietResetButton}
+                      style={styles.actionButton}
+                    />
+                    <CouplyQuietButton
+                      label={`View as ${creatorLabel}`}
+                      variant="soft"
+                      onPress={() => setPerspective("creator")}
+                      style={styles.actionButton}
+                    />
+                    <CouplyQuietButton
+                      label="Start this preview again"
+                      variant="text"
                       onPress={handleResetAll}
-                      accessibilityRole="button"
-                      accessibilityLabel="Start this preview again"
-                    >
-                      <Text style={styles.quietResetButtonText}>
-                        Start this preview again
-                      </Text>
-                    </Pressable>
+                      style={styles.actionButton}
+                    />
                   </View>
-                </View>
+                </CouplySectionCard>
               )}
 
-              {/* 6. Sam suggests a tweak: composing */}
+              {/* Recipient composing a tweak */}
               {responseState === "tweak_composing" && (
-                <View style={styles.outcomeCard}>
+                <CouplySectionCard style={styles.outcomeCard}>
                   <View style={styles.outcomeHeaderRow}>
-                    <View style={styles.outcomeIconBubble}>
-                      <Text style={styles.outcomeIconEmoji}>💬</Text>
-                    </View>
+                    <Text style={styles.outcomeEmoji}>💬</Text>
                     <Text style={styles.outcomeHeading}>
                       What would feel easier?
                     </Text>
                   </View>
-
-                  <Text style={styles.outcomeBodyText}>
+                  <Text style={styles.outcomeBody}>
                     A tiny change can make an invitation feel more natural.
                   </Text>
-
-                  <View style={styles.tweakChipsColumn}>
+                  <View style={styles.tweakList}>
                     {TWEAK_OPTIONS.map((tweak) => {
                       const isSelected = selectedTweak === tweak;
                       return (
@@ -631,50 +548,35 @@ export default function ChallengeLifecyclePreviewScreen() {
                       );
                     })}
                   </View>
-
-                  <View style={styles.actionButtonGroup}>
-                    <Pressable
-                      style={styles.primaryWideButton}
+                  <View style={styles.actionsStack}>
+                    <CouplyPrimaryButton
+                      label="Share this suggestion in preview"
                       onPress={handleShareTweak}
-                      accessibilityRole="button"
-                      accessibilityLabel="Share this suggestion in preview"
-                    >
-                      <Text style={styles.primaryWideButtonText}>
-                        Share this suggestion in preview
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={styles.quietResetButton}
+                      style={styles.actionButton}
+                    />
+                    <CouplyQuietButton
+                      label="Start this preview again"
+                      variant="text"
                       onPress={handleResetAll}
-                      accessibilityRole="button"
-                      accessibilityLabel="Start this preview again"
-                    >
-                      <Text style={styles.quietResetButtonText}>
-                        Start this preview again
-                      </Text>
-                    </Pressable>
+                      style={styles.actionButton}
+                    />
                   </View>
-                </View>
+                </CouplySectionCard>
               )}
 
-              {/* 6. Sam suggests a tweak: shared */}
+              {/* Recipient shared a tweak */}
               {responseState === "tweak_shared" && (
-                <View style={styles.outcomeCard}>
+                <CouplySectionCard variant="lilac" style={styles.outcomeCard}>
                   <View style={styles.outcomeHeaderRow}>
-                    <View style={styles.outcomeIconBubble}>
-                      <Text style={styles.outcomeIconEmoji}>💬</Text>
-                    </View>
+                    <Text style={styles.outcomeEmoji}>💬</Text>
                     <Text style={styles.outcomeHeading}>
                       A gentle alternative is ready.
                     </Text>
                   </View>
-
-                  <Text style={styles.outcomeBodyText}>
+                  <Text style={styles.outcomeBody}>
                     In this preview, {creatorLabel} would see your suggestion
                     and could take it from there.
                   </Text>
-
                   <View style={styles.selectedTweakBox}>
                     <Text style={styles.selectedTweakLabel}>
                       Suggested tweak:
@@ -683,312 +585,224 @@ export default function ChallengeLifecyclePreviewScreen() {
                       “{selectedTweak}”
                     </Text>
                   </View>
-
-                  <View style={styles.truthfulNoteBox}>
-                    <Text style={styles.truthfulNoteText}>
+                  <View style={styles.truthfulBox}>
+                    <Text style={styles.truthfulText}>
                       In this preview, this response only updates the current
                       browser session. Nothing has been shared or saved.
                     </Text>
                   </View>
-
-                  <View style={styles.actionButtonGroup}>
-                    <Pressable
-                      style={styles.primaryWideButton}
-                      onPress={() => setPerspective("alex")}
-                      accessibilityRole="button"
-                      accessibilityLabel={`View as ${creatorLabel}`}
-                    >
-                      <Text style={styles.primaryWideButtonText}>
-                        View as {creatorLabel}
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={styles.quietResetButton}
+                  <View style={styles.actionsStack}>
+                    <CouplyPrimaryButton
+                      label={`View as ${creatorLabel}`}
+                      onPress={() => setPerspective("creator")}
+                      style={styles.actionButton}
+                    />
+                    <CouplyQuietButton
+                      label="Start this preview again"
+                      variant="text"
                       onPress={handleResetAll}
-                      accessibilityRole="button"
-                      accessibilityLabel="Start this preview again"
-                    >
-                      <Text style={styles.quietResetButtonText}>
-                        Start this preview again
-                      </Text>
-                    </Pressable>
+                      style={styles.actionButton}
+                    />
                   </View>
-                </View>
+                </CouplySectionCard>
               )}
 
-              {/* 7. Sam chooses Not today */}
+              {/* Recipient chose Not today */}
               {responseState === "not_today" && (
-                <View style={styles.outcomeCard}>
+                <CouplySectionCard variant="muted" style={styles.outcomeCard}>
                   <View style={styles.outcomeHeaderRow}>
-                    <View style={styles.outcomeIconBubble}>
-                      <Text style={styles.outcomeIconEmoji}>🌱</Text>
-                    </View>
+                    <Text style={styles.outcomeEmoji}>🌱</Text>
                     <Text style={styles.outcomeHeading}>Completely fine.</Text>
                   </View>
-
-                  <Text style={styles.outcomeBodyText}>
+                  <Text style={styles.outcomeBody}>
                     Tiny invitations only work when declining is easy.
                   </Text>
-
-                  <View style={styles.truthfulNoteBox}>
-                    <Text style={styles.truthfulNoteText}>
+                  <View style={styles.truthfulBox}>
+                    <Text style={styles.truthfulText}>
                       In this preview, {creatorLabel} sees this as a gentle
                       pass. This response only updates the current browser
                       session. Nothing has been sent or saved.
                     </Text>
                   </View>
-
-                  <View style={styles.actionButtonGroup}>
-                    <Pressable
-                      style={styles.primaryWideButton}
-                      onPress={() => setPerspective("alex")}
-                      accessibilityRole="button"
-                      accessibilityLabel={`View as ${creatorLabel}`}
-                    >
-                      <Text style={styles.primaryWideButtonText}>
-                        View as {creatorLabel}
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={styles.quietResetButton}
+                  <View style={styles.actionsStack}>
+                    <CouplyPrimaryButton
+                      label={`View as ${creatorLabel}`}
+                      onPress={() => setPerspective("creator")}
+                      style={styles.actionButton}
+                    />
+                    <CouplyQuietButton
+                      label="Start this preview again"
+                      variant="text"
                       onPress={handleResetAll}
-                      accessibilityRole="button"
-                      accessibilityLabel="Start this preview again"
-                    >
-                      <Text style={styles.quietResetButtonText}>
-                        Start this preview again
-                      </Text>
-                    </Pressable>
+                      style={styles.actionButton}
+                    />
                   </View>
-                </View>
+                </CouplySectionCard>
               )}
             </View>
           ) : (
-            /* ========================================================= */
-            /* 8. ALEX'S SENDER VIEW                                     */
-            /* ========================================================= */
-            <View style={styles.flowSection}>
-              {/* Default / no response */}
+            /* CREATOR / SENDER VIEW */
+            <View style={styles.stateContainer}>
+              {/* Waiting quietly */}
               {responseState === "none" && (
-                <View style={styles.outcomeCard}>
+                <CouplySectionCard variant="muted" style={styles.outcomeCard}>
                   <View style={styles.outcomeHeaderRow}>
-                    <View style={styles.outcomeIconBubble}>
-                      <Text style={styles.outcomeIconEmoji}>⏳</Text>
-                    </View>
+                    <Text style={styles.outcomeEmoji}>⏳</Text>
                     <Text style={styles.outcomeHeading}>Waiting quietly</Text>
                   </View>
-
-                  <Text style={styles.outcomeBodyText}>
+                  <Text style={styles.outcomeBody}>
                     {recipientCapitalized} can respond whenever it feels right,
                     or simply let it pass.
                   </Text>
-
-                  <View style={styles.truthfulNoteBox}>
-                    <Text style={styles.truthfulNoteText}>
-                      No reminders or countdown timers are sent.
+                  <View style={styles.truthfulBox}>
+                    <Text style={styles.truthfulText}>
+                      No reminders, deadlines, or countdown timers are sent.
                     </Text>
                   </View>
-
-                  <View style={styles.actionButtonGroup}>
-                    <Pressable
-                      style={styles.secondaryButton}
+                  <View style={styles.actionsStack}>
+                    <CouplyQuietButton
+                      label="Preview time passing quietly"
+                      variant="soft"
                       onPress={handleTimePass}
-                      accessibilityRole="button"
-                      accessibilityLabel="Preview time passing quietly"
-                    >
-                      <Text style={styles.secondaryButtonText}>
-                        Preview time passing quietly
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={styles.secondaryButton}
-                      onPress={() => setPerspective("sam")}
-                      accessibilityRole="button"
-                      accessibilityLabel={`View as ${recipientCapitalized}`}
-                    >
-                      <Text style={styles.secondaryButtonText}>
-                        View as {recipientCapitalized}
-                      </Text>
-                    </Pressable>
+                      style={styles.actionButton}
+                    />
+                    <CouplyQuietButton
+                      label={`View as ${recipientCapitalized}`}
+                      variant="soft"
+                      onPress={() => setPerspective("recipient")}
+                      style={styles.actionButton}
+                    />
                   </View>
-                </View>
+                </CouplySectionCard>
               )}
 
               {/* Time passed */}
               {responseState === "time_passed" && (
-                <View style={styles.outcomeCard}>
+                <CouplySectionCard variant="muted" style={styles.outcomeCard}>
                   <View style={styles.outcomeHeaderRow}>
-                    <View style={styles.outcomeIconBubble}>
-                      <Text style={styles.outcomeIconEmoji}>🌙</Text>
-                    </View>
+                    <Text style={styles.outcomeEmoji}>🌙</Text>
                     <Text style={styles.outcomeHeading}>
                       Time passed quietly
                     </Text>
                   </View>
-
-                  <Text style={styles.outcomeBodyText}>
+                  <Text style={styles.outcomeBody}>
                     The timeframe passed without reminders, penalties, or
                     awkward follow-ups.
                   </Text>
-
-                  <View style={styles.truthfulNoteBox}>
-                    <Text style={styles.truthfulNoteText}>
+                  <View style={styles.truthfulBox}>
+                    <Text style={styles.truthfulText}>
                       This is only a local preview.
                     </Text>
                   </View>
-
-                  <View style={styles.actionButtonGroup}>
-                    <Pressable
-                      style={styles.quietResetButton}
+                  <View style={styles.actionsStack}>
+                    <CouplyQuietButton
+                      label="Start this preview again"
+                      variant="text"
                       onPress={handleResetAll}
-                      accessibilityRole="button"
-                      accessibilityLabel="Start this preview again"
-                    >
-                      <Text style={styles.quietResetButtonText}>
-                        Start this preview again
-                      </Text>
-                    </Pressable>
+                      style={styles.actionButton}
+                    />
                   </View>
-                </View>
+                </CouplySectionCard>
               )}
 
-              {/* After acceptance */}
+              {/* Sender sees partner is in */}
               {responseState === "in" && (
-                <View style={styles.outcomeCard}>
+                <CouplySectionCard variant="lilac" style={styles.outcomeCard}>
                   <View style={styles.outcomeHeaderRow}>
-                    <View style={styles.outcomeIconBubble}>
-                      <Text style={styles.outcomeIconEmoji}>🤝</Text>
-                    </View>
+                    <Text style={styles.outcomeEmoji}>🤝</Text>
                     <Text style={styles.outcomeHeading}>
                       {recipientCapitalized} is in.
                     </Text>
                   </View>
-
-                  <Text style={styles.outcomeBodyText}>
+                  <Text style={styles.outcomeBody}>
                     You can enjoy a small shared reset whenever it feels right.
                   </Text>
-
-                  <View style={styles.truthfulNoteBox}>
-                    <Text style={styles.truthfulNoteText}>
+                  <View style={styles.truthfulBox}>
+                    <Text style={styles.truthfulText}>
                       In this preview, this response only updates the current
-                      browser session. Shared moments feel lightest when both feel
-                      free to choose them.
+                      browser session. Shared moments feel lightest when both
+                      feel free to choose them.
                     </Text>
                   </View>
-
-                  <View style={styles.actionButtonGroup}>
-                    <Pressable
-                      style={styles.primaryWideButton}
+                  <View style={styles.actionsStack}>
+                    <CouplyPrimaryButton
+                      label="✨ We did this together"
                       onPress={handleComplete}
-                      accessibilityRole="button"
-                      accessibilityLabel="We did this together: mark as completed"
-                    >
-                      <Text style={styles.primaryWideButtonText}>
-                        ✨ We did this together
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={styles.quietResetButton}
+                      style={styles.actionButton}
+                    />
+                    <CouplyQuietButton
+                      label="Start this preview again"
+                      variant="text"
                       onPress={handleResetAll}
-                      accessibilityRole="button"
-                      accessibilityLabel="Start this preview again"
-                    >
-                      <Text style={styles.quietResetButtonText}>
-                        Start this preview again
-                      </Text>
-                    </Pressable>
+                      style={styles.actionButton}
+                    />
                   </View>
-                </View>
+                </CouplySectionCard>
               )}
 
-              {/* After a tweak */}
+              {/* Sender sees partner suggested a tweak */}
               {(responseState === "tweak_shared" ||
                 responseState === "tweak_composing") && (
-                <View style={styles.outcomeCard}>
+                <CouplySectionCard variant="lilac" style={styles.outcomeCard}>
                   <View style={styles.outcomeHeaderRow}>
-                    <View style={styles.outcomeIconBubble}>
-                      <Text style={styles.outcomeIconEmoji}>💬</Text>
-                    </View>
+                    <Text style={styles.outcomeEmoji}>💬</Text>
                     <Text style={styles.outcomeHeading}>
                       {recipientCapitalized} suggested a gentler version.
                     </Text>
                   </View>
-
-                  <Text style={styles.outcomeBodyText}>
+                  <Text style={styles.outcomeBody}>
                     “{selectedTweak || "Tomorrow instead?"}”
                   </Text>
-
-                  <View style={styles.truthfulNoteBox}>
-                    <Text style={styles.truthfulNoteText}>
+                  <View style={styles.truthfulBox}>
+                    <Text style={styles.truthfulText}>
                       In this preview, this response only updates the current
                       browser session. You could decide whether it still feels
                       right.
                     </Text>
                   </View>
-
-                  <View style={styles.actionButtonGroup}>
-                    <Pressable
-                      style={styles.quietResetButton}
+                  <View style={styles.actionsStack}>
+                    <CouplyQuietButton
+                      label="Start this preview again"
+                      variant="text"
                       onPress={handleResetAll}
-                      accessibilityRole="button"
-                      accessibilityLabel="Start this preview again"
-                    >
-                      <Text style={styles.quietResetButtonText}>
-                        Start this preview again
-                      </Text>
-                    </Pressable>
+                      style={styles.actionButton}
+                    />
                   </View>
-                </View>
+                </CouplySectionCard>
               )}
 
-              {/* After Not today */}
+              {/* Sender sees partner chose not today */}
               {responseState === "not_today" && (
-                <View style={styles.outcomeCard}>
+                <CouplySectionCard variant="muted" style={styles.outcomeCard}>
                   <View style={styles.outcomeHeaderRow}>
-                    <View style={styles.outcomeIconBubble}>
-                      <Text style={styles.outcomeIconEmoji}>🌱</Text>
-                    </View>
+                    <Text style={styles.outcomeEmoji}>🌱</Text>
                     <Text style={styles.outcomeHeading}>
                       {recipientCapitalized} chose not today.
                     </Text>
                   </View>
-
-                  <Text style={styles.outcomeBodyText}>
+                  <Text style={styles.outcomeBody}>
                     That is completely okay. Shared moments stay light because
                     declining is easy.
                   </Text>
-
-                  <View style={styles.truthfulNoteBox}>
-                    <Text style={styles.truthfulNoteText}>
+                  <View style={styles.truthfulBox}>
+                    <Text style={styles.truthfulText}>
                       In this preview, this response only updates the current
                       browser session. Declining easily is what keeps invitations
                       safe to receive.
                     </Text>
                   </View>
-
-                  <View style={styles.actionButtonGroup}>
-                    <Pressable
-                      style={styles.quietResetButton}
+                  <View style={styles.actionsStack}>
+                    <CouplyQuietButton
+                      label="Start this preview again"
+                      variant="text"
                       onPress={handleResetAll}
-                      accessibilityRole="button"
-                      accessibilityLabel="Start this preview again"
-                    >
-                      <Text style={styles.quietResetButtonText}>
-                        Start this preview again
-                      </Text>
-                    </Pressable>
+                      style={styles.actionButton}
+                    />
                   </View>
-                </View>
+                </CouplySectionCard>
               )}
             </View>
           )}
-
-          {/* Bottom spacer */}
-          <View style={styles.bottomSpacer} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -998,531 +812,315 @@ export default function ChallengeLifecyclePreviewScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FBF7FC",
+    backgroundColor: tokens.colors.pageBackground,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 60,
+    paddingHorizontal: tokens.spacing.page,
+    paddingTop: tokens.spacing.md,
+    paddingBottom: 48,
   },
   column: {
+    maxWidth: tokens.layout.maxContentWidth,
     width: "100%",
-    maxWidth: 520,
     alignSelf: "center",
-    gap: 18,
+    gap: tokens.spacing.lg,
   },
-  topNavRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: -6,
+  purposeCard: {
+    gap: 6,
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
   },
-  backButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    alignSelf: "flex-start",
-  },
-  backButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-  headerBlock: {
-    gap: 4,
-  },
-  title: {
-    fontSize: 24,
+  purposeOverline: {
+    fontSize: tokens.typeScale.overline,
     fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: 14.5,
-    color: "#6D6072",
-    lineHeight: 20,
-  },
-  devNoticeCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  devNoticeBadge: {
-    backgroundColor: "#F1EDF7",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  devNoticeBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#6E416D",
+    letterSpacing: 0.6,
+    color: tokens.colors.plum,
     textTransform: "uppercase",
   },
-  devNoticeText: {
-    flex: 1,
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 17,
+  purposeBody: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.text,
+    lineHeight: 18,
   },
-  perspectiveContainer: {
-    flexDirection: "row",
+  purposeTruthfulBox: {
+    marginTop: 4,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: tokens.colors.border,
+  },
+  purposeTruthfulText: {
+    fontSize: tokens.typeScale.overline + 0.5,
+    color: tokens.colors.textMuted,
+    lineHeight: 16,
+  },
+  perspectiveSection: {
     gap: 10,
   },
-  perspectiveCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    gap: 4,
-  },
-  perspectiveCardSelected: {
-    backgroundColor: "#FBEFF7",
-    borderColor: "#6E416D",
-  },
   perspectiveHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+    gap: 2,
+  },
+  perspectiveSectionTitle: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    color: tokens.colors.text,
+    textTransform: "uppercase",
+  },
+  perspectiveCaption: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+  },
+  perspectiveCardsRow: {
+    gap: 8,
+  },
+  perspectiveCard: {
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg - 2,
   },
   perspectiveEmoji: {
-    fontSize: 14,
-  },
-  perspectiveTitle: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#3D3040",
-  },
-  perspectiveTitleSelected: {
-    fontWeight: "700",
-    color: "#6E416D",
-  },
-  perspectiveSubtext: {
-    fontSize: 11.5,
-    color: "#8E7E94",
+    fontSize: 18,
   },
   invitationCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    gap: 12,
+    gap: tokens.spacing.md,
   },
-  invitationHeaderRow: {
+  invitationHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
+    gap: tokens.spacing.md,
   },
-  invitationIconBubble: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F8F3F9",
-    alignItems: "center",
-    justifyContent: "center",
+  invitationIcon: {
+    fontSize: 26,
     marginTop: 2,
-  },
-  invitationIconEmoji: {
-    fontSize: 18,
   },
   invitationHeaderTextGroup: {
     flex: 1,
-    gap: 3,
+    gap: 2,
   },
   invitationOverline: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#8E7E94",
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    color: tokens.colors.plum,
     textTransform: "uppercase",
-    letterSpacing: 0.3,
   },
   invitationTitle: {
-    fontSize: 16.5,
-    fontWeight: "700",
-    color: "#3D3040",
+    fontSize: tokens.typeScale.sectionTitle + 1,
+    fontWeight: "600",
+    color: tokens.colors.text,
   },
-  invitationContext: {
-    fontSize: 13,
-    color: "#6D6072",
+  invitationSubtitle: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
     lineHeight: 18,
   },
-  invitationDivider: {
-    height: 1,
-    backgroundColor: "#F4EDF6",
+  lighterThoughtCard: {
+    gap: tokens.spacing.sm,
+    padding: tokens.spacing.md,
+  },
+  lighterThoughtHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+  lighterThoughtOverline: {
+    fontSize: tokens.typeScale.overline - 0.5,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: tokens.colors.plum,
+    textTransform: "uppercase",
+    flex: 1,
+  },
+  lighterThoughtText: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontStyle: "italic",
+    color: tokens.colors.text,
+    lineHeight: 20,
+  },
+  lighterThoughtSupport: {
+    fontSize: tokens.typeScale.caption - 1,
+    color: tokens.colors.textSecondary,
+    lineHeight: 16,
   },
   pillsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: tokens.spacing.sm,
+    paddingTop: 4,
   },
-  pillBadge: {
-    backgroundColor: "#FBF7FC",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#F0E4F1",
+  stateContainer: {
+    gap: tokens.spacing.md,
   },
-  pillBadgeText: {
-    fontSize: 12,
+  responseSectionCard: {
+    gap: tokens.spacing.md,
+  },
+  recipientPromptTitle: {
+    fontSize: tokens.typeScale.sectionTitle,
     fontWeight: "600",
-    color: "#6E416D",
+    color: tokens.colors.text,
   },
-  flowSection: {
-    gap: 16,
-  },
-  recipientPromptBlock: {
-    gap: 8,
-  },
-  recipientHeadline: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.2,
-  },
-  reassuranceCard: {
-    backgroundColor: "#FAF5FB",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#F0E4F1",
+  reassuranceBox: {
+    backgroundColor: tokens.colors.surfaceMuted,
+    padding: 10,
+    borderRadius: tokens.radii.small,
   },
   reassuranceText: {
-    fontSize: 13,
-    color: "#6D6072",
-    lineHeight: 18,
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    lineHeight: 17,
   },
-  responseContainer: {
-    gap: 14,
-  },
-  responseButtonsRow: {
-    flexDirection: "row",
+  choicesList: {
     gap: 8,
+    marginTop: 4,
   },
-  primaryActionButton: {
-    flex: 1.2,
-    backgroundColor: "#6E416D",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 6,
+  recipientChoiceCard: {
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg - 2,
   },
-  primaryActionEmoji: {
-    fontSize: 14,
-  },
-  primaryActionButtonText: {
-    fontSize: 13.5,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  tweakActionButton: {
-    flex: 1.5,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 6,
-  },
-  tweakActionEmoji: {
-    fontSize: 14,
-  },
-  tweakActionButtonText: {
-    fontSize: 12.5,
-    fontWeight: "700",
-    color: "#6E416D",
-  },
-  declineActionButton: {
-    flex: 1.1,
-    backgroundColor: "#FBF7FC",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 5,
-  },
-  declineActionEmoji: {
-    fontSize: 13,
-  },
-  declineActionButtonText: {
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: "#6D6072",
+  choiceEmoji: {
+    fontSize: 18,
   },
   outcomeCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    gap: 12,
+    gap: 10,
   },
   outcomeHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
-  outcomeIconBubble: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#F1EDF7",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  outcomeIconEmoji: {
-    fontSize: 17,
+  outcomeEmoji: {
+    fontSize: 22,
   },
   outcomeHeading: {
-    fontSize: 16.5,
-    fontWeight: "700",
-    color: "#3D3040",
-  },
-  outcomeBodyText: {
-    fontSize: 14,
-    color: "#3D3040",
-    lineHeight: 21,
-  },
-  truthfulNoteBox: {
-    backgroundColor: "#FBF7FC",
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#F0E4F1",
-  },
-  truthfulNoteText: {
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 17,
-    fontStyle: "italic",
-  },
-  selectedTweakBox: {
-    backgroundColor: "#FAF5FB",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#F0E4F1",
-    gap: 4,
-  },
-  selectedTweakLabel: {
-    fontSize: 11.5,
+    fontSize: tokens.typeScale.sectionTitle + 1,
     fontWeight: "600",
-    color: "#8E7E94",
-    textTransform: "uppercase",
+    color: tokens.colors.text,
   },
-  selectedTweakText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#6E416D",
+  outcomeBody: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
+    lineHeight: 19,
   },
-  tweakChipsColumn: {
+  truthfulBox: {
+    backgroundColor: tokens.colors.surfaceMuted,
+    padding: 10,
+    borderRadius: tokens.radii.small,
+  },
+  truthfulText: {
+    fontSize: tokens.typeScale.caption - 0.5,
+    color: tokens.colors.textSecondary,
+    lineHeight: 16,
+  },
+  tweakList: {
     gap: 8,
     marginVertical: 4,
   },
   tweakChip: {
-    backgroundColor: "#FBF7FC",
-    borderRadius: 14,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
+    paddingVertical: 10,
+    paddingHorizontal: tokens.spacing.lg - 2,
+    borderRadius: tokens.radii.card,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surface,
   },
   tweakChipSelected: {
-    backgroundColor: "#FBEFF7",
-    borderColor: "#6E416D",
+    borderColor: tokens.colors.plum,
+    backgroundColor: tokens.colors.surfaceLilac,
   },
   tweakChipText: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#6D6072",
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.text,
   },
   tweakChipTextSelected: {
-    color: "#6E416D",
-    fontWeight: "700",
-  },
-  actionButtonGroup: {
-    gap: 8,
-    marginTop: 4,
-  },
-  primaryWideButton: {
-    backgroundColor: "#6E416D",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryWideButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  secondaryButton: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryButtonText: {
-    fontSize: 13.5,
     fontWeight: "600",
-    color: "#6E416D",
+    color: tokens.colors.plum,
   },
-  quietResetButton: {
-    backgroundColor: "#F8F3F9",
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+  selectedTweakBox: {
+    backgroundColor: tokens.colors.surface,
+    borderRadius: tokens.radii.small,
+    padding: tokens.spacing.md,
     borderWidth: 1,
-    borderColor: "#E5DAE6",
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: tokens.colors.border,
+    gap: 4,
   },
-  quietResetButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-  completionToggleSection: {
-    gap: 10,
-    marginTop: 4,
-  },
-  toggleButton: {
-    backgroundColor: "#FBF7FC",
-    borderRadius: 14,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  toggleButtonSelected: {
-    backgroundColor: "#FBEFF7",
-    borderColor: "#6E416D",
-  },
-  toggleButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6D6072",
-  },
-  toggleButtonTextSelected: {
-    color: "#6E416D",
+  selectedTweakLabel: {
+    fontSize: tokens.typeScale.overline,
     fontWeight: "700",
+    color: tokens.colors.textMuted,
+    textTransform: "uppercase",
   },
-  mockMemoryCard: {
-    backgroundColor: "#FDF8FC",
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1.2,
-    borderColor: "#EBD8EA",
-    gap: 6,
-    marginTop: 2,
+  selectedTweakText: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontWeight: "500",
+    color: tokens.colors.text,
   },
-  mockMemoryHeaderRow: {
+  actionsStack: {
+    gap: 8,
+    marginTop: 6,
+  },
+  actionButton: {
+    width: "100%",
+  },
+  memorySection: {
+    marginVertical: 6,
+    gap: 8,
+  },
+  memoryToggleButton: {
+    paddingVertical: 9,
+    paddingHorizontal: tokens.spacing.lg - 2,
+    borderRadius: tokens.radii.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surface,
+    alignSelf: "flex-start",
+  },
+  memoryToggleButtonActive: {
+    borderColor: tokens.colors.plum,
+    backgroundColor: tokens.colors.surfaceLilac,
+  },
+  memoryToggleText: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    fontWeight: "500",
+  },
+  memoryToggleTextActive: {
+    color: tokens.colors.plum,
+    fontWeight: "600",
+  },
+  memoryCard: {
+    backgroundColor: tokens.colors.surface,
+    borderRadius: tokens.radii.card,
+    padding: tokens.spacing.lg - 2,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    gap: 8,
+  },
+  memoryCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  mockMemoryBadge: {
-    backgroundColor: "#F4E5F2",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+  memoryDate: {
+    fontSize: tokens.typeScale.overline + 0.5,
+    color: tokens.colors.textMuted,
   },
-  mockMemoryBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#6E416D",
-  },
-  mockMemoryDate: {
-    fontSize: 12,
-    color: "#8E7E94",
-  },
-  mockMemoryTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#6E416D",
-  },
-  mockMemoryDetails: {
-    fontSize: 12.5,
-    color: "#6D6072",
-  },
-  mockMemoryNotice: {
-    marginTop: 4,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: "#F3E3F0",
-  },
-  mockMemoryNoticeText: {
-    fontSize: 11.5,
-    color: "#8E7E94",
-    fontStyle: "italic",
-  },
-  bottomSpacer: {
-    height: 10,
-  },
-  lighterThoughtCard: {
-    backgroundColor: "#FDF8FC",
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#EADEEB",
-    gap: 6,
-  },
-  lighterThoughtHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  lighterThoughtOverline: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#8B6B92",
-    letterSpacing: 0.5,
-  },
-  lighterThoughtTonePill: {
-    backgroundColor: "#F3E7F2",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  lighterThoughtTonePillText: {
-    fontSize: 11,
+  memoryTitle: {
+    fontSize: tokens.typeScale.bodyLarge + 0.5,
     fontWeight: "600",
-    color: "#6E416D",
+    color: tokens.colors.text,
   },
-  lighterThoughtText: {
-    fontSize: 14,
-    color: "#3D3040",
-    lineHeight: 20,
-    fontStyle: "italic",
+  memoryDetails: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
   },
-  lighterThoughtSupportingNote: {
-    fontSize: 11.5,
-    color: "#857388",
-    lineHeight: 16,
+  memoryTruthfulBox: {
+    backgroundColor: tokens.colors.surfaceMuted,
+    padding: tokens.spacing.sm,
+    borderRadius: tokens.radii.small,
+  },
+  memoryTruthfulText: {
+    fontSize: tokens.typeScale.overline,
+    color: tokens.colors.textMuted,
+    lineHeight: 15,
   },
 });

@@ -1,3 +1,9 @@
+import {
+  CouplyHeader,
+  CouplyPrimaryButton,
+  CouplyQuietButton,
+  CouplySectionCard,
+} from "@/components/CouplyUI";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
@@ -353,26 +359,21 @@ export default function ProfileScreen() {
         >
           <View style={styles.container}>
             {/* IN-PAGE HEADER */}
-            <View style={styles.header}>
-              <View style={styles.headerTopRow}>
-                <Text style={styles.overline}>YOUR SPACE</Text>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.homeLinkButton,
-                    pressed && styles.secondaryButtonPressed,
-                  ]}
-                  onPress={() => router.push("/home")}
-                  accessibilityRole="button"
-                  accessibilityLabel="Go to My Rhythm"
-                >
-                  <Text style={styles.homeLinkText}>Go to My Rhythm</Text>
-                </Pressable>
-              </View>
-              <Text style={styles.heading}>Your profile</Text>
-              <Text style={styles.supportingText}>
-                Your details and the space you share, at your pace.
-              </Text>
-            </View>
+            <CouplyHeader
+              overline="YOUR SPACE"
+              title="Your profile"
+              subtitle="Your details and the space you share, at your pace."
+              style={styles.headerCouply}
+            />
+
+            {/* QUICK LINK TO MY RHYTHM */}
+            <CouplyQuietButton
+              label="Go to My Rhythm"
+              onPress={() => router.push("/home")}
+              accessibilityLabel="Go to My Rhythm"
+              variant="soft"
+              style={styles.homeLinkBtnCouply}
+            />
 
             {/* STATUS FEEDBACK CARD */}
             {status !== "" && (
@@ -393,7 +394,7 @@ export default function ProfileScreen() {
             )}
 
             {/* PERSONAL DETAILS CARD */}
-            <View style={styles.card}>
+            <CouplySectionCard style={styles.cardCouply}>
               <Text style={styles.cardSectionHeading}>Personal details</Text>
 
               {!isEditing ? (
@@ -409,17 +410,13 @@ export default function ProfileScreen() {
                     <Text style={styles.profileEmail}>{email}</Text>
                   </View>
 
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.editButton,
-                      pressed && styles.secondaryButtonPressed,
-                    ]}
+                  <CouplyQuietButton
+                    label="Edit"
                     onPress={startEditing}
-                    accessibilityRole="button"
                     accessibilityLabel="Edit your preferred name"
-                  >
-                    <Text style={styles.editButtonText}>Edit</Text>
-                  </Pressable>
+                    variant="soft"
+                    style={styles.editBtnCouply}
+                  />
                 </View>
               ) : (
                 <View style={styles.editForm}>
@@ -443,53 +440,36 @@ export default function ProfileScreen() {
                   </Text>
 
                   <View style={styles.editActionsRow}>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.primaryButton,
-                        styles.flexButton,
-                        (isSaving ||
-                          !editedName.trim() ||
-                          editedName.trim() === displayName) &&
-                          styles.buttonDisabled,
-                        pressed && styles.primaryButtonPressed,
-                      ]}
+                    <CouplyPrimaryButton
+                      label={isSaving ? "Saving..." : "Save"}
                       onPress={saveProfile}
                       disabled={
                         isSaving ||
                         !editedName.trim() ||
                         editedName.trim() === displayName
                       }
-                      accessibilityRole="button"
+                      loading={isSaving}
                       accessibilityLabel={
                         isSaving ? "Saving profile" : "Save preferred name"
                       }
-                    >
-                      <Text style={styles.primaryButtonText}>
-                        {isSaving ? "Saving..." : "Save"}
-                      </Text>
-                    </Pressable>
+                      style={styles.flexButton}
+                    />
 
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.secondaryButton,
-                        styles.flexButton,
-                        isSaving && styles.buttonDisabled,
-                        pressed && styles.secondaryButtonPressed,
-                      ]}
+                    <CouplyQuietButton
+                      label="Cancel"
                       onPress={cancelEditing}
                       disabled={isSaving}
-                      accessibilityRole="button"
                       accessibilityLabel="Cancel editing preferred name"
-                    >
-                      <Text style={styles.secondaryButtonText}>Cancel</Text>
-                    </Pressable>
+                      variant="soft"
+                      style={styles.flexButton}
+                    />
                   </View>
                 </View>
               )}
-            </View>
+            </CouplySectionCard>
 
             {/* RELATIONSHIP SPACE CARD */}
-            <View style={styles.card}>
+            <CouplySectionCard style={styles.cardCouply}>
               <Text style={styles.cardSectionHeading}>Relationship space</Text>
 
               {coupleId ? (
@@ -535,36 +515,21 @@ export default function ProfileScreen() {
                         Invite your partner whenever you feel ready.
                       </Text>
 
-                      <Pressable
-                        style={({ pressed }) => [
-                          styles.primaryButton,
-                          pressed && styles.primaryButtonPressed,
-                        ]}
+                      <CouplyPrimaryButton
+                        label="Invite partner"
                         onPress={createPartnerInvite}
-                        accessibilityRole="button"
                         accessibilityLabel="Invite partner"
-                      >
-                        <Text style={styles.primaryButtonText}>
-                          Invite partner
-                        </Text>
-                      </Pressable>
+                      />
                     </View>
                   )}
 
                   {/* Moments shortcut */}
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.secondaryButton,
-                      pressed && styles.secondaryButtonPressed,
-                    ]}
+                  <CouplyQuietButton
+                    label="View moments in your space"
                     onPress={() => router.push("/events")}
-                    accessibilityRole="button"
                     accessibilityLabel="View moments in your space"
-                  >
-                    <Text style={styles.secondaryButtonText}>
-                      View moments in your space
-                    </Text>
-                  </Pressable>
+                    variant="soft"
+                  />
                 </View>
               ) : (
                 <View style={styles.noSpaceSection}>
@@ -576,19 +541,11 @@ export default function ProfileScreen() {
                     has already created.
                   </Text>
 
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.primaryButton,
-                      pressed && styles.primaryButtonPressed,
-                    ]}
+                  <CouplyPrimaryButton
+                    label="Create relationship space"
                     onPress={createCouple}
-                    accessibilityRole="button"
                     accessibilityLabel="Create relationship space"
-                  >
-                    <Text style={styles.primaryButtonText}>
-                      Create relationship space
-                    </Text>
-                  </Pressable>
+                  />
 
                   <View style={styles.orDividerRow}>
                     <View style={styles.orLine} />
@@ -608,40 +565,28 @@ export default function ProfileScreen() {
                       accessibilityLabel="Partner invite code"
                     />
 
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.joinPartnerButton,
-                        pressed && styles.secondaryButtonPressed,
-                      ]}
+                    <CouplyPrimaryButton
+                      label="Join partner"
                       onPress={acceptPartnerInvite}
-                      accessibilityRole="button"
                       accessibilityLabel="Join partner space"
-                    >
-                      <Text style={styles.joinPartnerButtonText}>
-                        Join partner
-                      </Text>
-                    </Pressable>
+                    />
                   </View>
                 </View>
               )}
-            </View>
+            </CouplySectionCard>
 
             {/* ACCOUNT CARD */}
-            <View style={styles.card}>
+            <CouplySectionCard style={styles.cardCouply}>
               <Text style={styles.cardSectionHeading}>Account</Text>
 
-              <Pressable
-                style={({ pressed }) => [
-                  styles.signOutButton,
-                  pressed && styles.secondaryButtonPressed,
-                ]}
+              <CouplyQuietButton
+                label="Sign out"
                 onPress={signOut}
-                accessibilityRole="button"
                 accessibilityLabel="Sign out of Couply"
-              >
-                <Text style={styles.signOutButtonText}>Sign out</Text>
-              </Pressable>
-            </View>
+                variant="soft"
+                textStyle={styles.signOutButtonText}
+              />
+            </CouplySectionCard>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -672,6 +617,23 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 48,
     gap: 18,
+  },
+  headerCouply: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 4,
+  },
+  homeLinkBtnCouply: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  cardCouply: {
+    marginHorizontal: 0,
+    marginBottom: 0,
+  },
+  editBtnCouply: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
   },
 
   /* Loading State */

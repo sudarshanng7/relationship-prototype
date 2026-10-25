@@ -1,7 +1,15 @@
+import {
+  CouplyChoiceCard,
+  CouplyHeader,
+  CouplyPrimaryButton,
+  CouplyQuietButton,
+  CouplySectionCard,
+} from "@/components/CouplyUI";
+import { tokens } from "@/components/couply-tokens";
 import { useChallengePreview } from "@/context/ChallengePreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -23,27 +31,6 @@ interface ParticipantOption {
   icon: string;
   description: string;
 }
-
-const PARTICIPANT_OPTIONS: ParticipantOption[] = [
-  {
-    key: "sam",
-    label: "Invite partner",
-    icon: "💌",
-    description: "A gentle, optional invitation for your partner",
-  },
-  {
-    key: "both",
-    label: "Both of us",
-    icon: "🤝",
-    description: "Something to choose together",
-  },
-  {
-    key: "me",
-    label: "For me",
-    icon: "🙋",
-    description: "A personal reset for your own peace of mind",
-  },
-];
 
 const SUGGESTED_IDEAS = [
   {
@@ -88,6 +75,8 @@ export default function MakeChallengePreviewScreen() {
   const { activeInvitation, shareInvitation, clearInvitation } =
     useChallengePreview();
 
+  const realPartnerName = partnerName || "your partner";
+
   const participantOptions: ParticipantOption[] = [
     {
       key: "sam",
@@ -110,6 +99,7 @@ export default function MakeChallengePreviewScreen() {
       description: "A personal reset for your own peace of mind",
     },
   ];
+
   const params = useLocalSearchParams<{
     idea?: string;
     participant?: string;
@@ -150,11 +140,14 @@ export default function MakeChallengePreviewScreen() {
   const [createdInvitationId, setCreatedInvitationId] = useState<string | null>(
     null,
   );
-  const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
+  const [showSharedConfirmation, setShowSharedConfirmation] =
+    useState<boolean>(false);
+  const [showPersonalConfirmation, setShowPersonalConfirmation] =
+    useState<boolean>(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const trimmedText = challengeText.trim();
-  const effectiveTitle = trimmedText || "Bring the mug home";
+  const effectiveTitle = trimmedText || "A small gentle pause";
   const isCustomProvided = trimmedText.length > 0;
 
   function handleShareInvitation() {
@@ -171,8 +164,8 @@ export default function MakeChallengePreviewScreen() {
       shareLighterThought &&
       lighterThoughtText.trim().length > 0;
 
-    const mappedParticipant: "me" | "partner" | "both" =
-      participantChoice === "sam" ? "partner" : participantChoice;
+    const mappedParticipant: "partner" | "both" =
+      participantChoice === "both" ? "both" : "partner";
 
     shareInvitation({
       id: invitationId,
@@ -189,7 +182,17 @@ export default function MakeChallengePreviewScreen() {
     });
 
     setCreatedInvitationId(invitationId);
-    setShowConfirmation(true);
+    setShowSharedConfirmation(true);
+  }
+
+  function handleFinishPersonal() {
+    const trimmed = challengeText.trim();
+    if (!trimmed) {
+      setValidationError("Please enter an idea first, or pick a suggestion above.");
+      return;
+    }
+    setValidationError(null);
+    setShowPersonalConfirmation(true);
   }
 
   function handleReset() {
@@ -199,7 +202,8 @@ export default function MakeChallengePreviewScreen() {
     setSelectedReward("No reward — just the moment");
     setShareLighterThought(false);
     setLighterThoughtText(incomingReframeText);
-    setShowConfirmation(false);
+    setShowSharedConfirmation(false);
+    setShowPersonalConfirmation(false);
     setValidationError(null);
     if (createdInvitationId && activeInvitation?.id === createdInvitationId) {
       clearInvitation();
@@ -211,6 +215,14 @@ export default function MakeChallengePreviewScreen() {
     setChallengeText(title);
     if (validationError) {
       setValidationError(null);
+    }
+  }
+
+  function handleBack() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/home");
     }
   }
 
@@ -226,127 +238,108 @@ export default function MakeChallengePreviewScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.column}>
-            {/* Top navigation row */}
-            <View style={styles.topNavRow}>
-              <Pressable
-                onPress={() => {
-                  if (router.canGoBack()) {
-                    router.back();
-                  } else {
-                    router.replace("/home");
-                  }
-                }}
-                style={styles.backButton}
-                accessibilityRole="button"
-                accessibilityLabel="Back"
-              >
-                <Text style={styles.backButtonText}>‹ Back</Text>
-              </Pressable>
-            </View>
+            {/* Header */}
+            <CouplyHeader
+              title="Make a tiny challenge"
+              subtitle="Compose a small, kind invitation that is easy to accept or quietly let pass."
+              onBack={handleBack}
+              backLabel="‹ Back"
+            />
 
-            {/* 1. Header */}
-            <View style={styles.headerBlock}>
-              <Text style={styles.title}>Make a tiny challenge</Text>
-              <Text style={styles.subtitle}>
-                Compose a small, kind invitation that is easy to accept or
-                quietly let pass.
-              </Text>
-            </View>
-
-            {/* 2. Development notice */}
-            <View style={styles.devNoticeCard}>
-              <View style={styles.devNoticeBadge}>
-                <Text style={styles.devNoticeBadgeText}>Dev Preview</Text>
-              </View>
-              <Text style={styles.devNoticeText}>
-                Development preview — everything here is local and temporary.
-                Nothing has been sent or saved.
-              </Text>
-            </View>
-
-            {/* Context banner when arriving from playful reframe */}
-            {params.source === "reframe" && (
-              <View style={styles.reframeContextBanner}>
-                <View style={styles.reframeContextBadge}>
-                  <Text style={styles.reframeContextBadgeText}>
-                    FROM YOUR REFRAME
-                  </Text>
+            {/* Development preview truth */}
+            <CouplySectionCard variant="muted" style={styles.noticeCard}>
+              <View style={styles.noticeRow}>
+                <View style={styles.noticeBadge}>
+                  <Text style={styles.noticeBadgeText}>Preview</Text>
                 </View>
-                <Text style={styles.reframeContextText}>
-                  A small, kind idea to help you two reset. You can change every
-                  detail below.
+                <Text style={styles.noticeText}>
+                  Local preview — everything here is temporary. Nothing has been
+                  sent or saved to a real partner.
                 </Text>
               </View>
-            )}
+            </CouplySectionCard>
 
-            {/* Optional lighter thought inclusion section */}
+            {/* Context banner when arriving from playful reframe */}
             {isFromReframe && (
-              <View style={styles.lighterThoughtShareSection}>
-                <Pressable
-                  style={styles.lighterThoughtSwitchRow}
-                  onPress={() => setShareLighterThought((prev) => !prev)}
-                  accessible={false}
-                >
-                  <View style={styles.lighterThoughtSwitchTextGroup}>
-                    <Text style={styles.lighterThoughtSwitchTitle}>
-                      Include your lighter thought
-                    </Text>
-                    <Text style={styles.lighterThoughtSwitchSupporting}>
-                      {shareLighterThought
-                        ? "Your edited lighter thought will appear with this invitation."
-                        : "It stays private. Your original irritation is never shared."}
+              <CouplySectionCard variant="lilac" style={styles.reframeBannerCard}>
+                <View style={styles.reframeBannerHeader}>
+                  <View style={styles.reframeBannerBadge}>
+                    <Text style={styles.reframeBannerBadgeText}>
+                      FROM YOUR REFRAME
                     </Text>
                   </View>
+                </View>
+                <Text style={styles.reframeBannerBody}>
+                  A small, kind idea to help you two reset. You can edit or keep
+                  the lighter thought below.
+                </Text>
+
+                {/* Lighter thought Switch control */}
+                <View style={styles.switchWrapper}>
                   <Pressable
-                    style={styles.switchWrapper}
-                    onPress={(e) => e.stopPropagation()}
+                    style={styles.switchRow}
+                    onPress={() => setShareLighterThought((prev) => !prev)}
                     accessible={false}
                   >
+                    <View style={styles.switchTextGroup}>
+                      <Text style={styles.switchTitle}>
+                        Include your lighter thought
+                      </Text>
+                      <Text style={styles.switchSubtitle}>
+                        {shareLighterThought
+                          ? "Your edited lighter thought will appear with this invitation."
+                          : "It stays private. Your original irritation is never shared."}
+                      </Text>
+                    </View>
                     <Switch
                       value={shareLighterThought}
                       onValueChange={setShareLighterThought}
-                      trackColor={{ false: "#E2D9E4", true: "#6E416D" }}
+                      trackColor={{
+                        false: tokens.colors.border,
+                        true: tokens.colors.plum,
+                      }}
                       thumbColor="#FFFFFF"
                       accessibilityRole="switch"
-                      accessibilityLabel="Include lighter thought with invitation"
+                      accessibilityLabel="Include your lighter thought"
                       accessibilityState={{ checked: shareLighterThought }}
                     />
                   </Pressable>
-                </Pressable>
 
-                <View style={styles.lighterThoughtInputContainer}>
-                  <Text style={styles.lighterThoughtInputLabel}>
-                    Your lighter thought
-                  </Text>
-                  <TextInput
-                    style={styles.lighterThoughtTextInput}
-                    value={lighterThoughtText}
-                    onChangeText={setLighterThoughtText}
-                    placeholder="A warm angle to share..."
-                    placeholderTextColor="#A89BB0"
-                    multiline
-                    accessibilityLabel="Your lighter thought"
-                  />
-                  <Text style={styles.lighterThoughtMutedNote}>
-                    {shareLighterThought
-                      ? "Only this edited lighter thought will be shown. Your original irritation stays private."
-                      : "This stays only with you. Your original irritation stays private."}
-                  </Text>
+                  {/* Lighter thought editable text */}
+                  <View style={styles.lighterThoughtInputBox}>
+                    <Text style={styles.lighterThoughtInputLabel}>
+                      Your lighter thought:
+                    </Text>
+                    <TextInput
+                      style={styles.lighterThoughtTextInput}
+                      value={lighterThoughtText}
+                      onChangeText={setLighterThoughtText}
+                      placeholder="A warm angle to share..."
+                      placeholderTextColor={tokens.colors.textMuted}
+                      multiline
+                      accessibilityLabel="Your lighter thought"
+                    />
+                    <Text style={styles.lighterThoughtPrivacyNote}>
+                      {shareLighterThought
+                        ? "Only this edited lighter thought will be shared. Your original irritation is never shared."
+                        : "This stays only with you. Your original irritation is never shared."}
+                    </Text>
+                  </View>
                 </View>
-              </View>
+              </CouplySectionCard>
             )}
 
-            {/* Step 1: Challenge Idea */}
-            <View style={styles.sectionBlock}>
-              <Text style={styles.sectionTitle}>1. What is the tiny idea?</Text>
-              <Text style={styles.sectionSubtitle}>
-                Keep it small, kind, and easy to decline. Low friction, high
-                warmth.
+            {/* SECTION 1: Your tiny idea */}
+            <CouplySectionCard style={styles.sectionCard}>
+              <Text style={styles.sectionNumber}>1 OF 4</Text>
+              <Text style={styles.sectionHeading}>Your tiny idea</Text>
+              <Text style={styles.sectionHelper}>
+                Keep it small, specific, and easy to decline.
               </Text>
 
               <View style={styles.inputContainer}>
                 <TextInput
-                  style={styles.textInput}
+                  style={styles.challengeTextInput}
                   value={challengeText}
                   onChangeText={(text) => {
                     setChallengeText(text);
@@ -355,21 +348,21 @@ export default function MakeChallengePreviewScreen() {
                     }
                   }}
                   placeholder="e.g. Brew a fresh cup of tea, or take a 5-minute quiet walk..."
-                  placeholderTextColor="#A89BB0"
+                  placeholderTextColor={tokens.colors.textMuted}
                   multiline
                   maxLength={120}
                   accessibilityLabel="Challenge idea text"
                 />
                 <View style={styles.inputFooter}>
-                  <Text style={styles.inputCounterText}>
+                  <Text style={styles.inputCounter}>
                     {challengeText.length}/120
                   </Text>
                 </View>
               </View>
 
-              {/* Suggestions row */}
+              {/* Suggestions */}
               <View style={styles.suggestionsContainer}>
-                <Text style={styles.suggestionsHeading}>
+                <Text style={styles.suggestionsTitle}>
                   Or pick a safe starting point:
                 </Text>
                 <View style={styles.suggestionsWrap}>
@@ -400,73 +393,52 @@ export default function MakeChallengePreviewScreen() {
                   })}
                 </View>
               </View>
-            </View>
+            </CouplySectionCard>
 
-            {/* Step 2: Participation Choice */}
-            <View style={styles.sectionBlock}>
-              <Text style={styles.sectionTitle}>2. Who is this for?</Text>
-              <Text style={styles.sectionSubtitle}>
+            {/* SECTION 2: Who is it for? */}
+            <CouplySectionCard style={styles.sectionCard}>
+              <Text style={styles.sectionNumber}>2 OF 4</Text>
+              <Text style={styles.sectionHeading}>Who is it for?</Text>
+              <Text style={styles.sectionHelper}>
                 An invitation is always optional. It is never a task for someone
                 else to complete.
               </Text>
 
-              <View style={styles.participantsColumn}>
+              <View style={styles.participantsList}>
                 {participantOptions.map((item) => {
                   const isSelected = participantChoice === item.key;
                   return (
-                    <Pressable
+                    <CouplyChoiceCard
                       key={item.key}
-                      style={[
-                        styles.participantCard,
-                        isSelected && styles.participantCardSelected,
-                      ]}
-                      onPress={() => setParticipantChoice(item.key)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: isSelected }}
+                      title={item.label}
+                      description={item.description}
+                      selected={isSelected}
+                      onPress={() => {
+                        setParticipantChoice(item.key);
+                        setShowSharedConfirmation(false);
+                        setShowPersonalConfirmation(false);
+                      }}
+                      icon={
+                        <Text style={styles.participantIcon}>{item.icon}</Text>
+                      }
                       accessibilityLabel={`${item.label}: ${item.description}`}
-                    >
-                      <View
-                        style={[
-                          styles.participantIconBubble,
-                          isSelected && styles.participantIconBubbleSelected,
-                        ]}
-                      >
-                        <Text style={styles.participantEmoji}>{item.icon}</Text>
-                      </View>
-                      <View style={styles.participantTextCol}>
-                        <Text
-                          style={[
-                            styles.participantLabel,
-                            isSelected && styles.participantLabelSelected,
-                          ]}
-                        >
-                          {item.label}
-                        </Text>
-                        <Text style={styles.participantDescription}>
-                          {item.description}
-                        </Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.radioButton,
-                          isSelected && styles.radioButtonSelected,
-                        ]}
-                      >
-                        {isSelected && <View style={styles.radioButtonDot} />}
-                      </View>
-                    </Pressable>
+                      style={styles.participantChoiceCard}
+                    />
                   );
                 })}
               </View>
-            </View>
+            </CouplySectionCard>
 
-            {/* Step 3: Timing & Context */}
-            <View style={styles.sectionBlock}>
-              <Text style={styles.sectionTitle}>3. When would this feel nice?</Text>
-              <Text style={styles.sectionSubtitle}>
+            {/* SECTION 3: A little context */}
+            <CouplySectionCard style={styles.sectionCard}>
+              <Text style={styles.sectionNumber}>3 OF 4</Text>
+              <Text style={styles.sectionHeading}>A little context</Text>
+              <Text style={styles.sectionHelper}>
                 No urgency or deadlines. Invitations can simply expire quietly.
               </Text>
 
+              {/* Timing */}
+              <Text style={styles.subHeading}>When would this feel nice?</Text>
               <View style={styles.chipsRow}>
                 {TIMEFRAME_OPTIONS.map((timeframe) => {
                   const isSelected = selectedTimeframe === timeframe;
@@ -474,8 +446,8 @@ export default function MakeChallengePreviewScreen() {
                     <Pressable
                       key={timeframe}
                       style={[
-                        styles.timeframeChip,
-                        isSelected && styles.timeframeChipSelected,
+                        styles.chip,
+                        isSelected && styles.chipSelected,
                       ]}
                       onPress={() => setSelectedTimeframe(timeframe)}
                       accessibilityRole="button"
@@ -484,8 +456,8 @@ export default function MakeChallengePreviewScreen() {
                     >
                       <Text
                         style={[
-                          styles.timeframeChipText,
-                          isSelected && styles.timeframeChipTextSelected,
+                          styles.chipText,
+                          isSelected && styles.chipTextSelected,
                         ]}
                       >
                         {timeframe}
@@ -495,13 +467,10 @@ export default function MakeChallengePreviewScreen() {
                 })}
               </View>
 
-              <Text style={[styles.sectionTitle, { marginTop: 12 }]}>
-                Add a small shared reward?
+              {/* Reward */}
+              <Text style={[styles.subHeading, { marginTop: 14 }]}>
+                Add an optional small reward?
               </Text>
-              <Text style={styles.sectionSubtitle}>
-                Optional — the moment matters more than completing a task.
-              </Text>
-
               <View style={styles.chipsRow}>
                 {REWARD_OPTIONS.map((reward) => {
                   const isSelected = selectedReward === reward.label;
@@ -509,19 +478,19 @@ export default function MakeChallengePreviewScreen() {
                     <Pressable
                       key={reward.label}
                       style={[
-                        styles.rewardChip,
-                        isSelected && styles.rewardChipSelected,
+                        styles.chip,
+                        isSelected && styles.chipSelected,
                       ]}
                       onPress={() => setSelectedReward(reward.label)}
                       accessibilityRole="button"
                       accessibilityState={{ selected: isSelected }}
                       accessibilityLabel={reward.label}
                     >
-                      <Text style={styles.rewardChipIcon}>{reward.icon}</Text>
+                      <Text style={styles.chipEmoji}>{reward.icon}</Text>
                       <Text
                         style={[
-                          styles.rewardChipText,
-                          isSelected && styles.rewardChipTextSelected,
+                          styles.chipText,
+                          isSelected && styles.chipTextSelected,
                         ]}
                       >
                         {reward.label}
@@ -530,33 +499,33 @@ export default function MakeChallengePreviewScreen() {
                   );
                 })}
               </View>
-            </View>
+            </CouplySectionCard>
 
-            {/* Step 4: Calm Live Preview Card */}
-            <View style={styles.sectionBlock}>
-              <Text style={styles.sectionTitle}>4. Preview your invitation</Text>
-              <Text style={styles.sectionSubtitle}>
+            {/* SECTION 4: What they would see */}
+            <CouplySectionCard style={styles.sectionCard}>
+              <Text style={styles.sectionNumber}>4 OF 4</Text>
+              <Text style={styles.sectionHeading}>What they would see</Text>
+              <Text style={styles.sectionHelper}>
                 Here is how this tiny invitation will feel. Notice how light and
                 calm it stays.
               </Text>
 
-              <View style={styles.previewCard}>
+              {/* Preview card */}
+              <View style={styles.previewBox}>
                 <View style={styles.previewHeaderRow}>
-                  <View style={styles.previewIconBubble}>
-                    <Text style={styles.previewIconEmoji}>
-                      {participantChoice === "me"
-                        ? "🌱"
-                        : participantChoice === "sam"
-                        ? "💌"
-                        : "🤝"}
-                    </Text>
-                  </View>
+                  <Text style={styles.previewIcon}>
+                    {participantChoice === "me"
+                      ? "🌱"
+                      : participantChoice === "sam"
+                      ? "💌"
+                      : "🤝"}
+                  </Text>
                   <View style={styles.previewHeaderTextGroup}>
                     <Text style={styles.previewOverline}>
                       {participantChoice === "me"
                         ? "A personal reset"
                         : participantChoice === "sam"
-                        ? `A tiny invitation for ${partnerRef}`
+                        ? `A tiny invitation for ${realPartnerName}`
                         : "A shared invitation"}
                     </Text>
                     <Text style={styles.previewChallengeTitle}>
@@ -574,42 +543,33 @@ export default function MakeChallengePreviewScreen() {
                   </View>
                 )}
 
-                <View style={styles.previewDivider} />
-
-                {/* Summary Details */}
-                <View style={styles.summaryBox}>
-                  <View style={styles.summaryItemRow}>
-                    <Text style={styles.summaryItemLabel}>Participant</Text>
-                    <Text style={styles.summaryItemValue}>
+                <View style={styles.summaryTable}>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Participant</Text>
+                    <Text style={styles.summaryValue}>
                       {participantChoice === "me"
                         ? "Just me"
                         : participantChoice === "sam"
-                        ? partnerName || "Your partner"
+                        ? realPartnerName
                         : "Both of us"}
                     </Text>
                   </View>
                   <View style={styles.summaryDivider} />
-                  <View style={styles.summaryItemRow}>
-                    <Text style={styles.summaryItemLabel}>Timing</Text>
-                    <Text style={styles.summaryItemValue}>
-                      {selectedTimeframe}
-                    </Text>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Timing</Text>
+                    <Text style={styles.summaryValue}>{selectedTimeframe}</Text>
                   </View>
                   <View style={styles.summaryDivider} />
-                  <View style={styles.summaryItemRow}>
-                    <Text style={styles.summaryItemLabel}>Reward</Text>
-                    <Text style={styles.summaryItemValue}>
-                      {selectedReward}
-                    </Text>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Reward</Text>
+                    <Text style={styles.summaryValue}>{selectedReward}</Text>
                   </View>
                   {isFromReframe && (
                     <>
                       <View style={styles.summaryDivider} />
-                      <View style={styles.summaryItemRow}>
-                        <Text style={styles.summaryItemLabel}>
-                          Lighter thought
-                        </Text>
-                        <Text style={styles.summaryItemValue}>
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>Lighter thought</Text>
+                        <Text style={styles.summaryValue}>
                           {shareLighterThought
                             ? incomingReframeTone || "Included"
                             : "Private"}
@@ -619,145 +579,148 @@ export default function MakeChallengePreviewScreen() {
                   )}
                 </View>
 
-                {/* Gentle Reassurance */}
-                <View style={styles.reassuranceNoteBox}>
-                  <Text style={styles.reassuranceNoteText}>
+                <View style={styles.reassuranceBox}>
+                  <Text style={styles.reassuranceText}>
                     {participantChoice === "sam"
-                      ? `${partnerName || "Your partner"} can choose to join, suggest a tweak, or quietly let it pass. No countdowns, streaks, or notifications are created.`
+                      ? `${realPartnerName} can choose to join, suggest a tweak, or quietly let it pass. No countdowns, streaks, or notifications are created.`
                       : participantChoice === "both"
                       ? "Both of you choose this together. Shared moments feel lightest when both feel free to decline easily."
                       : "A quiet personal commitment, just for your own peace of mind."}
                   </Text>
                 </View>
-
-                {/* Calm validation error */}
-                {validationError && (
-                  <View style={styles.calmValidationBox}>
-                    <Text style={styles.calmValidationText}>
-                      {validationError}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Active Plum Share Button */}
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.sharePreviewButton,
-                    pressed && styles.sharePreviewButtonPressed,
-                  ]}
-                  onPress={handleShareInvitation}
-                  accessibilityRole="button"
-                  accessibilityLabel="Share invitation in preview"
-                >
-                  <Text style={styles.sharePreviewButtonText}>
-                    Share invitation in preview
-                  </Text>
-                </Pressable>
-
-                {/* Confirmation card */}
-                {showConfirmation && (
-                  <View style={styles.confirmationCard}>
-                    <View style={styles.confirmationHeaderRow}>
-                      <View style={styles.confirmationBadge}>
-                        <Text style={styles.confirmationBadgeText}>
-                          LOCAL PREVIEW ACTIVE
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={styles.confirmationHeading}>
-                      Invitation shared in preview
-                    </Text>
-                    <Text style={styles.confirmationBody}>
-                      In this browser session, you can now see how this small
-                      invitation would appear for your partner.
-                    </Text>
-                    <View style={styles.confirmationTruthfulBox}>
-                      <Text style={styles.confirmationTruthfulText}>
-                        Nothing has been sent, saved, or shown to a real partner.
-                      </Text>
-                    </View>
-                    <View style={styles.confirmationActionsGroup}>
-                      <Pressable
-                        style={({ pressed }) => [
-                          styles.confirmationPrimaryBtn,
-                          pressed && styles.confirmationPrimaryBtnPressed,
-                        ]}
-                        onPress={() => router.push("/home")}
-                        accessibilityRole="button"
-                        accessibilityLabel="Go to My Rhythm"
-                      >
-                        <Text style={styles.confirmationPrimaryBtnText}>
-                          Go to My Rhythm
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        style={styles.confirmationSecondaryBtn}
-                        onPress={() =>
-                          router.push({
-                            pathname: "/challenge-lifecycle-preview",
-                            params: { source: "challenge-preview" },
-                          } as any)
-                        }
-                        accessibilityRole="button"
-                        accessibilityLabel="Explore recipient experience"
-                      >
-                        <Text style={styles.confirmationSecondaryBtnText}>
-                          Explore recipient experience
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                )}
               </View>
-            </View>
 
-            {/* Quick cross-link to sample lifecycle outcomes */}
-            <View style={styles.lifecycleCard}>
-              <View style={styles.lifecycleTextGroup}>
-                <Text style={styles.lifecycleHeading}>
+              {/* Validation error if any */}
+              {validationError && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{validationError}</Text>
+                </View>
+              )}
+
+              {/* Finish Action: Participant-specific */}
+              {participantChoice === "me" ? (
+                // Personal finish
+                <CouplyPrimaryButton
+                  label="Finish personal preview"
+                  onPress={handleFinishPersonal}
+                  style={styles.finishButton}
+                />
+              ) : (
+                // Shared / Partner finish
+                <View style={styles.shareActionContainer}>
+                  <CouplyPrimaryButton
+                    label="Share invitation in preview"
+                    onPress={handleShareInvitation}
+                    style={styles.finishButton}
+                  />
+                  <Text style={styles.prototypeNoticeText}>
+                    Local prototype only — nothing is sent to your partner’s device.
+                  </Text>
+                </View>
+              )}
+
+              {/* Personal completion confirmation */}
+              {showPersonalConfirmation && participantChoice === "me" && (
+                <CouplySectionCard variant="lilac" style={styles.confirmationCard}>
+                  <Text style={styles.confirmationTitle}>
+                    Your tiny plan is ready
+                  </Text>
+                  <Text style={styles.confirmationBody}>
+                    Keep it close and return to it whenever it feels useful.
+                  </Text>
+                  <View style={styles.truthfulBox}>
+                    <Text style={styles.truthfulText}>
+                      This is only a preview and has not been saved.
+                    </Text>
+                  </View>
+                  <CouplyPrimaryButton
+                    label="Go to My Rhythm"
+                    onPress={() => router.push("/home")}
+                    style={styles.confirmationAction}
+                  />
+                </CouplySectionCard>
+              )}
+
+              {/* Shared confirmation card */}
+              {showSharedConfirmation && participantChoice !== "me" && (
+                <CouplySectionCard variant="lilac" style={styles.confirmationCard}>
+                  <Text style={styles.confirmationOverline}>
+                    LOCAL PREVIEW ACTIVE
+                  </Text>
+                  <Text style={styles.confirmationTitle}>
+                    Invitation shared in preview
+                  </Text>
+                  <Text style={styles.confirmationBody}>
+                    In this browser session, you can now see how this small
+                    invitation would appear for {realPartnerName}.
+                  </Text>
+                  <View style={styles.truthfulBox}>
+                    <Text style={styles.truthfulText}>
+                      Nothing has been sent, saved, or shown to a real partner.
+                    </Text>
+                  </View>
+                  <View style={styles.confirmationActionsGroup}>
+                    <CouplyPrimaryButton
+                      label="Go to My Rhythm"
+                      onPress={() => router.push("/home")}
+                      style={styles.confirmationAction}
+                    />
+                    <CouplyQuietButton
+                      label="Explore recipient experience"
+                      variant="soft"
+                      onPress={() =>
+                        router.push({
+                          pathname: "/challenge-lifecycle-preview",
+                          params: { source: "challenge-preview" },
+                        } as any)
+                      }
+                      style={styles.confirmationAction}
+                    />
+                  </View>
+                </CouplySectionCard>
+              )}
+            </CouplySectionCard>
+
+            {/* Exploratory lifecycle preview link: Partner/Both only */}
+            {participantChoice !== "me" && (
+              <CouplySectionCard variant="muted" style={styles.lifecycleCard}>
+                <Text style={styles.lifecycleTitle}>
                   Curious what happens next?
                 </Text>
-                <Text style={styles.lifecycleSubtext}>
+                <Text style={styles.lifecycleBody}>
                   Explore the lifecycle preview to see how waiting, accepted,
                   declined, and expired states feel.
                 </Text>
-              </View>
-              <Pressable
-                style={styles.lifecycleButton}
-                onPress={() => {
-                  const isSharing = isFromReframe && shareLighterThought;
-                  router.push({
-                    pathname: "/challenge-lifecycle-preview",
-                    params: {
-                      idea: challengeText.trim(),
-                      participant: participantChoice,
-                      timeframe: selectedTimeframe,
-                      reward: selectedReward,
-                      reframeTone: incomingReframeTone,
-                      reframeText: isSharing ? lighterThoughtText.trim() : "",
-                      shareReframe: isSharing ? "true" : "false",
-                    },
-                  } as any);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Preview the partner invitation experience"
-              >
-                <Text style={styles.lifecycleButtonText}>
-                  Preview recipient experience ›
-                </Text>
-              </Pressable>
-            </View>
+                <CouplyQuietButton
+                  label="Preview recipient experience ›"
+                  variant="soft"
+                  onPress={() => {
+                    const isSharing = isFromReframe && shareLighterThought;
+                    router.push({
+                      pathname: "/challenge-lifecycle-preview",
+                      params: {
+                        idea: challengeText.trim(),
+                        participant: participantChoice,
+                        timeframe: selectedTimeframe,
+                        reward: selectedReward,
+                        reframeTone: incomingReframeTone,
+                        reframeText: isSharing ? lighterThoughtText.trim() : "",
+                        shareReframe: isSharing ? "true" : "false",
+                      },
+                    } as any);
+                  }}
+                  style={styles.lifecycleButton}
+                />
+              </CouplySectionCard>
+            )}
 
-            {/* Bottom Actions */}
-            <View style={styles.bottomActions}>
-              <Pressable
-                style={styles.resetButton}
+            {/* Reset */}
+            <View style={styles.resetRow}>
+              <CouplyQuietButton
+                label="Reset preview"
+                variant="text"
                 onPress={handleReset}
-                accessibilityRole="button"
-                accessibilityLabel="Reset preview"
-              >
-                <Text style={styles.resetButtonText}>Reset preview</Text>
-              </Pressable>
+              />
             </View>
           </View>
         </ScrollView>
@@ -769,127 +732,178 @@ export default function MakeChallengePreviewScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FBF7FC",
+    backgroundColor: tokens.colors.pageBackground,
   },
   keyboardAvoid: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 60,
+    paddingHorizontal: tokens.spacing.page,
+    paddingTop: tokens.spacing.md,
+    paddingBottom: 48,
   },
   column: {
+    maxWidth: tokens.layout.maxContentWidth,
     width: "100%",
-    maxWidth: 520,
     alignSelf: "center",
-    gap: 20,
+    gap: tokens.spacing.lg,
   },
-  topNavRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: -6,
+  noticeCard: {
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
   },
-  backButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    alignSelf: "flex-start",
-  },
-  backButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-  headerBlock: {
-    gap: 4,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: 14.5,
-    color: "#6D6072",
-    lineHeight: 20,
-  },
-  devNoticeCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
+  noticeRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
-  devNoticeBadge: {
-    backgroundColor: "#F1EDF7",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+  noticeBadge: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.xs,
+    borderRadius: tokens.radii.small,
   },
-  devNoticeBadgeText: {
-    fontSize: 11,
+  noticeBadgeText: {
+    fontSize: tokens.typeScale.overline,
     fontWeight: "700",
-    color: "#6E416D",
+    color: tokens.colors.plum,
     textTransform: "uppercase",
   },
-  devNoticeText: {
+  noticeText: {
     flex: 1,
-    fontSize: 12.5,
-    color: "#6D6072",
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
     lineHeight: 17,
   },
-  sectionBlock: {
-    gap: 10,
+  reframeBannerCard: {
+    gap: tokens.spacing.md,
   },
-  sectionTitle: {
-    fontSize: 16,
+  reframeBannerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  reframeBannerBadge: {
+    backgroundColor: tokens.colors.plum,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: 3,
+    borderRadius: tokens.radii.small,
+  },
+  reframeBannerBadgeText: {
+    fontSize: 10,
     fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.2,
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
   },
-  sectionSubtitle: {
-    fontSize: 13.5,
-    color: "#6D6072",
+  reframeBannerBody: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
     lineHeight: 18,
-    marginTop: -4,
+  },
+  switchWrapper: {
+    backgroundColor: tokens.colors.surface,
+    borderRadius: tokens.radii.card,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    gap: tokens.spacing.md,
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: tokens.spacing.md,
+  },
+  switchTextGroup: {
+    flex: 1,
+    gap: 2,
+  },
+  switchTitle: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontWeight: "600",
+    color: tokens.colors.text,
+  },
+  switchSubtitle: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    lineHeight: 16,
+  },
+  lighterThoughtInputBox: {
+    borderTopWidth: 1,
+    borderTopColor: tokens.colors.border,
+    paddingTop: 10,
+    gap: 6,
+  },
+  lighterThoughtInputLabel: {
+    fontSize: tokens.typeScale.caption,
+    fontWeight: "600",
+    color: tokens.colors.textSecondary,
+  },
+  lighterThoughtTextInput: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radii.small,
+    backgroundColor: tokens.colors.pageBackground,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.text,
+    minHeight: 48,
+    textAlignVertical: "top",
+  },
+  lighterThoughtPrivacyNote: {
+    fontSize: tokens.typeScale.overline,
+    color: tokens.colors.textMuted,
+    lineHeight: 15,
+  },
+  sectionCard: {
+    gap: tokens.spacing.md,
+  },
+  sectionNumber: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: tokens.colors.textMuted,
+    textTransform: "uppercase",
+  },
+  sectionHeading: {
+    fontSize: tokens.typeScale.sectionTitle + 1,
+    fontWeight: "600",
+    color: tokens.colors.text,
+  },
+  sectionHelper: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
+    lineHeight: 18,
   },
   inputContainer: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    padding: 14,
-    gap: 8,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radii.card,
+    backgroundColor: tokens.colors.surface,
+    padding: 10,
+    gap: 4,
   },
-  textInput: {
-    fontSize: 15,
-    color: "#3D3040",
-    minHeight: 70,
+  challengeTextInput: {
+    fontSize: tokens.typeScale.bodyLarge,
+    color: tokens.colors.text,
+    minHeight: 56,
     textAlignVertical: "top",
-    lineHeight: 22,
   },
   inputFooter: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
+    alignItems: "flex-end",
   },
-  inputCounterText: {
-    fontSize: 11.5,
-    color: "#8E7E94",
+  inputCounter: {
+    fontSize: tokens.typeScale.overline,
+    color: tokens.colors.textMuted,
   },
   suggestionsContainer: {
     gap: 8,
     marginTop: 4,
   },
-  suggestionsHeading: {
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: "#8E7E94",
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
+  suggestionsTitle: {
+    fontSize: tokens.typeScale.caption,
+    fontWeight: "500",
+    color: tokens.colors.textSecondary,
   },
   suggestionsWrap: {
     flexDirection: "row",
@@ -897,515 +911,234 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   suggestionChip: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    paddingVertical: 7,
-    paddingHorizontal: 11,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: tokens.radii.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surface,
   },
   suggestionChipSelected: {
-    backgroundColor: "#FBEFF7",
-    borderColor: "#6E416D",
+    borderColor: tokens.colors.plum,
+    backgroundColor: tokens.colors.surfaceLilac,
   },
   suggestionIcon: {
-    fontSize: 13,
+    fontSize: 14,
   },
   suggestionText: {
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: "#6D6072",
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.text,
   },
   suggestionTextSelected: {
-    color: "#6E416D",
-    fontWeight: "700",
+    color: tokens.colors.plum,
+    fontWeight: "600",
   },
-  participantsColumn: {
+  participantsList: {
     gap: 8,
   },
-  participantCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+  participantChoiceCard: {
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: 14,
   },
-  participantCardSelected: {
-    backgroundColor: "#FBEFF7",
-    borderColor: "#6E416D",
-  },
-  participantIconBubble: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F1EDF7",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  participantIconBubbleSelected: {
-    backgroundColor: "#F4E5F2",
-  },
-  participantEmoji: {
+  participantIcon: {
     fontSize: 18,
   },
-  participantTextCol: {
-    flex: 1,
-    gap: 2,
-  },
-  participantLabel: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#3D3040",
-  },
-  participantLabelSelected: {
-    color: "#6E416D",
-  },
-  participantDescription: {
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 16,
-  },
-  radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "#C5B6C8",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioButtonSelected: {
-    borderColor: "#6E416D",
-  },
-  radioButtonDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#6E416D",
+  subHeading: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "600",
+    color: tokens.colors.text,
   },
   chipsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
   },
-  timeframeChip: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    paddingVertical: 8,
-    paddingHorizontal: 13,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-  },
-  timeframeChipSelected: {
-    backgroundColor: "#FBEFF7",
-    borderColor: "#6E416D",
-  },
-  timeframeChipText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6D6072",
-  },
-  timeframeChipTextSelected: {
-    color: "#6E416D",
-    fontWeight: "700",
-  },
-  rewardChip: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
+  chip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: tokens.radii.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surface,
   },
-  rewardChipSelected: {
-    backgroundColor: "#FBEFF7",
-    borderColor: "#6E416D",
+  chipSelected: {
+    borderColor: tokens.colors.plum,
+    backgroundColor: tokens.colors.surfaceLilac,
   },
-  rewardChipIcon: {
-    fontSize: 13,
+  chipEmoji: {
+    fontSize: 14,
   },
-  rewardChipText: {
-    fontSize: 12.5,
+  chipText: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.text,
+  },
+  chipTextSelected: {
+    color: tokens.colors.plum,
     fontWeight: "600",
-    color: "#6D6072",
   },
-  rewardChipTextSelected: {
-    color: "#6E416D",
-    fontWeight: "700",
-  },
-  previewCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    gap: 12,
+  previewBox: {
+    backgroundColor: tokens.colors.pageBackground,
+    borderRadius: tokens.radii.card,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    gap: tokens.spacing.md,
   },
   previewHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
-  previewIconBubble: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F8F3F9",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  previewIconEmoji: {
-    fontSize: 18,
+  previewIcon: {
+    fontSize: 22,
   },
   previewHeaderTextGroup: {
     flex: 1,
-    gap: 2,
   },
   previewOverline: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#8E7E94",
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    color: tokens.colors.plum,
     textTransform: "uppercase",
-    letterSpacing: 0.3,
   },
   previewChallengeTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#3D3040",
+    fontSize: tokens.typeScale.sectionTitle,
+    fontWeight: "600",
+    color: tokens.colors.text,
+    marginTop: 2,
   },
   sampleHintBox: {
-    backgroundColor: "#FAF5FB",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: tokens.colors.surfaceMuted,
+    padding: 8,
+    borderRadius: tokens.radii.small,
   },
   sampleHintText: {
-    fontSize: 12,
-    color: "#8E7E94",
+    fontSize: tokens.typeScale.overline + 0.5,
+    color: tokens.colors.textSecondary,
     fontStyle: "italic",
   },
-  previewDivider: {
-    height: 1,
-    backgroundColor: "#F4EDF6",
-  },
-  summaryBox: {
-    backgroundColor: "#FBF7FC",
-    borderRadius: 12,
-    padding: 12,
+  summaryTable: {
+    backgroundColor: tokens.colors.surface,
+    borderRadius: tokens.radii.small,
+    padding: 10,
     borderWidth: 1,
-    borderColor: "#F0E4F1",
-    gap: 8,
+    borderColor: tokens.colors.border,
   },
-  summaryItemRow: {
+  summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingVertical: 6,
   },
-  summaryItemLabel: {
-    fontSize: 12.5,
-    color: "#8E7E94",
-    fontWeight: "500",
+  summaryLabel: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
   },
-  summaryItemValue: {
-    fontSize: 13,
-    color: "#3D3040",
+  summaryValue: {
+    fontSize: tokens.typeScale.caption,
     fontWeight: "600",
+    color: tokens.colors.text,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: "#F4EDF6",
+    backgroundColor: tokens.colors.border,
   },
-  reassuranceNoteBox: {
-    backgroundColor: "#FAF5FB",
-    borderRadius: 12,
+  reassuranceBox: {
+    paddingTop: 4,
+  },
+  reassuranceText: {
+    fontSize: tokens.typeScale.caption - 0.5,
+    color: tokens.colors.textMuted,
+    lineHeight: 16,
+  },
+  errorBox: {
+    backgroundColor: tokens.colors.surfaceBlush,
     padding: 10,
-    borderWidth: 1,
-    borderColor: "#F0E4F1",
+    borderRadius: tokens.radii.small,
   },
-  reassuranceNoteText: {
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 17,
-    fontStyle: "italic",
+  errorText: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.dangerText,
+    fontWeight: "500",
   },
-  disabledPreviewButton: {
-    backgroundColor: "#F3ECF5",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    marginTop: 2,
-  },
-  disabledPreviewButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#8E7E94",
-  },
-  sharePreviewButton: {
-    backgroundColor: "#6E416D",
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    justifyContent: "center",
+  finishButton: {
+    width: "100%",
     marginTop: 4,
   },
-  sharePreviewButtonPressed: {
-    backgroundColor: "#593258",
+  shareActionContainer: {
+    width: "100%",
+    gap: 6,
+    alignItems: "center",
   },
-  sharePreviewButtonText: {
-    fontSize: 14.5,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    letterSpacing: -0.2,
-  },
-  calmValidationBox: {
-    backgroundColor: "#FDF4F2",
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: "#F4D2CE",
-    marginTop: 4,
-  },
-  calmValidationText: {
-    fontSize: 12.5,
-    color: "#9E4D38",
-    lineHeight: 17,
+  prototypeNoticeText: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textMuted,
+    textAlign: "center",
+    lineHeight: 16,
   },
   confirmationCard: {
-    backgroundColor: "#FDF9FE",
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: "#E3D3E5",
     gap: 10,
-    marginTop: 12,
+    marginTop: 8,
   },
-  confirmationHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  confirmationBadge: {
-    backgroundColor: "#F0E2F1",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  confirmationBadgeText: {
-    fontSize: 11,
+  confirmationOverline: {
+    fontSize: tokens.typeScale.overline,
     fontWeight: "700",
-    color: "#6E416D",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
+    color: tokens.colors.plum,
+    textTransform: "uppercase",
   },
-  confirmationHeading: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.2,
+  confirmationTitle: {
+    fontSize: tokens.typeScale.sectionTitle,
+    fontWeight: "600",
+    color: tokens.colors.text,
   },
   confirmationBody: {
-    fontSize: 13.5,
-    color: "#6D6072",
-    lineHeight: 19,
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
+    lineHeight: 18,
   },
-  confirmationTruthfulBox: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "#EADEEB",
+  truthfulBox: {
+    backgroundColor: tokens.colors.surfaceMuted,
+    padding: 8,
+    borderRadius: tokens.radii.small,
   },
-  confirmationTruthfulText: {
-    fontSize: 12,
-    color: "#8E7E94",
-    lineHeight: 16,
-    fontStyle: "italic",
+  truthfulText: {
+    fontSize: tokens.typeScale.caption - 0.5,
+    color: tokens.colors.textSecondary,
   },
   confirmationActionsGroup: {
     gap: 8,
     marginTop: 4,
   },
-  confirmationPrimaryBtn: {
-    backgroundColor: "#6E416D",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  confirmationPrimaryBtnPressed: {
-    backgroundColor: "#593258",
-  },
-  confirmationPrimaryBtnText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  confirmationSecondaryBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 12,
-    backgroundColor: "#F8F3F9",
-    borderWidth: 1,
-    borderColor: "#E5DAE6",
-  },
-  confirmationSecondaryBtnText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6E416D",
+  confirmationAction: {
+    width: "100%",
   },
   lifecycleCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    gap: 10,
+    gap: 8,
   },
-  lifecycleTextGroup: {
-    gap: 3,
+  lifecycleTitle: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontWeight: "600",
+    color: tokens.colors.text,
   },
-  lifecycleHeading: {
-    fontSize: 14.5,
-    fontWeight: "700",
-    color: "#3D3040",
-  },
-  lifecycleSubtext: {
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 17,
+  lifecycleBody: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
+    lineHeight: 18,
   },
   lifecycleButton: {
     alignSelf: "flex-start",
-    paddingVertical: 6,
-    paddingHorizontal: 0,
-  },
-  lifecycleButtonText: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-  bottomActions: {
-    alignItems: "center",
     marginTop: 4,
   },
-  resetButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: "#F8F3F9",
-    borderWidth: 1,
-    borderColor: "#E5DAE6",
-  },
-  resetButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-  reframeContextBanner: {
-    backgroundColor: "#FAF5FB",
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1.2,
-    borderColor: "#EBD8EA",
-    flexDirection: "row",
+  resetRow: {
     alignItems: "center",
-    gap: 10,
-  },
-  reframeContextBadge: {
-    backgroundColor: "#F4E5F2",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  reframeContextBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#6E416D",
-    textTransform: "uppercase",
-  },
-  reframeContextText: {
-    flex: 1,
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 17,
-  },
-  lighterThoughtShareSection: {
-    backgroundColor: "#FDF8FC",
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#EADEEB",
-    gap: 8,
-  },
-  lighterThoughtSwitchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingVertical: 2,
-  },
-  lighterThoughtSwitchTextGroup: {
-    flex: 1,
-    gap: 3,
-  },
-  lighterThoughtSwitchTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.1,
-  },
-  lighterThoughtSwitchSupporting: {
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 17,
-  },
-  switchWrapper: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  lighterThoughtInputContainer: {
-    marginTop: 6,
-    gap: 6,
-  },
-  lighterThoughtInputLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#5C4F61",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  lighterThoughtTextInput: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    borderWidth: 1.2,
-    borderColor: "#D8C7DB",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: "#3D3040",
-    lineHeight: 20,
-    minHeight: 60,
-  },
-  lighterThoughtMutedNote: {
-    fontSize: 11.5,
-    color: "#857388",
-    lineHeight: 16,
-    fontStyle: "italic",
+    paddingVertical: 8,
   },
 });

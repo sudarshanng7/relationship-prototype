@@ -10,6 +10,12 @@ import {
   View,
 } from "react-native";
 
+import {
+  CouplyHeader,
+  CouplyPrimaryButton,
+  CouplyQuietButton,
+  CouplySectionCard,
+} from "@/components/CouplyUI";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 
@@ -131,7 +137,43 @@ export default function RecordMomentScreen() {
     setCategory("");
   }
 
-  async function saveMoment() {
+  const [isReviewingOurs, setIsReviewingOurs] = useState(false);
+
+  const categories =
+    eventType === "positive" ? positiveCategories : frictionCategories;
+
+  const currentCategoryLabel =
+    categories.find((c) => c.value === category)?.label || category;
+
+  const effectiveVisibility: Visibility = isPrivateReflectionMode
+    ? "mine"
+    : isSharedMomentMode
+    ? "ours"
+    : visibility;
+
+  function handlePrimaryAction() {
+    if (saving) return;
+
+    if (!coupleId) {
+      setStatus("No relationship space found.");
+      return;
+    }
+
+    if (!category) {
+      setStatus("Please choose a category.");
+      return;
+    }
+
+    if (effectiveVisibility === "ours" && !isReviewingOurs) {
+      setIsReviewingOurs(true);
+      setStatus("");
+      return;
+    }
+
+    void executeSave();
+  }
+
+  async function executeSave() {
     if (saving) return;
 
     if (!coupleId) {
@@ -148,11 +190,7 @@ export default function RecordMomentScreen() {
     setStatus("Saving...");
 
     try {
-      const finalVisibility: Visibility = isPrivateReflectionMode
-        ? "mine"
-        : isSharedMomentMode
-        ? "ours"
-        : visibility;
+      const finalVisibility: Visibility = effectiveVisibility;
 
       const { data: eventId, error } = await supabase.rpc(
         "create_relationship_moment",
@@ -189,18 +227,13 @@ export default function RecordMomentScreen() {
     }
   }
 
-  const categories =
-    eventType === "positive" ? positiveCategories : frictionCategories;
-
   const saveButtonLabel = saving
     ? "Saving..."
-    : isPrivateReflectionMode
+    : isPrivateReflectionMode || effectiveVisibility === "mine"
       ? "Save privately"
-      : isSharedMomentMode
+      : isReviewingOurs
         ? `Share with ${partnerRef}`
-        : visibility === "mine"
-          ? "Save to Mine"
-          : `Share with ${partnerRef}`;
+        : "Review shared moment";
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -209,31 +242,20 @@ export default function RecordMomentScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.column}>
-          {/* Top navigation row */}
-          <View style={styles.topNavRow}>
-            <Pressable
-              onPress={() => router.back()}
-              style={styles.backButton}
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-            >
-              <Text style={styles.backButtonText}>‹ Back</Text>
-            </Pressable>
-          </View>
-
           {/* Header */}
-          <View style={styles.headerBlock}>
-            <Text style={styles.title}>
-              {isPrivateReflectionMode
+          <CouplyHeader
+            title={
+              isPrivateReflectionMode
                 ? "Write a reflection"
                 : isSharedMomentMode
                 ? "Share a moment"
-                : "Record a moment"}
-            </Text>
-            <Text style={styles.subtitle}>
-              A small place to notice what mattered.
-            </Text>
-          </View>
+                : "Record a moment"
+            }
+            subtitle="A small place to notice what mattered."
+            onBack={() => router.back()}
+            backLabel="‹ Back"
+            style={styles.headerCouply}
+          />
 
           {/* Moment type */}
           {!isTypeLocked && (
@@ -400,6 +422,12 @@ export default function RecordMomentScreen() {
               placeholderTextColor="#9A8D9D"
               multiline
               editable={!saving}
+              accessibilityLabel={
+                isPrivateReflectionMode
+                  ? "Your reflection, private note"
+                  : "Private note, visible only to you"
+              }
+              accessibilityHint="Write what happened or how it felt. Stays private and is never shared."
             />
           </View>
 
@@ -492,23 +520,75 @@ export default function RecordMomentScreen() {
                 placeholderTextColor="#9A8D9D"
                 multiline
                 editable={!saving}
+                accessibilityLabel="Shared note, visible in Our Space"
+                accessibilityHint={`What you would like ${partnerRef} to know. This will be shared in Our Space.`}
               />
             </View>
           )}
 
-          {/* Save Action */}
-          <View style={styles.saveButtonWrap}>
-            <Pressable
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-              onPress={saveMoment}
-              disabled={saving}
-              accessibilityRole="button"
-              accessibilityLabel={saveButtonLabel}
-              accessibilityState={{ disabled: saving }}
-            >
-              <Text style={styles.saveButtonText}>{saveButtonLabel}</Text>
-            </Pressable>
-          </View>
+          {/* In-screen review card before sharing Ours */}
+          {isReviewingOurs && effectiveVisibility === "ours" && (
+            <CouplySectionCard variant="lilac" style={styles.reviewCard}>
+              <Text style={styles.reviewHeading}>
+                Ready to share with {partnerRef}?
+              </Text>
+              <Text style={styles.reviewBody}>
+                This moment will appear in Our Space for you both.
+              </Text>
+
+              <View style={styles.reviewSummaryBox}>
+                <View style={styles.reviewSummaryRow}>
+                  <Text style={styles.reviewSummaryLabel}>Category</Text>
+                  <Text style={styles.reviewSummaryValue}>
+                    {currentCategoryLabel}
+                  </Text>
+                </View>
+                {sharedTopic.trim().length > 0 && (
+                  <View style={styles.reviewSummaryTopicRow}>
+                    <Text style={styles.reviewSummaryLabel}>Shared note</Text>
+                    <Text style={styles.reviewSummaryValueText}>
+                      {sharedTopic.trim()}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <Text style={styles.reviewPrivacyReminder}>
+                You can go back and adjust anything before sharing.
+              </Text>
+
+              <View style={styles.reviewActionsCol}>
+                <CouplyPrimaryButton
+                  label={`Share with ${partnerRef}`}
+                  onPress={executeSave}
+                  disabled={saving}
+                  loading={saving}
+                  accessibilityLabel={`Share with ${partnerRef}`}
+                />
+                <CouplyQuietButton
+                  label="Keep editing"
+                  onPress={() => setIsReviewingOurs(false)}
+                  disabled={saving}
+                  variant="soft"
+                  accessibilityLabel="Keep editing"
+                  style={styles.reviewKeepEditingBtn}
+                />
+              </View>
+            </CouplySectionCard>
+          )}
+
+          {/* Primary Action Button (when not currently in review mode) */}
+          {!isReviewingOurs && (
+            <View style={styles.saveButtonWrap}>
+              <CouplyPrimaryButton
+                label={saveButtonLabel}
+                onPress={handlePrimaryAction}
+                disabled={saving}
+                loading={saving}
+                accessibilityLabel={saveButtonLabel}
+              />
+            </View>
+          )}
 
           {/* Status feedback */}
           {status !== "" && (
@@ -537,6 +617,11 @@ const styles = StyleSheet.create({
     maxWidth: 520,
     alignSelf: "center",
     gap: 22,
+  },
+  headerCouply: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 4,
   },
   topNavRow: {
     flexDirection: "row",
@@ -824,5 +909,66 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#6D6072",
     lineHeight: 18,
+  },
+  reviewCard: {
+    gap: 12,
+  },
+  reviewHeading: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#3D3040",
+    letterSpacing: -0.2,
+  },
+  reviewBody: {
+    fontSize: 14,
+    color: "#6D6072",
+    lineHeight: 20,
+  },
+  reviewSummaryBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E8DCE9",
+    padding: 14,
+    gap: 10,
+    marginTop: 4,
+  },
+  reviewSummaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  reviewSummaryLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#7E6E82",
+  },
+  reviewSummaryValue: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    color: "#3D3040",
+  },
+  reviewSummaryTopicRow: {
+    gap: 4,
+    borderTopWidth: 1,
+    borderTopColor: "#F2E8F4",
+    paddingTop: 8,
+  },
+  reviewSummaryValueText: {
+    fontSize: 13.5,
+    color: "#3D3040",
+    lineHeight: 19,
+  },
+  reviewPrivacyReminder: {
+    fontSize: 12.5,
+    color: "#7E6E82",
+    lineHeight: 17,
+  },
+  reviewActionsCol: {
+    gap: 8,
+    marginTop: 6,
+  },
+  reviewKeepEditingBtn: {
+    alignSelf: "stretch",
   },
 });
