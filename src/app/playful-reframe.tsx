@@ -197,6 +197,10 @@ export default function PlayfulReframeScreen() {
     }
   }
 
+  function handleRecordFrictionMoment() {
+    router.push("/record-moment?type=friction");
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -304,53 +308,6 @@ export default function PlayfulReframeScreen() {
               easiest to smile at.
             </Text>
 
-            {/* Consent Options */}
-            <View style={styles.consentRow}>
-              <Pressable
-                style={[
-                  styles.consentButton,
-                  consentChoice === "try" && styles.consentButtonSelected,
-                ]}
-                onPress={() => setConsentChoice("try")}
-                accessibilityRole="button"
-                accessibilityState={{ selected: consentChoice === "try" }}
-                accessibilityLabel="Try a playful reframe"
-              >
-                <Text
-                  style={[
-                    styles.consentButtonText,
-                    consentChoice === "try" && styles.consentButtonTextSelected,
-                  ]}
-                >
-                  Try a playful reframe
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.consentButton,
-                  consentChoice === "not_today" && styles.consentButtonSelected,
-                ]}
-                onPress={() => {
-                  setConsentChoice("not_today");
-                  setSelectedTone(null);
-                }}
-                accessibilityRole="button"
-                accessibilityState={{ selected: consentChoice === "not_today" }}
-                accessibilityLabel="Not today"
-              >
-                <Text
-                  style={[
-                    styles.consentButtonText,
-                    consentChoice === "not_today" &&
-                      styles.consentButtonTextSelected,
-                  ]}
-                >
-                  Not today
-                </Text>
-              </Pressable>
-            </View>
-
             {/* "Not today" path */}
             {consentChoice === "not_today" && (
               <View style={styles.notTodayWrapper}>
@@ -362,41 +319,100 @@ export default function PlayfulReframeScreen() {
                   Not every moment is meant to be reframed. Giving yourself
                   space and honoring your feeling is always valid.
                 </Text>
-                <CouplyQuietButton
-                  label="That is enough for now"
-                  onPress={handleReturnToRhythm}
-                  variant="soft"
-                  style={styles.notTodayButton}
-                />
+                <View style={styles.notTodayActionsRow}>
+                  <CouplyQuietButton
+                    label="That is enough for now"
+                    onPress={handleReturnToRhythm}
+                    variant="soft"
+                    style={styles.notTodayButton}
+                  />
+                  <CouplyQuietButton
+                    label="Try a playful reframe"
+                    onPress={() => setConsentChoice("try")}
+                    variant="soft"
+                    style={styles.notTodayButton}
+                  />
+                </View>
               </View>
             )}
 
-            {/* Tone Choices */}
+            {/* Tone Choices & Alternatives */}
             {consentChoice === "try" && (
-              <View style={styles.tonesList}>
-                {(["gentle", "playful", "exaggerated"] as const).map(
-                  (toneKey) => {
-                    const item = currentReframes[toneKey];
-                    const isSelected = selectedTone === toneKey;
+              <>
+                <View style={styles.tonesList}>
+                  {(["gentle", "playful", "exaggerated"] as const).map(
+                    (toneKey) => {
+                      const item = currentReframes[toneKey];
+                      const isSelected = selectedTone === toneKey;
 
-                    return (
-                      <CouplyChoiceCard
-                        key={toneKey}
-                        title={item.toneLabel}
-                        description={item.text}
-                        selected={isSelected}
-                        onPress={() => {
-                          setSelectedTone(toneKey);
-                          setLighterThoughtCustomText(null);
-                        }}
-                        icon={<Text style={styles.toneIcon}>{item.icon}</Text>}
-                        accessibilityLabel={`${item.toneLabel}: ${item.text}`}
-                        style={styles.toneChoiceCard}
-                      />
-                    );
-                  },
-                )}
-              </View>
+                      return (
+                        <CouplyChoiceCard
+                          key={toneKey}
+                          title={item.toneLabel}
+                          description={item.text}
+                          selected={isSelected}
+                          onPress={() => {
+                            setSelectedTone(toneKey);
+                            setLighterThoughtCustomText(null);
+                          }}
+                          icon={<Text style={styles.toneIcon}>{item.icon}</Text>}
+                          accessibilityLabel={`${item.toneLabel}: ${item.text}`}
+                          style={styles.toneChoiceCard}
+                        />
+                      );
+                    },
+                  )}
+                </View>
+
+                {/* Subtle divider and caption */}
+                <View style={styles.careDividerBlock}>
+                  <View style={styles.careDividerLine} />
+                  <Text style={styles.careDividerCaption}>
+                    Or choose a different kind of care
+                  </Text>
+                  <View style={styles.careDividerLine} />
+                </View>
+
+                {/* Full-width calm alternative card */}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.alternativeCard,
+                    pressed && styles.alternativeCardPressed,
+                  ]}
+                  onPress={handleRecordFrictionMoment}
+                  accessibilityRole="button"
+                  accessibilityLabel="Record this as a friction moment instead"
+                >
+                  <Text style={styles.alternativeOverline}>
+                    A DIFFERENT NEXT STEP
+                  </Text>
+                  <Text style={styles.alternativeHeading}>
+                    This feels bigger than a reframe
+                  </Text>
+                  <Text style={styles.alternativeBody}>
+                    Record what happened privately, then decide yourself whether
+                    it belongs in Our Space.
+                  </Text>
+                  <View style={styles.alternativeActionRow}>
+                    <View style={styles.alternativeQuietButton}>
+                      <Text style={styles.alternativeQuietButtonText}>
+                        Record a friction moment
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+
+                {/* Existing "Not today" action */}
+                <CouplyQuietButton
+                  label="Not today"
+                  onPress={() => {
+                    setConsentChoice("not_today");
+                    setSelectedTone(null);
+                  }}
+                  variant="soft"
+                  style={styles.notTodayConsentButton}
+                />
+              </>
             )}
           </CouplySectionCard>
 
@@ -758,5 +774,76 @@ const styles = StyleSheet.create({
   },
   quietActionButton: {
     width: "100%",
+  },
+  careDividerBlock: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.spacing.sm,
+    marginVertical: tokens.spacing.xs,
+  },
+  careDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: tokens.colors.borderSoft,
+  },
+  careDividerCaption: {
+    fontSize: tokens.typeScale.caption,
+    fontWeight: "500",
+    color: tokens.colors.textSecondary,
+  },
+  alternativeCard: {
+    backgroundColor: tokens.colors.surfaceMuted,
+    borderRadius: tokens.radii.card,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderSoft,
+    padding: tokens.spacing.md,
+    gap: 6,
+  },
+  alternativeCardPressed: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderColor: tokens.colors.border,
+  },
+  alternativeOverline: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: tokens.colors.textMuted,
+    textTransform: "uppercase",
+  },
+  alternativeHeading: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontWeight: "600",
+    color: tokens.colors.text,
+  },
+  alternativeBody: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    lineHeight: 18,
+  },
+  alternativeActionRow: {
+    marginTop: 4,
+  },
+  alternativeQuietButton: {
+    alignSelf: "flex-start",
+    backgroundColor: tokens.colors.surface,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderSoft,
+    borderRadius: tokens.radii.small,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  alternativeQuietButtonText: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "600",
+    color: tokens.colors.plum,
+  },
+  notTodayConsentButton: {
+    width: "100%",
+    marginTop: 2,
+  },
+  notTodayActionsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 4,
   },
 });

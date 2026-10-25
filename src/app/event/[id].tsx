@@ -60,6 +60,53 @@ type SuggestedNextStep =
   | "Quiet time side-by-side"
   | "Fresh tea together";
 
+type ClosingCheckInChoice = "ready" | "reconnecting" | "need_time";
+
+export type RepairPreviewPhase =
+  | "open"
+  | "in_care"
+  | "reconnecting"
+  | "reconnected";
+
+function deriveRepairPreviewPhase(
+  sharedResponse: PartnerResponseChoice,
+  alexShared: ClosingCheckInChoice | null,
+  samShared: ClosingCheckInChoice | null,
+): RepairPreviewPhase {
+  // 4. open: Only when no recipient response has been shared.
+  if (sharedResponse === "none") {
+    return "open";
+  }
+
+  // 1. reconnected: Only if BOTH latest shared check-ins are:
+  // "ready" / “I feel ready to leave this here”
+  if (alexShared === "ready" && samShared === "ready") {
+    return "reconnected";
+  }
+
+  // 2. reconnecting:
+  // If neither latest shared check-in is:
+  // "needs_time" / “I need more time”
+  // AND at least one latest shared check-in is:
+  // "reconnecting" / “The issue feels settled, but I’m still reconnecting”
+  const neitherNeedsTime =
+    alexShared !== "need_time" &&
+    (alexShared as string) !== "needs_time" &&
+    samShared !== "need_time" &&
+    (samShared as string) !== "needs_time";
+  const atLeastOneReconnecting =
+    alexShared === "reconnecting" || samShared === "reconnecting";
+
+  if (neitherNeedsTime && atLeastOneReconnecting) {
+    return "reconnecting";
+  }
+
+  // 3. in_care:
+  // If any latest shared check-in is "needs_time", OR only one person has shared a closing check-in,
+  // OR a shared recipient response exists but no completed closing check-in exists.
+  return "in_care";
+}
+
 const SUGGESTED_NEXT_STEPS: SuggestedNextStep[] = [
   "A quiet chat",
   "A warm hug",
@@ -144,13 +191,20 @@ export default function EventDetailScreen() {
   const [sharedSuggestedStep, setSharedSuggestedStep] =
     useState<SuggestedNextStep | null>(null);
 
-  // Draft vs. shared individual settlement
-  const [alexDraftSettled, setAlexDraftSettled] = useState<boolean | null>(null);
-  const [alexSharedSettled, setAlexSharedSettled] = useState<boolean | null>(
-    null,
-  );
-  const [samDraftSettled, setSamDraftSettled] = useState<boolean | null>(null);
-  const [samSharedSettled, setSamSharedSettled] = useState<boolean | null>(null);
+  // Draft vs. shared closing check-in
+  const [alexDraftCheckIn, setAlexDraftCheckIn] =
+    useState<ClosingCheckInChoice | null>(null);
+  const [alexSharedCheckIn, setAlexSharedCheckIn] =
+    useState<ClosingCheckInChoice | null>(null);
+  const [alexEditingCheckIn, setAlexEditingCheckIn] = useState(false);
+  const [alexHasUpdatedCheckIn, setAlexHasUpdatedCheckIn] = useState(false);
+
+  const [samDraftCheckIn, setSamDraftCheckIn] =
+    useState<ClosingCheckInChoice | null>(null);
+  const [samSharedCheckIn, setSamSharedCheckIn] =
+    useState<ClosingCheckInChoice | null>(null);
+  const [samEditingCheckIn, setSamEditingCheckIn] = useState(false);
+  const [samHasUpdatedCheckIn, setSamHasUpdatedCheckIn] = useState(false);
 
   // Private individual reflections (separate for Alex and Sam)
   const [alexPrivateTag, setAlexPrivateTag] = useState<PrivateHelpTag | null>(
@@ -189,10 +243,14 @@ export default function EventDetailScreen() {
     setSharedPartnerResponse("none");
     setDraftSuggestedStep(null);
     setSharedSuggestedStep(null);
-    setAlexDraftSettled(null);
-    setAlexSharedSettled(null);
-    setSamDraftSettled(null);
-    setSamSharedSettled(null);
+    setAlexDraftCheckIn(null);
+    setAlexSharedCheckIn(null);
+    setAlexEditingCheckIn(false);
+    setAlexHasUpdatedCheckIn(false);
+    setSamDraftCheckIn(null);
+    setSamSharedCheckIn(null);
+    setSamEditingCheckIn(false);
+    setSamHasUpdatedCheckIn(false);
     setAlexPrivateTag(null);
     setAlexPrivateDismissed(false);
     setSamPrivateTag(null);
@@ -204,31 +262,31 @@ export default function EventDetailScreen() {
     setIsTakeawaySaved(false);
   }
 
-  const isMutuallySettled =
-    alexSharedSettled === true && samSharedSettled === true;
+  const repairPreviewPhase = deriveRepairPreviewPhase(
+    sharedPartnerResponse,
+    alexSharedCheckIn,
+    samSharedCheckIn,
+  );
+  const isOpen = repairPreviewPhase === "open";
+  const isInCare = repairPreviewPhase === "in_care";
+  const isReconnecting = repairPreviewPhase === "reconnecting";
+  const isReconnected = repairPreviewPhase === "reconnected";
 
   useEffect(() => {
-    if (isMutuallySettled && event?.id) {
+    if (repairPreviewPhase === "reconnected" && event?.id) {
       setReconnectedPreview(event.id);
-    } else if (alexSharedSettled === false || samSharedSettled === false) {
+    } else {
       clearRepairPreview();
     }
-  }, [
-    isMutuallySettled,
-    alexSharedSettled,
-    samSharedSettled,
-    event?.id,
-    setReconnectedPreview,
-    clearRepairPreview,
-  ]);
+  }, [repairPreviewPhase, event?.id, setReconnectedPreview, clearRepairPreview]);
 
   useEffect(() => {
     if (event?.id && event.id === previewEventId) {
       if (previewStatus === "reconnected") {
-        setAlexDraftSettled(true);
-        setAlexSharedSettled(true);
-        setSamDraftSettled(true);
-        setSamSharedSettled(true);
+        setAlexDraftCheckIn("ready");
+        setAlexSharedCheckIn("ready");
+        setSamDraftCheckIn("ready");
+        setSamSharedCheckIn("ready");
         setDraftPartnerResponse((prev) => (prev === "none" ? "heard" : prev));
         setSharedPartnerResponse((prev) => (prev === "none" ? "heard" : prev));
       }
@@ -505,15 +563,16 @@ export default function EventDetailScreen() {
   const isPositive = event.event_type === "positive";
   const isSharedFriction = !isPositive && event.visibility === "ours";
 
-  const isInCare = sharedPartnerResponse !== "none" && !isMutuallySettled;
-  const isOpen = sharedPartnerResponse === "none";
-
-  const currentDraftSettled =
-    previewPerspective === "alex" ? alexDraftSettled : samDraftSettled;
-  const currentSharedSettled =
-    previewPerspective === "alex" ? alexSharedSettled : samSharedSettled;
-  const otherSharedSettled =
-    previewPerspective === "alex" ? samSharedSettled : alexSharedSettled;
+  const currentDraftCheckIn =
+    previewPerspective === "alex" ? alexDraftCheckIn : samDraftCheckIn;
+  const currentSharedCheckIn =
+    previewPerspective === "alex" ? alexSharedCheckIn : samSharedCheckIn;
+  const otherSharedCheckIn =
+    previewPerspective === "alex" ? samSharedCheckIn : alexSharedCheckIn;
+  const currentIsEditingCheckIn =
+    previewPerspective === "alex" ? alexEditingCheckIn : samEditingCheckIn;
+  const otherHasUpdatedCheckIn =
+    previewPerspective === "alex" ? samHasUpdatedCheckIn : alexHasUpdatedCheckIn;
   const partnerNameForCurrent =
     previewPerspective === "alex" ? recipientCapitalized : creatorLabel;
 
@@ -554,9 +613,11 @@ export default function EventDetailScreen() {
               <CouplyStatusPill
                 label={
                   isSharedFriction
-                    ? isMutuallySettled
+                    ? repairPreviewPhase === "reconnected"
                       ? "Reconnected"
-                      : isInCare
+                      : repairPreviewPhase === "reconnecting"
+                      ? "Reconnecting"
+                      : repairPreviewPhase === "in_care"
                       ? "In care"
                       : "Open"
                     : isPositive
@@ -565,9 +626,11 @@ export default function EventDetailScreen() {
                 }
                 variant={
                   isSharedFriction
-                    ? isMutuallySettled
+                    ? repairPreviewPhase === "reconnected"
                       ? "reconnected"
-                      : isInCare
+                      : repairPreviewPhase === "reconnecting"
+                      ? "softening"
+                      : repairPreviewPhase === "in_care"
                       ? "softening"
                       : "open"
                     : isPositive
@@ -789,10 +852,27 @@ export default function EventDetailScreen() {
 
               {/* One Next Action at Each Stage: "What feels right next?" Card */}
               <CouplySectionCard style={styles.nextActionCard}>
-                <View style={styles.nextActionHeader}>
-                  <Text style={styles.nextActionOverline}>NEXT STEP</Text>
-                  <Text style={styles.nextActionTitle}>What feels right next?</Text>
-                </View>
+                {repairPreviewPhase === "reconnecting" ? (
+                  <View style={styles.reconnectingHeaderBlock}>
+                    <View style={styles.reconnectingStatusRow}>
+                      <Text style={styles.reconnectingOverline}>RECONNECTING</Text>
+                      <CouplyStatusPill label="Reconnecting" variant="softening" />
+                    </View>
+                    <Text style={styles.reconnectingHeading}>
+                      The issue feels lighter, and connection is still finding its way.
+                    </Text>
+                    <Text style={styles.reconnectingBody}>
+                      There is nothing to force or finish today.
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.nextActionHeader}>
+                    <Text style={styles.nextActionOverline}>
+                      {repairPreviewPhase === "in_care" ? "IN CARE" : "NEXT STEP"}
+                    </Text>
+                    <Text style={styles.nextActionTitle}>What feels right next?</Text>
+                  </View>
+                )}
 
                 {/* STAGE A: OPEN */}
                 {isOpen && (
@@ -945,11 +1025,13 @@ export default function EventDetailScreen() {
                   </View>
                 )}
 
-                {/* STAGE B: IN CARE */}
+                {/* STAGE B: IN CARE, RECONNECTING, OR RECONNECTED */}
                 {!isOpen && (
                   <View style={styles.stageContentBlock}>
-                    {/* Selected response banner */}
-                    <View style={styles.responseDisplayBanner}>
+                    {/* Selected response banner - only during In Care */}
+                    {repairPreviewPhase === "in_care" && (
+                      <>
+                        <View style={styles.responseDisplayBanner}>
                       <Text style={styles.responseDisplayTitle}>
                         {previewPerspective === "sam" ? (
                           sharedPartnerResponse === "heard" ? (
@@ -994,7 +1076,7 @@ export default function EventDetailScreen() {
                         </View>
                       )}
 
-                      {previewPerspective === "sam" && !isMutuallySettled && (
+                      {previewPerspective === "sam" && !isReconnected && (
                         <Pressable
                           style={styles.changeResponseButton}
                           onPress={() => {
@@ -1089,149 +1171,215 @@ export default function EventDetailScreen() {
                             )}
                         </View>
                       )}
+                      </>
+                    )}
 
-                    {/* STAGE C: INDIVIDUAL SETTLEMENT */}
+                    {/* CLOSING CHECK-IN */}
                     <View style={styles.settlementBlock}>
                       <View style={styles.journeyDivider} />
-                      <Text style={styles.settlementHeading}>
-                        How does this feel for you?
-                      </Text>
-                      <Text style={styles.settlementSubtext}>
-                        Your answer does not decide it for anyone else.
-                      </Text>
+                      <Text style={styles.checkInOverline}>YOUR CHECK-IN</Text>
 
-                      <View style={styles.settleChoicesRow}>
-                        <CouplyChoiceCard
-                          style={styles.settleChoiceCardFlex}
-                          title="🤝 This feels settled to me"
-                          description="I feel ready to let this moment rest."
-                          selected={currentDraftSettled === true}
-                          onPress={() => {
-                            if (previewPerspective === "alex") {
-                              setAlexDraftSettled(true);
-                            } else {
-                              setSamDraftSettled(true);
-                            }
-                          }}
-                          accessibilityLabel="This feels settled to me"
-                        />
-                        <CouplyChoiceCard
-                          style={styles.settleChoiceCardFlex}
-                          title="🌿 Not settled yet"
-                          description="Keep this open with care."
-                          selected={currentDraftSettled === false}
-                          onPress={() => {
-                            if (previewPerspective === "alex") {
-                              setAlexDraftSettled(false);
-                            } else {
-                              setSamDraftSettled(false);
-                            }
-                          }}
-                          accessibilityLabel="Not settled yet"
-                        />
-                      </View>
+                      {currentSharedCheckIn !== null && !currentIsEditingCheckIn ? (
+                        <View style={styles.currentSharedCheckInCard}>
+                          <Text style={styles.currentSharedCheckInTitle}>
+                            {currentSharedCheckIn === "ready"
+                              ? "I feel ready to leave this here"
+                              : currentSharedCheckIn === "reconnecting"
+                              ? "The issue feels settled, but I’m still reconnecting"
+                              : "I need more time"}
+                          </Text>
+                          <Text style={styles.currentSharedCheckInDescription}>
+                            {currentSharedCheckIn === "ready"
+                              ? "The issue feels settled and I feel connected again."
+                              : currentSharedCheckIn === "reconnecting"
+                              ? "The practical part feels lighter, while closeness may need more time."
+                              : "There is no need to close this before it feels right."}
+                          </Text>
 
-                      {/* Review Card for Individual Settlement */}
-                      {currentDraftSettled !== null &&
-                        currentDraftSettled !== currentSharedSettled && (
-                          <View style={styles.reviewCard}>
-                            <Text style={styles.reviewCardOverline}>
-                              YOUR CHECK-IN
+                          <View style={styles.sharedConfirmationCard}>
+                            <Text style={styles.sharedConfirmationText}>
+                              Your check-in is shared. {partnerNameForCurrent} can take their time.
                             </Text>
-                            <Text style={styles.reviewCardHeading}>
-                              {currentDraftSettled === true
-                                ? "You feel ready to leave this here."
-                                : "You need a little more time."}
+                            <Text style={styles.sharedConfirmationTruthNote}>
+                              Only visible in this browser walkthrough. Nothing has been sent or saved.
                             </Text>
-                            <Text style={styles.reviewCardBody}>
-                              Would you like {partnerNameForCurrent} to see where you are?
-                            </Text>
-                            <View style={styles.reviewCardActionsRow}>
-                              <CouplyPrimaryButton
-                                label={
-                                  currentDraftSettled === true
-                                    ? `Share this with ${partnerNameForCurrent}`
-                                    : "Share that you need more time"
+                          </View>
+
+                          <CouplyQuietButton
+                            variant="soft"
+                            label="Update my check-in"
+                            onPress={() => {
+                              if (previewPerspective === "alex") {
+                                setAlexDraftCheckIn(alexSharedCheckIn);
+                                setAlexEditingCheckIn(true);
+                              } else {
+                                setSamDraftCheckIn(samSharedCheckIn);
+                                setSamEditingCheckIn(true);
+                              }
+                            }}
+                            accessibilityLabel="Update my check-in"
+                            style={styles.updateCheckInButton}
+                          />
+                        </View>
+                      ) : (
+                        <>
+                          <Text style={styles.settlementHeading}>
+                            How are things feeling for you now?
+                          </Text>
+                          <Text style={styles.settlementSubtext}>
+                            Choose what feels true. Your answer does not decide this for anyone else.
+                          </Text>
+
+                          <View style={styles.checkInChoicesStack}>
+                            <CouplyChoiceCard
+                              title="I feel ready to leave this here"
+                              description="The issue feels settled and I feel connected again."
+                              selected={currentDraftCheckIn === "ready"}
+                              onPress={() => {
+                                if (previewPerspective === "alex") {
+                                  setAlexDraftCheckIn("ready");
+                                } else {
+                                  setSamDraftCheckIn("ready");
                                 }
-                                onPress={() => {
-                                  if (previewPerspective === "alex") {
-                                    setAlexSharedSettled(alexDraftSettled);
-                                  } else {
-                                    setSamSharedSettled(samDraftSettled);
-                                  }
-                                }}
-                                accessibilityLabel={
-                                  currentDraftSettled === true
-                                    ? `Share this with ${partnerNameForCurrent}`
-                                    : "Share that you need more time"
+                              }}
+                              accessibilityLabel="I feel ready to leave this here: The issue feels settled and I feel connected again."
+                            />
+                            <CouplyChoiceCard
+                              title="The issue feels settled, but I’m still reconnecting"
+                              description="The practical part feels lighter, while closeness may need more time."
+                              selected={currentDraftCheckIn === "reconnecting"}
+                              onPress={() => {
+                                if (previewPerspective === "alex") {
+                                  setAlexDraftCheckIn("reconnecting");
+                                } else {
+                                  setSamDraftCheckIn("reconnecting");
                                 }
-                              />
+                              }}
+                              accessibilityLabel="The issue feels settled, but I’m still reconnecting: The practical part feels lighter, while closeness may need more time."
+                            />
+                            <CouplyChoiceCard
+                              title="I need more time"
+                              description="There is no need to close this before it feels right."
+                              selected={currentDraftCheckIn === "need_time"}
+                              onPress={() => {
+                                if (previewPerspective === "alex") {
+                                  setAlexDraftCheckIn("need_time");
+                                } else {
+                                  setSamDraftCheckIn("need_time");
+                                }
+                              }}
+                              accessibilityLabel="I need more time: There is no need to close this before it feels right."
+                            />
+                          </View>
+
+                          {/* Confirmation area when choice is drafted and not yet shared */}
+                          {currentDraftCheckIn !== null &&
+                            currentDraftCheckIn !== currentSharedCheckIn && (
+                              <View style={styles.reviewCard}>
+                                <Text style={styles.reviewCardHeading}>
+                                  Share this with {partnerNameForCurrent}?
+                                </Text>
+                                <Text style={styles.reviewCardBody}>
+                                  They will see only where you are right now.
+                                </Text>
+                                <View style={styles.reviewCardActionsRow}>
+                                  <CouplyPrimaryButton
+                                    label={`Share with ${partnerNameForCurrent}`}
+                                    onPress={() => {
+                                      if (previewPerspective === "alex") {
+                                        const wasShared =
+                                          alexSharedCheckIn !== null;
+                                        setAlexSharedCheckIn(alexDraftCheckIn);
+                                        if (wasShared) {
+                                          setAlexHasUpdatedCheckIn(true);
+                                        }
+                                        setAlexEditingCheckIn(false);
+                                      } else {
+                                        const wasShared =
+                                          samSharedCheckIn !== null;
+                                        setSamSharedCheckIn(samDraftCheckIn);
+                                        if (wasShared) {
+                                          setSamHasUpdatedCheckIn(true);
+                                        }
+                                        setSamEditingCheckIn(false);
+                                      }
+                                    }}
+                                    accessibilityLabel={`Share with ${partnerNameForCurrent}`}
+                                  />
+                                  <CouplyQuietButton
+                                    variant="text"
+                                    label="Keep deciding"
+                                    onPress={() => {
+                                      if (currentSharedCheckIn !== null) {
+                                        if (previewPerspective === "alex") {
+                                          setAlexDraftCheckIn(alexSharedCheckIn);
+                                          setAlexEditingCheckIn(false);
+                                        } else {
+                                          setSamDraftCheckIn(samSharedCheckIn);
+                                          setSamEditingCheckIn(false);
+                                        }
+                                      } else {
+                                        if (previewPerspective === "alex") {
+                                          setAlexDraftCheckIn(null);
+                                        } else {
+                                          setSamDraftCheckIn(null);
+                                        }
+                                      }
+                                    }}
+                                    accessibilityLabel="Keep deciding"
+                                  />
+                                </View>
+                              </View>
+                            )}
+
+                          {/* If editing and choice hasn't changed, allow keeping current check-in */}
+                          {currentIsEditingCheckIn &&
+                            currentDraftCheckIn === currentSharedCheckIn && (
                               <CouplyQuietButton
                                 variant="text"
                                 label="Keep deciding"
                                 onPress={() => {
                                   if (previewPerspective === "alex") {
-                                    setAlexDraftSettled(alexSharedSettled);
+                                    setAlexEditingCheckIn(false);
                                   } else {
-                                    setSamDraftSettled(samSharedSettled);
+                                    setSamEditingCheckIn(false);
                                   }
                                 }}
                                 accessibilityLabel="Keep deciding"
+                                style={styles.keepCurrentCheckInButton}
                               />
-                            </View>
-                          </View>
-                        )}
+                            )}
+                        </>
+                      )}
 
-                      {/* Compact confirmation after sharing settlement */}
-                      {currentSharedSettled !== null &&
-                        currentDraftSettled === currentSharedSettled && (
-                          <View style={styles.sharedConfirmationCard}>
-                            <Text style={styles.sharedConfirmationText}>
-                              Shared with {partnerNameForCurrent} in this walkthrough.
+                      {/* Partner's shared check-in answer summary */}
+                      {otherSharedCheckIn !== null && (
+                        <View style={styles.otherReconnectionNoticeCard}>
+                          {otherHasUpdatedCheckIn && (
+                            <Text style={styles.updatedCheckInCaption}>
+                              Updated check-in
                             </Text>
-                            <Text style={styles.sharedConfirmationTruthNote}>
-                              Only visible in this browser. Nothing has been sent or saved.
-                            </Text>
-                          </View>
-                        )}
-
-                      {/* Supportive note when selecting Not settled yet */}
-                      {currentDraftSettled === false && (
-                        <View style={styles.calmInlineNotice}>
-                          <Text style={styles.calmInlineNoticeText}>
-                            This stays open with care. Nothing needs to be forced or solved right now.
+                          )}
+                          <Text style={styles.otherReconnectionNoticeHeading}>
+                            {otherSharedCheckIn === "ready"
+                              ? `In this preview, ${partnerNameForCurrent} feels ready to leave this here.`
+                              : otherSharedCheckIn === "reconnecting"
+                              ? `In this preview, ${partnerNameForCurrent} feels the issue is settled, but is still reconnecting.`
+                              : `In this preview, ${partnerNameForCurrent} needs a little more time.`}
+                          </Text>
+                          <Text style={styles.otherReconnectionNoticeText}>
+                            {otherSharedCheckIn === "ready"
+                              ? "The issue feels settled and they feel connected again."
+                              : otherSharedCheckIn === "reconnecting"
+                              ? "The practical part feels lighter, while closeness may need more time."
+                              : "There is no need to close this before it feels right."}
                           </Text>
                         </View>
                       )}
 
-                      {/* Empathetic notice if other partner explicitly shared settled and current viewer is not shared settled */}
-                      {otherSharedSettled === true &&
-                        currentSharedSettled !== true && (
-                          <View style={styles.oneSidedNoticeCard}>
-                            <Text style={styles.oneSidedNoticeHeading}>
-                              In this preview, {partnerNameForCurrent} feels settled.
-                            </Text>
-                            <Text style={styles.oneSidedNoticeText}>
-                              You do not have to match that. This moment can stay open until it feels right for you too.
-                            </Text>
-                          </View>
-                        )}
-
-                      {/* Empathetic notice if other partner explicitly shared not settled */}
-                      {otherSharedSettled === false && (
-                        <View style={styles.oneSidedNoticeCard}>
-                          <Text style={styles.oneSidedNoticeHeading}>
-                            In this preview, {partnerNameForCurrent} needs a little more time.
-                          </Text>
-                          <Text style={styles.oneSidedNoticeText}>
-                            This moment stays open with care. Giving each other time protects emotional safety.
-                          </Text>
-                        </View>
-                      )}
-
-                      {/* STAGE D: PRIVATE INDIVIDUAL REFLECTION */}
-                      {(currentDraftSettled === true ||
-                        currentSharedSettled === true) &&
+                      {/* Private individual reflection */}
+                      {(currentDraftCheckIn !== null ||
+                        currentSharedCheckIn !== null) &&
                         !currentPrivateDismissed && (
                         <View style={styles.privateReflectionCard}>
                           <View style={styles.privateReflectionBadgeRow}>
@@ -1302,7 +1450,7 @@ export default function EventDetailScreen() {
                     </View>
 
                     {/* STAGE E & F: MUTUAL RECONNECTION & SHARED TAKEAWAY */}
-                    {isMutuallySettled && (
+                    {isReconnected && (
                       <View style={styles.reconnectedSection}>
                         <View style={styles.journeyDivider} />
                         <View style={styles.reconnectedHeaderRow}>
@@ -2276,12 +2424,14 @@ const styles = StyleSheet.create({
     color: tokens.colors.textSecondary,
     lineHeight: 18,
   },
-  settleChoicesRow: {
-    flexDirection: "row",
-    gap: 10,
+  checkInOverline: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+    letterSpacing: 0.8,
   },
-  settleChoiceCardFlex: {
-    flex: 1,
+  checkInChoicesStack: {
+    gap: 8,
   },
   calmInlineNotice: {
     backgroundColor: tokens.colors.surfaceLilac,
@@ -2427,6 +2577,124 @@ const styles = StyleSheet.create({
     fontSize: tokens.typeScale.overline,
     color: tokens.colors.textSecondary,
     fontStyle: "italic",
+  },
+
+  /* Reconnecting Stage */
+  reconnectingSection: {
+    gap: 12,
+  },
+  reconnectingHeaderBlock: {
+    gap: 6,
+  },
+  reconnectingStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  reconnectingOverline: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+    letterSpacing: 0.8,
+  },
+  reconnectingHeading: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: tokens.colors.text,
+  },
+  reconnectingBody: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
+    lineHeight: 18,
+  },
+  reconnectingStatusBlock: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 4,
+    backgroundColor: tokens.colors.surfaceLilac,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: tokens.radii.small,
+  },
+  reconnectingStatusExplanation: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.plum,
+    fontWeight: "600",
+    flex: 1,
+  },
+  reconnectCheckinHeader: {
+    gap: 4,
+    marginTop: 4,
+  },
+  reconnectCheckinTitle: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontWeight: "700",
+    color: tokens.colors.text,
+  },
+  reconnectCheckinBody: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
+    lineHeight: 18,
+  },
+  reconnectChoicesStack: {
+    gap: 8,
+  },
+  otherReconnectionNoticeCard: {
+    backgroundColor: tokens.colors.surfaceMuted,
+    borderRadius: tokens.radii.small,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    gap: 4,
+    marginTop: 4,
+  },
+  otherReconnectionNoticeHeading: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+  },
+  otherReconnectionNoticeText: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    lineHeight: 17,
+  },
+  currentSharedCheckInCard: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.card,
+    padding: 14,
+    borderWidth: 1.2,
+    borderColor: tokens.colors.borderSoft,
+    gap: 10,
+    marginTop: 4,
+  },
+  currentSharedCheckInTitle: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontWeight: "700",
+    color: tokens.colors.text,
+  },
+  currentSharedCheckInDescription: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.textSecondary,
+    lineHeight: 18,
+  },
+  updateCheckInButton: {
+    alignSelf: "flex-start",
+    marginTop: 2,
+  },
+  keepCurrentCheckInButton: {
+    alignSelf: "flex-start",
+    marginTop: 4,
+  },
+  updatedCheckInCaption: {
+    fontSize: tokens.typeScale.caption,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 2,
   },
 
   /* Reconnected section */
