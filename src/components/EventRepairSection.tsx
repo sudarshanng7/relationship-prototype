@@ -14,7 +14,7 @@ import {
 } from "@/lib/repair-states";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -126,9 +126,16 @@ export function EventRepairSection({
     }
   }, [eventId, userId, authorize, isCurrent]);
 
+  // Visibility changes restart the focused lifecycle even when refresh is stable.
+  const focusContext = useMemo(
+    () => ({ refresh, visibility }),
+    [refresh, visibility],
+  );
+
   // Always recheck membership, RLS and account identity when returning here.
   useFocusEffect(
     useCallback(() => {
+      const { refresh } = focusContext;
       focusGeneration.current++;
       writeInFlight.current = false;
       setRows([]);
@@ -144,7 +151,7 @@ export function EventRepairSection({
         requestId.current++;
         focusGeneration.current++;
       };
-    }, [refresh, visibility]),
+    }, [focusContext]),
   );
 
   const mine = rows.find((row) => row.user_id === userId);
