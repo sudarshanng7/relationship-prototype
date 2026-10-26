@@ -489,7 +489,7 @@ function EventDetailContent({
                   </>
                 ) : (
                   <Text style={styles.helperText}>
-                    You haven't shared your perspective yet.
+                    You haven&apos;t shared your perspective yet.
                   </Text>
                 )}
 
@@ -611,7 +611,7 @@ function EventDetailContent({
                 style={[styles.perspectiveCard, styles.partnerPerspectiveCard]}
               >
                 <Text style={styles.perspectiveHeading}>
-                  Your partner's perspective
+                  Your partner&apos;s perspective
                 </Text>
 
                 {partnerPerspective ? (
@@ -626,7 +626,7 @@ function EventDetailContent({
                   </>
                 ) : (
                   <Text style={styles.helperText}>
-                    Your partner hasn't shared a perspective.
+                    Your partner hasn&apos;t shared a perspective.
                   </Text>
                 )}
               </View>
@@ -698,7 +698,7 @@ function EventDetailContent({
               ) : (
                 <>
                   <Text style={styles.helperText}>
-                    Moving this moment to Mine removes your partner's access.
+                    Moving this moment to Mine removes your partner&apos;s access.
                     Shared perspectives and repair updates become private.
                     Information previously seen cannot be recalled.
                   </Text>

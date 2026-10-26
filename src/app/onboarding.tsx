@@ -123,7 +123,7 @@ export default function OnboardingScreen() {
       <Text style={styles.title}>Welcome to Relationship OS</Text>
 
       <Text style={styles.description}>
-        We're not here to tell you how relationships work. We're here to help
+        We&apos;re not here to tell you how relationships work. We&apos;re here to help
         you understand how yours works.
       </Text>
 
@@ -155,7 +155,7 @@ export default function OnboardingScreen() {
         <View style={styles.privacyCard}>
           <Text style={styles.privacyTitle}>Mine</Text>
           <Text style={styles.helpText}>
-            A private moment stays visible only to you. It won't be shared with
+            A private moment stays visible only to you. It won&apos;t be shared with
             your partner.
           </Text>
         </View>
@@ -168,7 +168,7 @@ export default function OnboardingScreen() {
         </View>
 
         <Text style={styles.helpText}>
-          You'll choose who can see a moment before saving it.
+          You&apos;ll choose who can see a moment before saving it.
         </Text>
       </View>
 

@@ -358,7 +358,7 @@ export function EventRepairSection({
             </View>
           ) : (
             <Text style={styles.helper}>
-              You haven't recorded a personal repair update yet.
+              You haven&apos;t recorded a personal repair update yet.
             </Text>
           )}
 
@@ -563,7 +563,7 @@ export function EventRepairSection({
 
       {visibility === "ours" && !loading && !error && (
         <View style={styles.partnerSection}>
-          <Text style={styles.subheading}>Your partner's shared update</Text>
+          <Text style={styles.subheading}>Your partner&apos;s shared update</Text>
           {partner ? (
             <View style={styles.summary}>
               <Text style={styles.summaryTitle}>
@@ -575,7 +575,7 @@ export function EventRepairSection({
                 </Text>
               )}
               <Text style={styles.helper}>
-                This is your partner's reported experience, not a joint
+                This is your partner&apos;s reported experience, not a joint
                 conclusion.
               </Text>
             </View>

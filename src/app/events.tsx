@@ -355,7 +355,7 @@ export default function EventsScreen() {
             </View>
           ) : state.error ? (
             <View style={styles.centerMessage}>
-              <Text style={styles.messageTitle}>Moments aren't available</Text>
+              <Text style={styles.messageTitle}>Moments aren&apos;t available</Text>
               <Text style={styles.messageText}>{state.error}</Text>
               {!state.coupleId && (
                 <Pressable
