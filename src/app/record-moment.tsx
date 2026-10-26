@@ -1,5 +1,8 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import {
+  AccountSessionBoundary, useAccountSessionScope,
+} from "@/components/AccountSessionBoundary";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -40,13 +43,29 @@ const frictionCategories = [
   { value: "other", label: "Other" },
 ];
 
+type MomentRoute = { type?: string; visibility?: string; lockType?: string };
+
 export default function RecordMomentScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams<{
-    type?: string;
-    visibility?: "mine" | "ours" | string;
-    lockType?: string;
+  const raw = useLocalSearchParams<{
+    type?: string | string[];
+    visibility?: string | string[];
+    lockType?: string | string[];
   }>();
+  const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
+  const params: MomentRoute = {
+    type: first(raw.type), visibility: first(raw.visibility), lockType: first(raw.lockType),
+  };
+  const routeKey = JSON.stringify([params.type, params.visibility, params.lockType]);
+  return (
+    <AccountSessionBoundary routeKey={routeKey}>
+      <RecordMomentForm params={params} />
+    </AccountSessionBoundary>
+  );
+}
+
+function RecordMomentForm({ params }: { params: MomentRoute }) {
+  const scope = useAccountSessionScope();
+  const router = useRouter();
 
   const isPrivateReflectionMode = params.visibility === "mine";
   const isSharedMomentMode = params.visibility === "ours";
@@ -72,55 +91,34 @@ export default function RecordMomentScreen() {
 
   const [status, setStatus] = useState("");
 
-  useEffect(() => {
-    loadCouple();
-  }, []);
+  const requestId = useRef(0);
+  const writeInFlight = useRef(false);
 
-  useEffect(() => {
-    if (params.type === "positive" || params.type === "friction") {
-      setEventType(params.type);
-      setCategory("");
+  const loadCouple = useCallback(async () => {
+    const id = ++requestId.current;
+    const valid = () => scope.isCurrent() && id === requestId.current;
+    if (!valid()) return;
+    try {
+      const auth = await scope.authorize();
+      if (!auth || !valid()) return;
+      setCoupleId(null);
+      setStatus("Loading...");
+      const { data, error } = await supabase.from("couple_members")
+        .select("couple_id").eq("user_id", scope.userId).maybeSingle()
+        .setHeader("Authorization", `Bearer ${auth.token}`);
+      if (!valid()) return;
+      if (error) throw new Error(error.message);
+      if (!(await scope.authorize()) || !valid()) return;
+      setCoupleId(data?.couple_id ?? null);
+      setStatus(data ? "" : "No relationship space found.");
+    } catch (error) {
+      if (valid()) setStatus(error instanceof Error ? error.message : "Could not load relationship space.");
     }
-  }, [params.type]);
+  }, [scope]);
 
-  useEffect(() => {
-    if (params.visibility === "ours") {
-      setVisibility("ours");
-    } else if (params.visibility === "mine") {
-      setVisibility("mine");
-    }
-  }, [params.visibility]);
-
-  async function loadCouple() {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      router.replace("/");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("couple_members")
-      .select("couple_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (error) {
-      console.error(error);
-      setStatus(error.message);
-      return;
-    }
-
-    if (!data) {
-      setStatus("No relationship space found.");
-      return;
-    }
-
-    setCoupleId(data.couple_id);
-  }
+  useFocusEffect(useCallback(() => {
+    void loadCouple();
+  }, [loadCouple]));
 
   function changeEventType(type: EventType) {
     setEventType(type);
@@ -130,7 +128,7 @@ export default function RecordMomentScreen() {
   }
 
   async function saveMoment() {
-    if (saving) return;
+    if (!scope.isCurrent() || writeInFlight.current || saving) return;
 
     if (!coupleId) {
       setStatus("No relationship space found.");
@@ -150,10 +148,27 @@ export default function RecordMomentScreen() {
       return;
     }
 
+    writeInFlight.current = true;
+    requestId.current++;
     setSaving(true);
     setStatus("Saving...");
 
     try {
+      const auth = await scope.authorize();
+      if (!auth || !scope.isCurrent()) return;
+      // Never apply a retained draft to a replacement relationship space.
+      const { data: membership, error: membershipError } = await supabase
+        .from("couple_members").select("couple_id").eq("user_id", scope.userId)
+        .maybeSingle().setHeader("Authorization", `Bearer ${auth.token}`);
+      if (!scope.isCurrent()) return;
+      if (membershipError) throw new Error(membershipError.message);
+      if (membership?.couple_id !== coupleId) {
+        setCoupleId(null);
+        setPrivateNote("");
+        setSharedTopic("");
+        setCategory("");
+        throw new Error("Relationship space changed. Reopen this form before saving.");
+      }
       const finalVisibility: Visibility = isPrivateReflectionMode
         ? "mine"
         : isSharedMomentMode
@@ -172,26 +187,29 @@ export default function RecordMomentScreen() {
           p_shared_topic:
             finalVisibility === "ours" ? sharedTopic.trim() || null : null,
         },
-      );
-
-      if (error) throw error;
+      ).setHeader("Authorization", `Bearer ${auth.token}`);
+      if (!scope.isCurrent()) return;
+      if (error) throw new Error(error.message);
 
       if (!eventId) {
         throw new Error("Moment could not be created.");
       }
 
+      if (!(await scope.authorize()) || !scope.isCurrent()) return;
       router.replace({
         pathname: "/event/[id]",
         params: { id: eventId, scope: finalVisibility },
       });
     } catch (error) {
-      console.error("Failed to save moment:", error);
-
+      if (!scope.isCurrent()) return;
       setStatus(
         error instanceof Error ? error.message : "Could not save the moment.",
       );
     } finally {
-      setSaving(false);
+      if (scope.isCurrent()) {
+        writeInFlight.current = false;
+        setSaving(false);
+      }
     }
   }
 

@@ -1,6 +1,10 @@
+import {
+  AccountSessionBoundary, useAccountSessionScope, type AuthorizedIdentity,
+} from "@/components/AccountSessionBoundary";
+import { signOutAccount } from "@/lib/auth-transitions";
 import { AppBottomNav } from "@/components/AppBottomNav";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import {
   Button,
   Pressable,
@@ -14,6 +18,15 @@ import {
 import { supabase } from "@/lib/supabase";
 
 export default function ProfileScreen() {
+  return (
+    <AccountSessionBoundary routeKey="profile">
+      <ProfileContent />
+    </AccountSessionBoundary>
+  );
+}
+
+function ProfileContent() {
+  const scope = useAccountSessionScope();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -31,118 +44,139 @@ export default function ProfileScreen() {
 
   const [status, setStatus] = useState("Loading...");
 
-  useEffect(() => {
-    loadPage();
-  }, []);
+  const [ready, setReady] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const committedNotice = useRef("");
+  const requestId = useRef(0);
+  const writeInFlight = useRef(false);
+  const mutationGeneration = useRef(0);
+  const signingOut = useRef(false);
 
-  async function loadPage() {
-    setStatus("Loading...");
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      router.replace("/");
-      return;
-    }
-
-    setEmail(user.email ?? "");
-
-    // Load current user's profile
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("display_name")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError) {
-      console.error(profileError);
-      setStatus("Could not load profile");
-      return;
-    }
-
-    const currentName = profile.display_name ?? "";
-
-    setDisplayName(currentName);
-    setEditedName(currentName);
+  const clearPrivateState = useCallback(() => {
+    setEmail("");
+    setDisplayName("");
+    setEditedName("");
     setIsEditing(false);
-
-    // Load relationship membership
-    const { data: membership, error: membershipError } = await supabase
-      .from("couple_members")
-      .select("couple_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (membershipError) {
-      console.error(membershipError);
-      setStatus("Could not load relationship space");
-      return;
-    }
-
-    const currentCoupleId = membership?.couple_id ?? null;
-
-    setCoupleId(currentCoupleId);
+    setCoupleId(null);
     setPartnerConnected(false);
     setPartnerName(null);
     setInviteCode(null);
+    setJoinCode("");
+    setReady(false);
+  }, []);
 
-    if (currentCoupleId) {
-      // Find the partner in the same couple
-      const { data: members, error: membersError } = await supabase
-        .from("couple_members")
-        .select("user_id")
-        .eq("couple_id", currentCoupleId);
+  const loadPage = useCallback(async () => {
+    const id = ++requestId.current;
+    const valid = () => scope.isCurrent() && id === requestId.current;
+    if (!valid()) return false;
+    clearPrivateState();
+    setLoadFailed(false);
+    setStatus(committedNotice.current ? `${committedNotice.current}. Refreshing profile...` : "Loading...");
+    try {
+      const auth = await scope.authorize(committedNotice.current);
+      if (!auth || !valid()) return false;
+      const bearer = `Bearer ${auth.token}`;
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles").select("display_name").eq("id", scope.userId)
+        .single().setHeader("Authorization", bearer);
+      if (!valid()) return false;
+      if (profileError || !profile) throw new Error("Could not load profile");
 
-      if (membersError) {
-        console.error(membersError);
-        setStatus("Could not load relationship members");
+      const { data: membership, error: membershipError } = await supabase
+        .from("couple_members").select("couple_id").eq("user_id", scope.userId)
+        .maybeSingle().setHeader("Authorization", bearer);
+      if (!valid()) return false;
+      if (membershipError) throw new Error("Could not load relationship space");
+
+      const currentCoupleId = membership?.couple_id ?? null;
+      let connected = false;
+      let name: string | null = null;
+      let code: string | null = null;
+      if (currentCoupleId) {
+        const { data: members, error: membersError } = await supabase
+          .from("couple_members").select("user_id").eq("couple_id", currentCoupleId)
+          .setHeader("Authorization", bearer);
+        if (!valid()) return false;
+        if (membersError) throw new Error("Could not load relationship members");
+        connected = Boolean(members?.some((member) => member.user_id !== scope.userId));
+        if (connected) {
+          const { data } = await supabase.rpc("get_partner_display_name")
+            .setHeader("Authorization", bearer);
+          if (!valid()) return false;
+          name = typeof data === "string" ? data.trim() || null : null;
+        } else {
+          const { data: invite, error: inviteError } = await supabase
+            .from("couple_invites").select("code")
+            .eq("couple_id", currentCoupleId).eq("created_by", scope.userId)
+            .eq("status", "pending").gt("expires_at", new Date().toISOString())
+            .order("created_at", { ascending: false }).limit(1).maybeSingle()
+            .setHeader("Authorization", bearer);
+          if (!valid()) return false;
+          if (inviteError) throw new Error("Could not load invitation");
+          code = invite?.code ?? null;
+        }
+      }
+      if (!valid() || !(await scope.authorize(committedNotice.current)) || !valid()) return false;
+      // Publish one identity-consistent snapshot, never a partial old-account view.
+      setEmail(auth.user.email ?? "");
+      setDisplayName(profile.display_name ?? "");
+      setEditedName(profile.display_name ?? "");
+      setCoupleId(currentCoupleId);
+      setPartnerConnected(connected);
+      setPartnerName(name);
+      setInviteCode(code);
+      setReady(true);
+      setStatus(committedNotice.current);
+      committedNotice.current = "";
+      return true;
+    } catch (error) {
+      if (valid()) {
+        const message = error instanceof Error ? error.message : "Could not load profile";
+        setStatus(`${committedNotice.current ? `${committedNotice.current}. ` : ""}${message}. Retry loading your profile.`);
+        setLoadFailed(true);
+      }
+      return false;
+    }
+  }, [clearPrivateState, scope]);
+
+  useFocusEffect(useCallback(() => {
+    void loadPage();
+  }, [loadPage]));
+
+  async function performWrite<T>(
+    pending: string,
+    action: (auth: AuthorizedIdentity) => Promise<T>,
+    onSuccess: (result: T) => void,
+    reloadNotice = "",
+  ) {
+    if (!ready || !scope.isCurrent() || writeInFlight.current) return;
+    const generation = ++mutationGeneration.current;
+    const valid = () => scope.isCurrent() && generation === mutationGeneration.current;
+    writeInFlight.current = true;
+    requestId.current++;
+    setIsSaving(true);
+    setStatus(pending);
+    try {
+      const auth = await scope.authorize();
+      if (!auth || !valid()) return;
+      const result = await action(auth);
+      if (!valid()) return;
+      if (reloadNotice) {
+        // The mutation committed. Retry may repeat only the follow-up reads.
+        committedNotice.current = reloadNotice;
+        if (await loadPage() && valid()) onSuccess(result);
         return;
       }
-
-      const partnerMember = members?.find(
-        (member) => member.user_id !== user.id,
-      );
-
-      if (partnerMember) {
-        // STATE 3: Partner connected
-        setPartnerConnected(true);
-
-        const { data: name, error: partnerNameError } = await supabase.rpc(
-          "get_partner_display_name",
-        );
-
-        if (partnerNameError) {
-          console.error("Could not load partner name:", partnerNameError);
-        }
-
-        setPartnerName(typeof name === "string" ? name.trim() || null : null);
-      } else {
-        // STATE 1 or 2: Check for an existing invitation
-        const { data: existingInvite, error: inviteError } = await supabase
-          .from("couple_invites")
-          .select("code")
-          .eq("couple_id", currentCoupleId)
-          .eq("created_by", user.id)
-          .eq("status", "pending")
-          .gt("expires_at", new Date().toISOString())
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (inviteError) {
-          console.error("Could not load existing invitation:", inviteError);
-          setStatus("Could not load invitation");
-          return;
-        }
-
-        setInviteCode(existingInvite?.code ?? null);
+      if (!valid() || !(await scope.authorize()) || !valid()) return;
+      if (valid()) onSuccess(result);
+    } catch (error) {
+      if (valid()) setStatus(error instanceof Error ? error.message : "Could not update profile.");
+    } finally {
+      if (valid()) {
+        writeInFlight.current = false;
+        setIsSaving(false);
       }
     }
-
-    setStatus("");
   }
 
   // ---------------------------
@@ -163,159 +197,99 @@ export default function ProfileScreen() {
 
   async function saveProfile() {
     const cleanName = editedName.trim();
-
     if (!cleanName) {
       setStatus("Please enter a display name.");
       return;
     }
-
-    if (isSaving) return;
-
-    setIsSaving(true);
-    setStatus("Saving profile...");
-
-    try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        setStatus("Please sign in again.");
-        return;
-      }
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          display_name: cleanName,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
-
-      if (error) {
-        console.error(error);
-        setStatus(error.message);
-        return;
-      }
-
+    await performWrite("Saving profile...", async ({ token }) => {
+      const { error } = await supabase.from("profiles")
+        .update({ display_name: cleanName, updated_at: new Date().toISOString() })
+        .eq("id", scope.userId).setHeader("Authorization", `Bearer ${token}`);
+      if (error) throw new Error(error.message);
+    }, () => {
       setDisplayName(cleanName);
       setEditedName(cleanName);
       setIsEditing(false);
       setStatus("Profile updated successfully");
-    } catch (error) {
-      console.error(error);
-      setStatus("Could not save profile.");
-    } finally {
-      setIsSaving(false);
-    }
+    });
   }
-
-  // ---------------------------
-  // COUPLE CREATION
-  // ---------------------------
 
   async function createCouple() {
-    setStatus("Creating relationship space...");
-
-    const { error } = await supabase.from("couples").insert({});
-
-    if (error) {
-      console.error(error);
-      setStatus(error.message);
-      return;
-    }
-
-    setInviteCode(null);
-    await loadPage();
+    await performWrite("Creating relationship space...", async ({ token }) => {
+      const { error } = await supabase.from("couples").insert({})
+        .setHeader("Authorization", `Bearer ${token}`);
+      if (error) throw new Error(error.message);
+    }, () => {}, "Relationship space created");
   }
 
-  // ---------------------------
-  // PARTNER INVITATION
-  // ---------------------------
-
   async function createPartnerInvite() {
-    if (!coupleId) {
-      setStatus("Create a relationship space first.");
-      return;
-    }
-
-    if (partnerConnected) {
-      setStatus("Your partner is already connected.");
-      return;
-    }
-
-    setStatus("Creating invitation...");
-
-    const { data, error } = await supabase
-      .from("couple_invites")
-      .insert({
-        couple_id: coupleId,
-      })
-      .select("code")
-      .single();
-
-    if (error) {
-      console.error(error);
-      setStatus(error.message);
-      return;
-    }
-
-    setInviteCode(data.code);
-    setStatus("Invitation created");
+    if (!coupleId) { setStatus("Create a relationship space first."); return; }
+    if (partnerConnected) { setStatus("Your partner is already connected."); return; }
+    await performWrite("Creating invitation...", async ({ token }) => {
+      const { data, error } = await supabase.from("couple_invites")
+        .insert({ couple_id: coupleId }).select("code").single()
+        .setHeader("Authorization", `Bearer ${token}`);
+      if (error) throw new Error(error.message);
+      return data.code as string;
+    }, (code) => {
+      setInviteCode(code);
+      setStatus("Invitation created");
+    });
   }
 
   async function acceptPartnerInvite() {
     const cleanCode = joinCode.trim().toUpperCase();
-
-    if (!cleanCode) {
-      setStatus("Please enter an invite code.");
-      return;
-    }
-
-    setStatus("Joining relationship space...");
-
-    const { error } = await supabase.rpc("accept_couple_invite", {
-      invite_code: cleanCode,
-    });
-
-    if (error) {
-      console.error(error);
-      setStatus(error.message);
-      return;
-    }
-
-    setJoinCode("");
-    await loadPage();
-    setStatus("Partner connected");
+    if (!cleanCode) { setStatus("Please enter an invite code."); return; }
+    await performWrite("Joining relationship space...", async ({ token }) => {
+      const { error } = await supabase.rpc("accept_couple_invite", { invite_code: cleanCode })
+        .setHeader("Authorization", `Bearer ${token}`);
+      if (error) throw new Error(error.message);
+    }, () => {
+      setJoinCode("");
+      setStatus("Partner connected");
+    }, "Partner connected");
   }
 
-  // ---------------------------
-  // SIGN OUT
-  // ---------------------------
-
   async function signOut() {
-    const { error } = await supabase.auth.signOut({
-      scope: "local",
-    });
-
-    if (error) {
-      console.error(error);
-      setStatus(error.message);
-      return;
+    if (!scope.isCurrent() || signingOut.current) return;
+    signingOut.current = true;
+    mutationGeneration.current++;
+    writeInFlight.current = true;
+    requestId.current++;
+    committedNotice.current = "";
+    setLoadFailed(false);
+    clearPrivateState();
+    setIsSaving(true);
+    setStatus("Signing out...");
+    try {
+      const result = await signOutAccount(scope.userId, scope.isCurrent);
+      if (!scope.isCurrent()) return;
+      if (result?.error) throw new Error(result.error.message);
+    } catch (error) {
+      if (!scope.isCurrent()) return;
+      await loadPage();
+      if (scope.isCurrent()) setStatus(error instanceof Error ? error.message : "Could not sign out.");
+    } finally {
+      if (scope.isCurrent()) {
+        signingOut.current = false;
+        writeInFlight.current = false;
+        setIsSaving(false);
+      }
     }
-
-    setInviteCode(null);
-    setPartnerName(null);
-    setPartnerConnected(false);
-    setCoupleId(null);
-
-    router.replace("/");
   }
 
   // ---------------------------
   // USER INTERFACE
   // ---------------------------
+
+  if (!ready) {
+    return (
+      <View>
+        <Text>{status}</Text>
+        {loadFailed && <Button title="Retry" onPress={() => { void loadPage(); }} disabled={isSaving} />}
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -339,7 +313,7 @@ export default function ProfileScreen() {
                   <Text style={styles.email}>{email}</Text>
                 </View>
 
-                <Pressable style={styles.editButton} onPress={startEditing}>
+                <Pressable style={styles.editButton} onPress={startEditing} disabled={isSaving}>
                   <Text style={styles.editButtonText}>Edit</Text>
                 </Pressable>
               </View>
@@ -433,6 +407,7 @@ export default function ProfileScreen() {
                   <Button
                     title="Invite partner"
                     onPress={createPartnerInvite}
+                    disabled={isSaving}
                   />
                 </View>
               </>
@@ -456,6 +431,7 @@ export default function ProfileScreen() {
               <Button
                 title="Create relationship space"
                 onPress={createCouple}
+                disabled={isSaving}
               />
             </View>
 
@@ -469,10 +445,11 @@ export default function ProfileScreen() {
               onChangeText={setJoinCode}
               placeholder="Enter invite code"
               autoCapitalize="characters"
+              editable={!isSaving}
             />
 
             <View style={styles.section}>
-              <Button title="Join partner" onPress={acceptPartnerInvite} />
+              <Button title="Join partner" onPress={acceptPartnerInvite} disabled={isSaving} />
             </View>
           </>
         )}
