@@ -17,6 +17,7 @@ import { supabase } from "@/lib/supabase";
 
 type EventType = "positive" | "friction";
 type Visibility = "mine" | "ours";
+type MembershipState = "loading" | "ready" | "unavailable" | "error";
 
 const positiveCategories = [
   { value: "care", label: "Care" },
@@ -74,6 +75,7 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
     (params.type === "positive" || params.type === "friction");
 
   const [coupleId, setCoupleId] = useState<string | null>(null);
+  const [membershipState, setMembershipState] = useState<MembershipState>("loading");
 
   const initialType: EventType =
     params.type === "positive" ? "positive" : "friction";
@@ -89,7 +91,7 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
     params.visibility === "ours" ? "ours" : "mine",
   );
 
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("Checking relationship space...");
 
   const requestId = useRef(0);
   const writeInFlight = useRef(false);
@@ -98,11 +100,12 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
     const id = ++requestId.current;
     const valid = () => scope.isCurrent() && id === requestId.current;
     if (!valid()) return;
+    setMembershipState("loading");
+    setCoupleId(null);
+    setStatus("Checking relationship space...");
     try {
       const auth = await scope.authorize();
       if (!auth || !valid()) return;
-      setCoupleId(null);
-      setStatus("Loading...");
       const { data, error } = await supabase.from("couple_members")
         .select("couple_id").eq("user_id", scope.userId).maybeSingle()
         .setHeader("Authorization", `Bearer ${auth.token}`);
@@ -110,9 +113,13 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
       if (error) throw new Error(error.message);
       if (!(await scope.authorize()) || !valid()) return;
       setCoupleId(data?.couple_id ?? null);
-      setStatus(data ? "" : "No relationship space found.");
-    } catch (error) {
-      if (valid()) setStatus(error instanceof Error ? error.message : "Could not load relationship space.");
+      setMembershipState(data?.couple_id ? "ready" : "unavailable");
+      setStatus(data?.couple_id ? "" : "No relationship space found. Create or join one in Settings.");
+    } catch {
+      if (valid()) {
+        setMembershipState("error");
+        setStatus("Could not verify your relationship space. Reopen this form to try again.");
+      }
     }
   }, [scope]);
 
@@ -127,8 +134,11 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
     setCategory("");
   }
 
+  const willShare =
+    isSharedMomentMode || (!isPrivateReflectionMode && visibility === "ours");
+
   async function saveMoment() {
-    if (!scope.isCurrent() || writeInFlight.current || saving) return;
+    if (!scope.isCurrent() || writeInFlight.current || saving || membershipState !== "ready") return;
 
     if (!coupleId) {
       setStatus("No relationship space found.");
@@ -139,9 +149,6 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
       setStatus("Please choose a category.");
       return;
     }
-
-    const willShare =
-      isSharedMomentMode || (!isPrivateReflectionMode && visibility === "ours");
 
     if (willShare && !sharedTopic.trim()) {
       setStatus("Please write what you would like to share with your partner.");
@@ -161,9 +168,13 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
         .from("couple_members").select("couple_id").eq("user_id", scope.userId)
         .maybeSingle().setHeader("Authorization", `Bearer ${auth.token}`);
       if (!scope.isCurrent()) return;
-      if (membershipError) throw new Error(membershipError.message);
+      if (membershipError) {
+        setMembershipState("error");
+        throw new Error("Could not verify your relationship space. Reopen this form to try again.");
+      }
       if (membership?.couple_id !== coupleId) {
         setCoupleId(null);
+        setMembershipState("unavailable");
         setPrivateNote("");
         setSharedTopic("");
         setCategory("");
@@ -215,6 +226,9 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
 
   const categories =
     eventType === "positive" ? positiveCategories : frictionCategories;
+
+  const canSave = membershipState === "ready" && Boolean(coupleId) &&
+    Boolean(category) && (!willShare || Boolean(sharedTopic.trim())) && !saving;
 
   const saveButtonLabel = saving
     ? "Saving..."
@@ -531,12 +545,12 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
           {/* Save Action */}
           <View style={styles.saveButtonWrap}>
             <Pressable
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+              style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
               onPress={saveMoment}
-              disabled={saving}
+              disabled={!canSave}
               accessibilityRole="button"
               accessibilityLabel={saveButtonLabel}
-              accessibilityState={{ disabled: saving }}
+              accessibilityState={{ disabled: !canSave }}
             >
               <Text style={styles.saveButtonText}>{saveButtonLabel}</Text>
             </Pressable>
