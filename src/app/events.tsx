@@ -2,7 +2,7 @@ import { AppBottomNav } from "@/components/AppBottomNav";
 import type { EventRepairState } from "@/lib/repair-states";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -64,18 +64,27 @@ export default function EventsScreen() {
   const isMineSpace = scope === "mine";
 
   const [filter, setFilter] = useState<MomentFilter>("all");
+  const [filterScope, setFilterScope] = useState(scope);
   const [state, setState] = useState<EventsState>(EMPTY_STATE);
   const [authEpoch, setAuthEpoch] = useState(0);
   const [reloadEpoch, setReloadEpoch] = useState(0);
 
   // Switching between Our Space and Moments starts with the right filter.
-  useEffect(() => {
+  if (filterScope !== scope) {
+    setFilterScope(scope);
     setFilter("all");
-  }, [scope]);
+  }
+
+  // Both epochs restart the focused loader, including its subscriptions.
+  const focusContext = useMemo(
+    () => ({ router, authEpoch, reloadEpoch }),
+    [router, authEpoch, reloadEpoch],
+  );
 
   // Reload on focus, and discard results belonging to an older request/session.
   useFocusEffect(
     useCallback(() => {
+      const { router } = focusContext;
       let active = true;
       let requestNumber = 0;
       let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
@@ -258,7 +267,7 @@ export default function EventsScreen() {
         authListener.subscription.unsubscribe();
         removeRealtimeChannel();
       };
-    }, [router, authEpoch, reloadEpoch]),
+    }, [focusContext]),
   );
 
   // UI filtering is not a substitute for Supabase Row Level Security.
