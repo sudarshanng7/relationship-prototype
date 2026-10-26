@@ -400,7 +400,7 @@ function ProfileContent() {
               <>
                 <Text style={styles.description}>
                   Your relationship space is ready. Invite your partner when
-                  you're ready.
+                  you&apos;re ready.
                 </Text>
 
                 <View style={styles.section}>
