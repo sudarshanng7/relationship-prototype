@@ -7,7 +7,9 @@
  * Database RLS controls which partner reports this caller can read.
  */
 import {
+  isRepairSaveConflict,
   loadEventRepairStates,
+  saveMyRepairState,
   type EventRepairState,
   type RepairMethod,
   type RepairStatus,
@@ -32,7 +34,6 @@ type Props = {
 };
 
 type RepairWrite =
-  | "save_my_repair_state"
   | "share_my_repair_state"
   | "withdraw_my_repair_state";
 
@@ -64,10 +65,38 @@ function methodLabel(value: RepairMethod | null): string | null {
 }
 
 function errorText(error: unknown): string {
-  return error instanceof Error
+  const message = typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string"
     ? error.message
-    : "Something went wrong. Please try again.";
+    : null;
+
+  // Match only reviewed messages and return fixed UI copy. Never display raw
+  // backend messages, details, or hints, including suffixes on known messages.
+  switch (message) {
+    case "Moment unavailable":
+      return "Moment unavailable";
+    case "Moment unavailable for sharing":
+      return "Moment unavailable for sharing";
+    case "Authentication required":
+      return "Please sign in again.";
+    case "Reload your repair update before saving.":
+      return "Reload your repair update before saving.";
+    case "Reload your repair update before sharing.":
+    case "Please reload your repair update before sharing":
+      return "Reload your repair update before sharing.";
+    case "Repair update changed, was already shared, or needs confirmation; please reload":
+      return "Your repair update changed or needs confirmation. Reload before sharing.";
+    case "The save returned no usable report version. Reload before sharing.":
+      return "Your saved update could not be confirmed. Reload before sharing.";
+    default:
+      return "Something went wrong. Please try again.";
+  }
 }
+
+const SAVE_CONFLICT_NOTICE =
+  "A newer repair report exists. Your choices are still here and were not saved or shared. Load the newer update before saving again; loading it will replace your unsaved choices.";
 
 export function EventRepairSection({
   eventId,
@@ -85,6 +114,7 @@ export function EventRepairSection({
   const [draftMethod, setDraftMethod] = useState<RepairMethod | null>(null);
   const [confirmShare, setConfirmShare] = useState(false);
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
+  const [saveConflict, setSaveConflict] = useState(false);
   const requestId = useRef(0);
   const focusGeneration = useRef(0);
   const writeInFlight = useRef(false);
@@ -114,6 +144,7 @@ export function EventRepairSection({
       setDraftMethod(mine?.what_helped ?? null);
       setConfirmShare(false);
       setConfirmWithdraw(false);
+      setSaveConflict(false);
     } catch (e) {
       if (valid()) {
         setRows([]);
@@ -143,6 +174,7 @@ export function EventRepairSection({
       setDraftMethod(null);
       setConfirmShare(false);
       setConfirmWithdraw(false);
+      setSaveConflict(false);
       setBusy(false);
       setNotice("");
       setLoading(true);
@@ -167,9 +199,11 @@ export function EventRepairSection({
     (draftStatus !== mine.repair_status || currentMethod !== mine.what_helped),
   );
   const canSave =
+    !saveConflict &&
     draftStatus !== null &&
     (!mine || dirty || mine.status_origin !== "explicit");
   const canShare = Boolean(
+    !saveConflict &&
     visibility === "ours" &&
     mine &&
     mine.sharing_status === "private" &&
@@ -207,6 +241,73 @@ export function EventRepairSection({
     return valid();
   }
 
+  async function saveRepairState(
+    status: RepairStatus,
+    method: RepairMethod | null,
+    expectedVersion: number | null,
+    valid: () => boolean,
+  ): Promise<number | null> {
+    const token = await authorize();
+    if (!token || !valid()) return null;
+    const version = await saveMyRepairState(
+      eventId,
+      status,
+      method,
+      expectedVersion,
+      token,
+    );
+    return valid() ? version : null;
+  }
+
+  function showSaveError(error: unknown) {
+    setConfirmShare(false);
+    if (isRepairSaveConflict(error)) {
+      setSaveConflict(true);
+      setError(SAVE_CONFLICT_NOTICE);
+    } else {
+      setError(errorText(error));
+    }
+  }
+
+  async function savePrivately() {
+    if (
+      !isCurrent() ||
+      writeInFlight.current ||
+      busy ||
+      loading ||
+      !canSave ||
+      draftStatus === null
+    )
+      return;
+    const generation = focusGeneration.current;
+    const valid = () => isCurrent() && generation === focusGeneration.current;
+    writeInFlight.current = true;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const version = await saveRepairState(
+        draftStatus,
+        currentMethod,
+        mine?.report_version ?? null,
+        valid,
+      );
+      if (version === null) return;
+      await refresh();
+      if (valid())
+        setNotice("Saved privately. It was not shared with your partner.");
+    } catch (e) {
+      // Keep both the draft and its loaded version; never retry against a newer
+      // version without the user deliberately loading and reviewing that report.
+      if (valid()) showSaveError(e);
+    } finally {
+      if (valid()) {
+        writeInFlight.current = false;
+        setBusy(false);
+      }
+    }
+  }
+
   async function saveAndShare() {
     if (
       !isCurrent() ||
@@ -221,14 +322,12 @@ export function EventRepairSection({
     const valid = () => isCurrent() && generation === focusGeneration.current;
     writeInFlight.current = true;
 
-    // Capture exactly the draft reviewed in the confirmation. The save RPC
-    // increments report_version by one on both inserts and updates.
-    // Never re-read a version after save and blindly share it: another device
-    // might have edited the report between the requests.
+    // Share the version returned by this exact save, never a guessed or reloaded
+    // version that could refer to a different device's report.
     const reviewedStatus = draftStatus;
     const reviewedMethod = currentMethod;
     const needsSave = canSave;
-    const expectedVersion = (mine?.report_version ?? 0) + (needsSave ? 1 : 0);
+    let expectedVersion = mine?.report_version ?? null;
     let savedPrivately = false;
 
     setBusy(true);
@@ -236,18 +335,13 @@ export function EventRepairSection({
     setNotice("");
     try {
       if (needsSave) {
-        if (
-          !(await writeRepairState(
-            "save_my_repair_state",
-            {
-              p_event_id: eventId,
-              p_repair_status: reviewedStatus,
-              p_what_helped: reviewedMethod,
-            },
-            valid,
-          ))
-        )
-          return;
+        expectedVersion = await saveRepairState(
+          reviewedStatus,
+          reviewedMethod,
+          expectedVersion,
+          valid,
+        );
+        if (expectedVersion === null) return;
         savedPrivately = true;
       }
 
@@ -269,6 +363,10 @@ export function EventRepairSection({
         setNotice("Your update was saved and shared with your partner.");
     } catch (e) {
       if (!valid()) return;
+      if (needsSave && !savedPrivately) {
+        showSaveError(e);
+        return;
+      }
       const detail = errorText(e);
       await refresh();
       if (!valid()) return;
@@ -343,7 +441,8 @@ export function EventRepairSection({
           {mine ? (
             <View style={styles.summary}>
               <Text style={styles.summaryTitle}>
-                Saved for you: {statusLabel(mine.repair_status)}
+                {saveConflict ? "Last loaded for you" : "Saved for you"}:{" "}
+                {statusLabel(mine.repair_status)}
               </Text>
               <Text style={styles.summarySecondary}>
                 {mine.sharing_status === "shared"
@@ -365,7 +464,9 @@ export function EventRepairSection({
             </View>
           ) : (
             <Text style={styles.helper}>
-              You haven&apos;t recorded a personal repair update yet.
+              {saveConflict
+                ? "Your newer saved report has not been loaded here yet."
+                : "You haven't recorded a personal repair update yet."}
             </Text>
           )}
 
@@ -452,18 +553,7 @@ export function EventRepairSection({
               style={[styles.primaryButton, busy && styles.disabled]}
               accessibilityRole="button"
               disabled={busy}
-              onPress={() => {
-                if (!draftStatus) return;
-                void execute(
-                  "save_my_repair_state",
-                  {
-                    p_event_id: eventId,
-                    p_repair_status: draftStatus,
-                    p_what_helped: currentMethod,
-                  },
-                  "Saved privately. It was not shared with your partner.",
-                );
-              }}
+              onPress={() => void savePrivately()}
             >
               <Text style={styles.primaryLabel}>
                 {busy ? "Saving…" : "Save privately"}
@@ -606,7 +696,11 @@ export function EventRepairSection({
         onPress={() => void refresh()}
         disabled={busy || loading}
       >
-        <Text style={styles.refreshLabel}>Refresh updates</Text>
+        <Text style={styles.refreshLabel}>
+          {saveConflict
+            ? "Load newer update (replaces your choices)"
+            : "Refresh updates"}
+        </Text>
       </Pressable>
     </View>
   );

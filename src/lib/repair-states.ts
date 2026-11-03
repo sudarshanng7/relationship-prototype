@@ -58,18 +58,51 @@ export async function loadEventRepairStates(
   return (data ?? []) as EventRepairState[];
 }
 
-/** Saves the caller's report and automatically returns it to private. */
+const SAVE_CONFLICT_MESSAGE = "Repair update changed; reload before saving";
+
+/** PostgREST errors are plain objects, rather than Error instances. */
+export function isRepairSaveConflict(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    error.message === SAVE_CONFLICT_MESSAGE
+  );
+}
+
+/**
+ * Saves only the caller's reviewed version and returns the actual new version.
+ * Pass null only when the last load found no report. Saving returns it to private.
+ * An optional token pins requests from identity-guarded views to their author.
+ */
 export async function saveMyRepairState(
   eventId: string,
   status: RepairStatus,
-  whatHelped: RepairMethod | null = null,
-): Promise<void> {
-  const { error } = await supabase.rpc("save_my_repair_state", {
+  whatHelped: RepairMethod | null,
+  expectedReportVersion: number | null,
+  accessToken?: string,
+): Promise<number> {
+  if (
+    expectedReportVersion !== null &&
+    (!Number.isSafeInteger(expectedReportVersion) || expectedReportVersion < 1)
+  ) {
+    throw new Error("Reload your repair update before saving.");
+  }
+  const request = supabase.rpc("save_my_repair_state_checked", {
     p_event_id: eventId,
     p_repair_status: status,
     p_what_helped: whatHelped,
+    p_expected_report_version: expectedReportVersion,
   });
+  if (accessToken) request.setHeader("Authorization", `Bearer ${accessToken}`);
+  const { data, error } = await request;
   if (error) throw error;
+  if (typeof data !== "number" || !Number.isSafeInteger(data) || data < 1) {
+    throw new Error(
+      "The save returned no usable report version. Reload before sharing.",
+    );
+  }
+  return data;
 }
 
 /** Shares exactly the report version the caller reviewed in the UI. */
