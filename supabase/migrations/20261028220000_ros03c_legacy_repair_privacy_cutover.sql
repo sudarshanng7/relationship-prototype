@@ -19,6 +19,8 @@ BEGIN;
 
 SET LOCAL lock_timeout = '5s';
 
+SET LOCAL search_path = pg_catalog, public;
+
 -- Fail rather than silently archive an RLS-filtered
 -- subset of historical relationship events.
 SET LOCAL row_security = off;
