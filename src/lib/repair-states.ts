@@ -59,6 +59,16 @@ export async function loadEventRepairStates(
 }
 
 const SAVE_CONFLICT_MESSAGE = "Repair update changed; reload before saving";
+const WITHDRAW_CONFLICT_MESSAGE = "Repair update changed; reload before withdrawing";
+
+export function isRepairWithdrawalConflict(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    error.message === WITHDRAW_CONFLICT_MESSAGE
+  );
+}
 
 /** PostgREST errors are plain objects, rather than Error instances. */
 export function isRepairSaveConflict(error: unknown): boolean {
@@ -120,13 +130,31 @@ export async function shareMyRepairState(
   if (error) throw error;
 }
 
-/** Withdraws the caller's shared report while preserving the private record. */
+/** Keeps the reviewed report private and invalidates shares of that version. */
 export async function withdrawMyRepairState(
   eventId: string,
-): Promise<boolean> {
-  const { data, error } = await supabase.rpc("withdraw_my_repair_state", {
-    p_event_id: eventId,
-  });
+  expectedReportVersion: number,
+  accessToken: string,
+): Promise<number> {
+  if (!Number.isSafeInteger(expectedReportVersion) || expectedReportVersion < 1) {
+    throw new Error("Reload your repair update before withdrawing.");
+  }
+  if (!accessToken) throw new Error("Authentication required");
+  const { data, error } = await supabase
+    .rpc("withdraw_my_repair_state_checked", {
+      p_event_id: eventId,
+      p_expected_report_version: expectedReportVersion,
+    })
+    .setHeader("Authorization", `Bearer ${accessToken}`);
   if (error) throw error;
-  return data === true;
+  if (
+    typeof data !== "number" ||
+    !Number.isSafeInteger(data) ||
+    data !== expectedReportVersion + 1
+  ) {
+    throw new Error(
+      "The withdrawal returned no usable report version. Reload before trying again.",
+    );
+  }
+  return data;
 }

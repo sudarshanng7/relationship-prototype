@@ -8,8 +8,10 @@
  */
 import {
   isRepairSaveConflict,
+  isRepairWithdrawalConflict,
   loadEventRepairStates,
   saveMyRepairState,
+  withdrawMyRepairState,
   type EventRepairState,
   type RepairMethod,
   type RepairStatus,
@@ -33,9 +35,7 @@ type Props = {
   isCurrent: () => boolean;
 };
 
-type RepairWrite =
-  | "share_my_repair_state"
-  | "withdraw_my_repair_state";
+type RepairWrite = "share_my_repair_state";
 
 const STATUSES: { value: RepairStatus; label: string }[] = [
   { value: "open", label: "Still unresolved" },
@@ -88,6 +88,11 @@ function errorText(error: unknown): string {
       return "Reload your repair update before sharing.";
     case "Repair update changed, was already shared, or needs confirmation; please reload":
       return "Your repair update changed or needs confirmation. Reload before sharing.";
+    case "Reload your repair update before withdrawing.":
+    case "Please reload your repair update before withdrawing":
+      return "Reload your repair update before withdrawing.";
+    case "The withdrawal returned no usable report version. Reload before trying again.":
+      return "Your withdrawal could not be confirmed. Reload before trying again.";
     case "The save returned no usable report version. Reload before sharing.":
       return "Your saved update could not be confirmed. Reload before sharing.";
     default:
@@ -97,6 +102,9 @@ function errorText(error: unknown): string {
 
 const SAVE_CONFLICT_NOTICE =
   "A newer repair report exists. Your choices are still here and were not saved or shared. Load the newer update before saving again; loading it will replace your unsaved choices.";
+
+const WITHDRAW_CONFLICT_NOTICE =
+  "Your repair report changed. Sharing was not withdrawn by this request. Your unsaved choices are still here. Load the newer update before confirming withdrawal again; loading it will replace your unsaved choices.";
 
 export function EventRepairSection({
   eventId,
@@ -114,7 +122,7 @@ export function EventRepairSection({
   const [draftMethod, setDraftMethod] = useState<RepairMethod | null>(null);
   const [confirmShare, setConfirmShare] = useState(false);
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
-  const [saveConflict, setSaveConflict] = useState(false);
+  const [reloadRequired, setReloadRequired] = useState(false);
   const requestId = useRef(0);
   const focusGeneration = useRef(0);
   const writeInFlight = useRef(false);
@@ -144,7 +152,7 @@ export function EventRepairSection({
       setDraftMethod(mine?.what_helped ?? null);
       setConfirmShare(false);
       setConfirmWithdraw(false);
-      setSaveConflict(false);
+      setReloadRequired(false);
     } catch (e) {
       if (valid()) {
         setRows([]);
@@ -174,7 +182,7 @@ export function EventRepairSection({
       setDraftMethod(null);
       setConfirmShare(false);
       setConfirmWithdraw(false);
-      setSaveConflict(false);
+      setReloadRequired(false);
       setBusy(false);
       setNotice("");
       setLoading(true);
@@ -199,11 +207,11 @@ export function EventRepairSection({
     (draftStatus !== mine.repair_status || currentMethod !== mine.what_helped),
   );
   const canSave =
-    !saveConflict &&
+    !reloadRequired &&
     draftStatus !== null &&
     (!mine || dirty || mine.status_origin !== "explicit");
   const canShare = Boolean(
-    !saveConflict &&
+    !reloadRequired &&
     visibility === "ours" &&
     mine &&
     mine.sharing_status === "private" &&
@@ -262,7 +270,7 @@ export function EventRepairSection({
   function showSaveError(error: unknown) {
     setConfirmShare(false);
     if (isRepairSaveConflict(error)) {
-      setSaveConflict(true);
+      setReloadRequired(true);
       setError(SAVE_CONFLICT_NOTICE);
     } else {
       setError(errorText(error));
@@ -383,28 +391,53 @@ export function EventRepairSection({
     }
   }
 
-  async function execute(
-    name: RepairWrite,
-    args: Record<string, unknown>,
-    success: string,
-  ) {
-    if (!isCurrent() || writeInFlight.current || busy || loading) return;
+  async function withdraw() {
+    if (
+      !isCurrent() ||
+      writeInFlight.current ||
+      busy ||
+      loading ||
+      reloadRequired ||
+      !mine ||
+      !confirmWithdraw
+    )
+      return;
     const generation = focusGeneration.current;
     const valid = () => isCurrent() && generation === focusGeneration.current;
+    const expectedVersion = mine.report_version;
     writeInFlight.current = true;
     setBusy(true);
     setError("");
     setNotice("");
     try {
-      if (!(await writeRepairState(name, args, valid))) return;
+      const token = await authorize();
+      if (!token || !valid()) return;
+      await withdrawMyRepairState(eventId, expectedVersion, token);
+      if (!valid()) return;
+      setConfirmWithdraw(false);
       await refresh();
-      if (valid()) setNotice(success);
+      if (valid()) setNotice("Withdrawal recorded; your personal record remains.");
     } catch (e) {
       if (!valid()) return;
-      const message = errorText(e);
-      // Reload after a stale-version error rather than reusing the old value.
-      await refresh();
-      if (valid()) setError(message);
+      setConfirmWithdraw(false);
+      setConfirmShare(false);
+      if (isRepairWithdrawalConflict(e)) {
+        // Keep the loaded version and draft; never fetch/retry a newer version
+        // until the author deliberately reloads and confirms a new withdrawal.
+        setReloadRequired(true);
+        setError(WITHDRAW_CONFLICT_NOTICE);
+      } else {
+        const message = errorText(e);
+        if (message === "Moment unavailable" || message === "Please sign in again.") {
+          // Purge inaccessible rows using the existing authorized read path.
+          await refresh();
+        } else {
+          // A transport or malformed-response failure can hide a committed write.
+          // Preserve choices, but require reconciliation before another write.
+          setReloadRequired(true);
+        }
+        if (valid()) setError(message);
+      }
     } finally {
       if (valid()) {
         writeInFlight.current = false;
@@ -441,7 +474,7 @@ export function EventRepairSection({
           {mine ? (
             <View style={styles.summary}>
               <Text style={styles.summaryTitle}>
-                {saveConflict ? "Last loaded for you" : "Saved for you"}:{" "}
+                {reloadRequired ? "Last loaded for you" : "Saved for you"}:{" "}
                 {statusLabel(mine.repair_status)}
               </Text>
               <Text style={styles.summarySecondary}>
@@ -464,7 +497,7 @@ export function EventRepairSection({
             </View>
           ) : (
             <Text style={styles.helper}>
-              {saveConflict
+              {reloadRequired
                 ? "Your newer saved report has not been loaded here yet."
                 : "You haven't recorded a personal repair update yet."}
             </Text>
@@ -608,7 +641,7 @@ export function EventRepairSection({
               </View>
             ))}
 
-          {visibility === "ours" && mine?.sharing_status === "shared" && (
+          {!reloadRequired && visibility === "ours" && mine?.sharing_status === "shared" && (
             <View style={styles.shareSection}>
               <Text style={styles.subheading}>Sharing your update</Text>
               <Text style={styles.helper}>
@@ -633,13 +666,7 @@ export function EventRepairSection({
                     style={[styles.primaryButton, busy && styles.disabled]}
                     accessibilityRole="button"
                     disabled={busy}
-                    onPress={() =>
-                      void execute(
-                        "withdraw_my_repair_state",
-                        { p_event_id: eventId },
-                        "Update withdrawn from sharing; your personal record remains.",
-                      )
-                    }
+                    onPress={() => void withdraw()}
                   >
                     <Text style={styles.primaryLabel}>Confirm withdrawal</Text>
                   </Pressable>
@@ -697,7 +724,7 @@ export function EventRepairSection({
         disabled={busy || loading}
       >
         <Text style={styles.refreshLabel}>
-          {saveConflict
+          {reloadRequired
             ? "Load newer update (replaces your choices)"
             : "Refresh updates"}
         </Text>

@@ -32,7 +32,7 @@ function loadSource(file, imports) {
 
 const checkedSave = "save_my_repair_state_checked";
 const share = "share_my_repair_state";
-const withdraw = "withdraw_my_repair_state";
+const withdraw = "withdraw_my_repair_state_checked";
 const conflict = {
   code: "P0001",
   message: "Repair update changed; reload before saving",
@@ -454,7 +454,7 @@ test("UI withdrawal still uses the author-bound RPC and reloads its version", as
   const db = client([row({ sharing_status: "shared" })]);
   db.respond = async () => {
     db.rows = [row({ report_version: 8 })];
-    return { data: true, error: null };
+    return { data: 8, error: null };
   };
   const ui = harness(db);
   await ui.flush();
@@ -537,4 +537,177 @@ test("UI handles unavailable withdrawal without exposing backend metadata or cla
   assert.equal(db.reads, 2, "denial must refresh using the existing authorized read path");
   assert.match(ui.text(), /Moment unavailable/);
   assert.doesNotMatch(ui.text(), /PRIVATE_|Update withdrawn from sharing|Your current saved update is visible/);
+});
+
+const withdrawalConflict = {
+  code: "P0001", message: "Repair update changed; reload before withdrawing",
+  details: "PRIVATE_WITHDRAW_DETAIL", hint: "PRIVATE_WITHDRAW_HINT",
+};
+
+test("typed withdrawal consumes a reviewed private version and pins its author", async () => {
+  const db = client([row()]);
+  db.respond = async () => ({ data: 8, error: null });
+  assert.equal(await db.lib.withdrawMyRepairState("event-a", 7, "pinned-author"), 8);
+  assert.deepEqual(db.calls, [{
+    name: withdraw, args: { p_event_id: "event-a", p_expected_report_version: 7 },
+    headers: { Authorization: "Bearer pinned-author" },
+  }]);
+});
+
+test("typed withdrawal rejects invalid input and missing author tokens before dispatch", async () => {
+  const db = client();
+  for (const version of [undefined, null, 0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+    await assert.rejects(db.lib.withdrawMyRepairState("event-a", version, "token"),
+      /Reload your repair update before withdrawing/);
+  }
+  await assert.rejects(db.lib.withdrawMyRepairState("event-a", 7, ""), /Authentication required/);
+  assert.equal(db.calls.length, 0);
+});
+
+test("typed withdrawal propagates exact conflicts without backend detail rendering", async () => {
+  const db = client();
+  db.respond = async () => ({ error: withdrawalConflict });
+  await assert.rejects(db.lib.withdrawMyRepairState("event-a", 7, "token"),
+    (error) => error === withdrawalConflict && db.lib.isRepairWithdrawalConflict(error));
+  for (const error of [null, {}, { message: withdrawalConflict.message + ": INTERNAL" }]) {
+    assert.equal(db.lib.isRepairWithdrawalConflict(error), false);
+  }
+});
+
+for (const data of [false, true, null, undefined, "8", [], {}, 0, 7, 9, NaN, Number.MAX_SAFE_INTEGER + 1]) {
+  test(`withdrawal rejects malformed/unexpected response ${String(data)} without claiming success`, async () => {
+    const db = client([row({ sharing_status: "shared" })]);
+    db.respond = async () => ({ data, error: null });
+    const ui = harness(db);
+    await ui.flush();
+    await edit(ui);
+    await ui.press("Withdraw shared update");
+    await ui.press("Confirm withdrawal");
+    assert.match(ui.text(), /Your withdrawal could not be confirmed. Reload before trying again./);
+    assert.doesNotMatch(ui.text(), /Withdrawal recorded|Confirm withdrawal/);
+    assert.equal(ui.selected("Talking"), true);
+    assert.equal(db.reads, 1);
+    assert.equal(db.calls.length, 1);
+    assert.ok(ui.button("Load newer update (replaces your choices)"));
+  });
+}
+
+for (const [scenario, latest] of [
+  ["newer share", row({ report_version: 9, sharing_status: "shared", repair_status: "partially_repaired" })],
+  ["save before pending share", row({ report_version: 8 })],
+  ["lost-response retry after later sharing", row({ report_version: 9, sharing_status: "shared" })],
+]) {
+  test(`UI conflict after ${scenario} preserves choices until explicit reload and reconfirmation`, async () => {
+    const db = client([row({ sharing_status: "shared" })]);
+    db.respond = async () => { db.rows = [latest]; return { error: withdrawalConflict }; };
+    const ui = harness(db);
+    await ui.flush();
+    await edit(ui);
+    const retainedConfirm = async () => {
+      await ui.press("Withdraw shared update");
+      return ui.button("Confirm withdrawal");
+    };
+    const confirm = await retainedConfirm();
+    confirm.props.onPress();
+    await ui.flush();
+    assert.match(ui.text(), /Sharing was not withdrawn by this request/);
+    assert.doesNotMatch(ui.text(), /PRIVATE_|Withdrawal recorded|Confirm withdrawal/);
+    assert.equal(ui.selected("I feel reconnected"), true);
+    assert.equal(ui.selected("Talking"), true);
+    assert.equal(db.reads, 1, "conflict must not automatically replace draft choices");
+    assert.equal(db.calls[0].args.p_expected_report_version, 7);
+    assert.equal(ui.button("Save privately"), undefined);
+    await ui.press("Load newer update (replaces your choices)");
+    assert.equal(db.calls.length, 1, "reload must never retry a withdrawal");
+    if (latest.sharing_status === "shared") {
+      db.respond = async () => {
+        db.rows = [{ ...latest, report_version: latest.report_version + 1, sharing_status: "private" }];
+        return { data: latest.report_version + 1, error: null };
+      };
+      await ui.press("Withdraw shared update");
+      assert.equal(db.calls.length, 1, "new confirmation is required");
+      await ui.press("Confirm withdrawal");
+      assert.equal(db.calls[1].args.p_expected_report_version, latest.report_version);
+      assert.match(ui.text(), /Withdrawal recorded/);
+    } else {
+      assert.equal(ui.button("Withdraw shared update"), undefined);
+    }
+  });
+}
+
+test("UI keeps an uncertain lost-response withdrawal blocked until explicit reconciliation", async () => {
+  const db = client([row({ sharing_status: "shared" })]);
+  db.respond = async () => {
+    db.rows = [row({ report_version: 8 })]; // Represents a committed write with lost response.
+    throw new Error("PRIVATE_CONNECTION_HOST");
+  };
+  const ui = harness(db);
+  await ui.flush();
+  await edit(ui);
+  await ui.press("Withdraw shared update");
+  await ui.press("Confirm withdrawal");
+  assert.match(ui.text(), /Something went wrong/);
+  assert.doesNotMatch(ui.text(), /PRIVATE_|Withdrawal recorded/);
+  assert.equal(ui.selected("Talking"), true);
+  assert.equal(db.calls.length, 1);
+  await ui.press("Load newer update (replaces your choices)");
+  assert.equal(db.calls.length, 1);
+  assert.match(ui.text(), /Private — not shared/);
+});
+
+for (const invalidate of ["identity", "blur", "unmount"]) {
+  test(`UI suppresses withdrawal completion after ${invalidate}`, async () => {
+    const db = client([row({ sharing_status: "shared" })]);
+    const pending = deferred();
+    db.respond = () => pending.promise;
+    const ui = harness(db);
+    await ui.flush();
+    await ui.press("Withdraw shared update");
+    await ui.press("Confirm withdrawal");
+    assert.equal(db.calls[0].headers.Authorization, "Bearer author-token");
+    if (invalidate === "identity") ui.current = false;
+    else ui[invalidate]();
+    pending.resolve({ data: 8, error: null });
+    await ui.flush();
+    assert.equal(db.reads, 1);
+    assert.doesNotMatch(ui.text(), /Withdrawal recorded/);
+  });
+}
+
+test("UI withdrawal rechecks identity before dispatch and suppresses duplicate confirmations", async () => {
+  const db = client([row({ sharing_status: "shared" })]);
+  const ui = harness(db);
+  await ui.flush();
+  await ui.press("Withdraw shared update");
+  const pending = deferred();
+  ui.authorize = () => pending.promise;
+  const confirm = ui.button("Confirm withdrawal");
+  confirm.props.onPress();
+  confirm.props.onPress();
+  await ui.flush();
+  ui.current = false;
+  pending.resolve("old-author-token");
+  await ui.flush();
+  assert.equal(db.calls.length, 0);
+});
+
+test("UI withdrawal uses its own version and leaves the partner response untouched", async () => {
+  const partner = row({ user_id: "user-b", sharing_status: "shared", report_version: 90 });
+  const db = client([partner, row({ sharing_status: "shared" })]);
+  const pending = deferred();
+  db.respond = () => pending.promise;
+  const ui = harness(db);
+  await ui.flush();
+  await ui.press("Withdraw shared update");
+  const confirm = ui.button("Confirm withdrawal");
+  confirm.props.onPress();
+  confirm.props.onPress();
+  await ui.flush();
+  assert.equal(db.calls.length, 1);
+  assert.equal(db.calls[0].args.p_expected_report_version, 7);
+  assert.deepEqual(db.rows[0], partner);
+  db.rows = [partner, row({ report_version: 8 })];
+  pending.resolve({ data: 8, error: null });
+  await ui.flush();
+  assert.match(ui.text(), /Withdrawal recorded/);
 });
