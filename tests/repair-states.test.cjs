@@ -518,3 +518,23 @@ test("UI suppresses duplicate dispatch while a checked save is pending", async (
   pending.resolve({ data: 42, error: null });
   await ui.flush();
 });
+
+test("UI handles unavailable withdrawal without exposing backend metadata or claiming success", async () => {
+  const db = client([row({ sharing_status: "shared" })]);
+  db.respond = async () => {
+    db.rows = []; // Subsequent authorized reads no longer return the old report.
+    return { error: {
+      code: "P0001", message: "Moment unavailable",
+      details: "PRIVATE_MOMENT_DETAIL", hint: "PRIVATE_MEMBERSHIP_HINT",
+    } };
+  };
+  const ui = harness(db);
+  await ui.flush();
+  await ui.press("Withdraw shared update");
+  await ui.press("Confirm withdrawal");
+  assert.deepEqual(db.calls.map((call) => call.name), [withdraw]);
+  assert.equal(db.calls[0].headers.Authorization, "Bearer author-token");
+  assert.equal(db.reads, 2, "denial must refresh using the existing authorized read path");
+  assert.match(ui.text(), /Moment unavailable/);
+  assert.doesNotMatch(ui.text(), /PRIVATE_|Update withdrawn from sharing|Your current saved update is visible/);
+});
