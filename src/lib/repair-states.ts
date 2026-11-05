@@ -45,14 +45,17 @@ export type EventRepairState = {
 const REPAIR_SELECT =
   "event_id, user_id, repair_status, what_helped, sharing_status, shared_at, reported_at, status_origin, report_version, created_at, updated_at";
 
-/** Returns only rows that RLS permits this signed-in caller to read. */
+/** RLS-constrained read; guarded views can pin it to their validated session. */
 export async function loadEventRepairStates(
   eventId: string,
+  accessToken?: string,
 ): Promise<EventRepairState[]> {
-  const { data, error } = await supabase
+  const request = supabase
     .from("event_repair_states")
     .select(REPAIR_SELECT)
     .eq("event_id", eventId);
+  if (accessToken) request.setHeader("Authorization", `Bearer ${accessToken}`);
+  const { data, error } = await request;
 
   if (error) throw error;
   return (data ?? []) as EventRepairState[];
@@ -60,6 +63,21 @@ export async function loadEventRepairStates(
 
 const SAVE_CONFLICT_MESSAGE = "Repair update changed; reload before saving";
 const WITHDRAW_CONFLICT_MESSAGE = "Repair update changed; reload before withdrawing";
+
+/** Only exact reviewed PostgreSQL rejections establish that this share was denied. */
+export function isRepairSharingRejection(error: unknown): boolean {
+  return (
+    typeof error === "object" && error !== null &&
+    "code" in error && error.code === "P0001" &&
+    "message" in error && typeof error.message === "string" &&
+    [
+      "Authentication required",
+      "Moment unavailable for sharing",
+      "Please reload your repair update before sharing",
+      "Repair update changed, was already shared, or needs confirmation; please reload",
+    ].includes(error.message)
+  );
+}
 
 export function isRepairWithdrawalConflict(error: unknown): boolean {
   return (

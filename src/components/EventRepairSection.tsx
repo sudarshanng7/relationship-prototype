@@ -8,6 +8,7 @@
  */
 import {
   isRepairSaveConflict,
+  isRepairSharingRejection,
   isRepairWithdrawalConflict,
   loadEventRepairStates,
   saveMyRepairState,
@@ -106,6 +107,60 @@ const SAVE_CONFLICT_NOTICE =
 const WITHDRAW_CONFLICT_NOTICE =
   "Your repair report changed. Sharing was not withdrawn by this request. Your unsaved choices are still here. Load the newer update before confirming withdrawal again; loading it will replace your unsaved choices.";
 
+type SharingAttempt = {
+  version: number;
+  status: RepairStatus;
+  method: RepairMethod | null;
+  saved: boolean;
+  outcome: "unknown" | "confirmed" | "rejected";
+  rejection?: string;
+};
+
+const SHARING_SUCCESS = "Your update was saved and shared with your partner.";
+const SHARING_UNKNOWN =
+  "We couldn't confirm whether your update was shared. Please refresh to check its current sharing status.";
+const SHARING_REFRESH_FAILED =
+  "The current sharing status could not be verified. Please refresh to check it.";
+
+// A read describes current state. Only this version/content match confirms that
+// the intended update is currently shared; a newer report proves no history.
+function matchesSharingAttempt(report: EventRepairState, attempt: SharingAttempt) {
+  return report.status_origin === "explicit" &&
+    report.repair_status === attempt.status &&
+    report.what_helped === attempt.method &&
+    report.report_version === attempt.version +
+      (report.sharing_status === "shared" ? 1 : 0);
+}
+
+function sharingFeedback(attempt: SharingAttempt, report?: EventRepairState) {
+  const saved = attempt.saved ? "Your update was saved. " : "";
+  const current = report
+    ? `Your current saved update is ${report.sharing_status === "shared"
+      ? "shared with your partner" : "private"}.`
+    : "";
+  if (attempt.outcome === "confirmed") {
+    return {
+      notice: report && !(report.sharing_status === "shared" && matchesSharingAttempt(report, attempt))
+        ? `Sharing was confirmed. ${!matchesSharingAttempt(report, attempt) ? "Your repair report changed. " : ""}${current}`
+        : SHARING_SUCCESS,
+      error: report ? "" : SHARING_REFRESH_FAILED,
+    };
+  }
+  if (attempt.outcome === "rejected") {
+    return {
+      notice: current,
+      error: `${saved}This sharing request was rejected. ${attempt.rejection}${report ? "" : ` ${SHARING_REFRESH_FAILED}`}`,
+    };
+  }
+  if (!report) return { notice: "", error: `${saved}${SHARING_UNKNOWN}` };
+  const changed = !matchesSharingAttempt(report, attempt);
+  return {
+    notice: `${saved}${changed ? "Your repair report changed. " : ""}${current}${changed && report.sharing_status === "shared"
+      ? " This does not confirm whether the earlier update was shared." : ""}`,
+    error: "",
+  };
+}
+
 export function EventRepairSection({
   eventId,
   userId,
@@ -123,6 +178,8 @@ export function EventRepairSection({
   const [confirmShare, setConfirmShare] = useState(false);
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   const [reloadRequired, setReloadRequired] = useState(false);
+  const [sharingUnverified, setSharingUnverified] = useState(false);
+  const sharingAttempt = useRef<SharingAttempt | null>(null);
   const requestId = useRef(0);
   const focusGeneration = useRef(0);
   const writeInFlight = useRef(false);
@@ -132,38 +189,82 @@ export function EventRepairSection({
       requestId.current++;
       focusGeneration.current++;
     },
-    [],
+    [eventId, userId, visibility, authorize, isCurrent],
   );
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async ({ preserveDraft = false, afterWrite = false } = {}) => {
+    // A retained button handler must not start a competing load during a write.
+    if (writeInFlight.current && !afterWrite) return;
     const id = ++requestId.current;
     const valid = () => id === requestId.current && isCurrent();
     if (!valid()) return;
     setLoading(true);
     setError("");
     try {
-      if (!(await authorize()) || !valid()) return;
-      const records = await loadEventRepairStates(eventId);
+      const token = await authorize();
       if (!valid()) return;
-      if (!(await authorize()) || !valid()) return;
+      if (!token) throw new Error("Authentication required");
+      const loaded = await loadEventRepairStates(eventId, token);
+      if (!valid()) return;
+      const authorized = await authorize();
+      if (!valid()) return;
+      if (!authorized) throw new Error("Authentication required");
+      if (loaded.some((record) => record.event_id !== eventId) ||
+        loaded.filter((record) => record.user_id === userId).length > 1) {
+        throw new Error("Unexpected repair report identity");
+      }
+      const records = loaded.filter((record) => record.user_id === userId ||
+        (visibility === "ours" && record.sharing_status === "shared"));
       const mine = records.find((record) => record.user_id === userId);
       setRows(records);
-      setDraftStatus(mine?.repair_status ?? null);
-      setDraftMethod(mine?.what_helped ?? null);
+      const attempt = sharingAttempt.current;
+      if (attempt) {
+        const report = mine && Number.isSafeInteger(mine.report_version) &&
+          mine.report_version >= attempt.version &&
+          (mine.sharing_status === "private" || mine.sharing_status === "shared")
+          ? mine : undefined;
+        const feedback = sharingFeedback(attempt, report);
+        setNotice(feedback.notice);
+        setError(feedback.error);
+        setSharingUnverified(!report);
+        setReloadRequired(!report || (preserveDraft && !matchesSharingAttempt(report, attempt)));
+        // No row is not evidence of privacy: deletion, revocation or hidden
+        // membership may all leave an authenticated read without our report.
+        if (!report) return;
+        sharingAttempt.current = null;
+      } else {
+        setNotice("");
+        setReloadRequired(false);
+        setSharingUnverified(false);
+      }
+      if (!preserveDraft) {
+        setDraftStatus(mine?.repair_status ?? null);
+        setDraftMethod(mine?.what_helped ?? null);
+      }
       setConfirmShare(false);
       setConfirmWithdraw(false);
-      setReloadRequired(false);
     } catch (e) {
       if (valid()) {
         setRows([]);
-        setDraftStatus(null);
-        setDraftMethod(null);
-        setError(errorText(e));
+        const attempt = sharingAttempt.current;
+        if (attempt) {
+          const feedback = sharingFeedback(attempt);
+          setNotice(feedback.notice);
+          setError(feedback.error);
+          setSharingUnverified(true);
+          setReloadRequired(true);
+        } else {
+          if (!preserveDraft) {
+            setDraftStatus(null);
+            setDraftMethod(null);
+          }
+          setError(errorText(e));
+        }
       }
     } finally {
       if (valid()) setLoading(false);
     }
-  }, [eventId, userId, authorize, isCurrent]);
+  }, [eventId, userId, visibility, authorize, isCurrent]);
 
   // Visibility changes restart the focused lifecycle even when refresh is stable.
   const focusContext = useMemo(
@@ -183,6 +284,8 @@ export function EventRepairSection({
       setConfirmShare(false);
       setConfirmWithdraw(false);
       setReloadRequired(false);
+      sharingAttempt.current = null;
+      setSharingUnverified(false);
       setBusy(false);
       setNotice("");
       setLoading(true);
@@ -241,11 +344,13 @@ export function EventRepairSection({
       }
     }
     const token = await authorize();
-    if (!token || !valid()) return false;
-    const { error } = await supabase
+    if (!valid()) return false;
+    if (!token) throw new Error("Authentication required");
+    const { data, error } = await supabase
       .rpc(name, args)
       .setHeader("Authorization", `Bearer ${token}`);
     if (error) throw error;
+    if (data !== true) throw new Error("Sharing response could not be confirmed");
     return valid();
   }
 
@@ -301,7 +406,7 @@ export function EventRepairSection({
         valid,
       );
       if (version === null) return;
-      await refresh();
+      await refresh({ afterWrite: true });
       if (valid())
         setNotice("Saved privately. It was not shared with your partner.");
     } catch (e) {
@@ -353,6 +458,18 @@ export function EventRepairSection({
         savedPrivately = true;
       }
 
+      if (expectedVersion === null) return;
+      const attempt: SharingAttempt = {
+        version: expectedVersion,
+        status: reviewedStatus,
+        method: reviewedMethod,
+        saved: savedPrivately,
+        outcome: "unknown",
+      };
+      sharingAttempt.current = attempt;
+      setSharingUnverified(true);
+      setConfirmShare(false);
+
       // Server refuses to share a stale version, legacy/unconfirmed report,
       // a Mine event, or a report not owned by this authenticated caller.
       if (
@@ -366,23 +483,24 @@ export function EventRepairSection({
         ))
       )
         return;
-      await refresh();
-      if (valid())
-        setNotice("Your update was saved and shared with your partner.");
+      attempt.outcome = "confirmed";
+      setNotice(SHARING_SUCCESS);
+      await refresh({ preserveDraft: true, afterWrite: true });
     } catch (e) {
       if (!valid()) return;
       if (needsSave && !savedPrivately) {
         showSaveError(e);
         return;
       }
-      const detail = errorText(e);
-      await refresh();
-      if (!valid()) return;
-      setError(
-        savedPrivately
-          ? `Your update was saved privately but was NOT shared. ${detail}`
-          : `Your update was NOT shared. ${detail}`,
-      );
+      const attempt = sharingAttempt.current;
+      if (!attempt) return;
+      if (isRepairSharingRejection(e)) {
+        attempt.outcome = "rejected";
+        attempt.rejection = errorText(e);
+      }
+      // Read only: a transport error can hide a committed transaction. Never
+      // resubmit sharing or replace the author's choices during reconciliation.
+      await refresh({ preserveDraft: true, afterWrite: true });
     } finally {
       if (valid()) {
         writeInFlight.current = false;
@@ -415,7 +533,7 @@ export function EventRepairSection({
       await withdrawMyRepairState(eventId, expectedVersion, token);
       if (!valid()) return;
       setConfirmWithdraw(false);
-      await refresh();
+      await refresh({ afterWrite: true });
       if (valid()) setNotice("Withdrawal recorded; your personal record remains.");
     } catch (e) {
       if (!valid()) return;
@@ -430,7 +548,7 @@ export function EventRepairSection({
         const message = errorText(e);
         if (message === "Moment unavailable" || message === "Please sign in again.") {
           // Purge inaccessible rows using the existing authorized read path.
-          await refresh();
+          await refresh({ afterWrite: true });
         } else {
           // A transport or malformed-response failure can hide a committed write.
           // Preserve choices, but require reconciliation before another write.
@@ -478,7 +596,9 @@ export function EventRepairSection({
                 {statusLabel(mine.repair_status)}
               </Text>
               <Text style={styles.summarySecondary}>
-                {mine.sharing_status === "shared"
+                {sharingUnverified
+                  ? "Sharing status needs verification"
+                  : mine.sharing_status === "shared"
                   ? "Shared with your partner"
                   : "Private — not shared"}
               </Text>
@@ -497,7 +617,9 @@ export function EventRepairSection({
             </View>
           ) : (
             <Text style={styles.helper}>
-              {reloadRequired
+              {sharingUnverified
+                ? "Sharing status needs verification. Your choices are still here."
+                : reloadRequired
                 ? "Your newer saved report has not been loaded here yet."
                 : "You haven't recorded a personal repair update yet."}
             </Text>
@@ -724,7 +846,9 @@ export function EventRepairSection({
         disabled={busy || loading}
       >
         <Text style={styles.refreshLabel}>
-          {reloadRequired
+          {sharingUnverified
+            ? "Refresh sharing status (replaces your choices)"
+            : reloadRequired
             ? "Load newer update (replaces your choices)"
             : "Refresh updates"}
         </Text>

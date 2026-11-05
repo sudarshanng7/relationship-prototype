@@ -49,7 +49,8 @@ function row(overrides = {}) {
 }
 
 function client(initialRows = []) {
-  const state = { rows: initialRows, calls: [], reads: 0, trace: [] };
+  const state = { rows: initialRows, calls: [], readCalls: [], reads: 0, trace: [] };
+  state.read = async () => ({ data: structuredClone(state.rows), error: state.readError ?? null });
   state.respond = async (call) => {
     if (call.name === checkedSave) {
       state.rows = [row({
@@ -58,6 +59,11 @@ function client(initialRows = []) {
         report_version: 42,
       })];
       return { data: 42, error: null };
+    }
+    if (call.name === share) {
+      state.rows = state.rows.map((report) => report.user_id === "user-a"
+        ? { ...report, sharing_status: "shared", report_version: call.args.p_expected_report_version + 1 }
+        : report);
     }
     return { data: true, error: null };
   };
@@ -75,12 +81,18 @@ function client(initialRows = []) {
     },
     from(table) {
       assert.equal(table, "event_repair_states");
-      return { select: () => ({ eq: async (column, value) => {
+      return { select: () => ({ eq: (column, value) => {
         assert.equal(column, "event_id");
-        assert.equal(value, "event-a");
-        state.reads++;
-        state.trace.push("read");
-        return { data: structuredClone(state.rows), error: state.readError ?? null };
+        const call = { eventId: value, headers: {} };
+        return {
+          setHeader(key, value) { call.headers[key] = value; return this; },
+          then(resolve, reject) {
+            state.reads++;
+            state.readCalls.push(call);
+            state.trace.push("read");
+            return Promise.resolve().then(() => state.read(call)).then(resolve, reject);
+          },
+        };
       } }) };
     },
   };
@@ -103,6 +115,7 @@ function harness(db, visibility = "ours") {
   let cursor = 0;
   let tree;
   let focusCleanup;
+  let focusEffect;
   const state = { current: true, authorize: async () => "author-token" };
   const memo = (factory, deps) => {
     const index = cursor++;
@@ -121,9 +134,13 @@ function harness(db, visibility = "ours") {
     useRef: (initial) => memo(() => ({ current: initial }), []),
     useCallback: (callback, deps) => memo(() => callback, deps),
     useMemo: memo,
-    useLayoutEffect: (effect, deps) => memo(() => { effects.push(() => {
-      cleanups.push(effect());
-    }); }, deps),
+    useLayoutEffect: (effect, deps) => {
+      const index = cursor;
+      memo(() => { effects.push(() => {
+        cleanups[index]?.();
+        cleanups[index] = effect();
+      }); }, deps);
+    },
   };
   const jsx = (type, props) => ({ type, props });
   const { EventRepairSection } = loadSource("src/components/EventRepairSection.tsx", {
@@ -135,9 +152,12 @@ function harness(db, visibility = "ours") {
       ActivityIndicator: "ActivityIndicator", Pressable: "Pressable",
       Text: "Text", View: "View", StyleSheet: { create: (value) => value },
     },
-    "expo-router": { useFocusEffect: (effect) => memo(() => {
-      effects.push(() => { focusCleanup?.(); focusCleanup = effect(); });
-    }, [effect]) },
+    "expo-router": { useFocusEffect: (effect) => {
+      focusEffect = effect;
+      memo(() => {
+        effects.push(() => { focusCleanup?.(); focusCleanup = effect(); });
+      }, [effect]);
+    } },
   });
   const props = {
     eventId: "event-a", userId: "user-a", visibility,
@@ -179,6 +199,8 @@ function harness(db, visibility = "ours") {
   };
   state.selected = (label) => state.button(label)?.props.accessibilityState?.checked;
   state.blur = () => { focusCleanup?.(); };
+  state.refocus = () => { state.blur(); focusCleanup = focusEffect(); state.render(); };
+  state.setProps = (next) => { Object.assign(props, next); state.render(); };
   state.unmount = () => { state.blur(); cleanups.forEach((cleanup) => cleanup?.()); };
   state.render();
   return state;
@@ -335,14 +357,15 @@ test("UI reports partial success when sharing the saved version loses a race", a
   const db = client([row()]);
   const respond = db.respond;
   db.respond = async (call) => call.name === share
-    ? { error: { message: "Repair update changed, was already shared, or needs confirmation; please reload" } }
+    ? { error: { code: "P0001", message: "Repair update changed, was already shared, or needs confirmation; please reload" } }
     : respond(call);
   const ui = harness(db);
   await ui.flush();
   await edit(ui);
   await confirmShare(ui);
   assert.equal(db.calls[1].args.p_expected_report_version, 42);
-  assert.match(ui.text(), /saved privately but was NOT shared/);
+  assert.match(ui.text(), /Your update was saved. This sharing request was rejected./);
+  assert.match(ui.text(), /Your current saved update is private./);
   assert.match(ui.text(), /Your repair update changed or needs confirmation. Reload before sharing./);
   assert.doesNotMatch(ui.text(), /was saved and shared/);
   assert.equal(db.calls.length, 2, "no automatic retry of share");
@@ -438,10 +461,11 @@ for (const stage of ["load", "save-and-share", "share", "withdraw"]) {
       await edit(ui);
       await confirmShare(ui);
     }
-    assert.match(ui.text(), /Something went wrong. Please try again./);
+    assert.match(ui.text(), stage === "share"
+      ? /Your current saved update is private./ : /Something went wrong. Please try again./);
     assert.doesNotMatch(ui.text(), /duplicate key|event_repair_states_pkey|PRIVATE_/);
     if (stage === "share") {
-      assert.match(ui.text(), /saved privately but was NOT shared/);
+      assert.doesNotMatch(ui.text(), /was NOT shared/);
       assert.equal(db.calls[1].args.p_expected_report_version, 42);
     } else if (stage === "save-and-share") {
       assert.equal(ui.selected("Talking"), true);
@@ -710,4 +734,356 @@ test("UI withdrawal uses its own version and leaves the partner response untouch
   pending.resolve({ data: 8, error: null });
   await ui.flush();
   assert.match(ui.text(), /Withdrawal recorded/);
+});
+
+// Finding 6: assert real component text, including the summary that previously
+// contradicted the share failure notice. No server or native runtime is used.
+const sharingUnknown = "We couldn't confirm whether your update was shared. Please refresh to check its current sharing status.";
+const sharingSuccess = "Your update was saved and shared with your partner.";
+const transportError = new Error("PRIVATE_TRANSPORT_HOST");
+
+function assertNoFalsePrivacy(ui) {
+  assert.doesNotMatch(ui.text(), /was NOT shared|saved privately but|Private — not shared|It was not shared/);
+  assert.doesNotMatch(ui.text(), /PRIVATE_|INTERNAL_|jointly repaired|relationship health/i);
+}
+
+async function sharingScenario({ existing = false, respond, read } = {}) {
+  const db = client(existing ? [row()] : []);
+  const original = db.respond;
+  if (respond) db.respond = (call) => respond(call, db, original);
+  const ui = harness(db);
+  await ui.flush();
+  if (read) db.read = (call) => read(call, db);
+  if (!existing) await edit(ui);
+  await ui.press(existing ? "Share saved update" : "Save & share with partner");
+  await ui.press("Confirm save & share");
+  return { db, ui };
+}
+
+for (const existing of [false, true]) {
+  test(`Finding 6: ${existing ? "unchanged report" : "private save"} then confirmed sharing shows success`, async () => {
+    const { db, ui } = await sharingScenario({ existing });
+    assert.ok(ui.text().includes(sharingSuccess));
+    assert.match(ui.text(), /Shared with your partner/);
+    assertNoFalsePrivacy(ui);
+    assert.equal(db.calls.filter((call) => call.name === checkedSave).length, existing ? 0 : 1);
+    assert.equal(db.calls.filter((call) => call.name === share).length, 1);
+    assert.equal(db.reads, 2);
+    assert.deepEqual(db.readCalls.map((call) => call.headers), [
+      { Authorization: "Bearer author-token" }, { Authorization: "Bearer author-token" },
+    ]);
+  });
+
+  for (const committed of [true, false]) {
+    test(`Finding 6: ${existing ? "unchanged" : "saved"} share response lost, current state ${committed ? "shared" : "private"}`, async () => {
+      const { db, ui } = await sharingScenario({ existing,
+        respond: async (call, db, original) => {
+          if (call.name !== share) return original(call);
+          if (committed) await original(call);
+          throw transportError;
+        },
+      });
+      assert.equal(db.calls.filter((call) => call.name === share).length, 1);
+      assert.equal(db.reads, 2, "exactly one read-only reconciliation");
+      assert.match(ui.text(), committed
+        ? /Your current saved update is shared with your partner\./
+        : /Your current saved update is private\./);
+      assert.doesNotMatch(ui.text(), /was NOT shared|saved privately but|PRIVATE_|This sharing request was rejected/);
+      assert.ok(!ui.text().includes(sharingSuccess), "a current read is not a historical RPC acknowledgment");
+      if (committed) assertNoFalsePrivacy(ui);
+      else assert.match(ui.text(), /Private — not shared/);
+      if (!existing) assert.equal(ui.selected("Talking"), true);
+    });
+  }
+
+  for (const acknowledged of [false, true]) {
+    test(`Finding 6: ${existing ? "unchanged" : "saved"} sharing ${acknowledged ? "confirmed" : "commits with lost response"}, reconciliation fails`, async () => {
+      const { db, ui } = await sharingScenario({ existing,
+        respond: async (call, db, original) => {
+          const result = await original(call);
+          if (call.name === share && !acknowledged) throw transportError;
+          return result;
+        },
+        read: async () => { throw transportError; },
+      });
+      assert.ok(ui.text().includes(acknowledged ? sharingSuccess : sharingUnknown));
+      if (acknowledged) {
+        assert.match(ui.text(), /The current sharing status could not be verified. Please refresh to check it./);
+        assert.ok(!ui.text().includes(sharingUnknown));
+      } else assert.ok(!ui.text().includes(sharingSuccess));
+      if (!existing) {
+        assert.match(ui.text(), acknowledged ? /saved and shared/ : /Your update was saved./);
+        assert.equal(ui.selected("I feel reconnected"), true);
+        assert.equal(ui.selected("Talking"), true);
+      }
+      assertNoFalsePrivacy(ui);
+      assert.equal(ui.button("Save privately"), undefined);
+      assert.equal(ui.button("Share saved update"), undefined);
+      assert.equal(ui.button("Save & share with partner"), undefined);
+      assert.equal(db.calls.filter((call) => call.name === share).length, 1);
+      // A failed manual read also preserves the draft and uncertainty.
+      await ui.press("Refresh sharing status (replaces your choices)");
+      assert.ok(ui.text().includes(acknowledged ? sharingSuccess : sharingUnknown));
+      if (!existing) assert.equal(ui.selected("Talking"), true);
+      db.read = async () => ({ data: structuredClone(db.rows), error: null });
+      await ui.press("Refresh sharing status (replaces your choices)");
+      assert.match(ui.text(), /Shared with your partner/);
+      assert.doesNotMatch(ui.text(), /couldn't confirm|could not be verified|Sharing status needs verification/);
+      assertNoFalsePrivacy(ui);
+      assert.equal(db.calls.filter((call) => call.name === share).length, 1, "manual refresh never shares");
+    });
+  }
+}
+
+test("Finding 6: definitive server rejection remains distinct from save failure and uncertain sharing", async () => {
+  const { db, ui } = await sharingScenario({
+    respond: (call, db, original) => call.name === share ? {
+      error: { code: "P0001", message: "Moment unavailable for sharing", details: "PRIVATE_DETAIL", hint: "PRIVATE_HINT" },
+    } : original(call),
+  });
+  assert.match(ui.text(), /Your update was saved. This sharing request was rejected. Moment unavailable for sharing/);
+  assert.match(ui.text(), /Your current saved update is private./);
+  assert.equal(ui.selected("Talking"), true);
+  assert.doesNotMatch(ui.text(), /was NOT shared|PRIVATE_|couldn't confirm|was saved and shared/);
+  assert.equal(db.calls.length, 2);
+});
+
+test("Finding 6: definitive rejection plus failed read does not assert current privacy", async () => {
+  const { ui } = await sharingScenario({
+    respond: (call, db, original) => call.name === share ? {
+      error: { code: "P0001", message: "Moment unavailable for sharing" },
+    } : original(call),
+    read: async () => ({ data: null, error: transportError }),
+  });
+  assert.match(ui.text(), /Your update was saved. This sharing request was rejected./);
+  assert.match(ui.text(), /The current sharing status could not be verified./);
+  assertNoFalsePrivacy(ui);
+});
+
+for (const response of [null, false, undefined, "true", 1]) {
+  test(`Finding 6: unusable share acknowledgment ${String(response)} requires reconciliation`, async () => {
+    const { ui } = await sharingScenario({
+      respond: async (call, db, original) => {
+        const result = await original(call);
+        return call.name === share ? { data: response, error: null } : result;
+      },
+      read: async () => { throw transportError; },
+    });
+    assert.ok(ui.text().includes(sharingUnknown));
+    assert.ok(!ui.text().includes(sharingSuccess));
+    assertNoFalsePrivacy(ui);
+  });
+}
+
+for (const invalidation of ["account", "blur", "unmount", "event", "visibility"]) {
+  test(`Finding 6: ${invalidation} changes during in-flight sharing suppress old completion`, async () => {
+    const pending = deferred();
+    const { db, ui } = await sharingScenario({
+      respond: (call, db, original) => call.name === share ? pending.promise : original(call),
+    });
+    const previousReads = db.reads;
+    assert.equal(db.calls[1].headers.Authorization, "Bearer author-token");
+    if (invalidation === "account") {
+      ui.current = false;
+      ui.unmount(); // Parent replaces the keyed account subtree.
+    } else if (invalidation === "event") {
+      db.rows = [];
+      ui.setProps({ eventId: "event-b" });
+    } else if (invalidation === "visibility") {
+      db.rows = [row({ report_version: 44, repair_status: "partially_repaired", what_helped: "space" })];
+      ui.setProps({ visibility: "mine" });
+    } else ui[invalidation]();
+    await ui.flush();
+    const generationText = ui.text();
+    pending.resolve({ data: true, error: null });
+    await ui.flush();
+    assert.equal(ui.text(), generationText);
+    assert.doesNotMatch(ui.text(), /was saved and shared|current saved update is shared|was NOT shared/);
+    assert.equal(db.reads, previousReads + (["event", "visibility"].includes(invalidation) ? 1 : 0));
+    assert.equal(db.calls.filter((call) => call.name === share).length, 1);
+    if (invalidation === "visibility") {
+      assert.match(ui.text(), /Private — not shared/);
+      assert.equal(ui.button("Save & share with partner"), undefined);
+    }
+    if (invalidation === "account") {
+      db.rows = [row({ user_id: "user-b", repair_status: "partially_repaired", what_helped: "space" })];
+      const next = harness(db);
+      next.authorize = async () => "new-account-token";
+      next.setProps({ userId: "user-b" });
+      await next.flush();
+      assert.equal(next.selected("A little better"), true);
+      assert.doesNotMatch(next.text(), /was saved and shared|Saved for you: I feel reconnected|What helped: Talking/);
+    }
+  });
+}
+
+for (const invalidation of ["account", "refocus", "event", "visibility"]) {
+  test(`Finding 6: stale reconciliation after ${invalidation} cannot publish old report or notice`, async () => {
+    const pending = deferred();
+    const { db, ui } = await sharingScenario({
+      respond: async (call, db, original) => {
+        const result = await original(call);
+        if (call.name === share) throw transportError;
+        return result;
+      },
+      read: () => pending.promise,
+    });
+    const oldRows = structuredClone(db.rows);
+    db.rows = [row({ report_version: 45, repair_status: "partially_repaired", what_helped: "space" })];
+    db.read = async () => ({ data: structuredClone(db.rows), error: null });
+    if (invalidation === "account") { ui.current = false; ui.unmount(); }
+    else if (invalidation === "refocus") ui.refocus();
+    else if (invalidation === "event") { db.rows = []; ui.setProps({ eventId: "event-b" }); }
+    else ui.setProps({ visibility: "mine" });
+    await ui.flush();
+    const generationText = ui.text();
+    pending.resolve({ data: oldRows, error: null });
+    await ui.flush();
+    assert.equal(ui.text(), generationText);
+    assert.doesNotMatch(ui.text(), /Your current saved update is shared|was saved and shared|was NOT shared/);
+    assert.equal(db.calls.filter((call) => call.name === share).length, 1);
+    if (["refocus", "visibility"].includes(invalidation)) {
+      assert.equal(ui.selected("Space"), true);
+      assert.match(ui.text(), /Private — not shared/);
+    }
+  });
+}
+
+for (const latest of [
+  row({ report_version: 44, repair_status: "partially_repaired", what_helped: "space" }),
+  row({ report_version: 45, sharing_status: "shared", repair_status: "partially_repaired", what_helped: "space" }),
+  row({ report_version: 45, sharing_status: "shared", repair_status: "reconnected", what_helped: "talking" }),
+  row({ report_version: 43, sharing_status: "shared", repair_status: "reconnected", what_helped: "space" }),
+  row({ report_version: 43, sharing_status: "shared", repair_status: "partially_repaired", what_helped: "talking" }),
+  row({ report_version: 43, sharing_status: "shared", repair_status: "reconnected", what_helped: "talking", status_origin: "legacy_creator_report" }),
+]) {
+  test(`Finding 6: changed report ${latest.report_version}/${latest.sharing_status}/${latest.repair_status}/${latest.what_helped}/${latest.status_origin} is current state, not proof of intended sharing`, async () => {
+    const { db, ui } = await sharingScenario({
+      respond: async (call, db, original) => {
+        const result = await original(call);
+        if (call.name === share) { db.rows = [latest]; throw transportError; }
+        return result;
+      },
+    });
+    assert.match(ui.text(), /Your repair report changed./);
+    assert.ok(ui.text().includes(latest.sharing_status === "shared"
+      ? "Your current saved update is shared with your partner. This does not confirm whether the earlier update was shared."
+      : "Your current saved update is private."));
+    assert.ok(!ui.text().includes(sharingSuccess));
+    assert.equal(ui.selected("Talking"), true, "automatic reconciliation keeps the author's draft");
+    assert.equal(ui.button("Save privately"), undefined);
+    assert.doesNotMatch(ui.text(), /was NOT shared/);
+    await ui.press("Load newer update (replaces your choices)");
+    assert.doesNotMatch(ui.text(), /Your repair report changed|does not confirm/);
+    assert.equal(db.calls.filter((call) => call.name === share).length, 1);
+    assert.equal(ui.selected(latest.what_helped === "space" ? "Space" : "Talking"), true);
+  });
+}
+
+for (const records of [
+  [],
+  [row({ user_id: "user-b", sharing_status: "shared", report_version: 43 })],
+  [row({ event_id: "event-b", sharing_status: "shared", report_version: 43 })],
+  [row({ sharing_status: "shared", report_version: 41 })],
+  [row({ sharing_status: "shared", report_version: Number.MAX_SAFE_INTEGER + 1 })],
+  [row({ sharing_status: "shared", report_version: 43 }), row({ sharing_status: "shared", report_version: 43 })],
+]) {
+  test(`Finding 6: absent or unrelated/invalid authoritative report ${JSON.stringify(records)} leaves outcome unknown`, async () => {
+    const { db, ui } = await sharingScenario({
+      respond: async (call, db, original) => {
+        if (call.name !== share) return original(call);
+        db.rows = records;
+        throw transportError;
+      },
+    });
+    assert.ok(ui.text().includes(sharingUnknown));
+    assertNoFalsePrivacy(ui);
+    assert.ok(!ui.text().includes(sharingSuccess));
+    assert.equal(ui.selected("Talking"), true);
+    assert.equal(ui.button("Save privately"), undefined);
+    assert.equal(db.calls.filter((call) => call.name === share).length, 1);
+    db.rows = [row({ report_version: 44, repair_status: "partially_repaired", what_helped: "space" })];
+    await ui.press("Refresh sharing status (replaces your choices)");
+    assert.match(ui.text(), /Your current saved update is private./);
+    assert.doesNotMatch(ui.text(), /couldn't confirm|Sharing status needs verification/);
+    assert.equal(ui.selected("Space"), true);
+  });
+}
+
+test("Finding 6: duplicate share confirmations and retained refresh handlers cannot race the share", async () => {
+  const db = client([row()]);
+  const pending = deferred();
+  const original = db.respond;
+  db.respond = (call) => call.name === share ? pending.promise : original(call);
+  const ui = harness(db);
+  await ui.flush();
+  const refresh = ui.button("Refresh updates");
+  await ui.press("Share saved update");
+  const confirm = ui.button("Confirm save & share");
+  confirm.props.onPress();
+  confirm.props.onPress();
+  refresh.props.onPress();
+  await ui.flush();
+  assert.equal(db.calls.length, 1);
+  assert.equal(db.reads, 1);
+  assertNoFalsePrivacy(ui);
+  db.rows = [row({ report_version: 8, sharing_status: "shared" })];
+  pending.resolve({ data: true, error: null });
+  await ui.flush();
+  assert.ok(ui.text().includes(sharingSuccess));
+  assert.equal(db.reads, 2);
+  assert.equal(db.calls.length, 1);
+});
+
+test("Finding 6: reconciliation rechecks authorization after reading and cannot publish into a changed account", async () => {
+  const pending = deferred();
+  const { db, ui } = await sharingScenario({
+    respond: async (call, db, original) => {
+      const result = await original(call);
+      if (call.name === share) throw transportError;
+      return result;
+    },
+    read: () => pending.promise,
+  });
+  let checks = 0;
+  ui.authorize = async () => { checks++; ui.current = false; return null; };
+  pending.resolve({ data: structuredClone(db.rows), error: null });
+  await ui.flush();
+  assert.equal(checks, 1);
+  assert.ok(!ui.text().includes(sharingSuccess));
+  assert.doesNotMatch(ui.text(), /Your current saved update is shared|was NOT shared/);
+});
+
+test("Finding 6: only exact reviewed P0001 messages count as definitive share rejection", () => {
+  const db = client();
+  for (const error of [transportError, { message: "Moment unavailable for sharing" },
+    { code: "P0001", message: "Moment unavailable for sharing: PRIVATE_DETAIL" },
+    { code: "P0001", message: "PRIVATE_SQL_MESSAGE" }, null]) {
+    assert.equal(db.lib.isRepairSharingRejection(error), false);
+  }
+  assert.equal(db.lib.isRepairSharingRejection({ code: "P0001", message: "Moment unavailable for sharing" }), true);
+});
+
+test("Finding 6: confirmed sharing followed by withdrawal describes historical success and current privacy", async () => {
+  const { ui } = await sharingScenario({
+    respond: async (call, db, original) => {
+      const result = await original(call);
+      if (call.name === share) db.rows = [row({ report_version: 44, repair_status: "reconnected", what_helped: "talking" })];
+      return result;
+    },
+  });
+  assert.match(ui.text(), /Sharing was confirmed. Your repair report changed. Your current saved update is private./);
+  assert.doesNotMatch(ui.text(), /couldn't confirm|was NOT shared/);
+  assert.equal(ui.selected("Talking"), true);
+});
+
+test("Finding 6: later manual refresh replaces an old success notice with current sharing state", async () => {
+  const { db, ui } = await sharingScenario();
+  assert.ok(ui.text().includes(sharingSuccess));
+  db.rows = [row({ report_version: 44, repair_status: "partially_repaired", what_helped: "space" })];
+  await ui.press("Refresh updates");
+  assert.match(ui.text(), /Private — not shared/);
+  assert.ok(!ui.text().includes(sharingSuccess));
+  assert.equal(ui.selected("Space"), true);
+  assert.equal(db.calls.filter((call) => call.name === share).length, 1);
 });
