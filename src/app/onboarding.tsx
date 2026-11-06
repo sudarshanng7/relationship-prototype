@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Button,
@@ -11,99 +11,118 @@ import {
 } from "react-native";
 
 import { supabase } from "@/lib/supabase";
+import {
+  AccountSessionBoundary, useAccountSessionScope,
+} from "@/components/AccountSessionBoundary";
 
 export default function OnboardingScreen() {
+  return (
+    <AccountSessionBoundary routeKey="onboarding">
+      <OnboardingContent />
+    </AccountSessionBoundary>
+  );
+}
+
+function OnboardingContent() {
+  const scope = useAccountSessionScope();
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [ready, setReady] = useState(false);
+  const [needsReload, setNeedsReload] = useState(false);
+  const requestId = useRef(0);
+  const writeState = useRef<"idle" | "pending" | "uncertain" | "saved">("idle");
 
-  useEffect(() => {
-    let active = true;
-
-    async function checkSetup() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!active) return;
-
-      if (!user) {
-        router.replace("/");
-        return;
-      }
-
+  const loadSetup = useCallback(async () => {
+    if (!scope.isCurrent() || writeState.current === "pending" || writeState.current === "saved") return;
+    const id = ++requestId.current;
+    const valid = () => scope.isCurrent() && id === requestId.current;
+    setReady(false);
+    setLoading(true);
+    setDisplayName("");
+    setErrorMessage("");
+    setNeedsReload(false);
+    try {
+      const auth = await scope.authorize();
+      if (!auth || !valid()) return;
       const { data, error } = await supabase
         .from("profiles")
-        .select("display_name, onboarding_completed")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!active) return;
-
-      if (error || !data) {
-        setErrorMessage(error?.message ?? "Your profile could not be found.");
-        setLoading(false);
-        return;
-      }
-
+        .select("id, display_name, onboarding_completed")
+        .eq("id", scope.userId)
+        .maybeSingle()
+        .setHeader("Authorization", `Bearer ${auth.token}`);
+      if (!valid() || !(await scope.authorize()) || !valid()) return;
+      if (error || !data || data.id !== scope.userId) throw new Error("Profile unavailable");
       if (data.onboarding_completed) {
+        writeState.current = "saved";
         router.replace("/profile");
         return;
       }
-
       setDisplayName(data.display_name ?? "");
-      setLoading(false);
+      setReady(true);
+      writeState.current = "idle";
+    } catch {
+      if (valid()) {
+        setErrorMessage("Could not load your setup. Please reload to continue.");
+        setNeedsReload(true);
+      }
+    } finally {
+      if (valid()) setLoading(false);
     }
+  }, [router, scope]);
 
-    checkSetup();
-
-    return () => {
-      active = false;
-    };
-  }, [router]);
+  // The boundary keys content by account/focus visit and invalidates pending
+  // work on blur/unmount. Same-account token refreshes keep the draft.
+  useFocusEffect(useCallback(() => {
+    void loadSetup();
+  }, [loadSetup]));
 
   async function completeOnboarding() {
-    if (saving) return;
-
+    if (!ready || !scope.isCurrent() || writeState.current !== "idle") return;
+    // Capture the draft before awaiting authorization, within its account scope.
+    const cleanName = displayName.trim() || null;
+    writeState.current = "pending";
+    const id = ++requestId.current;
+    const valid = () => scope.isCurrent() && id === requestId.current;
+    let dispatched = false;
     setSaving(true);
     setErrorMessage("");
 
     try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        router.replace("/");
-        return;
-      }
-
-      const { error } = await supabase
+      const auth = await scope.authorize();
+      if (!auth || !valid()) return;
+      dispatched = true;
+      const { data, error } = await supabase
         .from("profiles")
         .update({
-          display_name: displayName.trim() || null,
+          display_name: cleanName,
           onboarding_completed: true,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", user.id)
+        .eq("id", scope.userId)
         .select("id")
-        .single();
-
-      if (error) {
-        setErrorMessage(error.message);
-        return;
-      }
-
+        .single()
+        .setHeader("Authorization", `Bearer ${auth.token}`);
+      if (!valid()) return;
+      const acknowledged = !error && data?.id === scope.userId;
+      if (acknowledged) writeState.current = "saved";
+      if (!(await scope.authorize(acknowledged ? "Your setup was saved." : undefined)) || !valid()) return;
+      if (!acknowledged) throw new Error("Save outcome unconfirmed");
       router.replace("/profile");
-    } catch (error) {
-      console.error("Onboarding failed:", error);
-      setErrorMessage("Could not save your setup.");
+    } catch {
+      if (!valid() || !(await scope.authorize()) || !valid()) return;
+      // A transport failure may follow a committed update. Only a read may be
+      // retried; even a retained Continue handler cannot resubmit this attempt.
+      writeState.current = dispatched ? "uncertain" : "idle";
+      setNeedsReload(dispatched);
+      setErrorMessage(dispatched
+        ? "We couldn't confirm whether your setup was saved. Reload setup to check before continuing."
+        : "Could not verify your setup. Please try again.");
     } finally {
-      setSaving(false);
+      if (valid()) setSaving(false);
     }
   }
 
@@ -141,7 +160,7 @@ export default function OnboardingScreen() {
           onChangeText={setDisplayName}
           maxLength={60}
           autoCapitalize="words"
-          editable={!saving}
+          editable={ready && !saving && !needsReload}
         />
 
         <Text style={styles.optional}>Optional</Text>
@@ -176,8 +195,9 @@ export default function OnboardingScreen() {
         <Button
           title={saving ? "Saving..." : "Continue"}
           onPress={completeOnboarding}
-          disabled={saving}
+          disabled={!ready || saving || needsReload}
         />
+        {needsReload && <Button title="Reload setup" onPress={() => { void loadSetup(); }} />}
       </View>
 
       <Text style={styles.optional}>
