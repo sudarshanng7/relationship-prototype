@@ -1,5 +1,6 @@
+import { signInWithPassword, signUp as signUpAccount } from "@/lib/auth-transitions";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { supabase } from "@/lib/supabase";
@@ -10,13 +11,32 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
+  const authAttempt = useRef(0);
+  const authInFlight = useRef(false);
+  const [authPending, setAuthPending] = useState(false);
 
-  async function navigateAfterAuthentication(userId: string) {
+  useLayoutEffect(() => () => { authAttempt.current++; }, []);
+
+  async function navigateAfterAuthentication(userId: string, attempt: number) {
+    const { data: before, error: beforeError } = await supabase.auth.getSession();
+    if (attempt !== authAttempt.current) return;
+    if (beforeError || before.session?.user.id !== userId) {
+      setStatus("Your session could not be confirmed. Please sign in again.");
+      return;
+    }
     const { data: profile, error } = await supabase
       .from("profiles")
       .select("onboarding_completed")
       .eq("id", userId)
-      .maybeSingle();
+      .maybeSingle()
+      .setHeader("Authorization", `Bearer ${before.session.access_token}`);
+
+    const { data: after, error: afterError } = await supabase.auth.getSession();
+    if (attempt !== authAttempt.current) return;
+    if (afterError || after.session?.user.id !== userId) {
+      setStatus("Your session changed or ended. Please sign in again.");
+      return;
+    }
 
     if (error || !profile) {
       console.error("Could not check onboarding:", error);
@@ -34,6 +54,7 @@ export default function LoginScreen() {
   }
 
   async function signIn() {
+    if (authInFlight.current) return;
     const cleanEmail = email.trim();
 
     if (!cleanEmail || !password) {
@@ -41,22 +62,27 @@ export default function LoginScreen() {
       return;
     }
     setStatus("Signing in...");
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: cleanEmail,
-      password,
-    });
-
-    if (error) {
-      console.error(error);
-      setStatus(error.message);
-      return;
+    const attempt = ++authAttempt.current;
+    authInFlight.current = true;
+    setAuthPending(true);
+    try {
+      const { data, error } = await signInWithPassword({ email: cleanEmail, password });
+      if (attempt !== authAttempt.current) return;
+      if (error) { setStatus(error.message); return; }
+      if (!data.user) { setStatus("Sign-in could not be confirmed. Please try again."); return; }
+      await navigateAfterAuthentication(data.user.id, attempt);
+    } catch {
+      if (attempt === authAttempt.current) setStatus("Could not complete sign-in. Please try again.");
+    } finally {
+      if (attempt === authAttempt.current) {
+        authInFlight.current = false;
+        setAuthPending(false);
+      }
     }
-
-    await navigateAfterAuthentication(data.user.id);
   }
 
   async function signUp() {
+    if (authInFlight.current) return;
     const cleanEmail = email.trim();
 
     if (!cleanEmail) {
@@ -75,24 +101,27 @@ export default function LoginScreen() {
     }
 
     setStatus("Creating account...");
-
-    const { data, error } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password,
-    });
-
-    if (error) {
-      console.error(error);
-      setStatus(error.message);
-      return;
+    const attempt = ++authAttempt.current;
+    authInFlight.current = true;
+    setAuthPending(true);
+    try {
+      const { data, error } = await signUpAccount({ email: cleanEmail, password });
+      if (attempt !== authAttempt.current) return;
+      if (error) { setStatus(error.message); return; }
+      if (!data.user) { setStatus("Account creation could not be confirmed. Please try again."); return; }
+      if (data.session) {
+        await navigateAfterAuthentication(data.user.id, attempt);
+        return;
+      }
+      setStatus("Account created. Please confirm your email, then sign in.");
+    } catch {
+      if (attempt === authAttempt.current) setStatus("Could not complete account creation. Please try again.");
+    } finally {
+      if (attempt === authAttempt.current) {
+        authInFlight.current = false;
+        setAuthPending(false);
+      }
     }
-
-    if (data.session && data.user) {
-      await navigateAfterAuthentication(data.user.id);
-      return;
-    }
-
-    setStatus("Account created. Please confirm your email, then sign in.");
   }
 
   return (
@@ -119,11 +148,11 @@ export default function LoginScreen() {
       />
 
       <View style={styles.button}>
-        <Button title="Sign in" onPress={signIn} />
+        <Button title="Sign in" onPress={signIn} disabled={authPending} />
       </View>
 
       <View style={styles.button}>
-        <Button title="Create account" onPress={signUp} />
+        <Button title="Create account" onPress={signUp} disabled={authPending} />
       </View>
 
       <Text style={styles.status}>{status}</Text>

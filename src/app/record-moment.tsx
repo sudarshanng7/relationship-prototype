@@ -1,5 +1,8 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import {
+  AccountSessionBoundary, useAccountSessionScope,
+} from "@/components/AccountSessionBoundary";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -14,6 +17,7 @@ import { supabase } from "@/lib/supabase";
 
 type EventType = "positive" | "friction";
 type Visibility = "mine" | "ours";
+type MembershipState = "loading" | "ready" | "unavailable" | "error";
 
 const positiveCategories = [
   { value: "care", label: "Care" },
@@ -40,13 +44,29 @@ const frictionCategories = [
   { value: "other", label: "Other" },
 ];
 
+type MomentRoute = { type?: string; visibility?: string; lockType?: string };
+
 export default function RecordMomentScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams<{
-    type?: string;
-    visibility?: "mine" | "ours" | string;
-    lockType?: string;
+  const raw = useLocalSearchParams<{
+    type?: string | string[];
+    visibility?: string | string[];
+    lockType?: string | string[];
   }>();
+  const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
+  const params: MomentRoute = {
+    type: first(raw.type), visibility: first(raw.visibility), lockType: first(raw.lockType),
+  };
+  const routeKey = JSON.stringify([params.type, params.visibility, params.lockType]);
+  return (
+    <AccountSessionBoundary routeKey={routeKey}>
+      <RecordMomentForm params={params} />
+    </AccountSessionBoundary>
+  );
+}
+
+function RecordMomentForm({ params }: { params: MomentRoute }) {
+  const scope = useAccountSessionScope();
+  const router = useRouter();
 
   const isPrivateReflectionMode = params.visibility === "mine";
   const isSharedMomentMode = params.visibility === "ours";
@@ -55,6 +75,7 @@ export default function RecordMomentScreen() {
     (params.type === "positive" || params.type === "friction");
 
   const [coupleId, setCoupleId] = useState<string | null>(null);
+  const [membershipState, setMembershipState] = useState<MembershipState>("loading");
 
   const initialType: EventType =
     params.type === "positive" ? "positive" : "friction";
@@ -70,57 +91,41 @@ export default function RecordMomentScreen() {
     params.visibility === "ours" ? "ours" : "mine",
   );
 
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("Checking relationship space...");
 
-  useEffect(() => {
-    loadCouple();
-  }, []);
+  const requestId = useRef(0);
+  const writeInFlight = useRef(false);
 
-  useEffect(() => {
-    if (params.type === "positive" || params.type === "friction") {
-      setEventType(params.type);
-      setCategory("");
+  const loadCouple = useCallback(async () => {
+    const id = ++requestId.current;
+    const valid = () => scope.isCurrent() && id === requestId.current;
+    if (!valid()) return;
+    setMembershipState("loading");
+    setCoupleId(null);
+    setStatus("Checking relationship space...");
+    try {
+      const auth = await scope.authorize();
+      if (!auth || !valid()) return;
+      const { data, error } = await supabase.from("couple_members")
+        .select("couple_id").eq("user_id", scope.userId).maybeSingle()
+        .setHeader("Authorization", `Bearer ${auth.token}`);
+      if (!valid()) return;
+      if (error) throw new Error(error.message);
+      if (!(await scope.authorize()) || !valid()) return;
+      setCoupleId(data?.couple_id ?? null);
+      setMembershipState(data?.couple_id ? "ready" : "unavailable");
+      setStatus(data?.couple_id ? "" : "No relationship space found. Create or join one in Settings.");
+    } catch {
+      if (valid()) {
+        setMembershipState("error");
+        setStatus("Could not verify your relationship space. Reopen this form to try again.");
+      }
     }
-  }, [params.type]);
+  }, [scope]);
 
-  useEffect(() => {
-    if (params.visibility === "ours") {
-      setVisibility("ours");
-    } else if (params.visibility === "mine") {
-      setVisibility("mine");
-    }
-  }, [params.visibility]);
-
-  async function loadCouple() {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      router.replace("/");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("couple_members")
-      .select("couple_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (error) {
-      console.error(error);
-      setStatus(error.message);
-      return;
-    }
-
-    if (!data) {
-      setStatus("No relationship space found.");
-      return;
-    }
-
-    setCoupleId(data.couple_id);
-  }
+  useFocusEffect(useCallback(() => {
+    void loadCouple();
+  }, [loadCouple]));
 
   function changeEventType(type: EventType) {
     setEventType(type);
@@ -129,8 +134,11 @@ export default function RecordMomentScreen() {
     setCategory("");
   }
 
+  const willShare =
+    isSharedMomentMode || (!isPrivateReflectionMode && visibility === "ours");
+
   async function saveMoment() {
-    if (saving) return;
+    if (!scope.isCurrent() || writeInFlight.current || saving || membershipState !== "ready") return;
 
     if (!coupleId) {
       setStatus("No relationship space found.");
@@ -142,18 +150,36 @@ export default function RecordMomentScreen() {
       return;
     }
 
-    const willShare =
-      isSharedMomentMode || (!isPrivateReflectionMode && visibility === "ours");
-
     if (willShare && !sharedTopic.trim()) {
       setStatus("Please write what you would like to share with your partner.");
       return;
     }
 
+    writeInFlight.current = true;
+    requestId.current++;
     setSaving(true);
     setStatus("Saving...");
 
     try {
+      const auth = await scope.authorize();
+      if (!auth || !scope.isCurrent()) return;
+      // Never apply a retained draft to a replacement relationship space.
+      const { data: membership, error: membershipError } = await supabase
+        .from("couple_members").select("couple_id").eq("user_id", scope.userId)
+        .maybeSingle().setHeader("Authorization", `Bearer ${auth.token}`);
+      if (!scope.isCurrent()) return;
+      if (membershipError) {
+        setMembershipState("error");
+        throw new Error("Could not verify your relationship space. Reopen this form to try again.");
+      }
+      if (membership?.couple_id !== coupleId) {
+        setCoupleId(null);
+        setMembershipState("unavailable");
+        setPrivateNote("");
+        setSharedTopic("");
+        setCategory("");
+        throw new Error("Relationship space changed. Reopen this form before saving.");
+      }
       const finalVisibility: Visibility = isPrivateReflectionMode
         ? "mine"
         : isSharedMomentMode
@@ -172,31 +198,37 @@ export default function RecordMomentScreen() {
           p_shared_topic:
             finalVisibility === "ours" ? sharedTopic.trim() || null : null,
         },
-      );
-
-      if (error) throw error;
+      ).setHeader("Authorization", `Bearer ${auth.token}`);
+      if (!scope.isCurrent()) return;
+      if (error) throw new Error(error.message);
 
       if (!eventId) {
         throw new Error("Moment could not be created.");
       }
 
+      if (!(await scope.authorize()) || !scope.isCurrent()) return;
       router.replace({
         pathname: "/event/[id]",
         params: { id: eventId, scope: finalVisibility },
       });
     } catch (error) {
-      console.error("Failed to save moment:", error);
-
+      if (!scope.isCurrent()) return;
       setStatus(
         error instanceof Error ? error.message : "Could not save the moment.",
       );
     } finally {
-      setSaving(false);
+      if (scope.isCurrent()) {
+        writeInFlight.current = false;
+        setSaving(false);
+      }
     }
   }
 
   const categories =
     eventType === "positive" ? positiveCategories : frictionCategories;
+
+  const canSave = membershipState === "ready" && Boolean(coupleId) &&
+    Boolean(category) && (!willShare || Boolean(sharedTopic.trim())) && !saving;
 
   const saveButtonLabel = saving
     ? "Saving..."
@@ -513,12 +545,12 @@ export default function RecordMomentScreen() {
           {/* Save Action */}
           <View style={styles.saveButtonWrap}>
             <Pressable
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+              style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
               onPress={saveMoment}
-              disabled={saving}
+              disabled={!canSave}
               accessibilityRole="button"
               accessibilityLabel={saveButtonLabel}
-              accessibilityState={{ disabled: saving }}
+              accessibilityState={{ disabled: !canSave }}
             >
               <Text style={styles.saveButtonText}>{saveButtonLabel}</Text>
             </Pressable>
