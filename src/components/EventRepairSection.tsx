@@ -44,6 +44,10 @@ const STATUSES: { value: RepairStatus; label: string }[] = [
   { value: "reconnected", label: "I feel reconnected" },
 ];
 
+const IMPORTED_STATUS_LABELS: Record<RepairStatus, string> = {
+  open: "Open", partially_repaired: "Partially repaired", reconnected: "Reconnected",
+};
+
 const METHODS: { value: RepairMethod | null; label: string }[] = [
   { value: null, label: "Not sure / none" },
   { value: "talking", label: "Talking" },
@@ -278,8 +282,10 @@ export function EventRepairSection({
         setSharingUnverified(false);
       }
       if (!preserveDraft) {
-        setDraftStatus(mine?.repair_status ?? null);
-        setDraftMethod(mine?.what_helped ?? null);
+        // Imported history is not a current choice. Even selecting Open again
+        // must be a deliberate action before a checked save confirms it.
+        setDraftStatus(mine?.status_origin === "explicit" ? mine.repair_status : null);
+        setDraftMethod(mine?.status_origin === "explicit" ? mine.what_helped : null);
       }
       setConfirmShare(false);
       setConfirmWithdraw(false);
@@ -638,8 +644,11 @@ export function EventRepairSection({
           {mine ? (
             <View style={styles.summary}>
               <Text style={styles.summaryTitle}>
-                {reloadRequired ? "Last loaded for you" : "Saved for you"}:{" "}
-                {statusLabel(mine.repair_status)}
+                {mine.status_origin === "legacy_default_unconfirmed"
+                  ? `Imported status: ${IMPORTED_STATUS_LABELS[mine.repair_status]} — not confirmed by you`
+                  : mine.status_origin === "legacy_creator_report"
+                    ? `Earlier report: ${statusLabel(mine.repair_status)}`
+                    : `${reloadRequired ? "Last loaded for you" : "Saved for you"}: ${statusLabel(mine.repair_status)}`}
               </Text>
               <Text style={styles.summarySecondary}>
                 {sharingUnverified
@@ -648,16 +657,21 @@ export function EventRepairSection({
                   ? "Shared with your partner"
                   : "Private — not shared"}
               </Text>
-              {mine.what_helped && (
+              {mine.what_helped && mine.status_origin !== "legacy_default_unconfirmed" && (
                 <Text style={styles.summarySecondary}>
-                  What helped: {methodLabel(mine.what_helped)}
+                  {mine.status_origin === "legacy_creator_report" ? "What helped in that report" : "What helped"}: {methodLabel(mine.what_helped)}
                 </Text>
               )}
-              {mine.status_origin !== "explicit" && (
+              {mine.status_origin === "legacy_default_unconfirmed" && (
                 <Text style={styles.legacyNote}>
-                  This was imported from an earlier version. It may include an
-                  automatic default. Review your selection before saving or
-                  sharing. An imported Open value may be an automatic default.
+                  This status came from an earlier version and may have been set
+                  automatically. Choose how you feel now to record your own update.
+                </Text>
+              )}
+              {mine.status_origin === "legacy_creator_report" && (
+                <Text style={styles.legacyNote}>
+                  This is a preserved report from an earlier version. Choose how
+                  you feel now before saving a current update.
                 </Text>
               )}
             </View>
@@ -749,11 +763,12 @@ export function EventRepairSection({
           )}
 
           {/* Two clear choices at the moment of saving; sharing is NEVER the default. */}
-          {canSave && (
+          {(canSave || (mine && mine.status_origin !== "explicit" && draftStatus === null)) && (
             <Pressable
-              style={[styles.primaryButton, busy && styles.disabled]}
+              style={[styles.primaryButton, (busy || !canSave) && styles.disabled]}
               accessibilityRole="button"
-              disabled={busy}
+              accessibilityState={{ disabled: busy || !canSave }}
+              disabled={busy || !canSave}
               onPress={() => void savePrivately()}
             >
               <Text style={styles.primaryLabel}>

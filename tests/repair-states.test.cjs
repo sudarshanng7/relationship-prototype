@@ -343,10 +343,11 @@ test("UI never uses a partner's shared version as its own expected version", asy
   assert.equal(db.calls[0].args.p_expected_report_version, null);
 });
 
-test("UI confirms an unchanged legacy report with a checked save before sharing", async () => {
+test("UI confirms a deliberately selected legacy Open with a checked save before sharing", async () => {
   const db = client([row({ status_origin: "legacy_default_unconfirmed" })]);
   const ui = harness(db);
   await ui.flush();
+  await ui.press("Still unresolved");
   await confirmShare(ui);
   assert.deepEqual(db.calls.map((call) => call.name), [checkedSave, share]);
   assert.equal(db.calls[0].args.p_expected_report_version, 7);
@@ -976,7 +977,14 @@ for (const latest of [
     await ui.press("Load newer update (replaces your choices)");
     assert.doesNotMatch(ui.text(), /Your repair report changed|does not confirm/);
     assert.equal(db.calls.filter((call) => call.name === share).length, 1);
-    assert.equal(ui.selected(latest.what_helped === "space" ? "Space" : "Talking"), true);
+    if (latest.status_origin === "explicit") {
+      assert.equal(ui.selected(latest.what_helped === "space" ? "Space" : "Talking"), true);
+    } else {
+      // A04: deliberately loading historical provenance does not confirm a
+      // current status choice, even after sharing-outcome reconciliation.
+      assert.equal(ui.selected("I feel reconnected"), false);
+      assert.equal(ui.button("Save privately").props.disabled, true);
+    }
   });
 }
 
