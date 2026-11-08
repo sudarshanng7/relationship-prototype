@@ -2,7 +2,7 @@ import {
   AccountSessionBoundary, useAccountSessionScope,
 } from "@/components/AccountSessionBoundary";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -14,6 +14,10 @@ import {
 } from "react-native";
 
 import { supabase } from "@/lib/supabase";
+import {
+  ACKNOWLEDGED_CREATION_NOTICE, UNCERTAIN_CREATION_NOTICE,
+  isMomentCreationRejection, isMomentId, type CreationAttempt,
+} from "@/lib/moment-creation";
 
 type EventType = "positive" | "friction";
 type Visibility = "mine" | "ours";
@@ -47,6 +51,9 @@ const frictionCategories = [
 type MomentRoute = { type?: string; visibility?: string; lockType?: string };
 
 export default function RecordMomentScreen() {
+  // Non-sensitive gate survives focus/session re-verification remounts. Drafts
+  // and tokens stay inside the boundary and are cleared when it invalidates.
+  const attemptRef = useRef<CreationAttempt | null>(null);
   const raw = useLocalSearchParams<{
     type?: string | string[];
     visibility?: string | string[];
@@ -59,14 +66,31 @@ export default function RecordMomentScreen() {
   const routeKey = JSON.stringify([params.type, params.visibility, params.lockType]);
   return (
     <AccountSessionBoundary routeKey={routeKey}>
-      <RecordMomentForm params={params} />
+      <RecordMomentForm params={params} routeKey={routeKey} attemptRef={attemptRef} />
     </AccountSessionBoundary>
   );
 }
 
-function RecordMomentForm({ params }: { params: MomentRoute }) {
+function RecordMomentForm({ params, routeKey, attemptRef }: {
+  params: MomentRoute;
+  routeKey: string;
+  attemptRef: RefObject<CreationAttempt | null>;
+}) {
   const scope = useAccountSessionScope();
   const router = useRouter();
+  const [creationPhase, setCreationPhase] = useState<CreationAttempt["phase"] | "checking">("checking");
+  useLayoutEffect(() => {
+    if (!scope.isCurrent()) return;
+    if (attemptRef.current?.userId !== scope.userId || attemptRef.current.routeKey !== routeKey) {
+      attemptRef.current = { userId: scope.userId, routeKey, phase: "idle" };
+    } else if (attemptRef.current.phase === "pending") {
+      // The previous focused scope can no longer acknowledge its request.
+      attemptRef.current.phase = "uncertain";
+    }
+    setCreationPhase(attemptRef.current.phase);
+  }, [attemptRef, routeKey, scope]);
+  const creationNotice = creationPhase === "uncertain" ? UNCERTAIN_CREATION_NOTICE
+    : creationPhase === "acknowledged" ? ACKNOWLEDGED_CREATION_NOTICE : "";
 
   const isPrivateReflectionMode = params.visibility === "mine";
   const isSharedMomentMode = params.visibility === "ours";
@@ -138,7 +162,8 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
     isSharedMomentMode || (!isPrivateReflectionMode && visibility === "ours");
 
   async function saveMoment() {
-    if (!scope.isCurrent() || writeInFlight.current || saving || membershipState !== "ready") return;
+    if (!scope.isCurrent() || writeInFlight.current || saving ||
+        attemptRef.current?.phase !== "idle" || membershipState !== "ready") return;
 
     if (!coupleId) {
       setStatus("No relationship space found.");
@@ -160,6 +185,8 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
     setSaving(true);
     setStatus("Saving...");
 
+    let dispatched = false;
+    let preflightNotice = "Nothing was sent. Could not prepare your moment. Please try again.";
     try {
       const auth = await scope.authorize();
       if (!auth || !scope.isCurrent()) return;
@@ -170,7 +197,8 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
       if (!scope.isCurrent()) return;
       if (membershipError) {
         setMembershipState("error");
-        throw new Error("Could not verify your relationship space. Reopen this form to try again.");
+        preflightNotice = "Nothing was sent. Could not verify your relationship space. Reopen this form to try again.";
+        throw new Error("Membership unavailable");
       }
       if (membership?.couple_id !== coupleId) {
         setCoupleId(null);
@@ -178,7 +206,8 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
         setPrivateNote("");
         setSharedTopic("");
         setCategory("");
-        throw new Error("Relationship space changed. Reopen this form before saving.");
+        preflightNotice = "Nothing was sent. Relationship space changed. Reopen this form before saving.";
+        throw new Error("Membership changed");
       }
       const finalVisibility: Visibility = isPrivateReflectionMode
         ? "mine"
@@ -186,7 +215,7 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
           ? "ours"
           : visibility;
 
-      const { data: eventId, error } = await supabase.rpc(
+      const creationRequest = supabase.rpc(
         "create_relationship_moment",
         {
           p_couple_id: coupleId,
@@ -198,24 +227,66 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
           p_shared_topic:
             finalVisibility === "ours" ? sharedTopic.trim() || null : null,
         },
-      ).setHeader("Authorization", `Bearer ${auth.token}`);
+      ).setHeader("Authorization", `Bearer ${auth.token}`).retry(false);
+      // The installed PostgREST builder dispatches when awaited, so local
+      // construction failures above still establish that nothing was sent.
+      dispatched = true;
+      attemptRef.current!.phase = "pending";
+      const { data: eventId, error } = await creationRequest;
       if (!scope.isCurrent()) return;
-      if (error) throw new Error(error.message);
-
-      if (!eventId) {
-        throw new Error("Moment could not be created.");
+      if (error && eventId === null && isMomentCreationRejection(error)) {
+        attemptRef.current!.phase = "idle";
+        if (!(await scope.authorize()) || !scope.isCurrent()) return;
+        setStatus("The server rejected this creation; no moment was created. You can review your draft and try again.");
+        return;
       }
+      if (error || !isMomentId(eventId)) throw new Error("Uncertain creation");
 
-      if (!(await scope.authorize()) || !scope.isCurrent()) return;
+      attemptRef.current!.phase = "acknowledged";
+      setCreationPhase("acknowledged");
+      if (!(await scope.authorize(ACKNOWLEDGED_CREATION_NOTICE)) || !scope.isCurrent()) return;
       router.replace({
         pathname: "/event/[id]",
         params: { id: eventId, scope: finalVisibility },
       });
-    } catch (error) {
+    } catch {
       if (!scope.isCurrent()) return;
-      setStatus(
-        error instanceof Error ? error.message : "Could not save the moment.",
-      );
+      if (dispatched) {
+        if (attemptRef.current!.phase !== "acknowledged") {
+          attemptRef.current!.phase = "uncertain";
+          setCreationPhase("uncertain");
+        }
+        const notice = attemptRef.current!.phase === "acknowledged"
+          ? ACKNOWLEDGED_CREATION_NOTICE : UNCERTAIN_CREATION_NOTICE;
+        const auth = await scope.authorize(notice);
+        if (!auth || !scope.isCurrent()) return;
+        // A response loss must not keep a draft in a replacement relationship
+        // space. These checks are reads and can never resend the creation.
+        try {
+          const { data, error } = await supabase.from("couple_members")
+            .select("couple_id").eq("user_id", scope.userId).maybeSingle()
+            .setHeader("Authorization", `Bearer ${auth.token}`);
+          if (!scope.isCurrent()) return;
+          if (error || data?.couple_id !== coupleId) {
+            setPrivateNote("");
+            setSharedTopic("");
+            setCategory("");
+            setCoupleId(null);
+            setMembershipState("unavailable");
+          }
+        } catch {
+          if (!scope.isCurrent()) return;
+          setPrivateNote("");
+          setSharedTopic("");
+          setCategory("");
+          setCoupleId(null);
+          setMembershipState("error");
+        }
+        if (!scope.isCurrent()) return;
+        setStatus("");
+      } else {
+        setStatus(preflightNotice);
+      }
     } finally {
       if (scope.isCurrent()) {
         writeInFlight.current = false;
@@ -228,7 +299,8 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
     eventType === "positive" ? positiveCategories : frictionCategories;
 
   const canSave = membershipState === "ready" && Boolean(coupleId) &&
-    Boolean(category) && (!willShare || Boolean(sharedTopic.trim())) && !saving;
+    Boolean(category) && (!willShare || Boolean(sharedTopic.trim())) && !saving &&
+    creationPhase === "idle";
 
   const saveButtonLabel = saving
     ? "Saving..."
@@ -557,6 +629,21 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
           </View>
 
           {/* Status feedback */}
+          {creationNotice !== "" && (
+            <View style={styles.statusCard}>
+              <Text style={styles.statusText}>{creationNotice}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Check existing moments"
+                onPress={() => {
+                  if (scope.isCurrent()) router.replace("/events");
+                }}
+                style={styles.checkMomentsButton}
+              >
+                <Text style={styles.backButtonText}>Check existing moments</Text>
+              </Pressable>
+            </View>
+          )}
           {status !== "" && (
             <View style={styles.statusCard}>
               <Text style={styles.statusText}>{status}</Text>
@@ -569,6 +656,7 @@ function RecordMomentForm({ params }: { params: MomentRoute }) {
 }
 
 const styles = StyleSheet.create({
+  checkMomentsButton: { minHeight: 44, justifyContent: "center" },
   safeArea: {
     flex: 1,
     backgroundColor: "#FBF7FC",
