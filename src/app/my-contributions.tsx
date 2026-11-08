@@ -1,10 +1,14 @@
 import { AccountSessionBoundary, useAccountSessionScope } from "@/components/AccountSessionBoundary";
+import {
+  CouplyEmptyState, CouplyHeader, CouplyPage, CouplyQuietButton,
+  CouplySectionCard, CouplyStatusPill,
+} from "@/components/CouplyUI";
+import { tokens } from "@/components/couply-tokens";
 import type { EventRepairState } from "@/lib/repair-states";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 
 type OwnPerspective = {
   id: string;
@@ -115,32 +119,64 @@ function MyContributionsContent() {
   }, [scope, reload]));
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top"]}>
+    <CouplyPage edges={["top", "left", "right", "bottom"]} testID="my-contributions-page">
       <FlatList
+        style={styles.list}
         data={state.items}
         keyExtractor={(item) => item.kind === "perspective" ? `perspective:${item.row.id}` : `repair:${item.row.event_id}`}
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Back to Moments" style={styles.button}
-              onPress={() => { if (scope.isCurrent()) router.replace("/events"); }}>
-              <Text style={styles.link}>‹ Back to Moments</Text>
-            </Pressable>
-            <Text style={styles.title}>My contributions</Text>
-            <Text style={styles.body}>Your own perspectives and repair updates, including retained contributions when a moment is no longer available to you.</Text>
-            <Text style={styles.body}>These are your experiences. They do not imply agreement or mutual repair. Sharing labels describe your contribution; they do not confirm current access to its moment.</Text>
-            <Text style={styles.body}>This page is read-only. Nothing here is automatically shared or resubmitted.</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Refresh my contributions" disabled={state.loading}
-              accessibilityState={{ disabled: state.loading }} style={styles.button} onPress={() => setReload((value) => value + 1)}>
-              <Text style={styles.link}>{state.loading ? "Checking access…" : "Refresh my contributions"}</Text>
-            </Pressable>
-            {state.error !== "" && <Text style={styles.body}>{state.error}</Text>}
+            <CouplyHeader
+              overline="RELATIONSHIP OS"
+              title="My contributions"
+              subtitle="Your own perspectives and repair updates, including retained contributions when a moment is no longer available to you."
+              backLabel="Back to Moments"
+              onBack={() => { if (scope.isCurrent()) router.replace("/events"); }}
+            />
+            <CouplySectionCard variant="lilac" style={styles.explanation}>
+              <Text style={styles.body}>These are your experiences. They do not imply agreement or mutual repair. Sharing labels describe your contribution; they do not confirm current access to its moment.</Text>
+              <Text style={styles.body}>This page is read-only. Nothing here is automatically shared or resubmitted.</Text>
+            </CouplySectionCard>
+            <CouplyQuietButton
+              label={state.loading ? "Checking access…" : "Refresh my contributions"}
+              accessibilityLabel="Refresh my contributions"
+              disabled={state.loading}
+              loading={state.loading}
+              onPress={() => setReload((value) => value + 1)}
+            />
+            {state.loading && (
+              <CouplySectionCard variant="muted" style={styles.notice}>
+                <ActivityIndicator size="small" color={tokens.colors.plum} />
+                <Text accessibilityLiveRegion="polite" style={styles.body}>Checking access…</Text>
+              </CouplySectionCard>
+            )}
+            {state.error !== "" && (
+              <CouplySectionCard style={styles.notice}>
+                <Text accessibilityRole="header" style={styles.heading}>Contributions aren&apos;t available</Text>
+                <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body}>{state.error}</Text>
+              </CouplySectionCard>
+            )}
           </View>
         }
-        ListEmptyComponent={!state.loading && !state.error ? <Text style={styles.body}>No contributions available. Perspectives you submit and your repair updates will appear here when you have access.</Text> : null}
+        ListEmptyComponent={!state.loading && !state.error ? (
+          <CouplyEmptyState
+            title="No contributions available."
+            body="Perspectives you submit and your repair updates will appear here when you have access."
+          />
+        ) : null}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.heading}>{item.kind === "perspective" ? "My perspective" : "My repair update"}</Text>
+          <CouplySectionCard style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text accessibilityRole="header" style={styles.heading}>{item.kind === "perspective" ? "My perspective" : "My repair update"}</Text>
+              <CouplyStatusPill
+                label={item.kind === "perspective"
+                  ? item.row.sharing_status === "suspended" ? "Sharing suspended" : "Submitted"
+                  : item.row.sharing_status === "shared" ? "Shared" : "Private"}
+                style={item.row.sharing_status === "shared" ? styles.sharedTag
+                  : item.row.sharing_status === "suspended" ? undefined : styles.ownTag}
+              />
+            </View>
             {item.kind === "perspective" ? <>
               <Text style={styles.body}>{item.row.perspective_text}</Text>
               <Text style={styles.body}>{item.row.sharing_status === "suspended"
@@ -158,22 +194,24 @@ function MyContributionsContent() {
                 : "Private — not shared with your partner."}</Text>
             </>}
             <Text style={styles.timestamp}>Contribution updated: {new Date(item.row.updated_at).toLocaleString()}</Text>
-          </View>
+          </CouplySectionCard>
         )}
       />
-    </SafeAreaView>
+    </CouplyPage>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FBF7FC" },
-  content: { padding: 20, paddingBottom: 48, width: "100%", maxWidth: 560, alignSelf: "center" },
-  header: { gap: 14, marginBottom: 20 },
-  title: { fontSize: 28, fontWeight: "700", color: "#3D3040" },
-  heading: { fontSize: 18, fontWeight: "600", color: "#3D3040" },
-  body: { fontSize: 15, lineHeight: 23, color: "#514555" },
-  card: { gap: 12, padding: 18, marginBottom: 16, borderRadius: 16, backgroundColor: "#FFFFFF" },
-  timestamp: { fontSize: 13, color: "#6D6072" },
-  button: { minHeight: 44, justifyContent: "center" },
-  link: { fontSize: 15, fontWeight: "600", color: "#6E416D" },
+  list: { flex: 1 },
+  content: { flexGrow: 1, paddingTop: tokens.spacing.sm, paddingBottom: tokens.spacing.xxl },
+  header: { gap: tokens.spacing.lg, marginBottom: tokens.spacing.xl },
+  explanation: { gap: tokens.spacing.md },
+  notice: { gap: tokens.spacing.md, alignItems: "center" },
+  heading: { color: tokens.colors.text, fontSize: tokens.typeScale.sectionTitle, fontWeight: "700", flexShrink: 1 },
+  body: { color: tokens.colors.textSecondary, fontSize: tokens.typeScale.bodyLarge, lineHeight: 23 },
+  card: { gap: tokens.spacing.md, marginBottom: tokens.spacing.lg },
+  cardHeader: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: tokens.spacing.sm, justifyContent: "space-between" },
+  ownTag: { backgroundColor: tokens.colors.surfaceLilac },
+  sharedTag: { backgroundColor: tokens.colors.surfaceBlush },
+  timestamp: { color: tokens.colors.textMuted, fontSize: tokens.typeScale.caption },
 });
