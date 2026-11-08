@@ -22,8 +22,10 @@ async function draft(ui, ours = false) {
   ui.change(0, "  Synthetic private draft  ");
   if (ours) ui.change(1, "  Synthetic shared topic  ");
 }
-const save = (ui) => ui.nodes().find((node) => node.type === "Pressable" &&
-  ["Save to Mine", "Save privately", "Share with your partner"].includes(node.props.accessibilityLabel));
+// Keep exercising the real guarded callback, including deliberate disabled and
+// retained calls. The real shared button separately blocks its disabled host.
+const save = (ui) => ui.components().find((node) =>
+  node.props.testID === "record-moment-save");
 async function submit(ui) { await save(ui).props.onPress(); await ui.flush(); }
 function uncertain(ui) {
   assert.match(ui.text(), /may already have been saved or shared/);

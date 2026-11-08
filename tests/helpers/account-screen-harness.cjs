@@ -36,6 +36,7 @@ function harness(db, file, options = {}) {
   const contexts = new Map();
   let current, cursor, tree, mounted = true, focused = true;
   let layout = [], passive = [];
+  let componentNodes = [];
   const ui = { navigations: [], mounts: new Map() };
   const depsEqual = (a, b) => a && b && a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
   const memo = (factory, deps) => {
@@ -101,6 +102,8 @@ function harness(db, file, options = {}) {
       useFocusEffect: (callback) => react.useEffect(() => focused ? callback() : undefined, [callback, focused]),
     },
   };
+  imports["@/components/couply-tokens"] = loadSource("src/components/couply-tokens.ts", {});
+  imports["@/components/CouplyUI"] = loadSource("src/components/CouplyUI.tsx", imports);
   imports["@/components/AccountSessionBoundary"] = loadSource("src/components/AccountSessionBoundary.tsx", imports);
   imports["react-native"].FlatList = (props) => jsx("View", { children: [
     props.ListHeaderComponent,
@@ -125,6 +128,7 @@ function harness(db, file, options = {}) {
       return result;
     }
     if (typeof node.type === "function") {
+      componentNodes.push(node);
       let instance = instances.get(key);
       if (!instance || instance.type !== node.type) {
         if (instance) cleanup(instance);
@@ -143,6 +147,7 @@ function harness(db, file, options = {}) {
   }
   ui.render = () => {
     if (!mounted) return;
+    componentNodes = [];
     const visited = new Set();
     tree = resolve(jsx(Screen), "root", visited);
     for (const [key, instance] of instances) {
@@ -169,6 +174,9 @@ function harness(db, file, options = {}) {
   };
   ui.text = () => text(tree);
   ui.nodes = () => nodes(tree);
+  // Expose actual supplied callbacks for guard tests that deliberately bypass a
+  // disabled host. Components still render normally; host props are untouched.
+  ui.components = () => componentNodes;
   ui.changeParams = async (next) => { params = next; await ui.flush(); };
   ui.find = (label) => nodes(tree).find((node) => node.props?.accessibilityLabel === label || (node.type === "Button" && node.props.title === label));
   ui.tap = async (label) => {
