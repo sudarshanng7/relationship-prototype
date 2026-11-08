@@ -330,6 +330,15 @@ export default function EventsScreen() {
             </Text>
           </Pressable>
 
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="My contributions"
+            onPress={() => router.push("/my-contributions")}
+            style={[styles.refreshLink, styles.contributionsLink]}
+          >
+            <Text style={styles.refreshText}>My contributions</Text>
+          </Pressable>
+
           {!isOursSpace && !isMineSpace && (
             <View style={styles.filters}>
               {FILTERS.map((option) => {
@@ -522,6 +531,7 @@ function formatDate(iso: string) {
 }
 
 const styles = StyleSheet.create({
+  contributionsLink: { minHeight: 44, justifyContent: "center" },
   screen: { flex: 1, backgroundColor: "#FBF7FC" },
   scroll: { flex: 1 },
   content: {
