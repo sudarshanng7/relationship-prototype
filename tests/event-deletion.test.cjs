@@ -4,6 +4,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const { test } = require("node:test");
 const ts = require("typescript");
+const { loadSource } = require("./helpers/account-screen-harness.cjs");
 
 // Execute the actual EventDetailContent handler/authorization, not a rewritten
 // deletion controller. Hooks, native hosts, parent account identity and transport
@@ -96,6 +97,7 @@ function harness(db, currentUserId = "user-a") {
     react, "react/jsx-runtime": { jsx, jsxs: jsx },
     "@/lib/supabase": { supabase: db.supabase },
     "@/components/EventRepairSection": { EventRepairSection: "EventRepairSection" },
+    "react-native-safe-area-context": { SafeAreaView: "SafeAreaView" },
     "react-native": Object.assign(Object.fromEntries(
       ["Pressable", "ScrollView", "Text", "TextInput", "View"].map((name) => [name, name]),
     ), { StyleSheet: { create: (value) => value } }),
@@ -107,6 +109,8 @@ function harness(db, currentUserId = "user-a") {
       },
     },
   };
+  imports["@/components/couply-tokens"] = loadSource("src/components/couply-tokens.ts", {});
+  imports["@/components/CouplyUI"] = loadSource("src/components/CouplyUI.tsx", imports);
   // Router identity must be stable, as in the installed SDK; a fresh router
   // object each render would invent focus reload loops absent from the product.
   const router = { back: () => ui.navigations.push("back") };
@@ -125,10 +129,14 @@ function harness(db, currentUserId = "user-a") {
     eventId: "event-a", currentUserId, isCurrentAccount: () => ui.current,
     invalidateAccount: () => { ui.current = false; ui.invalidations++; },
   };
+  const resolve = (node) => !node || typeof node !== "object" ? node
+    : Array.isArray(node) ? node.map(resolve)
+    : typeof node.type === "function" ? resolve(node.type(node.props))
+    : { ...node, props: { ...node.props, children: resolve(node.props?.children) } };
   ui.render = () => {
     if (!mounted) return;
     cursor = 0;
-    tree = module.exports.EventDetailContent(props);
+    tree = resolve(module.exports.EventDetailContent(props));
     while (effects.length) effects.shift()();
   };
   ui.flush = async () => {

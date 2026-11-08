@@ -1,4 +1,6 @@
+import { CouplyHeader, CouplyPage, CouplySectionCard, CouplyStatusPill } from "@/components/CouplyUI";
 import { EventRepairSection } from "@/components/EventRepairSection";
+import { tokens } from "@/components/couply-tokens";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -79,9 +81,13 @@ export default function EventDetailScreen() {
 
   if (!boundary?.userId || !eventId) {
     return (
-      <View style={styles.center}>
-        <Text>{eventId ? "Loading..." : "Invalid event."}</Text>
-      </View>
+      <CouplyPage edges={["left", "right", "bottom"]}>
+        <View style={styles.center}>
+          <CouplySectionCard style={styles.centerNotice}>
+            <Text accessibilityLiveRegion="polite" style={styles.helperText}>{eventId ? "Loading..." : "Invalid event."}</Text>
+          </CouplySectionCard>
+        </View>
+      </CouplyPage>
     );
   }
 
@@ -425,9 +431,13 @@ function EventDetailContent({
 
   if (!event) {
     return (
-      <View style={styles.center}>
-        <Text>{statusMessage}</Text>
-      </View>
+      <CouplyPage edges={["left", "right", "bottom"]}>
+        <View style={styles.center}>
+          <CouplySectionCard style={styles.centerNotice}>
+            <Text accessibilityLiveRegion="polite" style={styles.helperText}>{statusMessage}</Text>
+          </CouplySectionCard>
+        </View>
+      </CouplyPage>
     );
   }
 
@@ -438,9 +448,10 @@ function EventDetailContent({
   );
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <CouplyPage edges={["left", "right", "bottom"]}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       {/* Moment summary */}
-      <View style={styles.summaryCard}>
+      <CouplySectionCard style={[styles.summaryCard, event.event_type === "positive" && styles.positiveSummary]}>
         <View style={styles.summaryTop}>
           <Text style={styles.eyebrow}>
             {event.event_type === "friction"
@@ -448,21 +459,13 @@ function EventDetailContent({
               : "A GOOD MOMENT"}
           </Text>
 
-          <View
-            style={[
-              styles.visibilityBadge,
-              event.visibility === "ours"
-                ? styles.visibilityBadgeOurs
-                : styles.visibilityBadgeMine,
-            ]}
-          >
-            <Text style={styles.visibilityBadgeText}>
-              {event.visibility === "ours" ? "Ours · Shared" : "Mine · Private"}
-            </Text>
-          </View>
+          <CouplyStatusPill
+            label={event.visibility === "ours" ? "Ours · Shared" : "Mine · Private"}
+            style={event.visibility === "ours" ? styles.visibilityBadgeOurs : styles.visibilityBadgeMine}
+          />
         </View>
 
-        <Text style={styles.title}>{formatCategory(event.category)}</Text>
+        <CouplyHeader title={formatCategory(event.category)} style={styles.summaryHeading} />
 
         <Text style={styles.meta}>
           Recorded {formatDate(event.created_at)}
@@ -478,32 +481,32 @@ function EventDetailContent({
             : {event.intensity} / 5
           </Text>
         )}
-      </View>
+      </CouplySectionCard>
 
       {/* Shared topic */}
       {event.visibility === "ours" && event.shared_topic && (
-        <View style={[styles.contentCard, styles.sharedCard]}>
-          <Text style={styles.contentTitle}>Shared topic</Text>
+        <CouplySectionCard variant="blush" style={styles.contentCard}>
+          <Text accessibilityRole="header" style={styles.contentTitle}>Shared topic</Text>
 
           <Text style={styles.contentBody}>{event.shared_topic}</Text>
 
           <Text style={styles.contentHint}>
             This topic is intentionally shared with your partner.
           </Text>
-        </View>
+        </CouplySectionCard>
       )}
 
       {/* Private reflection */}
       {privateNote && (
-        <View style={[styles.contentCard, styles.privateCard]}>
-          <Text style={styles.contentTitle}>My private reflection</Text>
+        <CouplySectionCard variant="lilac" style={styles.contentCard}>
+          <Text accessibilityRole="header" style={styles.contentTitle}>My private reflection</Text>
 
           <Text style={styles.contentBody}>{privateNote}</Text>
 
           <Text style={styles.contentHint}>
             Private — only you can see this reflection.
           </Text>
-        </View>
+        </CouplySectionCard>
       )}
 
       {event.event_type === "friction" && currentUserId && (
@@ -519,8 +522,8 @@ function EventDetailContent({
 
       {/* Our Perspectives */}
       {event.visibility === "ours" && (
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Our perspectives</Text>
+        <CouplySectionCard style={styles.sectionCard}>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>Our perspectives</Text>
 
           <Text style={styles.helperText}>
             Each perspective belongs to its author. Sharing a perspective does
@@ -532,8 +535,8 @@ function EventDetailContent({
           ) : (
             <>
               {/* Own perspective */}
-              <View style={styles.perspectiveCard}>
-                <Text style={styles.perspectiveHeading}>Your perspective</Text>
+              <CouplySectionCard variant="muted" style={styles.perspectiveCard}>
+                <Text accessibilityRole="header" style={styles.perspectiveHeading}>Your perspective</Text>
 
                 {myPerspective ? (
                   <>
@@ -561,6 +564,8 @@ function EventDetailContent({
                     ]}
                     disabled={savingPerspective}
                     accessibilityRole="button"
+                    accessibilityState={{ disabled: savingPerspective }}
+                    accessibilityLabel={myPerspective?.sharing_status === "submitted" ? "Edit my perspective" : "Write and share my perspective"}
                     onPress={() => {
                       setPerspectiveInput(
                         myPerspective?.sharing_status === "submitted"
@@ -588,6 +593,7 @@ function EventDetailContent({
                       value={perspectiveInput}
                       onChangeText={setPerspectiveInput}
                       placeholder="Describe your experience"
+                      accessibilityLabel="Your perspective"
                       multiline
                       editable={!savingPerspective}
                     />
@@ -600,6 +606,8 @@ function EventDetailContent({
                       ]}
                       disabled={savingPerspective || !perspectiveInput.trim()}
                       accessibilityRole="button"
+                      accessibilityLabel="Share my perspective"
+                      accessibilityState={{ disabled: savingPerspective || !perspectiveInput.trim() }}
                       onPress={submitPerspective}
                     >
                       <Text style={styles.primaryButtonText}>
@@ -613,6 +621,8 @@ function EventDetailContent({
                       style={styles.secondaryButton}
                       disabled={savingPerspective}
                       accessibilityRole="button"
+                      accessibilityLabel="Cancel perspective editing"
+                      accessibilityState={{ disabled: savingPerspective }}
                       onPress={() => {
                         setPerspectiveInput("");
                         setEditingPerspective(false);
@@ -628,6 +638,8 @@ function EventDetailContent({
                     style={styles.dangerButton}
                     disabled={savingPerspective}
                     accessibilityRole="button"
+                    accessibilityLabel="Withdraw my perspective"
+                    accessibilityState={{ disabled: savingPerspective }}
                     onPress={() => setConfirmWithdraw(true)}
                   >
                     <Text style={styles.dangerButtonText}>
@@ -637,7 +649,7 @@ function EventDetailContent({
                 )}
 
                 {myPerspective && confirmWithdraw && (
-                  <View style={styles.confirmCard}>
+                  <CouplySectionCard variant="muted" style={styles.confirmCard}>
                     <Text style={styles.helperText}>
                       Withdrawing permanently deletes your perspective. This
                       cannot be undone.
@@ -647,6 +659,8 @@ function EventDetailContent({
                       style={styles.dangerButton}
                       disabled={savingPerspective}
                       accessibilityRole="button"
+                      accessibilityLabel="Yes, withdraw"
+                      accessibilityState={{ disabled: savingPerspective }}
                       onPress={withdrawPerspective}
                     >
                       <Text style={styles.dangerButtonText}>Yes, withdraw</Text>
@@ -656,21 +670,21 @@ function EventDetailContent({
                       style={styles.secondaryButton}
                       disabled={savingPerspective}
                       accessibilityRole="button"
+                      accessibilityLabel="Keep my perspective"
+                      accessibilityState={{ disabled: savingPerspective }}
                       onPress={() => setConfirmWithdraw(false)}
                     >
                       <Text style={styles.secondaryButtonText}>
                         Keep my perspective
                       </Text>
                     </Pressable>
-                  </View>
+                  </CouplySectionCard>
                 )}
-              </View>
+              </CouplySectionCard>
 
               {/* Partner perspective */}
-              <View
-                style={[styles.perspectiveCard, styles.partnerPerspectiveCard]}
-              >
-                <Text style={styles.perspectiveHeading}>
+              <CouplySectionCard variant="blush" style={styles.perspectiveCard}>
+                <Text accessibilityRole="header" style={styles.perspectiveHeading}>
                   Your partner&apos;s perspective
                 </Text>
 
@@ -689,16 +703,16 @@ function EventDetailContent({
                     Your partner hasn&apos;t shared a perspective.
                   </Text>
                 )}
-              </View>
+              </CouplySectionCard>
             </>
           )}
-        </View>
+        </CouplySectionCard>
       )}
 
       {/* Moment visibility — creator only */}
       {isCreator && (
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Moment visibility</Text>
+        <CouplySectionCard style={styles.sectionCard}>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>Moment visibility</Text>
 
           <Text style={styles.helperText}>
             This moment is currently{" "}
@@ -710,6 +724,7 @@ function EventDetailContent({
             <Pressable
               style={styles.secondaryButton}
               accessibilityRole="button"
+              accessibilityLabel={event.visibility === "mine" ? "Share this moment" : "Change moment visibility"}
               onPress={() => {
                 setSharedTopicInput("");
                 setShowSharingControls(true);
@@ -736,6 +751,7 @@ function EventDetailContent({
                     value={sharedTopicInput}
                     onChangeText={setSharedTopicInput}
                     placeholder="Enter a topic to share"
+                    accessibilityLabel="Topic to share"
                     multiline
                     editable={!changingVisibility}
                   />
@@ -748,6 +764,8 @@ function EventDetailContent({
                     ]}
                     disabled={changingVisibility || !sharedTopicInput.trim()}
                     accessibilityRole="button"
+                    accessibilityLabel="Confirm sharing"
+                    accessibilityState={{ disabled: changingVisibility || !sharedTopicInput.trim() }}
                     onPress={() => changeMomentVisibility("ours")}
                   >
                     <Text style={styles.primaryButtonText}>
@@ -770,6 +788,8 @@ function EventDetailContent({
                     ]}
                     disabled={changingVisibility}
                     accessibilityRole="button"
+                    accessibilityLabel="Confirm move to Mine"
+                    accessibilityState={{ disabled: changingVisibility }}
                     onPress={() => changeMomentVisibility("mine")}
                   >
                     <Text style={styles.dangerButtonText}>
@@ -783,6 +803,8 @@ function EventDetailContent({
                 style={styles.secondaryButton}
                 disabled={changingVisibility}
                 accessibilityRole="button"
+                accessibilityLabel="Cancel visibility change"
+                accessibilityState={{ disabled: changingVisibility }}
                 onPress={() => {
                   setSharedTopicInput("");
                   setShowSharingControls(false);
@@ -792,7 +814,7 @@ function EventDetailContent({
               </Pressable>
             </>
           )}
-        </View>
+        </CouplySectionCard>
       )}
 
       {/* Delete moment — creator only */}
@@ -803,6 +825,8 @@ function EventDetailContent({
               style={styles.dangerButton}
               accessibilityRole="button"
               disabled={writing || deletionBlocked}
+              accessibilityLabel="Delete moment"
+              accessibilityState={{ disabled: writing || deletionBlocked }}
               onPress={() => {
                 deleteConsent.current = true;
                 setConfirmDelete(true);
@@ -811,8 +835,8 @@ function EventDetailContent({
               <Text style={styles.dangerButtonText}>Delete moment</Text>
             </Pressable>
           ) : (
-            <View style={styles.confirmCard}>
-              <Text style={styles.sectionTitle}>Delete this moment?</Text>
+            <CouplySectionCard variant="muted" style={styles.confirmCard}>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>Delete this moment?</Text>
 
               <Text style={styles.helperText}>
                 This permanently deletes the moment and its associated
@@ -824,6 +848,8 @@ function EventDetailContent({
                 style={styles.dangerButton}
                 accessibilityRole="button"
                 disabled={writing}
+                accessibilityLabel="Yes, delete permanently"
+                accessibilityState={{ disabled: writing }}
                 onPress={deleteEvent}
               >
                 <Text style={styles.dangerButtonText}>
@@ -835,6 +861,8 @@ function EventDetailContent({
                 style={styles.secondaryButton}
                 accessibilityRole="button"
                 disabled={writing}
+                accessibilityLabel="Cancel deletion"
+                accessibilityState={{ disabled: writing }}
                 onPress={() => {
                   deleteConsent.current = false;
                   setConfirmDelete(false);
@@ -842,15 +870,18 @@ function EventDetailContent({
               >
                 <Text style={styles.secondaryButtonText}>Cancel</Text>
               </Pressable>
-            </View>
+            </CouplySectionCard>
           )}
         </View>
       )}
 
       {statusMessage !== "" && (
-        <Text style={styles.status}>{statusMessage}</Text>
+        <CouplySectionCard variant="muted" style={styles.statusPanel}>
+          <Text accessibilityLiveRegion="polite" style={styles.status}>{statusMessage}</Text>
+        </CouplySectionCard>
       )}
     </ScrollView>
+    </CouplyPage>
   );
 }
 
@@ -865,258 +896,40 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 60,
-    backgroundColor: "#FBF7FC",
-  },
-
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-
-  summaryCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    padding: 20,
-  },
-
-  summaryTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
-  },
-
-  eyebrow: {
-    color: "#6E416D",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.4,
-    flexShrink: 1,
-  },
-
-  title: {
-    fontSize: 27,
-    fontWeight: "700",
-    color: "#3D3040",
-  },
-
-  meta: {
-    color: "#6D6072",
-    fontSize: 13,
-    marginTop: 8,
-  },
-
-  intensityText: {
-    color: "#6E416D",
-    fontSize: 13,
-    marginTop: 14,
-  },
-
-  visibilityBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-
-  visibilityBadgeMine: {
-    backgroundColor: "#F1EDF7",
-  },
-
-  visibilityBadgeOurs: {
-    backgroundColor: "#FBEFF7",
-  },
-
-  visibilityBadgeText: {
-    color: "#6E416D",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-
-  contentCard: {
-    padding: 18,
-    marginTop: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-
-  privateCard: {
-    backgroundColor: "#F3F0F8",
-    borderColor: "#E0D8EB",
-  },
-
-  sharedCard: {
-    backgroundColor: "#FFF7FA",
-    borderColor: "#F0DCE9",
-  },
-
-  contentTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#3D3040",
-    marginBottom: 10,
-  },
-
-  contentBody: {
-    fontSize: 15,
-    lineHeight: 23,
-    color: "#3D3040",
-  },
-
-  contentHint: {
-    fontSize: 12,
-    color: "#6D6072",
-    marginTop: 12,
-  },
-
-  sectionCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    padding: 18,
-    marginTop: 22,
-  },
-
-  sectionTitle: {
-    fontSize: 19,
-    fontWeight: "700",
-    color: "#3D3040",
-    marginBottom: 8,
-  },
-
-  helperText: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: "#6D6072",
-    marginTop: 6,
-    marginBottom: 12,
-  },
-
-  perspectiveCard: {
-    backgroundColor: "#F8F5FA",
-    borderRadius: 13,
-    padding: 15,
-    marginTop: 14,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-  },
-
-  partnerPerspectiveCard: {
-    backgroundColor: "#FCF8FB",
-  },
-
-  perspectiveHeading: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#3D3040",
-  },
-
-  perspectiveStatus: {
-    fontSize: 12,
-    color: "#6E416D",
-    marginTop: 6,
-    marginBottom: 10,
-  },
-
-  perspectiveText: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: "#3D3040",
-  },
-
-  sharingInput: {
-    minHeight: 96,
-    borderWidth: 1,
-    borderColor: "#D8C8DC",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    padding: 12,
-    textAlignVertical: "top",
-    marginTop: 8,
-    marginBottom: 10,
-    fontSize: 14,
-    color: "#3D3040",
-  },
-
-  primaryButton: {
-    backgroundColor: "#6E416D",
-    borderRadius: 11,
-    padding: 13,
-    alignItems: "center",
-    marginTop: 10,
-  },
-
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-
-  secondaryButton: {
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: "#6E416D",
-    padding: 12,
-    marginTop: 10,
-    alignItems: "center",
-  },
-
-  secondaryButtonText: {
-    color: "#6E416D",
-    fontSize: 14,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-
-  dangerButton: {
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: "#A33C43",
-    padding: 12,
-    marginTop: 10,
-    alignItems: "center",
-  },
-
-  dangerButtonText: {
-    color: "#A33C43",
-    fontSize: 14,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-
-  disabled: {
-    opacity: 0.5,
-  },
-
-  deleteSection: {
-    marginTop: 34,
-    paddingTop: 18,
-    borderTopWidth: 1,
-    borderTopColor: "#E8DCE9",
-  },
-
-  confirmCard: {
-    backgroundColor: "#FFF7F7",
-    padding: 14,
-    marginTop: 12,
-    borderRadius: 12,
-  },
-
-  status: {
-    marginTop: 20,
-    fontSize: 13,
-    textAlign: "center",
-    color: "#6E416D",
-  },
+  scroll: { flex: 1 },
+  container: { flexGrow: 1, paddingTop: tokens.spacing.md, paddingBottom: tokens.spacing.xxl },
+  center: { flex: 1, justifyContent: "center", paddingVertical: tokens.spacing.xxl },
+  centerNotice: { width: "100%" },
+  summaryCard: { gap: tokens.spacing.md },
+  positiveSummary: { borderColor: tokens.colors.celebrationBorder },
+  summaryTop: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: tokens.spacing.sm },
+  summaryHeading: { paddingTop: 0, paddingBottom: 0 },
+  eyebrow: { color: tokens.colors.plum, fontSize: tokens.typeScale.overline, fontWeight: "700", letterSpacing: 1, flexShrink: 1 },
+  visibilityBadgeMine: { backgroundColor: tokens.colors.surfaceLilac },
+  visibilityBadgeOurs: { backgroundColor: tokens.colors.surfaceBlush },
+  meta: { color: tokens.colors.textSecondary, fontSize: tokens.typeScale.caption, lineHeight: 20 },
+  intensityText: { color: tokens.colors.plum, fontSize: tokens.typeScale.body, lineHeight: 20, backgroundColor: tokens.colors.surfaceLilac, padding: tokens.spacing.sm, borderRadius: tokens.radii.small, alignSelf: "flex-start", maxWidth: "100%" },
+  contentCard: { marginTop: tokens.spacing.lg },
+  contentTitle: { color: tokens.colors.text, fontSize: tokens.typeScale.sectionTitle, fontWeight: "700", marginBottom: tokens.spacing.sm },
+  contentBody: { color: tokens.colors.text, fontSize: tokens.typeScale.bodyLarge, lineHeight: 23 },
+  contentHint: { color: tokens.colors.textSecondary, fontSize: tokens.typeScale.body, lineHeight: 20, marginTop: tokens.spacing.md },
+  sectionCard: { marginTop: tokens.spacing.xl },
+  sectionTitle: { color: tokens.colors.text, fontSize: tokens.typeScale.sectionTitle, fontWeight: "700", marginBottom: tokens.spacing.sm },
+  helperText: { color: tokens.colors.textSecondary, fontSize: tokens.typeScale.body, lineHeight: 20, marginTop: tokens.spacing.sm, marginBottom: tokens.spacing.md },
+  perspectiveCard: { marginTop: tokens.spacing.lg },
+  perspectiveHeading: { color: tokens.colors.text, fontSize: tokens.typeScale.sectionTitle, fontWeight: "700" },
+  perspectiveStatus: { color: tokens.colors.plum, fontSize: tokens.typeScale.caption, lineHeight: 20, marginTop: tokens.spacing.xs, marginBottom: tokens.spacing.sm },
+  perspectiveText: { color: tokens.colors.text, fontSize: tokens.typeScale.bodyLarge, lineHeight: 22 },
+  sharingInput: { minHeight: 96, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surface, borderRadius: tokens.radii.small, padding: tokens.spacing.md, textAlignVertical: "top", marginTop: tokens.spacing.sm, marginBottom: tokens.spacing.sm, fontSize: tokens.typeScale.bodyLarge, color: tokens.colors.text },
+  primaryButton: { minHeight: tokens.layout.minTouchTarget, backgroundColor: tokens.colors.plum, borderRadius: tokens.radii.small, padding: tokens.spacing.md, alignItems: "center", justifyContent: "center", marginTop: tokens.spacing.sm },
+  primaryButtonText: { color: tokens.colors.surface, fontSize: tokens.typeScale.bodyLarge, fontWeight: "700", textAlign: "center" },
+  secondaryButton: { minHeight: tokens.layout.minTouchTarget, borderRadius: tokens.radii.small, borderWidth: 1, borderColor: tokens.colors.plum, padding: tokens.spacing.md, marginTop: tokens.spacing.sm, alignItems: "center", justifyContent: "center" },
+  secondaryButtonText: { color: tokens.colors.plum, fontSize: tokens.typeScale.bodyLarge, fontWeight: "700", textAlign: "center" },
+  dangerButton: { minHeight: tokens.layout.minTouchTarget, borderRadius: tokens.radii.small, borderWidth: 1, borderColor: tokens.colors.dangerText, padding: tokens.spacing.md, marginTop: tokens.spacing.sm, alignItems: "center", justifyContent: "center" },
+  dangerButtonText: { color: tokens.colors.dangerText, fontSize: tokens.typeScale.bodyLarge, fontWeight: "700", textAlign: "center" },
+  disabled: { opacity: 0.5 },
+  deleteSection: { marginTop: tokens.spacing.xxl, paddingTop: tokens.spacing.lg, borderTopWidth: 1, borderTopColor: tokens.colors.borderSoft },
+  confirmCard: { marginTop: tokens.spacing.md },
+  statusPanel: { marginTop: tokens.spacing.xl },
+  status: { color: tokens.colors.plum, fontSize: tokens.typeScale.body, lineHeight: 20, textAlign: "center" },
 });
