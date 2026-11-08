@@ -127,6 +127,11 @@ function EventDetailContent({
   const focusGeneration = useRef(0);
   const requestId = useRef(0);
   const writeInFlight = useRef(false);
+  const deletionPhase = useRef<"idle" | "pending" | "uncertain" | "deleted">("idle");
+  const deleteConsent = useRef(false);
+  const [deletionBlocked, setDeletionBlocked] = useState(false);
+  // Bind confirmations to the load that produced the displayed event.
+  const [deletionScope, setDeletionScope] = useState<{ generation: number; request: number } | null>(null);
 
   // Unmount must invalidate before passive effect cleanup (and before a late
   // promise can dispatch another write for a route that has been replaced).
@@ -170,6 +175,7 @@ function EventDetailContent({
     // Clear the entire view before revalidation, including unsaved text and
     // confirmations. No previous load is allowed to repopulate this boundary.
     setEvent(null);
+    setDeletionScope(null);
     setPrivateNote(null);
     setPerspectives([]);
     setPerspectivesLoading(true);
@@ -179,6 +185,7 @@ function EventDetailContent({
     setShowSharingControls(false);
     setConfirmWithdraw(false);
     setConfirmDelete(false);
+    deleteConsent.current = false;
     setStatusMessage("Loading...");
     try {
       const token = await authorize();
@@ -237,6 +244,7 @@ function EventDetailContent({
 
       // Publish only after ALL reads and the final identity check complete.
       setEvent(data);
+      setDeletionScope({ generation: focusGeneration.current, request: id });
       setPrivateNote(reflection?.note ?? null);
 
       if (perspectiveError) {
@@ -262,6 +270,8 @@ function EventDetailContent({
     focused.current = true;
     focusGeneration.current++;
     writeInFlight.current = false;
+    deletionPhase.current = "idle";
+    setDeletionBlocked(false);
     setWriting(false);
     void loadEvent();
     return () => {
@@ -353,14 +363,64 @@ function EventDetailContent({
   }
 
   async function deleteEvent() {
-    if (!event || event.creator_id !== currentUserId || !confirmDelete) return;
-    await performWrite("Deleting moment...", async (token) => {
-      const { error } = await supabase.from("relationship_events")
-        .delete().eq("id", eventId)
-        .setHeader("Authorization", `Bearer ${token}`);
-      if (error) throw new Error(error.message);
-      return null;
-    });
+    const valid = () => isCurrent() && deletionScope !== null &&
+      deletionScope.generation === focusGeneration.current && deletionScope.request === requestId.current;
+    if (!valid() || !event || event.creator_id !== currentUserId || !confirmDelete || !deleteConsent.current ||
+        writeInFlight.current || deletionPhase.current !== "idle") return;
+    deleteConsent.current = false;
+    deletionPhase.current = "pending";
+    writeInFlight.current = true;
+    setWriting(true);
+    setStatusMessage("Deleting moment...");
+    let dispatched = false;
+    try {
+      const token = await authorize();
+      if (!token || !valid()) return;
+      dispatched = true;
+      const { data, error } = await supabase.rpc("delete_relationship_event", {
+        p_event_id: eventId,
+      }).setHeader("Authorization", `Bearer ${token}`);
+      if (!valid()) return;
+      if (!error && data === true) {
+        deletionPhase.current = "deleted";
+        // Navigation requires both the literal deletion acknowledgment and a
+        // still-current verified identity. An absent row is not an acknowledgment.
+        if (await authorize() && valid()) router.back();
+        return;
+      }
+      if (!(await authorize()) || !valid()) return;
+      deletionPhase.current = "uncertain";
+      setDeletionBlocked(true);
+      setConfirmDelete(false);
+      const rejected = error?.code === "P0001" &&
+        (error.message === "Event unavailable" || error.message === "Authentication required");
+      setStatusMessage(rejected
+        ? "This deletion request was rejected. Reopen the moment to check its current availability."
+        : "We couldn't confirm whether this moment was deleted. Reopen it to check its current availability. No deletion was retried.");
+    } catch {
+      if (!valid()) return;
+      if (!dispatched || deletionPhase.current === "deleted") {
+        // Failed verification must clear the old account view; do not turn an
+        // acknowledged deletion into a false failure or navigate without identity.
+        invalidateAccount();
+        return;
+      }
+      try {
+        if (!(await authorize()) || !valid()) return;
+      } catch {
+        if (valid()) invalidateAccount();
+        return;
+      }
+      deletionPhase.current = "uncertain";
+      setDeletionBlocked(true);
+      setConfirmDelete(false);
+      setStatusMessage("We couldn't confirm whether this moment was deleted. Reopen it to check its current availability. No deletion was retried.");
+    } finally {
+      if (valid()) {
+        writeInFlight.current = false;
+        setWriting(false);
+      }
+    }
   }
 
   if (!event) {
@@ -742,8 +802,11 @@ function EventDetailContent({
             <Pressable
               style={styles.dangerButton}
               accessibilityRole="button"
-              disabled={writing}
-              onPress={() => setConfirmDelete(true)}
+              disabled={writing || deletionBlocked}
+              onPress={() => {
+                deleteConsent.current = true;
+                setConfirmDelete(true);
+              }}
             >
               <Text style={styles.dangerButtonText}>Delete moment</Text>
             </Pressable>
@@ -772,7 +835,10 @@ function EventDetailContent({
                 style={styles.secondaryButton}
                 accessibilityRole="button"
                 disabled={writing}
-                onPress={() => setConfirmDelete(false)}
+                onPress={() => {
+                  deleteConsent.current = false;
+                  setConfirmDelete(false);
+                }}
               >
                 <Text style={styles.secondaryButtonText}>Cancel</Text>
               </Pressable>
