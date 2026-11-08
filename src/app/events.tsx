@@ -1,4 +1,9 @@
 import { AppBottomNav } from "@/components/AppBottomNav";
+import {
+  CouplyEmptyState, CouplyHeader, CouplyPage, CouplyPrimaryButton,
+  CouplyQuietButton, CouplySectionCard, CouplyStatusPill,
+} from "@/components/CouplyUI";
+import { tokens } from "@/components/couply-tokens";
 import type { EventRepairState } from "@/lib/repair-states";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -294,111 +299,85 @@ export default function EventsScreen() {
       : "A place to return to what mattered.";
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top"]}>
+    <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.column}>
-          <View style={styles.headingRow}>
-            <View style={styles.headingCopy}>
-              <Text style={styles.eyebrow}>RELATIONSHIP OS</Text>
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.subtitle}>{subtitle}</Text>
-            </View>
-            <Pressable
-              style={styles.recordButton}
-              onPress={() => router.push("/record-moment")}
-              accessibilityRole="button"
-              accessibilityLabel="Record a moment"
-            >
-              <Text style={styles.recordButtonText}>+ Record</Text>
-            </Pressable>
+        <CouplyPage safe={false} contentStyle={styles.column}>
+          <CouplyHeader
+            overline="RELATIONSHIP OS"
+            title={title}
+            subtitle={subtitle}
+            rightSlot={
+              <CouplyPrimaryButton
+                label="+ Record a moment"
+                accessibilityLabel="Record a moment"
+                onPress={() => router.push("/record-moment")}
+              />
+            }
+          />
+
+          <View style={styles.actions}>
+            <CouplyQuietButton
+              label={state.loading ? "Refreshing…" : "↻ Refresh updates"}
+              accessibilityLabel="Refresh moments and repair updates"
+              disabled={state.loading}
+              loading={state.loading}
+              onPress={() => setReloadEpoch((value) => value + 1)}
+            />
+            <CouplyQuietButton
+              label="My contributions"
+              variant="text"
+              onPress={() => router.push("/my-contributions")}
+            />
           </View>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Refresh moments and repair updates"
-            accessibilityState={{ disabled: state.loading }}
-            disabled={state.loading}
-            onPress={() => setReloadEpoch((value) => value + 1)}
-            style={styles.refreshLink}
-          >
-            <Text style={styles.refreshText}>
-              {state.loading ? "Refreshing…" : "↻ Refresh updates"}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="My contributions"
-            onPress={() => router.push("/my-contributions")}
-            style={[styles.refreshLink, styles.contributionsLink]}
-          >
-            <Text style={styles.refreshText}>My contributions</Text>
-          </Pressable>
-
           {!isOursSpace && !isMineSpace && (
-            <View style={styles.filters}>
+            <View style={styles.filters} accessibilityRole="tablist">
               {FILTERS.map((option) => {
                 const selected = filter === option.value;
                 return (
                   <Pressable
                     key={option.value}
                     onPress={() => setFilter(option.value)}
-                    style={[styles.filter, selected && styles.filterSelected]}
-                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.filter, selected && styles.filterSelected, pressed && styles.pressed]}
+                    accessibilityRole="tab"
                     accessibilityState={{ selected }}
                     accessibilityLabel={`Show ${option.label} moments`}
                   >
-                    <Text
-                      style={[
-                        styles.filterText,
-                        selected && styles.filterTextSelected,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
+                    <Text style={[styles.filterText, selected && styles.filterTextSelected]}>{option.label}</Text>
                   </Pressable>
                 );
               })}
             </View>
           )}
 
-          {state.loading ? (
-            <View style={styles.centerMessage}>
-              <ActivityIndicator size="small" color="#6E416D" />
-              <Text style={styles.messageText}>Loading your moments...</Text>
-            </View>
+          {state.loading || !state.userId ? (
+            <CouplySectionCard variant="muted" style={styles.notice}>
+              <ActivityIndicator size="small" color={tokens.colors.plum} />
+              <Text accessibilityLiveRegion="polite" style={styles.body}>Loading your moments...</Text>
+            </CouplySectionCard>
           ) : state.error ? (
-            <View style={styles.centerMessage}>
-              <Text style={styles.messageTitle}>Moments aren&apos;t available</Text>
-              <Text style={styles.messageText}>{state.error}</Text>
+            <CouplySectionCard style={styles.notice}>
+              <Text accessibilityRole="header" style={styles.noticeTitle}>Moments aren&apos;t available</Text>
+              <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body}>{state.error}</Text>
               {!state.coupleId && (
-                <Pressable
-                  onPress={() => router.push("/profile")}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.actionLink}>Go to Settings</Text>
-                </Pressable>
+                <CouplyQuietButton label="Go to Settings" onPress={() => router.push("/profile")} />
               )}
-            </View>
+            </CouplySectionCard>
           ) : visibleEvents.length === 0 ? (
-            <View style={styles.centerMessage}>
-              <Text style={styles.messageTitle}>
-                {isOursSpace || filter === "ours"
-                  ? "Nothing shared here yet"
-                  : isMineSpace || filter === "mine"
-                    ? "Your private space is quiet for now"
-                    : "No moments here yet"}
-              </Text>
-              <Text style={styles.messageText}>
-                {isOursSpace || filter === "ours"
-                  ? "Only moments deliberately shared as Ours will appear here."
-                  : "You can record something whenever it matters to you."}
-              </Text>
-            </View>
+            <CouplyEmptyState
+              title={isOursSpace || filter === "ours"
+                ? "Nothing shared here yet"
+                : isMineSpace || filter === "mine"
+                  ? "Your private space is quiet for now"
+                  : "No moments here yet"}
+              body={isOursSpace || filter === "ours"
+                ? "Only moments deliberately shared as Ours will appear here."
+                : "You can record something whenever it matters to you."}
+            />
           ) : (
             <View style={styles.list}>
               {visibleEvents.map((event) => {
@@ -420,7 +399,8 @@ export default function EventsScreen() {
                 return (
                   <Pressable
                     key={event.id}
-                    style={styles.card}
+                    testID={`moment-${event.id}`}
+                    style={({ pressed }) => pressed && styles.pressed}
                     accessibilityRole="button"
                     accessibilityLabel={`Open ${event.visibility} ${formatCategory(event.category)} moment`}
                     onPress={() =>
@@ -430,73 +410,55 @@ export default function EventsScreen() {
                       })
                     }
                   >
-                    <View style={styles.cardTop}>
-                      <View style={styles.iconBubble}>
-                        <Text style={styles.icon}>
-                          {isPositive ? "✦" : "〰"}
-                        </Text>
+                    <CouplySectionCard style={[styles.card, isPositive && styles.positiveCard]}>
+                      <View style={styles.cardTop}>
+                        <View style={[styles.iconBubble, isPositive && styles.positiveIcon]}>
+                          <Text accessible={false} style={styles.icon}>{isPositive ? "✦" : "〰"}</Text>
+                        </View>
+                        <View style={styles.cardHeaderText}>
+                          <Text style={styles.cardTitle}>{formatCategory(event.category)}</Text>
+                          <Text style={styles.cardMeta}>{isCreator ? "Recorded by you" : "Shared by your partner"}</Text>
+                        </View>
+                        <Text style={styles.date}>{formatDate(event.created_at)}</Text>
+                        <Text accessible={false} style={styles.chevron}>›</Text>
                       </View>
-                      <View style={styles.cardHeaderText}>
-                        <Text style={styles.cardTitle}>
-                          {formatCategory(event.category)}
-                        </Text>
-                        <Text style={styles.cardMeta}>
-                          {isCreator
-                            ? "Recorded by you"
-                            : "Shared by your partner"}
-                        </Text>
-                      </View>
-                      <Text style={styles.date}>
-                        {formatDate(event.created_at)}
-                      </Text>
-                      <Text style={styles.chevron}>›</Text>
-                    </View>
 
-                    <View style={styles.cardBottom}>
-                      <View
-                        style={[
-                          styles.privacyTag,
-                          event.visibility === "ours" && styles.sharedTag,
-                        ]}
-                      >
-                        <Text style={styles.privacyTagText}>
-                          {event.visibility === "mine"
-                            ? "Mine · Private"
-                            : "Ours · Shared"}
-                        </Text>
+                      <View style={styles.cardBottom}>
+                        <CouplyStatusPill
+                          label={event.visibility === "mine" ? "Mine · Private" : "Ours · Shared"}
+                          style={event.visibility === "ours" ? styles.sharedTag : styles.privateTag}
+                        />
+                        <CouplyStatusPill label={isPositive ? "Positive" : "Friction"} variant={isPositive ? "positive" : "neutral"} />
                       </View>
-                      <Text style={styles.eventType}>
-                        {isPositive ? "Positive" : "Friction"}
-                      </Text>
-                    </View>
 
-                    {!isPositive && (
-                      <View style={styles.repairSummary}>
-                        <Text style={styles.repairStatus}>
-                          {myRepair
-                            ? myRepair.status_origin === "legacy_default_unconfirmed"
-                              ? "Your update: Imported Open (not confirmed)"
-                              : myRepair.status_origin !== "explicit"
-                                ? `Your earlier update: ${formatRepairStatus(myRepair.repair_status)} (review before sharing)`
-                                : `Your update: ${formatRepairStatus(myRepair.repair_status)} · ${myRepair.sharing_status === "shared" ? "Shared" : "Private"}`
-                            : "Your update: Not recorded yet"}
-                        </Text>
-                        {partnerRepair && (
+                      {!isPositive && (
+                        <View style={styles.repairSummary}>
                           <Text style={styles.repairStatus}>
-                            {`Partner shared: ${formatRepairStatus(partnerRepair.repair_status)}`}
-                            {partnerRepair.what_helped
-                              ? ` · ${formatCategory(partnerRepair.what_helped)} helped`
-                              : ""}
+                            {myRepair
+                              ? myRepair.status_origin === "legacy_default_unconfirmed"
+                                ? "Your update: Imported Open (not confirmed)"
+                                : myRepair.status_origin !== "explicit"
+                                  ? `Your earlier update: ${formatRepairStatus(myRepair.repair_status)} (review before sharing)`
+                                  : `Your update: ${formatRepairStatus(myRepair.repair_status)} · ${myRepair.sharing_status === "shared" ? "Shared" : "Private"}`
+                              : "Your update: Not recorded yet"}
                           </Text>
-                        )}
-                      </View>
-                    )}
+                          {partnerRepair && (
+                            <Text style={styles.repairStatus}>
+                              {`Partner shared: ${formatRepairStatus(partnerRepair.repair_status)}`}
+                              {partnerRepair.what_helped
+                                ? ` · ${formatCategory(partnerRepair.what_helped)} helped`
+                                : ""}
+                            </Text>
+                          )}
+                        </View>
+                      )}
+                    </CouplySectionCard>
                   </Pressable>
                 );
               })}
             </View>
           )}
-        </View>
+        </CouplyPage>
       </ScrollView>
       <AppBottomNav activeTab={isOursSpace ? "our_space" : "moments"} />
     </SafeAreaView>
@@ -531,117 +493,58 @@ function formatDate(iso: string) {
 }
 
 const styles = StyleSheet.create({
-  contributionsLink: { minHeight: 44, justifyContent: "center" },
-  screen: { flex: 1, backgroundColor: "#FBF7FC" },
+  screen: { flex: 1, backgroundColor: tokens.colors.pageBackground },
   scroll: { flex: 1 },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 36,
-  },
-  column: { width: "100%", maxWidth: 720, alignSelf: "center", gap: 20 },
-  headingRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  headingCopy: { flex: 1 },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2,
-    color: "#6E416D",
-    marginBottom: 10,
-  },
-  title: { fontSize: 28, fontWeight: "700", color: "#3D3040" },
-  subtitle: { marginTop: 7, fontSize: 14, lineHeight: 21, color: "#6D6072" },
-  recordButton: {
-    backgroundColor: "#6E416D",
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderRadius: 13,
-  },
-  recordButtonText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
+  content: { flexGrow: 1, paddingTop: tokens.spacing.sm, paddingBottom: tokens.spacing.xxl },
+  column: { gap: tokens.spacing.xl },
+  actions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: tokens.spacing.sm },
   filters: {
     flexDirection: "row",
-    backgroundColor: "#F2EBF3",
-    padding: 4,
-    borderRadius: 14,
-    gap: 4,
+    flexWrap: "wrap",
+    backgroundColor: tokens.colors.surfaceLilac,
+    padding: tokens.spacing.xs,
+    borderRadius: tokens.radii.card,
+    gap: tokens.spacing.xs,
   },
   filter: {
-    flex: 1,
-    borderRadius: 11,
-    paddingVertical: 11,
-    alignItems: "center",
-  },
-  filterSelected: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-  },
-  filterText: { color: "#6D6072", fontWeight: "500", fontSize: 14 },
-  filterTextSelected: { color: "#6E416D", fontWeight: "700" },
-  centerMessage: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    borderRadius: 18,
-    padding: 26,
-    alignItems: "center",
-    gap: 11,
-  },
-  messageTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#3D3040",
-    textAlign: "center",
-  },
-  messageText: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: "#6D6072",
-    textAlign: "center",
-  },
-  actionLink: {
-    color: "#6E416D",
-    fontSize: 14,
-    fontWeight: "700",
-    marginTop: 6,
-  },
-  list: { gap: 12 },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    padding: 16,
-    gap: 13,
-  },
-  cardTop: { flexDirection: "row", alignItems: "center", gap: 10 },
-  iconBubble: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F1EDF7",
+    flexGrow: 1,
+    flexBasis: 72,
+    minHeight: tokens.layout.minTouchTarget,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.sm,
+    borderRadius: tokens.radii.small,
     alignItems: "center",
     justifyContent: "center",
   },
-  icon: { fontSize: 21, color: "#6E416D" },
-  cardHeaderText: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: "700", color: "#3D3040" },
-  cardMeta: { fontSize: 12, marginTop: 4, color: "#6D6072" },
-  date: { fontSize: 11, color: "#8E7E94", maxWidth: 90, textAlign: "right" },
-  chevron: { fontSize: 22, color: "#8E7E94" },
-  cardBottom: { flexDirection: "row", alignItems: "center", gap: 9 },
-  privacyTag: {
-    backgroundColor: "#F1EDF7",
-    borderRadius: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+  filterSelected: { backgroundColor: tokens.colors.surface, borderWidth: 1, borderColor: tokens.colors.border },
+  filterText: { color: tokens.colors.textSecondary, fontSize: tokens.typeScale.bodyLarge, fontWeight: "500" },
+  filterTextSelected: { color: tokens.colors.plum, fontWeight: "700" },
+  notice: { alignItems: "center", gap: tokens.spacing.md },
+  noticeTitle: { color: tokens.colors.text, fontSize: tokens.typeScale.sectionTitle, fontWeight: "700", textAlign: "center" },
+  body: { color: tokens.colors.textSecondary, fontSize: tokens.typeScale.bodyLarge, lineHeight: 22, textAlign: "center" },
+  list: { gap: tokens.spacing.md },
+  card: { minHeight: tokens.layout.minTouchTarget, gap: tokens.spacing.md },
+  positiveCard: { borderColor: tokens.colors.celebrationBorder },
+  cardTop: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: tokens.spacing.sm },
+  iconBubble: {
+    width: 38,
+    height: 38,
+    borderRadius: tokens.radii.pill,
+    backgroundColor: tokens.colors.surfaceLilac,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  sharedTag: { backgroundColor: "#FBEFF7" },
-  privacyTagText: { color: "#6E416D", fontSize: 12, fontWeight: "700" },
-  eventType: { color: "#6D6072", fontSize: 12 },
-  refreshLink: { alignSelf: "flex-end", paddingVertical: 4 },
-  refreshText: { color: "#6E416D", fontSize: 13, fontWeight: "600" },
-  repairSummary: { gap: 4 },
-  repairStatus: { color: "#6D6072", fontSize: 12, lineHeight: 18 },
+  positiveIcon: { backgroundColor: tokens.colors.celebrationSoft },
+  icon: { color: tokens.colors.plum, fontSize: 21 },
+  cardHeaderText: { flexGrow: 1, flexShrink: 1, flexBasis: 120, minWidth: 0 },
+  cardTitle: { color: tokens.colors.text, fontSize: tokens.typeScale.sectionTitle, fontWeight: "700" },
+  cardMeta: { color: tokens.colors.textSecondary, fontSize: tokens.typeScale.caption, marginTop: tokens.spacing.xs },
+  date: { color: tokens.colors.textMuted, fontSize: tokens.typeScale.caption, flexShrink: 1 },
+  chevron: { color: tokens.colors.textMuted, fontSize: 22 },
+  cardBottom: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: tokens.spacing.sm },
+  privateTag: { backgroundColor: tokens.colors.surfaceLilac },
+  sharedTag: { backgroundColor: tokens.colors.surfaceBlush },
+  repairSummary: { gap: tokens.spacing.sm, borderTopWidth: 1, borderTopColor: tokens.colors.borderSoft, paddingTop: tokens.spacing.md },
+  repairStatus: { color: tokens.colors.textSecondary, fontSize: tokens.typeScale.body, lineHeight: 21 },
+  pressed: { opacity: 0.75 },
 });
