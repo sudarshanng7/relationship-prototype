@@ -108,6 +108,7 @@ const WITHDRAW_CONFLICT_NOTICE =
   "Your repair report changed. Sharing was not withdrawn by this request. Your unsaved choices are still here. Load the newer update before confirming withdrawal again; loading it will replace your unsaved choices.";
 
 type SharingAttempt = {
+  kind: "share";
   version: number;
   status: RepairStatus;
   method: RepairMethod | null;
@@ -115,6 +116,15 @@ type SharingAttempt = {
   outcome: "unknown" | "confirmed" | "rejected";
   rejection?: string;
 };
+
+type PrivateSaveAttempt = {
+  kind: "private-save";
+  version: number;
+  status: RepairStatus;
+  method: RepairMethod | null;
+};
+
+type RepairAttempt = SharingAttempt | PrivateSaveAttempt;
 
 const SHARING_SUCCESS = "Your update was saved and shared with your partner.";
 const SHARING_UNKNOWN =
@@ -161,6 +171,24 @@ function sharingFeedback(attempt: SharingAttempt, report?: EventRepairState) {
   };
 }
 
+function matchesPrivateSave(report: EventRepairState, attempt: PrivateSaveAttempt) {
+  return report.report_version === attempt.version &&
+    report.sharing_status === "private" &&
+    report.repair_status === attempt.status &&
+    report.what_helped === attempt.method &&
+    report.status_origin === "explicit";
+}
+
+function privateSaveFeedback(attempt: PrivateSaveAttempt, report?: EventRepairState) {
+  return {
+    // The acknowledgment describes this operation, never the report's history.
+    notice: `Saved privately.${report
+      ? ` ${matchesPrivateSave(report, attempt) ? "" : "Your repair report changed since this save. "}The latest refresh found your update ${report.sharing_status === "shared" ? "shared with your partner" : "private"}.`
+      : ""}`,
+    error: report ? "" : SHARING_REFRESH_FAILED,
+  };
+}
+
 export function EventRepairSection({
   eventId,
   userId,
@@ -179,7 +207,7 @@ export function EventRepairSection({
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   const [reloadRequired, setReloadRequired] = useState(false);
   const [sharingUnverified, setSharingUnverified] = useState(false);
-  const sharingAttempt = useRef<SharingAttempt | null>(null);
+  const repairAttempt = useRef<RepairAttempt | null>(null);
   const requestId = useRef(0);
   const focusGeneration = useRef(0);
   const writeInFlight = useRef(false);
@@ -217,21 +245,33 @@ export function EventRepairSection({
         (visibility === "ours" && record.sharing_status === "shared"));
       const mine = records.find((record) => record.user_id === userId);
       setRows(records);
-      const attempt = sharingAttempt.current;
+      const attempt = repairAttempt.current;
       if (attempt) {
         const report = mine && Number.isSafeInteger(mine.report_version) &&
           mine.report_version >= attempt.version &&
-          (mine.sharing_status === "private" || mine.sharing_status === "shared")
+          (mine.sharing_status === "private" || mine.sharing_status === "shared") &&
+          (attempt.kind !== "private-save" || (
+            mine.status_origin === "explicit" &&
+            STATUSES.some((item) => item.value === mine.repair_status) &&
+            METHODS.some((item) => item.value === mine.what_helped) &&
+            (mine.report_version > attempt.version || matchesPrivateSave(mine, attempt))
+          ))
           ? mine : undefined;
-        const feedback = sharingFeedback(attempt, report);
+        const feedback = attempt.kind === "private-save"
+          ? privateSaveFeedback(attempt, report) : sharingFeedback(attempt, report);
         setNotice(feedback.notice);
         setError(feedback.error);
         setSharingUnverified(!report);
-        setReloadRequired(!report || (preserveDraft && !matchesSharingAttempt(report, attempt)));
+        const matches = report && (attempt.kind === "private-save"
+          ? matchesPrivateSave(report, attempt) : matchesSharingAttempt(report, attempt));
+        setReloadRequired(!report || (preserveDraft && !matches));
         // No row is not evidence of privacy: deletion, revocation or hidden
         // membership may all leave an authenticated read without our report.
-        if (!report) return;
-        sharingAttempt.current = null;
+        if (!report) {
+          if (attempt.kind === "private-save") setRows([]);
+          return;
+        }
+        repairAttempt.current = null;
       } else {
         setNotice("");
         setReloadRequired(false);
@@ -246,9 +286,10 @@ export function EventRepairSection({
     } catch (e) {
       if (valid()) {
         setRows([]);
-        const attempt = sharingAttempt.current;
+        const attempt = repairAttempt.current;
         if (attempt) {
-          const feedback = sharingFeedback(attempt);
+          const feedback = attempt.kind === "private-save"
+            ? privateSaveFeedback(attempt) : sharingFeedback(attempt);
           setNotice(feedback.notice);
           setError(feedback.error);
           setSharingUnverified(true);
@@ -284,7 +325,7 @@ export function EventRepairSection({
       setConfirmShare(false);
       setConfirmWithdraw(false);
       setReloadRequired(false);
-      sharingAttempt.current = null;
+      repairAttempt.current = null;
       setSharingUnverified(false);
       setBusy(false);
       setNotice("");
@@ -406,9 +447,13 @@ export function EventRepairSection({
         valid,
       );
       if (version === null) return;
-      await refresh({ afterWrite: true });
-      if (valid())
-        setNotice("Saved privately. It was not shared with your partner.");
+      repairAttempt.current = {
+        kind: "private-save", version, status: draftStatus, method: currentMethod,
+      };
+      setSharingUnverified(true);
+      // Reconcile through the guarded read path. A failed or superseded read
+      // must never be followed by an unconditional current-privacy assurance.
+      await refresh({ preserveDraft: true, afterWrite: true });
     } catch (e) {
       // Keep both the draft and its loaded version; never retry against a newer
       // version without the user deliberately loading and reviewing that report.
@@ -460,13 +505,14 @@ export function EventRepairSection({
 
       if (expectedVersion === null) return;
       const attempt: SharingAttempt = {
+        kind: "share",
         version: expectedVersion,
         status: reviewedStatus,
         method: reviewedMethod,
         saved: savedPrivately,
         outcome: "unknown",
       };
-      sharingAttempt.current = attempt;
+      repairAttempt.current = attempt;
       setSharingUnverified(true);
       setConfirmShare(false);
 
@@ -492,8 +538,8 @@ export function EventRepairSection({
         showSaveError(e);
         return;
       }
-      const attempt = sharingAttempt.current;
-      if (!attempt) return;
+      const attempt = repairAttempt.current;
+      if (!attempt || attempt.kind !== "share") return;
       if (isRepairSharingRejection(e)) {
         attempt.outcome = "rejected";
         attempt.rejection = errorText(e);

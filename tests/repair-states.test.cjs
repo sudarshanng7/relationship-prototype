@@ -1087,3 +1087,264 @@ test("Finding 6: later manual refresh replaces an old success notice with curren
   assert.equal(ui.selected("Space"), true);
   assert.equal(db.calls.filter((call) => call.name === share).length, 1);
 });
+
+// Finding 10: private-save acknowledgment and the latest observed report are
+// separate facts. Exercise the real component, including its rendered summary.
+const privateSaved = "Saved privately.";
+const privateUnverified = "The current sharing status could not be verified. Please refresh to check it.";
+
+async function privateSaveScenario({ initial = [row()], respond, read } = {}) {
+  const db = client(initial);
+  const original = db.respond;
+  if (respond) db.respond = (call) => respond(call, db, original);
+  const ui = harness(db);
+  await ui.flush();
+  await edit(ui);
+  if (read) db.read = (call) => read(call, db);
+  await ui.press("Save privately");
+  return { db, ui };
+}
+
+function assertPrivateSaveOnly(db) {
+  assert.equal(db.calls.length, 1, "reconciliation never resubmits or shares");
+  assert.equal(db.calls[0].name, checkedSave);
+  assert.equal(db.calls[0].args.p_expected_report_version, 7);
+  assert.equal(db.calls[0].headers.Authorization, "Bearer author-token");
+}
+
+function assertPrivateSaveUnverified(ui) {
+  assert.ok(ui.text().includes(privateSaved), "retain the acknowledged operation");
+  assert.ok(ui.text().includes(privateUnverified));
+  assert.match(ui.text(), /Sharing status needs verification/);
+  assertNoFalsePrivacy(ui);
+  assert.doesNotMatch(ui.text(), /The latest refresh found|Your repair report changed since this save/);
+  assert.equal(ui.selected("I feel reconnected"), true);
+  assert.equal(ui.selected("Talking"), true);
+  assert.equal(ui.button("Save privately"), undefined);
+  assert.equal(ui.button("Save & share with partner"), undefined);
+}
+
+test("Finding 10: verified private save reconciles summary and notice", async () => {
+  const { db, ui } = await privateSaveScenario();
+  assert.ok(ui.text().includes(privateSaved));
+  assert.match(ui.text(), /The latest refresh found your update private\./);
+  assert.match(ui.text(), /Saved for you: I feel reconnected/);
+  assert.match(ui.text(), /Private — not shared/);
+  assert.doesNotMatch(ui.text(), /It was not shared|changed since this save|could not be verified/);
+  assertPrivateSaveOnly(db);
+  assert.equal(db.reads, 2);
+  assert.deepEqual(db.readCalls.map((call) => call.headers), [
+    { Authorization: "Bearer author-token" }, { Authorization: "Bearer author-token" },
+  ]);
+});
+
+test("Finding 10: concurrent sharing after private save reconciles summary and notice", async () => {
+  const { db, ui } = await privateSaveScenario({
+    respond: async (call, db, original) => {
+      const result = await original(call);
+      // Another signed-in session explicitly shared the acknowledged version.
+      db.rows = db.rows.map((report) => ({ ...report, sharing_status: "shared", report_version: 43 }));
+      return result;
+    },
+  });
+  assert.match(ui.text(), /Shared with your partner/);
+  assert.doesNotMatch(ui.text(), /It was not shared|Private — not shared/);
+  assert.ok(ui.text().includes(privateSaved));
+  assert.match(ui.text(), /Your repair report changed since this save\. The latest refresh found your update shared with your partner\./);
+  assert.equal(ui.selected("Talking"), true);
+  assert.equal(ui.button("Save privately"), undefined);
+  assert.ok(ui.button("Load newer update (replaces your choices)"));
+  assertPrivateSaveOnly(db);
+});
+
+for (const sharing of ["private", "shared"]) {
+  for (const sameContent of [false, true]) {
+    test(`Finding 10: newer ${sharing} report with ${sameContent ? "same" : "different"} content is not the saved version`, async () => {
+      const latest = row({ report_version: 45, sharing_status: sharing,
+        repair_status: sameContent ? "reconnected" : "partially_repaired",
+        what_helped: sameContent ? "talking" : "space" });
+      const { db, ui } = await privateSaveScenario({
+        respond: async (call, db, original) => { const result = await original(call); db.rows = [latest]; return result; },
+      });
+      assert.ok(ui.text().includes(privateSaved));
+      assert.match(ui.text(), /Your repair report changed since this save/);
+      assert.ok(ui.text().includes(`The latest refresh found your update ${sharing === "shared" ? "shared with your partner" : "private"}.`));
+      assert.match(ui.text(), sharing === "shared" ? /Shared with your partner/ : /Private — not shared/);
+      assert.doesNotMatch(ui.text(), /It was not shared|could not be verified/);
+      assert.equal(ui.selected("I feel reconnected"), true, "automatic read preserves choices");
+      assert.equal(ui.selected("Talking"), true);
+      assert.equal(ui.button("Save privately"), undefined);
+      assert.equal(ui.button("Save & share with partner"), undefined);
+      await ui.press("Load newer update (replaces your choices)");
+      assert.equal(ui.selected(sameContent ? "Talking" : "Space"), true);
+      assert.doesNotMatch(ui.text(), /Saved privately\.|changed since this save/);
+      assertPrivateSaveOnly(db);
+    });
+  }
+}
+
+for (const [description, records] of [
+  ["missing report", []],
+  ["null read data", null],
+  ["only partner's shared report", [row({ user_id: "user-b", sharing_status: "shared", report_version: 43 })]],
+  ["foreign event", [row({ event_id: "event-b", report_version: 42 })]],
+  ["malformed author", [row({ user_id: null, report_version: 42 })]],
+  ["duplicate own reports", [row({ report_version: 42 }), row({ report_version: 42 })]],
+  ["older version", [row({ report_version: 41 })]],
+  ["zero version", [row({ report_version: 0 })]],
+  ["fractional version", [row({ report_version: 42.5 })]],
+  ["unsafe version", [row({ report_version: Number.MAX_SAFE_INTEGER + 1 })]],
+  ["string version", [row({ report_version: "42" })]],
+  ["missing version", [row({ report_version: undefined })]],
+  ["invalid sharing state", [row({ report_version: 43, sharing_status: "unexpected" })]],
+  ["invalid repair status", [row({ report_version: 43, repair_status: "PRIVATE_BAD_STATUS" })]],
+  ["invalid repair method", [row({ report_version: 43, what_helped: "PRIVATE_BAD_METHOD" })]],
+  ["unexpected provenance", [row({ report_version: 43, status_origin: "legacy_creator_report" })]],
+  ["same version with different content", [row({ report_version: 42 })]],
+  ["same version with impossible sharing state", [row({ report_version: 42, sharing_status: "shared", repair_status: "reconnected", what_helped: "talking" })]],
+]) {
+  test(`Finding 10: ${description} cannot establish current privacy after private save`, async () => {
+    const { db, ui } = await privateSaveScenario({ read: async () => ({ data: records, error: null }) });
+    assertPrivateSaveUnverified(ui);
+    assertPrivateSaveOnly(db);
+    assert.equal(db.reads, 2);
+  });
+}
+
+for (const thrown of [false, true]) {
+  test(`Finding 10: ${thrown ? "thrown" : "returned"} refresh failure preserves acknowledged saving and choices`, async () => {
+    const { db, ui } = await privateSaveScenario({
+      initial: [row({ sharing_status: "shared" })],
+      read: async () => { if (thrown) throw transportError; return { data: null, error: transportError }; },
+    });
+    assertPrivateSaveUnverified(ui);
+    await ui.press("Refresh sharing status (replaces your choices)");
+    assertPrivateSaveUnverified(ui);
+    db.rows = [row({ report_version: 45, repair_status: "partially_repaired", what_helped: "space", sharing_status: "shared" })];
+    db.read = async () => ({ data: structuredClone(db.rows), error: null });
+    await ui.press("Refresh sharing status (replaces your choices)");
+    assert.match(ui.text(), /The latest refresh found your update shared with your partner\./);
+    assert.match(ui.text(), /Shared with your partner/);
+    assert.equal(ui.selected("Space"), true, "only deliberate reload replaces the choices");
+    assert.doesNotMatch(ui.text(), /could not be verified|Sharing status needs verification|It was not shared/);
+    assertPrivateSaveOnly(db);
+  });
+}
+
+for (const invalidation of ["account", "blur", "unmount", "refocus", "event", "visibility"]) {
+  test(`Finding 10: ${invalidation} during private-save refresh suppresses stale rows and notice`, async () => {
+    const pending = deferred();
+    const { db, ui } = await privateSaveScenario({ read: () => pending.promise });
+    const oldRows = structuredClone(db.rows);
+    assert.equal(db.reads, 2);
+    db.rows = [row({ report_version: 46, repair_status: "partially_repaired", what_helped: "space" })];
+    db.read = async () => ({ data: structuredClone(db.rows), error: null });
+    if (invalidation === "account") { ui.current = false; ui.unmount(); }
+    else if (["blur", "unmount", "refocus"].includes(invalidation)) ui[invalidation]();
+    else if (invalidation === "event") { db.rows = []; ui.setProps({ eventId: "event-b" }); }
+    else ui.setProps({ visibility: "mine" });
+    await ui.flush();
+    const text = ui.text();
+    pending.resolve({ data: oldRows, error: null });
+    await ui.flush();
+    assert.equal(ui.text(), text, "discarded read cannot publish a completion afterward");
+    assert.doesNotMatch(ui.text(), /Saved privately\.|The latest refresh found|It was not shared/);
+    assertPrivateSaveOnly(db);
+    if (["refocus", "visibility"].includes(invalidation)) {
+      assert.match(ui.text(), /Private — not shared/);
+      assert.equal(ui.selected("Space"), true);
+    }
+    if (invalidation === "account") {
+      db.rows = [row({ user_id: "user-b", repair_status: "partially_repaired", what_helped: "space" })];
+      const next = harness(db);
+      next.authorize = async () => "account-b-token";
+      next.setProps({ userId: "user-b" });
+      await next.flush();
+      assert.equal(next.selected("Space"), true);
+      assert.doesNotMatch(next.text(), /Saved privately\.|The latest refresh found|What helped: Talking/);
+    }
+  });
+}
+
+test("Finding 10: account switch during private save cannot publish or refresh for the replacement account", async () => {
+  const pending = deferred();
+  const { db, ui } = await privateSaveScenario({ respond: () => pending.promise });
+  assert.equal(db.calls[0].headers.Authorization, "Bearer author-token");
+  ui.current = false;
+  ui.unmount();
+  const before = ui.text();
+  pending.resolve({ data: 42, error: null });
+  await ui.flush();
+  assert.equal(ui.text(), before);
+  assert.doesNotMatch(ui.text(), /Saved privately\.|The latest refresh found/);
+  assert.equal(db.reads, 1);
+  assertPrivateSaveOnly(db);
+});
+
+test("Finding 10: post-read authorization rejects silent account replacement before private-save feedback", async () => {
+  const pending = deferred();
+  const { db, ui } = await privateSaveScenario({ read: () => pending.promise });
+  let checks = 0;
+  ui.authorize = async () => { checks++; ui.current = false; return null; };
+  pending.resolve({ data: structuredClone(db.rows), error: null });
+  await ui.flush();
+  assert.equal(checks, 1);
+  assert.doesNotMatch(ui.text(), /Saved privately\.|The latest refresh found|Private — not shared/);
+  assertPrivateSaveOnly(db);
+});
+
+test("Finding 10: same-account token refresh keeps the save pinned and verifies the latest read", async () => {
+  const pending = deferred();
+  const { db, ui } = await privateSaveScenario({ respond: () => pending.promise });
+  ui.authorize = async () => "refreshed-author-token";
+  db.rows = [row({ report_version: 42, repair_status: "reconnected", what_helped: "talking" })];
+  pending.resolve({ data: 42, error: null });
+  await ui.flush();
+  assertPrivateSaveOnly(db);
+  assert.equal(db.readCalls[1].headers.Authorization, "Bearer refreshed-author-token");
+  assert.match(ui.text(), /The latest refresh found your update private\./);
+  assert.match(ui.text(), /Private — not shared/);
+});
+
+test("Finding 10: duplicate saves and retained refresh cannot compete with post-save reconciliation", async () => {
+  const db = client([row()]);
+  const ui = harness(db);
+  await ui.flush();
+  await edit(ui);
+  const save = ui.button("Save privately");
+  const refresh = ui.button("Refresh updates");
+  const pending = deferred();
+  db.read = () => pending.promise;
+  save.props.onPress();
+  save.props.onPress();
+  await ui.flush();
+  save.props.onPress();
+  refresh.props.onPress();
+  await ui.flush();
+  assertPrivateSaveOnly(db);
+  assert.equal(db.reads, 2, "retained refresh is blocked during the write");
+  pending.resolve({ data: structuredClone(db.rows), error: null });
+  await ui.flush();
+  assert.match(ui.text(), /The latest refresh found your update private\./);
+  assert.match(ui.text(), /Private — not shared/);
+  assertPrivateSaveOnly(db);
+});
+
+test("Finding 10: private-save conflict never acknowledges success or replaces choices", async () => {
+  const { db, ui } = await privateSaveScenario({ respond: async () => ({ error: conflict }) });
+  assert.match(ui.text(), /newer repair report exists/);
+  assert.doesNotMatch(ui.text(), /Saved privately\.|The latest refresh found|It was not shared/);
+  assert.equal(ui.selected("Talking"), true);
+  assert.equal(ui.button("Save privately"), undefined);
+  assertPrivateSaveOnly(db);
+  assert.equal(db.reads, 1, "no automatic reload or retry after a reviewed-version conflict");
+});
+
+test("Finding 10: later refresh clears private-save feedback when observing a shared report", async () => {
+  const { db, ui } = await privateSaveScenario();
+  db.rows = [row({ report_version: 43, repair_status: "reconnected", what_helped: "talking", sharing_status: "shared" })];
+  await ui.press("Refresh updates");
+  assert.match(ui.text(), /Shared with your partner/);
+  assert.doesNotMatch(ui.text(), /Saved privately\.|The latest refresh found your update private|It was not shared/);
+  assertPrivateSaveOnly(db);
+});
