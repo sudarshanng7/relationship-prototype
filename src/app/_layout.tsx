@@ -77,6 +77,12 @@ export default function RootLayout() {
             headerShown: false,
           }}
         />
+        <Stack.Screen
+          name="shared-list"
+          options={{
+            headerShown: false,
+          }}
+        />
       </Stack>
         </ChallengePreviewProvider>
       </RepairPreviewProvider>

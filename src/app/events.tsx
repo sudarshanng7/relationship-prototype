@@ -363,6 +363,27 @@ export default function EventsScreen() {
             }
           />
 
+          {/* Shared list entry row inside Our Space */}
+          {isOursMode && (
+            <Pressable
+              onPress={() => router.push("/shared-list" as any)}
+              style={({ pressed }) => [
+                styles.sharedListEntryRow,
+                pressed && styles.sharedListEntryRowPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Open shared list"
+            >
+              <View style={styles.sharedListEntryTextCol}>
+                <Text style={styles.sharedListEntryTitle}>Shared list</Text>
+                <Text style={styles.sharedListEntrySubtitle}>
+                  Groceries, home and errands
+                </Text>
+              </View>
+              <Text style={styles.sharedListEntryChevron}>›</Text>
+            </Pressable>
+          )}
+
           {/* Segmented filter container: All, Mine, Ours */}
           <View style={styles.segmentedFilterContainer} role="tablist">
             {(["all", "mine", "ours"] as const).map((seg) => {
@@ -897,6 +918,44 @@ const createStyles = (theme: ThemeColors) =>
       fontSize: 13,
       fontWeight: "600",
       color: theme.primaryAccent,
+    },
+
+    /* Shared list entry row inside Our Space */
+    sharedListEntryRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: theme.surface,
+      borderColor: theme.border,
+      borderWidth: 1.2,
+      borderRadius: tokens.radii.card,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      marginBottom: 16,
+      minHeight: 52,
+    },
+    sharedListEntryRowPressed: {
+      backgroundColor: theme.secondarySurface,
+      borderColor: theme.primaryAccent,
+    },
+    sharedListEntryTextCol: {
+      flex: 1,
+      gap: 2,
+    },
+    sharedListEntryTitle: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "600",
+      color: theme.primaryText,
+    },
+    sharedListEntrySubtitle: {
+      fontSize: tokens.typeScale.caption,
+      color: theme.secondaryText,
+    },
+    sharedListEntryChevron: {
+      fontSize: 20,
+      fontWeight: "400",
+      color: theme.primaryAccent,
+      marginLeft: 12,
     },
 
     /* Mine mode navigation */
