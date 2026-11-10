@@ -12,7 +12,7 @@ import { useRepairPreview } from "@/context/RepairPreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -61,8 +61,7 @@ export default function EventsScreen() {
   const [oursFilter, setOursFilter] = useState<OursFilter | null>(null);
   const [hasFinishedInitialLoad, setHasFinishedInitialLoad] = useState(false);
   const { width: windowWidth } = useWindowDimensions();
-  const scrollViewRef = useRef<ScrollView>(null);
-  const momentsSectionY = useRef<number>(0);
+  const isCompactScreen = windowWidth < 340;
 
   useEffect(() => {
     const rawScope = Array.isArray(params.scope) ? params.scope[0] : params.scope;
@@ -78,18 +77,17 @@ export default function EventsScreen() {
   const isMineMode = activeScope === "mine";
   const isOursMode = activeScope === "ours";
 
-  const openMomentsCount = useMemo(() => {
+  const openMoments = useMemo(() => {
     return events.filter(
-      (e) => e.visibility === "ours" && e.event_type === "friction" && e.status === "open"
-    ).length;
+      (e) =>
+        e.visibility === "ours" &&
+        e.event_type === "friction" &&
+        e.status === "open",
+    );
   }, [events]);
 
-  const scrollToMoments = useCallback(() => {
-    scrollViewRef.current?.scrollTo({
-      y: Math.max(0, momentsSectionY.current - 20),
-      animated: true,
-    });
-  }, []);
+  const openMomentsCount = openMoments.length;
+  const mostRecentOpenMoment = openMoments[0] ?? null;
 
   function handleSelectScope(nextScope: FilterOption) {
     setActiveScope(nextScope);
@@ -331,10 +329,255 @@ export default function EventsScreen() {
       !hasSpaceError &&
       !hasGenericError);
 
+  const momentsListContent = (
+    <View style={styles.momentsFeedContainer}>
+      {/* Calm notice for local repair preview in Ours */}
+      {isPreviewReconnectedActive && (
+        <View
+          style={styles.previewNoticeBanner}
+          accessibilityRole="alert"
+          accessibilityLabel="You are viewing a local repair preview. This moment’s saved status has not changed."
+        >
+          <Text style={styles.previewNoticeBannerText}>
+            You are viewing a local repair preview. This moment’s saved status has not changed.
+          </Text>
+        </View>
+      )}
+
+      {/* Relationship space error */}
+      {hasSpaceError && (
+        <View style={styles.centeredNoticeCard}>
+          <Text style={styles.centeredNoticeTitle}>Relationship Space</Text>
+          <Text style={styles.centeredNoticeText}>
+            You do not belong to a relationship space.
+          </Text>
+        </View>
+      )}
+
+      {/* Generic backend error banner */}
+      {hasGenericError && (
+        <View style={styles.errorNoticeCard}>
+          <Text style={styles.errorNoticeText}>{status}</Text>
+        </View>
+      )}
+
+      {/* Calm loading skeleton layout */}
+      {shouldShowLoading && (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Restoring your moments...</Text>
+          <View style={styles.skeletonCard} />
+          <View style={[styles.skeletonCard, { opacity: 0.55 }]} />
+        </View>
+      )}
+
+      {/* Empty states */}
+      {!shouldShowLoading &&
+        ((!isMineMode && !isOursMode) || hasFinishedInitialLoad) &&
+        visibleEvents.length === 0 &&
+        !hasSpaceError && (
+        <CouplyEmptyState
+          title={
+            isMineMode
+              ? "Your private space is quiet for now."
+              : isOursMode
+              ? oursFilter === "open"
+                ? "No moments are currently lingering."
+                : oursFilter === "softening"
+                ? "No moments are softening right now."
+                : oursFilter === "reconnected"
+                ? "No reconnected moments yet."
+                : "Nothing has been shared yet."
+              : activeScope === "all"
+              ? "No moments here yet."
+              : activeScope === "mine"
+              ? "Your private space is quiet for now."
+              : "Nothing has been shared yet."
+          }
+          body={
+            isMineMode
+              ? "Private reflections you keep will appear here."
+              : isOursMode
+              ? oursFilter === "open"
+                ? "Frictions that feel unresolved will appear here when recorded."
+                : oursFilter === "softening"
+                ? "Moments where care or space is opening up will appear here."
+                : oursFilter === "reconnected"
+                ? "Moments where you two found your way back will be kept here."
+                : `Only moments you intentionally share with ${partnerRef} will appear here.`
+              : activeScope === "all"
+              ? "You can record something good or something that felt off whenever it matters."
+              : activeScope === "mine"
+              ? "Private reflections you keep will appear here."
+              : `Only moments you intentionally share with ${partnerRef} will appear here.`
+          }
+          action={
+            !isMineMode && !isOursMode && activeScope === "all" ? (
+              <CouplyPrimaryButton
+                label="Record a moment"
+                onPress={() => router.push("/record-moment")}
+                accessibilityLabel="Record a moment"
+              />
+            ) : null
+          }
+        />
+      )}
+
+      {/* List of redesigned moment cards */}
+      {!shouldShowLoading &&
+        visibleEvents.map((event) => {
+          const isCreator = event.creator_id === currentUserId;
+          const naturalDate = formatNaturalDate(event.created_at);
+          const isPositive = event.event_type === "positive";
+          const privacyLabel =
+            event.visibility === "mine" ? "Mine · Private" : "Ours · Shared";
+          const attribution = isCreator
+            ? "Recorded by you"
+            : `Shared by ${partnerName || "partner"}`;
+          const accessiblePrivacy =
+            event.visibility === "mine" ? "private" : "shared";
+
+          const isPreviewReconnected =
+            isOursMode &&
+            previewStatus === "reconnected" &&
+            event.id === previewEventId;
+
+          const displayStatus = isPreviewReconnected
+            ? "Reconnected · preview"
+            : formatStatus(event.status);
+
+          return (
+            <Pressable
+              key={event.id}
+              onPress={() => openEvent(event.id)}
+              style={({ pressed }) => [
+                styles.card,
+                isPositive && styles.positiveCard,
+                pressed && styles.cardPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isPreviewReconnected
+                  ? `Open ${accessiblePrivacy} ${formatCategory(
+                      event.category,
+                    )} moment recorded ${naturalDate.toLowerCase()}. Status: Reconnected preview.`
+                  : `Open ${accessiblePrivacy} ${formatCategory(
+                      event.category,
+                    )} moment recorded ${naturalDate.toLowerCase()}.`
+              }
+            >
+              {/* Top card row: Icon + Category + Attribution & Date + Chevron */}
+              <View style={styles.cardHeaderRow}>
+                <View style={styles.cardHeaderLeft}>
+                  <View
+                    style={[
+                      styles.iconBadge,
+                      isPositive
+                        ? styles.positiveIconBadge
+                        : styles.frictionIconBadge,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.iconSymbol,
+                        isPositive && styles.positiveIconSymbol,
+                      ]}
+                    >
+                      {isPositive ? "✦" : "〰"}
+                    </Text>
+                  </View>
+
+                  <View style={styles.categoryWrap}>
+                    <Text style={styles.categoryTitle}>
+                      {formatCategory(event.category)}
+                    </Text>
+                    <Text style={styles.attributionText}>{attribution}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.cardHeaderRight}>
+                  <Text style={styles.dateText}>{naturalDate}</Text>
+                  <Text style={styles.chevron}>›</Text>
+                </View>
+              </View>
+
+              {/* Bottom card row: Privacy badge & calm friction status / celebration badge */}
+              <View
+                style={[
+                  styles.cardFooterRow,
+                  isPositive && styles.positiveCardFooterRow,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.privacyBadge,
+                    event.visibility === "mine"
+                      ? isPositive
+                        ? styles.minePositivePrivacyBadge
+                        : styles.minePrivacyBadge
+                      : isPositive
+                      ? styles.oursPositivePrivacyBadge
+                      : styles.oursPrivacyBadge,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.privacyBadgeText,
+                      event.visibility === "mine"
+                        ? isPositive
+                          ? styles.minePositivePrivacyText
+                          : styles.minePrivacyText
+                        : isPositive
+                        ? styles.oursPositivePrivacyText
+                        : styles.oursPrivacyText,
+                    ]}
+                  >
+                    {privacyLabel}
+                  </Text>
+                </View>
+
+                {isPositive ? (
+                  <CouplyStatusPill
+                    label="Celebration"
+                    variant="positive"
+                  />
+                ) : (
+                  <CouplyStatusPill
+                    label={displayStatus}
+                    variant={
+                      isPreviewReconnected
+                        ? "preview"
+                        : event.status === "reconnected"
+                        ? "reconnected"
+                        : event.status === "partially_repaired"
+                        ? "softening"
+                        : "open"
+                    }
+                  />
+                )}
+              </View>
+
+              {/* Supporting note for local preview override */}
+              {isPreviewReconnected && (
+                <View style={styles.previewCardNoticeWrap}>
+                  <Text style={styles.previewCardNoticeText}>
+                    Temporary in this browser — not yet saved or shared with {partnerRef}.
+                  </Text>
+                  {hasSharedTakeaway && (
+                    <Text style={styles.previewTakeawaySubtleIndicator}>
+                      A shared takeaway is available in this preview.
+                    </Text>
+                  )}
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
-        ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -384,143 +627,169 @@ export default function EventsScreen() {
               {/* A. Shared Garden Hero */}
               <GardenEntryCard coupleId={coupleId} />
 
-              {/* B. Quick-action row: Share a moment + View moments */}
+              {/* B. Action Shelf */}
               <View
                 style={
-                  windowWidth < 350
-                    ? styles.quickActionStack
-                    : styles.quickActionRow
+                  mostRecentOpenMoment && !isCompactScreen
+                    ? styles.actionShelfRow
+                    : styles.actionShelfStack
                 }
               >
+                {/* Share a moment tile (Primary contribution action) */}
                 <Pressable
                   onPress={() =>
                     router.push("/record-moment?visibility=ours" as any)
                   }
                   style={({ pressed }) => [
-                    styles.quickActionTile,
+                    styles.actionTile,
+                    mostRecentOpenMoment
+                      ? isCompactScreen
+                        ? styles.actionTileStackItem
+                        : styles.actionTilePrimary
+                      : styles.actionTileFull,
                     {
                       backgroundColor: theme.secondarySurface,
                       borderColor: pressed
                         ? theme.primaryAccent
                         : theme.borderSoft,
                     },
-                    pressed && styles.quickActionTilePressed,
+                    pressed && styles.cardPressed,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Share a moment in Our Space"
+                  accessibilityLabel="Share a moment: Add to Our Space"
                   accessibilityHint="Navigates to record a moment shared with your partner"
                 >
-                  <View style={styles.quickActionTopRow}>
+                  <View style={styles.actionTileTopRow}>
+                    <View
+                      style={[
+                        styles.actionTileIconCircle,
+                        { backgroundColor: theme.surface },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.actionTileIconText,
+                          { color: theme.primaryAccent },
+                        ]}
+                      >
+                        ＋
+                      </Text>
+                    </View>
                     <Text
                       style={[
-                        styles.quickActionOverline,
+                        styles.actionTileChevron,
                         { color: theme.primaryAccent },
                       ]}
                     >
-                      ADD
-                    </Text>
-                    <Text
-                      style={[
-                        styles.quickActionBadgeIcon,
-                        { color: theme.primaryAccent },
-                      ]}
-                    >
-                      +
+                      ›
                     </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.quickActionTitle,
-                      { color: theme.primaryText },
-                    ]}
-                  >
-                    Share a moment
-                  </Text>
-                  <Text
-                    style={[
-                      styles.quickActionLink,
-                      { color: theme.primaryAccent },
-                    ]}
-                  >
-                    Share ›
-                  </Text>
+                  <View style={styles.actionTileTextCol}>
+                    <Text
+                      style={[
+                        styles.actionTileLabel,
+                        { color: theme.primaryText },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      Share a moment
+                    </Text>
+                    <Text
+                      style={[
+                        styles.actionTileCaption,
+                        { color: theme.secondaryText },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      Add to Our Space
+                    </Text>
+                  </View>
                 </Pressable>
 
-                <Pressable
-                  onPress={scrollToMoments}
-                  style={({ pressed }) => [
-                    styles.quickActionTile,
-                    {
-                      backgroundColor: theme.surface,
-                      borderColor: pressed
-                        ? theme.primaryAccent
-                        : theme.borderSoft,
-                    },
-                    pressed && styles.quickActionTilePressed,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="View moments between you two"
-                  accessibilityHint="Scrolls down to the moments list"
-                >
-                  <View style={styles.quickActionTopRow}>
-                    <Text
-                      style={[
-                        styles.quickActionOverline,
-                        { color: theme.secondaryText },
-                      ]}
-                    >
-                      EXPLORE
-                    </Text>
-                    <Text
-                      style={[
-                        styles.quickActionBadgeIcon,
-                        { color: theme.secondaryText },
-                      ]}
-                    >
-                      ▾
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.quickActionTitle,
-                      { color: theme.primaryText },
+                {/* Continue tile (Rendered only when an open shared friction moment exists) */}
+                {mostRecentOpenMoment && (
+                  <Pressable
+                    onPress={() => openEvent(mostRecentOpenMoment.id)}
+                    style={({ pressed }) => [
+                      styles.actionTile,
+                      isCompactScreen
+                        ? styles.actionTileStackItem
+                        : styles.actionTileContextual,
+                      {
+                        backgroundColor: theme.surface,
+                        borderColor: pressed
+                          ? theme.primaryAccent
+                          : theme.borderSoft,
+                      },
+                      pressed && styles.cardPressed,
                     ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Continue: Open moment"
+                    accessibilityHint="Navigates to the most recent open shared moment"
                   >
-                    View moments
-                  </Text>
-                  <Text
-                    style={[
-                      styles.quickActionLink,
-                      { color: theme.secondaryText },
-                    ]}
-                  >
-                    Jump to list ›
-                  </Text>
-                </Pressable>
+                    <View style={styles.actionTileTopRow}>
+                      <View
+                        style={[
+                          styles.actionTileIconCircle,
+                          { backgroundColor: theme.secondarySurface },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.actionTileIconText,
+                            { color: theme.primaryAccent },
+                          ]}
+                        >
+                          ↗
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.actionTileChevron,
+                          { color: theme.secondaryText },
+                        ]}
+                      >
+                        ›
+                      </Text>
+                    </View>
+                    <View style={styles.actionTileTextCol}>
+                      <Text
+                        style={[
+                          styles.actionTileLabel,
+                          { color: theme.primaryText },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        Continue
+                      </Text>
+                      <Text
+                        style={[
+                          styles.actionTileCaption,
+                          { color: theme.secondaryText },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        Open moment
+                      </Text>
+                    </View>
+                  </Pressable>
+                )}
               </View>
 
-              {/* C. Shared Tools: Single Grouped Tile with quiet divider */}
-              <View
-                style={[
-                  styles.sharedToolsCard,
-                  {
-                    backgroundColor: theme.secondarySurface,
-                    borderColor: theme.borderSoft,
-                  },
-                ]}
-              >
-                <View style={styles.sharedToolsCardHeader}>
+              {/* C. Shared Tools: Compact utility tiles */}
+              <View style={styles.sharedToolsSection}>
+                <View style={styles.sharedToolsHeaderBlock}>
                   <Text
                     style={[
-                      styles.sharedToolsCardOverline,
-                      { color: theme.primaryAccent },
+                      styles.sharedToolsOverline,
+                      { color: theme.secondaryText },
                     ]}
                   >
                     SHARED TOOLS
                   </Text>
                   <Text
                     style={[
-                      styles.sharedToolsCardHeading,
+                      styles.sharedToolsHeading,
                       { color: theme.primaryText },
                     ]}
                   >
@@ -528,47 +797,71 @@ export default function EventsScreen() {
                   </Text>
                 </View>
 
-                <View style={styles.sharedToolsRows}>
+                <View
+                  style={
+                    isCompactScreen
+                      ? styles.utilityTilesStack
+                      : styles.utilityTilesRow
+                  }
+                >
+                  {/* Shared List Tile */}
                   <Pressable
                     onPress={() => router.push("/shared-list" as any)}
                     style={({ pressed }) => [
-                      styles.toolRowItem,
-                      pressed && styles.toolRowItemPressed,
+                      styles.utilityTile,
+                      isCompactScreen
+                        ? styles.utilityTileStackItem
+                        : styles.utilityTileRowItem,
+                      {
+                        backgroundColor: theme.secondarySurface,
+                        borderColor: pressed
+                          ? theme.primaryAccent
+                          : theme.borderSoft,
+                      },
+                      pressed && styles.cardPressed,
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel="Open Shared List: Groceries, home and errands"
                     accessibilityHint="Navigates to the couple's shared grocery and task list"
                   >
-                    <View
-                      style={[
-                        styles.toolRowIconCircle,
-                        {
-                          backgroundColor:
-                            theme.status.celebration.bg,
-                        },
-                      ]}
-                    >
+                    <View style={styles.utilityTileTopRow}>
+                      <View
+                        style={[
+                          styles.utilityIconBadge,
+                          { backgroundColor: theme.status.celebration.bg },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.utilityIconText,
+                            { color: theme.primaryAccent },
+                          ]}
+                        >
+                          ✓
+                        </Text>
+                      </View>
                       <Text
                         style={[
-                          styles.toolRowIconText,
+                          styles.utilityTileChevron,
                           { color: theme.primaryAccent },
                         ]}
                       >
-                        ✓
+                        ›
                       </Text>
                     </View>
-                    <View style={styles.toolRowTextCol}>
+                    <View style={styles.utilityTextCol}>
                       <Text
                         style={[
-                          styles.toolRowTitle,
+                          styles.utilityTitle,
                           { color: theme.primaryText },
                         ]}
+                        numberOfLines={1}
                       >
                         Shared List
                       </Text>
                       <Text
                         style={[
-                          styles.toolRowSubtitle,
+                          styles.utilitySubtitle,
                           { color: theme.secondaryText },
                         ]}
                         numberOfLines={1}
@@ -576,63 +869,71 @@ export default function EventsScreen() {
                         Groceries, home and errands
                       </Text>
                     </View>
-                    <Text
-                      style={[
-                        styles.toolRowChevron,
-                        { color: theme.primaryAccent },
-                      ]}
-                    >
-                      ›
-                    </Text>
                   </Pressable>
 
-                  <View
-                    style={[
-                      styles.toolRowDivider,
-                      { backgroundColor: theme.borderSoft },
-                    ]}
-                  />
-
+                  {/* Important Dates Tile */}
                   <Pressable
-                    onPress={() => router.push("/profile" as any)}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/profile",
+                        params: { section: "important-dates" },
+                      } as any)
+                    }
                     style={({ pressed }) => [
-                      styles.toolRowItem,
-                      pressed && styles.toolRowItemPressed,
+                      styles.utilityTile,
+                      isCompactScreen
+                        ? styles.utilityTileStackItem
+                        : styles.utilityTileRowItem,
+                      {
+                        backgroundColor: theme.secondarySurface,
+                        borderColor: pressed
+                          ? theme.primaryAccent
+                          : theme.borderSoft,
+                      },
+                      pressed && styles.cardPressed,
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel="Open Important Dates: Milestones and anniversaries"
                     accessibilityHint="Navigates to profile to view milestone dates and relationship details"
                   >
-                    <View
-                      style={[
-                        styles.toolRowIconCircle,
-                        {
-                          backgroundColor:
-                            theme.status.reconnected.bg,
-                        },
-                      ]}
-                    >
+                    <View style={styles.utilityTileTopRow}>
+                      <View
+                        style={[
+                          styles.utilityIconBadge,
+                          { backgroundColor: theme.status.reconnected.bg },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.utilityIconText,
+                            { color: theme.primaryAccent },
+                          ]}
+                        >
+                          ♡
+                        </Text>
+                      </View>
                       <Text
                         style={[
-                          styles.toolRowIconText,
+                          styles.utilityTileChevron,
                           { color: theme.primaryAccent },
                         ]}
                       >
-                        ♡
+                        ›
                       </Text>
                     </View>
-                    <View style={styles.toolRowTextCol}>
+                    <View style={styles.utilityTextCol}>
                       <Text
                         style={[
-                          styles.toolRowTitle,
+                          styles.utilityTitle,
                           { color: theme.primaryText },
                         ]}
+                        numberOfLines={1}
                       >
                         Important Dates
                       </Text>
                       <Text
                         style={[
-                          styles.toolRowSubtitle,
+                          styles.utilitySubtitle,
                           { color: theme.secondaryText },
                         ]}
                         numberOfLines={1}
@@ -640,58 +941,51 @@ export default function EventsScreen() {
                         Milestones and anniversaries
                       </Text>
                     </View>
-                    <Text
-                      style={[
-                        styles.toolRowChevron,
-                        { color: theme.primaryAccent },
-                      ]}
-                    >
-                      ›
-                    </Text>
                   </Pressable>
                 </View>
               </View>
             </View>
           )}
 
-          {/* 2. Shared Moments Section Header (when in Ours mode) */}
+          {/* 2. Shared Moments Section (when in Ours mode) */}
           {isOursMode && (
             <View
-              style={styles.sharedMomentsSection}
-              onLayout={(e) => {
-                momentsSectionY.current = e.nativeEvent.layout.y;
-              }}
+              style={[
+                styles.sharedMomentsVisualZone,
+                {
+                  backgroundColor: theme.secondarySurface,
+                  borderColor: theme.borderSoft,
+                },
+              ]}
             >
-              <View style={styles.sharedMomentsHeaderRow}>
-                <View style={styles.sharedMomentsTextCol}>
+              <View style={styles.sharedMomentsHeaderBlock}>
+                <Text
+                  style={[
+                    styles.sharedMomentsOverline,
+                    { color: theme.secondaryText },
+                  ]}
+                >
+                  SHARED MOMENTS
+                </Text>
+                <Text
+                  style={[
+                    styles.sharedMomentsHeading,
+                    { color: theme.primaryText },
+                  ]}
+                >
+                  Moments between you two
+                </Text>
+                {openMomentsCount > 0 && (
                   <Text
                     style={[
-                      styles.sharedMomentsOverline,
-                      { color: theme.primaryAccent },
+                      styles.sharedMomentsCountNote,
+                      { color: theme.secondaryText },
                     ]}
                   >
-                    SHARED MOMENTS
+                    {openMomentsCount}{" "}
+                    {openMomentsCount === 1 ? "moment" : "moments"} still open
                   </Text>
-                  <Text
-                    style={[
-                      styles.sharedMomentsHeading,
-                      { color: theme.primaryText },
-                    ]}
-                  >
-                    Moments between you two
-                  </Text>
-                  {openMomentsCount > 0 && (
-                    <Text
-                      style={[
-                        styles.sharedMomentsCountNote,
-                        { color: theme.secondaryText },
-                      ]}
-                    >
-                      {openMomentsCount}{" "}
-                      {openMomentsCount === 1 ? "moment" : "moments"} still open
-                    </Text>
-                  )}
-                </View>
+                )}
               </View>
 
               {/* Ours status filter chips */}
@@ -745,6 +1039,8 @@ export default function EventsScreen() {
                   </Pressable>
                 )}
               </View>
+
+              {momentsListContent}
             </View>
           )}
 
@@ -800,250 +1096,10 @@ export default function EventsScreen() {
                   </Pressable>
                 </View>
               )}
+
+              {momentsListContent}
             </>
           )}
-
-          {/* Calm notice for local repair preview in Ours */}
-          {isPreviewReconnectedActive && (
-            <View
-              style={styles.previewNoticeBanner}
-              accessibilityRole="alert"
-              accessibilityLabel="You are viewing a local repair preview. This moment’s saved status has not changed."
-            >
-              <Text style={styles.previewNoticeBannerText}>
-                You are viewing a local repair preview. This moment’s saved status has not changed.
-              </Text>
-            </View>
-          )}
-
-          {/* Relationship space error */}
-          {hasSpaceError && (
-            <View style={styles.centeredNoticeCard}>
-              <Text style={styles.centeredNoticeTitle}>Relationship Space</Text>
-              <Text style={styles.centeredNoticeText}>
-                You do not belong to a relationship space.
-              </Text>
-            </View>
-          )}
-
-          {/* Generic backend error banner */}
-          {hasGenericError && (
-            <View style={styles.errorNoticeCard}>
-              <Text style={styles.errorNoticeText}>{status}</Text>
-            </View>
-          )}
-
-          {/* Calm loading skeleton layout */}
-          {shouldShowLoading && (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Restoring your moments...</Text>
-              <View style={styles.skeletonCard} />
-              <View style={[styles.skeletonCard, { opacity: 0.55 }]} />
-            </View>
-          )}
-
-          {/* Empty states */}
-          {!shouldShowLoading &&
-            ((!isMineMode && !isOursMode) || hasFinishedInitialLoad) &&
-            visibleEvents.length === 0 &&
-            !hasSpaceError && (
-            <CouplyEmptyState
-              title={
-                isMineMode
-                  ? "Your private space is quiet for now."
-                  : isOursMode
-                  ? oursFilter === "open"
-                    ? "No moments are currently lingering."
-                    : oursFilter === "softening"
-                    ? "No moments are softening right now."
-                    : oursFilter === "reconnected"
-                    ? "No reconnected moments yet."
-                    : "Nothing has been shared yet."
-                  : activeScope === "all"
-                  ? "No moments here yet."
-                  : activeScope === "mine"
-                  ? "Your private space is quiet for now."
-                  : "Nothing has been shared yet."
-              }
-              body={
-                isMineMode
-                  ? "Private reflections you keep will appear here."
-                  : isOursMode
-                  ? oursFilter === "open"
-                    ? "Frictions that feel unresolved will appear here when recorded."
-                    : oursFilter === "softening"
-                    ? "Moments where care or space is opening up will appear here."
-                    : oursFilter === "reconnected"
-                    ? "Moments where you two found your way back will be kept here."
-                    : `Only moments you intentionally share with ${partnerRef} will appear here.`
-                  : activeScope === "all"
-                  ? "You can record something good or something that felt off whenever it matters."
-                  : activeScope === "mine"
-                  ? "Private reflections you keep will appear here."
-                  : `Only moments you intentionally share with ${partnerRef} will appear here.`
-              }
-              action={
-                !isMineMode && !isOursMode && activeScope === "all" ? (
-                  <CouplyPrimaryButton
-                    label="Record a moment"
-                    onPress={() => router.push("/record-moment")}
-                    accessibilityLabel="Record a moment"
-                  />
-                ) : null
-              }
-            />
-          )}
-
-          {/* List of redesigned moment cards */}
-          {!shouldShowLoading &&
-            visibleEvents.map((event) => {
-              const isCreator = event.creator_id === currentUserId;
-              const naturalDate = formatNaturalDate(event.created_at);
-              const isPositive = event.event_type === "positive";
-              const privacyLabel =
-                event.visibility === "mine" ? "Mine · Private" : "Ours · Shared";
-              const attribution = isCreator
-                ? "Recorded by you"
-                : `Shared by ${partnerName || "partner"}`;
-              const accessiblePrivacy =
-                event.visibility === "mine" ? "private" : "shared";
-
-              const isPreviewReconnected =
-                isOursMode &&
-                previewStatus === "reconnected" &&
-                event.id === previewEventId;
-
-              const displayStatus = isPreviewReconnected
-                ? "Reconnected · preview"
-                : formatStatus(event.status);
-
-              return (
-                <Pressable
-                  key={event.id}
-                  onPress={() => openEvent(event.id)}
-                  style={({ pressed }) => [
-                    styles.card,
-                    isPositive && styles.positiveCard,
-                    pressed && styles.cardPressed,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    isPreviewReconnected
-                      ? `Open ${accessiblePrivacy} ${formatCategory(
-                          event.category,
-                        )} moment recorded ${naturalDate.toLowerCase()}. Status: Reconnected preview.`
-                      : `Open ${accessiblePrivacy} ${formatCategory(
-                          event.category,
-                        )} moment recorded ${naturalDate.toLowerCase()}.`
-                  }
-                >
-                  {/* Top card row: Icon + Category + Attribution & Date + Chevron */}
-                  <View style={styles.cardHeaderRow}>
-                    <View style={styles.cardHeaderLeft}>
-                      <View
-                        style={[
-                          styles.iconBadge,
-                          isPositive
-                            ? styles.positiveIconBadge
-                            : styles.frictionIconBadge,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.iconSymbol,
-                            isPositive && styles.positiveIconSymbol,
-                          ]}
-                        >
-                          {isPositive ? "✦" : "〰"}
-                        </Text>
-                      </View>
-
-                      <View style={styles.categoryWrap}>
-                        <Text style={styles.categoryTitle}>
-                          {formatCategory(event.category)}
-                        </Text>
-                        <Text style={styles.attributionText}>{attribution}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.cardHeaderRight}>
-                      <Text style={styles.dateText}>{naturalDate}</Text>
-                      <Text style={styles.chevron}>›</Text>
-                    </View>
-                  </View>
-
-                  {/* Bottom card row: Privacy badge & calm friction status / celebration badge */}
-                  <View
-                    style={[
-                      styles.cardFooterRow,
-                      isPositive && styles.positiveCardFooterRow,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.privacyBadge,
-                        event.visibility === "mine"
-                          ? isPositive
-                            ? styles.minePositivePrivacyBadge
-                            : styles.minePrivacyBadge
-                          : isPositive
-                          ? styles.oursPositivePrivacyBadge
-                          : styles.oursPrivacyBadge,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.privacyBadgeText,
-                          event.visibility === "mine"
-                            ? isPositive
-                              ? styles.minePositivePrivacyText
-                              : styles.minePrivacyText
-                            : isPositive
-                            ? styles.oursPositivePrivacyText
-                            : styles.oursPrivacyText,
-                        ]}
-                      >
-                        {privacyLabel}
-                      </Text>
-                    </View>
-
-                    {isPositive ? (
-                      <CouplyStatusPill
-                        label="Celebration"
-                        variant="positive"
-                      />
-                    ) : (
-                      <CouplyStatusPill
-                        label={displayStatus}
-                        variant={
-                          isPreviewReconnected
-                            ? "preview"
-                            : event.status === "reconnected"
-                            ? "reconnected"
-                            : event.status === "partially_repaired"
-                            ? "softening"
-                            : "open"
-                        }
-                      />
-                    )}
-                  </View>
-
-                  {/* Supporting note for local preview override */}
-                  {isPreviewReconnected && (
-                    <View style={styles.previewCardNoticeWrap}>
-                      <Text style={styles.previewCardNoticeText}>
-                        Temporary in this browser — not yet saved or shared with {partnerRef}.
-                      </Text>
-                      {hasSharedTakeaway && (
-                        <Text style={styles.previewTakeawaySubtleIndicator}>
-                          A shared takeaway is available in this preview.
-                        </Text>
-                      )}
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
 
           {/* Development privacy tests (Only rendered when __DEV__ is true) */}
           {__DEV__ && (
@@ -1246,27 +1302,26 @@ const createStyles = (theme: ThemeColors) =>
     dashboardWrapper: {
       width: "100%",
       gap: 16,
-      marginBottom: 24,
+      marginBottom: 0,
     },
 
-    /* Quick Action Row (directly below Garden) */
-    quickActionRow: {
+    /* Action Shelf */
+    actionShelfRow: {
       flexDirection: "row",
-      gap: 12,
+      gap: 10,
       width: "100%",
     },
-    quickActionStack: {
+    actionShelfStack: {
       flexDirection: "column",
-      gap: 12,
+      gap: 10,
       width: "100%",
     },
-    quickActionTile: {
-      flex: 1,
-      minWidth: 0,
-      minHeight: 104,
-      padding: 16,
+    actionTile: {
+      paddingVertical: 14,
+      paddingHorizontal: 14,
       borderRadius: 18,
       borderWidth: 1.2,
+      minHeight: 104,
       justifyContent: "space-between",
       shadowColor: "#2D1F33",
       shadowOffset: { width: 0, height: 2 },
@@ -1274,173 +1329,167 @@ const createStyles = (theme: ThemeColors) =>
       shadowRadius: 6,
       elevation: 2,
     },
-    quickActionTilePressed: {
-      opacity: 0.94,
-      transform: [{ scale: 0.995 }],
+    actionTilePrimary: {
+      flex: 58,
     },
-    quickActionTopRow: {
+    actionTileContextual: {
+      flex: 42,
+    },
+    actionTileFull: {
+      width: "100%",
+    },
+    actionTileStackItem: {
+      width: "100%",
+    },
+    actionTileTopRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
     },
-    quickActionOverline: {
-      fontSize: tokens.typeScale.overline,
-      fontWeight: "700",
-      letterSpacing: 0.8,
-    },
-    quickActionBadgeIcon: {
-      fontSize: 16,
-      fontWeight: "700",
-    },
-    quickActionTitle: {
-      fontSize: tokens.typeScale.bodyLarge,
-      fontWeight: "700",
-      marginVertical: 4,
-    },
-    quickActionLink: {
-      fontSize: tokens.typeScale.caption,
-      fontWeight: "700",
-    },
-
-    /* Shared Tools: Single Grouped Tile with quiet divider */
-    sharedToolsCard: {
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      borderRadius: 20,
-      borderWidth: 1.2,
-      shadowColor: "#2D1F33",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.04,
-      shadowRadius: 6,
-      elevation: 2,
-      gap: 10,
-    },
-    sharedToolsCardHeader: {
-      gap: 2,
-    },
-    sharedToolsCardOverline: {
-      fontSize: tokens.typeScale.overline,
-      fontWeight: "700",
-      letterSpacing: 0.8,
-    },
-    sharedToolsCardHeading: {
-      fontSize: tokens.typeScale.sectionTitle,
-      fontWeight: "700",
-      lineHeight: 22,
-    },
-    sharedToolsRows: {
-      flexDirection: "column",
-    },
-    toolRowItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingVertical: 10,
-      minHeight: 48,
-    },
-    toolRowItemPressed: {
-      opacity: 0.75,
-    },
-    toolRowIconCircle: {
+    actionTileIconCircle: {
       width: 30,
       height: 30,
       borderRadius: 15,
       alignItems: "center",
       justifyContent: "center",
-      marginRight: 12,
     },
-    toolRowIconText: {
-      fontSize: 14,
+    actionTileIconText: {
+      fontSize: 15,
       fontWeight: "700",
     },
-    toolRowTextCol: {
-      flex: 1,
-      gap: 2,
-    },
-    toolRowTitle: {
-      fontSize: tokens.typeScale.body,
-      fontWeight: "600",
-    },
-    toolRowSubtitle: {
-      fontSize: tokens.typeScale.caption,
-      lineHeight: 16,
-    },
-    toolRowChevron: {
+    actionTileChevron: {
       fontSize: 18,
       fontWeight: "600",
-      marginLeft: 8,
+      marginLeft: 4,
     },
-    toolRowDivider: {
-      height: 1,
-      width: "100%",
-      marginVertical: 2,
-    },
-
-    /* Shared Moments Section */
-    sharedMomentsSection: {
-      width: "100%",
-      marginTop: 8,
-    },
-    sharedMomentsHeaderRow: {
-      flexDirection: "row",
-      alignItems: "flex-end",
-      justifyContent: "space-between",
-      marginBottom: 14,
-      gap: 8,
-    },
-    sharedMomentsTextCol: {
-      flex: 1,
+    actionTileTextCol: {
       gap: 2,
     },
-    sharedMomentsOverline: {
-      fontSize: tokens.typeScale.overline,
+    actionTileLabel: {
+      fontSize: 15,
       fontWeight: "700",
-      letterSpacing: 0.8,
+      letterSpacing: -0.2,
     },
-    sharedMomentsHeading: {
-      fontSize: tokens.typeScale.sectionTitle,
-      fontWeight: "700",
-    },
-    sharedMomentsCountNote: {
-      fontSize: tokens.typeScale.caption,
-      marginTop: 2,
+    actionTileCaption: {
+      fontSize: 12,
+      lineHeight: 16,
     },
 
-    /* Shared list entry row inside Our Space */
-    sharedListEntryRow: {
+    /* Shared Tools: Compact utility tiles */
+    sharedToolsSection: {
+      width: "100%",
+      gap: 10,
+      marginTop: 2,
+    },
+    sharedToolsHeaderBlock: {
+      gap: 2,
+    },
+    sharedToolsOverline: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "600",
+      letterSpacing: 0.8,
+    },
+    sharedToolsHeading: {
+      fontSize: tokens.typeScale.sectionTitle,
+      fontWeight: "700",
+      lineHeight: 22,
+    },
+    utilityTilesRow: {
+      flexDirection: "row",
+      gap: 10,
+      width: "100%",
+    },
+    utilityTilesStack: {
+      flexDirection: "column",
+      gap: 10,
+      width: "100%",
+    },
+    utilityTile: {
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+      borderRadius: 18,
+      borderWidth: 1.2,
+      minHeight: 98,
+      justifyContent: "space-between",
+      shadowColor: "#2D1F33",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    utilityTileRowItem: {
+      flex: 1,
+    },
+    utilityTileStackItem: {
+      width: "100%",
+    },
+    utilityTileTopRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      backgroundColor: theme.surface,
-      borderColor: theme.border,
-      borderWidth: 1.2,
-      borderRadius: tokens.radii.card,
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      marginBottom: 16,
-      minHeight: 52,
     },
-    sharedListEntryRowPressed: {
-      backgroundColor: theme.secondarySurface,
-      borderColor: theme.primaryAccent,
+    utilityIconBadge: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: "center",
+      justifyContent: "center",
     },
-    sharedListEntryTextCol: {
-      flex: 1,
+    utilityIconText: {
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    utilityTileChevron: {
+      fontSize: 18,
+      fontWeight: "600",
+      marginLeft: 4,
+    },
+    utilityTextCol: {
       gap: 2,
     },
-    sharedListEntryTitle: {
-      fontSize: tokens.typeScale.bodyLarge,
+    utilityTitle: {
+      fontSize: tokens.typeScale.body,
       fontWeight: "600",
-      color: theme.primaryText,
+      letterSpacing: -0.2,
     },
-    sharedListEntrySubtitle: {
+    utilitySubtitle: {
       fontSize: tokens.typeScale.caption,
-      color: theme.secondaryText,
+      lineHeight: 16,
     },
-    sharedListEntryChevron: {
-      fontSize: 20,
-      fontWeight: "400",
-      color: theme.primaryAccent,
-      marginLeft: 12,
+
+    /* Shared Moments Visual Zone */
+    sharedMomentsVisualZone: {
+      width: "100%",
+      marginTop: 28,
+      borderRadius: 24,
+      borderWidth: 1.2,
+      paddingHorizontal: 16,
+      paddingTop: 20,
+      paddingBottom: 8,
+      gap: 16,
+    },
+    sharedMomentsHeaderBlock: {
+      gap: 4,
+    },
+    sharedMomentsOverline: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "600",
+      letterSpacing: 0.8,
+      marginBottom: 2,
+    },
+    sharedMomentsHeading: {
+      fontSize: 23,
+      lineHeight: 28,
+      fontWeight: "700",
+      letterSpacing: -0.3,
+    },
+    sharedMomentsCountNote: {
+      fontSize: tokens.typeScale.body,
+      lineHeight: 18,
+      marginTop: 4,
+    },
+    momentsFeedContainer: {
+      width: "100%",
     },
 
     /* Mine mode navigation */
@@ -1504,6 +1553,7 @@ const createStyles = (theme: ThemeColors) =>
 
     /* Ours mode status filter chips */
     oursFilterSection: {
+      marginTop: 16,
       marginBottom: 16,
       gap: 8,
     },

@@ -8,8 +8,8 @@ import {
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
-import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -27,6 +27,8 @@ import {
 // ----------------------------------------------------
 // TYPES & CONSTANTS
 // ----------------------------------------------------
+
+export type ProfileView = "me" | "partner" | "us";
 
 interface CoupleImportantDate {
   id: string;
@@ -165,9 +167,51 @@ function normalizeTags(rawTags: string[]): string[] {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ section?: string | string[] }>();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { refreshIdentity } = useUserIdentity();
+
+  // Profile View State (Me | Partner | Us)
+  const [activeProfileView, setActiveProfileView] = useState<ProfileView>(() => {
+    const rawSection = Array.isArray(params.section)
+      ? params.section[0]
+      : params.section;
+    return rawSection === "important-dates" ? "us" : "me";
+  });
+  const [prioritizeImportantDates, setPrioritizeImportantDates] = useState(() => {
+    const rawSection = Array.isArray(params.section)
+      ? params.section[0]
+      : params.section;
+    return rawSection === "important-dates";
+  });
+  const scrollViewRef = useRef<ScrollView>(null);
+  const importantDatesY = useRef<number>(0);
+  const hasConsumedSectionParam = useRef(false);
+
+  // Direct Important Dates navigation handler
+  useEffect(() => {
+    const rawSection = Array.isArray(params.section)
+      ? params.section[0]
+      : params.section;
+
+    if (rawSection === "important-dates" && !hasConsumedSectionParam.current) {
+      hasConsumedSectionParam.current = true;
+      setActiveProfileView("us");
+      setPrioritizeImportantDates(true);
+      router.setParams({ section: undefined });
+      requestAnimationFrame(() => {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+      });
+    } else if (!rawSection) {
+      hasConsumedSectionParam.current = false;
+    }
+  }, [params.section]);
+
+  const handleSelectProfileView = useCallback((view: ProfileView) => {
+    setActiveProfileView(view);
+    setPrioritizeImportantDates(false);
+  }, []);
 
   // Initial loading state
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -1269,6 +1313,7 @@ export default function ProfileScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -1304,6 +1349,46 @@ export default function ProfileScreen() {
               style={styles.homeLinkBtnCouply}
             />
 
+            {/* Segmented Profile Navigation Control */}
+            <View style={styles.segmentControlContainer} role="tablist">
+              {(
+                [
+                  { key: "me", label: "Me" },
+                  { key: "partner", label: "Partner" },
+                  { key: "us", label: "Us" },
+                ] as const
+              ).map(({ key, label }) => {
+                const isSelected = activeProfileView === key;
+
+                return (
+                  <Pressable
+                    key={key}
+                    onPress={() => handleSelectProfileView(key)}
+                    style={[
+                      styles.segmentTab,
+                      isSelected
+                        ? styles.segmentTabActive
+                        : styles.segmentTabInactive,
+                    ]}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isSelected }}
+                    accessibilityLabel={`${label} profile view`}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentTabText,
+                        isSelected
+                          ? styles.segmentTabTextActive
+                          : styles.segmentTabTextInactive,
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
             {/* General connection status feedback banner if present */}
             {connectionStatus !== "" && (
               <View
@@ -1315,9 +1400,12 @@ export default function ProfileScreen() {
             )}
 
             {/* -------------------------------------------
-                2. PERSONAL DETAILS (Compact Account Summary, Full Width)
+                VIEW: ME (Personal Details + What I Share)
                ------------------------------------------- */}
-            <CouplySectionCard style={styles.cardCouply}>
+            {activeProfileView === "me" && (
+              <>
+                {/* 2. PERSONAL DETAILS (Compact Account Summary, Full Width) */}
+                <CouplySectionCard style={styles.cardCouply}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.cardSectionHeading}>Personal details</Text>
                 <Text style={styles.privacyTag}>
@@ -1954,13 +2042,16 @@ export default function ProfileScreen() {
                     </View>
                   )}
                 </CouplySectionCard>
+              </>
+            )}
 
             {/* -------------------------------------------
-                4. ABOUT MY PARTNER (Read-Only)
+                VIEW: PARTNER (About Partner - Read Only)
                ------------------------------------------- */}
-            <CouplySectionCard
-              style={[styles.cardCouply, styles.partnerCard]}
-            >
+            {activeProfileView === "partner" && (
+              <CouplySectionCard
+                style={[styles.cardCouply, styles.partnerCard]}
+              >
                   {/* Compact Identity Header */}
                   <View style={styles.partnerIdentityHeader}>
                     <View
@@ -2099,15 +2190,19 @@ export default function ProfileScreen() {
                     </View>
                   )}
                 </CouplySectionCard>
+            )}
 
             {/* -------------------------------------------
-                5. OUR RELATIONSHIP (Couple-Owned)
+                VIEW: US (Our Relationship + Important Dates + Relationship Space)
                ------------------------------------------- */}
-            <CouplySectionCard style={styles.cardCouply}>
-                  <View style={styles.sectionHeaderRow}>
-                    <Text style={styles.cardSectionHeading}>
-                      Our relationship
-                    </Text>
+            {activeProfileView === "us" &&
+              (() => {
+                const ourRelationshipCard = (
+                  <CouplySectionCard style={styles.cardCouply}>
+                    <View style={styles.sectionHeaderRow}>
+                      <Text style={styles.cardSectionHeading}>
+                        Our relationship
+                      </Text>
                     <Text style={styles.privacyTag}>
                       Shared in your relationship space.
                     </Text>
@@ -2607,16 +2702,20 @@ export default function ProfileScreen() {
                     </View>
                   )}
                 </CouplySectionCard>
+                );
 
-            {/* -------------------------------------------
-                6. IMPORTANT DATES
-               ------------------------------------------- */}
-            <CouplySectionCard style={styles.cardCouply}>
-                  <View style={styles.sectionHeaderRow}>
-                    <Text style={styles.cardSectionHeading}>
-                      Important dates
-                    </Text>
-                  </View>
+                const importantDatesCard = (
+                  <CouplySectionCard
+                    style={styles.cardCouply}
+                    onLayout={(event) => {
+                      importantDatesY.current = event.nativeEvent.layout.y;
+                    }}
+                  >
+                    <View style={styles.sectionHeaderRow}>
+                      <Text style={styles.cardSectionHeading}>
+                        Important dates
+                      </Text>
+                    </View>
 
                   <Text style={styles.sectionPurposeText}>
                     Milestones you both may want to remember.
@@ -2858,21 +2957,25 @@ export default function ProfileScreen() {
                     </View>
                   )}
                 </CouplySectionCard>
+                );
 
-            {/* -------------------------------------------
-                7. RELATIONSHIP SPACE / CONNECTION (Full Width, Infrastructure Hierarchy)
-               ------------------------------------------- */}
-            <CouplySectionCard
-              style={[styles.cardCouply, styles.infrastructureCard]}
-            >
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.cardSectionHeading}>
-                  Relationship space
-                </Text>
-                <Text style={styles.privacyTag}>
-                  Connection & invitations
-                </Text>
-              </View>
+                const relationshipSpaceCard = (
+                  <CouplySectionCard
+                    style={[styles.cardCouply, styles.infrastructureCard]}
+                  >
+                    <View style={styles.sectionHeaderRow}>
+                      <Text
+                        style={[
+                          styles.cardSectionHeading,
+                          styles.infrastructureHeading,
+                        ]}
+                      >
+                        Relationship space
+                      </Text>
+                      <Text style={styles.privacyTag}>
+                        Account infrastructure
+                      </Text>
+                    </View>
 
               <Text style={styles.sectionPurposeText}>
                 Pairing and connection settings for your shared space.
@@ -2982,6 +3085,22 @@ export default function ProfileScreen() {
                 </View>
               )}
             </CouplySectionCard>
+                );
+
+                return prioritizeImportantDates ? (
+                  <>
+                    {importantDatesCard}
+                    {ourRelationshipCard}
+                    {relationshipSpaceCard}
+                  </>
+                ) : (
+                  <>
+                    {ourRelationshipCard}
+                    {importantDatesCard}
+                    {relationshipSpaceCard}
+                  </>
+                );
+              })()}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -3186,6 +3305,59 @@ const createStyles = (theme: ThemeColors) =>
       paddingVertical: 6,
       paddingHorizontal: 12,
       alignSelf: "flex-start",
+    },
+
+    /* Segmented Navigation Control */
+    segmentControlContainer: {
+      flexDirection: "row",
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 14,
+      padding: 4,
+      gap: 4,
+      borderWidth: 1.2,
+      borderColor: theme.borderSoft,
+      width: "100%",
+    },
+    segmentTab: {
+      flex: 1,
+      minHeight: 44,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+    },
+    segmentTabActive: {
+      backgroundColor: theme.surface,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    segmentTabInactive: {
+      backgroundColor: "transparent",
+      borderWidth: 1.2,
+      borderColor: "transparent",
+    },
+    segmentTabText: {
+      fontSize: 14.5,
+      letterSpacing: -0.1,
+    },
+    segmentTabTextActive: {
+      fontWeight: "700",
+      color: theme.primaryText,
+    },
+    segmentTabTextInactive: {
+      fontWeight: "600",
+      color: theme.secondaryText,
+    },
+    infrastructureHeading: {
+      fontSize: 16.5,
+      fontWeight: "600",
+      color: theme.secondaryText,
     },
 
     /* Cards */
