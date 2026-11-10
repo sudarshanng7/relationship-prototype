@@ -1,4 +1,5 @@
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
+import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -18,6 +19,7 @@ import {
 export default function OnboardingScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { refreshIdentity } = useUserIdentity();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [displayName, setDisplayName] = useState("");
@@ -102,6 +104,8 @@ export default function OnboardingScreen() {
         setErrorMessage(error.message);
         return;
       }
+
+      await refreshIdentity();
 
       router.replace("/home");
     } catch (error) {
