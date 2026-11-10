@@ -412,6 +412,7 @@ export function CouplyChoiceCard({
       }
       accessibilityHint={accessibilityHint}
       accessibilityState={{ ...selectionState, disabled: isDisabled, busy: loading }}
+      aria-checked={accessibilityRole === "radio" || accessibilityRole === "checkbox" ? selected : undefined}
       disabled={isDisabled}
     >
       <View style={styles.choiceCardContent}>

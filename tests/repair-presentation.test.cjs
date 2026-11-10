@@ -50,6 +50,30 @@ test("the three existing status controls retain radio roles and checked state", 
   assert.equal(style(ui.button("A little better").props.style).backgroundColor, tokens.colors.plum);
 });
 
+for (const label of statusLabels) {
+  test(`native ${label} selection keeps checked aliases synchronized without writing`, async (t) => {
+    const { db, ui } = await setup(t);
+    await ui.press(label);
+    for (const node of radios(ui).slice(0, 3)) {
+      const checked = node.props.accessibilityLabel === label;
+      assert.equal(node.props.accessibilityState.checked, checked);
+      assert.equal(node.props["aria-checked"], checked);
+    }
+    assert.equal(db.calls.length, 0);
+    assert.equal(db.reads, 1);
+  });
+}
+
+for (const origin of [null, "legacy_default_unconfirmed", "legacy_creator_report"]) {
+  test(`native ${origin ?? "missing report"} starts explicitly unchecked and does not select history`, async (t) => {
+    const { db, ui } = await setup(t, origin ? [row({ status_origin: origin, repair_status: "reconnected" })] : []);
+    assert.equal(radios(ui).length, 3);
+    assert.ok(radios(ui).every((node) => node.props["aria-checked"] === false && node.props.accessibilityState.checked === false));
+    assert.ok(!ui.button("Save privately") || ui.button("Save privately").props.disabled);
+    assert.equal(db.calls.length, 0);
+  });
+}
+
 for (const [value, label] of methodChoices) {
   test(`what-helped ${label} preserves its stored value and optional radio semantics`, async (t) => {
     const { db, ui } = await setup(t);
@@ -58,6 +82,8 @@ for (const [value, label] of methodChoices) {
     assert.equal(byLabel(ui, "What helped? (optional)").props.accessibilityRole, "radiogroup");
     assert.deepEqual(radios(ui).slice(3).map((node) => node.props.accessibilityLabel), methodChoices.map((item) => item[1]));
     await ui.press(label); assert.equal(ui.selected(label), true);
+    assert.ok(radios(ui).slice(3).every((node) => node.props["aria-checked"] === (node.props.accessibilityLabel === label)));
+    assert.equal(db.calls.length, 0, "method selection alone never saves or shares");
     await ui.press("Save privately");
     assert.equal(db.calls[0].name, checkedSave);
     assert.equal(db.calls[0].args.p_what_helped, value);
@@ -216,6 +242,12 @@ test("pending private saving preserves radio semantics, disables controls and bl
   save(); await ui.flush(); save(); await ui.flush();
   assert.equal(db.calls.length, 1);
   assert.ok(radios(ui).every((node) => node.props.disabled && node.props.accessibilityState.disabled));
+  // A retained native callback cannot change the pending draft while disabled.
+  ui.button("A little better").props.onPress();
+  ui.button("Space").props.onPress();
+  await ui.flush();
+  assert.equal(db.calls.length, 1);
+  assert.ok(radios(ui).every((node) => node.props["aria-checked"] === node.props.accessibilityState.checked));
   assert.equal(ui.selected("I feel reconnected"), true); assert.equal(ui.selected("Talking"), true);
   assert.equal(byLabel(ui, "Save privately").props.disabled, true);
   pending.resolve(); await ui.flush();

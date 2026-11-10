@@ -88,6 +88,7 @@ for (const role of ["radio", "checkbox", "tab", "button"]) {
       assert.equal(tree.props.accessibilityRole, role);
       assert.equal(tree.props.accessibilityLabel, "My choice: Optional detail");
       assert.deepEqual(tree.props.accessibilityState, { ...expected, disabled: false, busy: false });
+      assert.equal(tree.props["aria-checked"], role === "radio" || role === "checkbox" ? selected : undefined);
       tree.props.onPress();
       assert.equal(presses, 1);
       assert.deepEqual(ui.CouplyChoiceCard(props).props.accessibilityState, tree.props.accessibilityState);
@@ -102,6 +103,7 @@ for (const role of ["radio", "checkbox", "tab", "button"]) {
       assert.equal(tree.props.onPress, undefined);
       assert.equal(tree.props.accessibilityState.disabled, true);
       assert.equal(tree.props.accessibilityState.busy, Boolean(state.loading));
+      assert.equal(tree.props["aria-checked"], role === "radio" || role === "checkbox" ? false : undefined);
       assert.equal(tree.props.accessibilityLabel, "Choose an option");
       assert.equal(tree.props.accessibilityHint, "Optional");
       assert.equal(tree.props.testID, "choice");

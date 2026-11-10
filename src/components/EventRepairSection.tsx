@@ -7,6 +7,7 @@
  * Database RLS controls which partner reports this caller can read.
  */
 import { CouplySectionCard, CouplyStatusPill } from "@/components/CouplyUI";
+import { RepairRadioGroup } from "@/components/RepairRadioGroup";
 import { tokens } from "@/components/couply-tokens";
 import {
   isRepairSaveConflict,
@@ -690,75 +691,43 @@ export function EventRepairSection({
           )}
 
           <Text accessibilityRole="header" style={styles.subheading}>How does this feel now?</Text>
-          <View style={styles.choices} accessibilityRole="radiogroup" accessibilityLabel="How does this feel now?">
-            {STATUSES.map((item) => (
-              <Pressable
-                key={item.value}
-                accessibilityRole="radio"
-                accessibilityLabel={item.label}
-                accessibilityState={{
-                  checked: draftStatus === item.value,
-                  disabled: busy,
-                }}
-                disabled={busy}
-                style={[
-                  styles.choice,
-                  draftStatus === item.value && styles.selected,
-                  busy && styles.disabled,
-                ]}
-                onPress={() => {
-                  setDraftStatus(item.value);
-                  if (item.value === "open") setDraftMethod(null);
-                  setConfirmShare(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.choiceText,
-                    draftStatus === item.value && styles.selectedText,
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          <RepairRadioGroup
+            label="How does this feel now?"
+            options={STATUSES}
+            value={draftStatus}
+            disabled={busy}
+            style={styles.choices}
+            optionStyle={styles.choice}
+            selectedOptionStyle={styles.selected}
+            disabledOptionStyle={styles.disabled}
+            textStyle={styles.choiceText}
+            selectedTextStyle={styles.selectedText}
+            onChange={(status) => {
+              setDraftStatus(status);
+              if (status === "open") setDraftMethod(null);
+              setConfirmShare(false);
+            }}
+          />
 
           {draftStatus !== null && draftStatus !== "open" && (
             <>
               <Text accessibilityRole="header" style={styles.subheading}>What helped? (optional)</Text>
-              <View style={styles.choices} accessibilityRole="radiogroup" accessibilityLabel="What helped? (optional)">
-                {METHODS.map((item) => (
-                  <Pressable
-                    key={item.value ?? "none"}
-                    accessibilityRole="radio"
-                    accessibilityLabel={item.label}
-                    accessibilityState={{
-                      checked: draftMethod === item.value,
-                      disabled: busy,
-                    }}
-                    disabled={busy}
-                    style={[
-                      styles.choice,
-                      draftMethod === item.value && styles.selected,
-                      busy && styles.disabled,
-                    ]}
-                    onPress={() => {
-                      setDraftMethod(item.value);
-                      setConfirmShare(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.choiceText,
-                        draftMethod === item.value && styles.selectedText,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+              <RepairRadioGroup
+                label="What helped? (optional)"
+                options={METHODS}
+                value={draftMethod}
+                disabled={busy}
+                style={styles.choices}
+                optionStyle={styles.choice}
+                selectedOptionStyle={styles.selected}
+                disabledOptionStyle={styles.disabled}
+                textStyle={styles.choiceText}
+                selectedTextStyle={styles.selectedText}
+                onChange={(method) => {
+                  setDraftMethod(method);
+                  setConfirmShare(false);
+                }}
+              />
             </>
           )}
 

@@ -161,6 +161,7 @@ function harness(db, visibility = "ours", source) {
   };
   imports["@/components/couply-tokens"] = loadSource("src/components/couply-tokens.ts", {});
   imports["@/components/CouplyUI"] = loadSource("src/components/CouplyUI.tsx", imports);
+  imports["@/components/RepairRadioGroup"] = loadSource("src/components/RepairRadioGroup.tsx", imports);
   const { EventRepairSection } = loadSource("src/components/EventRepairSection.tsx", imports, source);
   const props = {
     eventId: "event-a", userId: "user-a", visibility,
