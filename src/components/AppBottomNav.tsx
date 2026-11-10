@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   bottomNavInner: {
     width: "100%",
-    maxWidth: tokens.layout.maxContentWidth,
+    maxWidth: tokens.layout.appShell,
     alignSelf: "center",
     flexDirection: "row",
     justifyContent: "space-around",

@@ -83,6 +83,12 @@ export default function RootLayout() {
             headerShown: false,
           }}
         />
+        <Stack.Screen
+          name="garden"
+          options={{
+            headerShown: false,
+          }}
+        />
       </Stack>
         </ChallengePreviewProvider>
       </RepairPreviewProvider>

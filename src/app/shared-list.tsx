@@ -856,6 +856,7 @@ export default function SharedListScreen() {
             subtitle="Groceries, home tasks and little things you’re handling together."
             onBack={handleBack}
             backLabel="‹ Our Space"
+            style={styles.headerCouply}
             rightSlot={
               !isEmpty ? (
                 <CouplyPrimaryButton
@@ -1322,7 +1323,7 @@ export default function SharedListScreen() {
         onRequestClose={() => setTaskToDelete(null)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={styles.deleteConfirmContainer}>
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Remove this item?</Text>
               <Text style={styles.modalSubtitle}>
@@ -1697,7 +1698,7 @@ export default function SharedListScreen() {
         }}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={styles.deleteConfirmContainer}>
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>
                 Clear completed{" "}
@@ -1766,7 +1767,7 @@ export default function SharedListScreen() {
         }}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={styles.deleteConfirmContainer}>
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>
                 Remove all{" "}
@@ -1843,14 +1844,19 @@ const createStyles = (theme: ThemeColors) =>
     },
     scrollContent: {
       flexGrow: 1,
-      paddingHorizontal: tokens.spacing.page,
+      paddingHorizontal: tokens.layout.pagePaddingStandard,
       paddingTop: tokens.spacing.md,
       paddingBottom: 120,
     },
     mainColumn: {
       width: "100%",
-      maxWidth: 540,
+      maxWidth: tokens.layout.appShell,
       alignSelf: "center",
+    },
+    headerCouply: {
+      paddingHorizontal: 0,
+      paddingTop: 0,
+      paddingBottom: 4,
     },
 
     /* Header right slot button */
@@ -1978,6 +1984,8 @@ const createStyles = (theme: ThemeColors) =>
     /* Task text & meta */
     taskTextCol: {
       flex: 1,
+      minWidth: 0,
+      flexShrink: 1,
       gap: 4,
       justifyContent: "center",
     },
@@ -1994,6 +2002,7 @@ const createStyles = (theme: ThemeColors) =>
     taskMetaRow: {
       flexDirection: "row",
       alignItems: "center",
+      flexWrap: "wrap",
       gap: 6,
     },
 
@@ -2001,6 +2010,7 @@ const createStyles = (theme: ThemeColors) =>
     taskActionsRow: {
       flexDirection: "row",
       alignItems: "center",
+      flexShrink: 0,
       gap: 4,
     },
     iconActionBtn: {
@@ -2090,7 +2100,7 @@ const createStyles = (theme: ThemeColors) =>
     },
     skeletonCard: {
       width: "100%",
-      maxWidth: 540,
+      maxWidth: tokens.layout.appShell,
       height: 60,
       backgroundColor: theme.secondarySurface,
       borderColor: theme.border,
@@ -2108,8 +2118,15 @@ const createStyles = (theme: ThemeColors) =>
     },
     modalContainer: {
       width: "100%",
-      maxWidth: 480,
+      maxWidth: tokens.layout.modal,
       maxHeight: "92%",
+      alignSelf: "center",
+    },
+    deleteConfirmContainer: {
+      width: "100%",
+      maxWidth: tokens.layout.dialogCompact,
+      maxHeight: "92%",
+      alignSelf: "center",
     },
     modalCard: {
       backgroundColor: theme.surface,
@@ -2439,8 +2456,9 @@ const createStyles = (theme: ThemeColors) =>
 
     /* Overflow Menu Card & Items */
     menuCard: {
-      maxWidth: 420,
+      maxWidth: tokens.layout.modal,
       width: "100%",
+      alignSelf: "center",
       gap: 14,
     },
     menuHeader: {

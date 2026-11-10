@@ -1,5 +1,6 @@
 import { tokens } from "@/components/couply-tokens";
 import { AppBottomNav } from "@/components/AppBottomNav";
+import { GardenEntryCard } from "@/components/garden/GardenEntryCard";
 import {
   CouplyEmptyState,
   CouplyHeader,
@@ -11,13 +12,14 @@ import { useRepairPreview } from "@/context/RepairPreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -58,6 +60,9 @@ export default function EventsScreen() {
   });
   const [oursFilter, setOursFilter] = useState<OursFilter | null>(null);
   const [hasFinishedInitialLoad, setHasFinishedInitialLoad] = useState(false);
+  const { width: windowWidth } = useWindowDimensions();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const momentsSectionY = useRef<number>(0);
 
   useEffect(() => {
     const rawScope = Array.isArray(params.scope) ? params.scope[0] : params.scope;
@@ -72,6 +77,19 @@ export default function EventsScreen() {
 
   const isMineMode = activeScope === "mine";
   const isOursMode = activeScope === "ours";
+
+  const openMomentsCount = useMemo(() => {
+    return events.filter(
+      (e) => e.visibility === "ours" && e.event_type === "friction" && e.status === "open"
+    ).length;
+  }, [events]);
+
+  const scrollToMoments = useCallback(() => {
+    scrollViewRef.current?.scrollTo({
+      y: Math.max(0, momentsSectionY.current - 20),
+      animated: true,
+    });
+  }, []);
 
   function handleSelectScope(nextScope: FilterOption) {
     setActiveScope(nextScope);
@@ -316,10 +334,11 @@ export default function EventsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.mainColumn}>
+        <View style={[styles.mainColumn, isOursMode && styles.mainColumnOurs]}>
           {/* Header */}
           <CouplyHeader
             title={isMineMode ? "Mine" : isOursMode ? "Our Space" : "Moments"}
@@ -333,135 +352,427 @@ export default function EventsScreen() {
                 : "A place to return to what mattered."
             }
             rightSlot={
-              <CouplyPrimaryButton
-                label={
-                  isMineMode
-                    ? "+ Write a reflection"
-                    : isOursMode
-                    ? "+ Share a moment"
-                    : "+ Record a moment"
-                }
-                onPress={() =>
-                  router.push(
+              isOursMode ? undefined : (
+                <CouplyPrimaryButton
+                  label={
                     isMineMode
-                      ? "/record-moment?visibility=mine"
-                      : isOursMode
-                      ? "/record-moment?visibility=ours"
-                      : "/record-moment"
-                  )
-                }
-                accessibilityLabel={
-                  isMineMode
-                    ? "+ Write a reflection"
-                    : isOursMode
-                    ? "+ Share a moment"
-                    : "Record a moment"
-                }
-                style={styles.recordHeaderBtnCouply}
-                textStyle={styles.recordHeaderBtnCouplyText}
-              />
+                      ? "+ Write a reflection"
+                      : "+ Record a moment"
+                  }
+                  onPress={() =>
+                    router.push(
+                      isMineMode
+                        ? "/record-moment?visibility=mine"
+                        : "/record-moment"
+                    )
+                  }
+                  accessibilityLabel={
+                    isMineMode
+                      ? "+ Write a reflection"
+                      : "Record a moment"
+                  }
+                  style={styles.recordHeaderBtnCouply}
+                  textStyle={styles.recordHeaderBtnCouplyText}
+                />
+              )
             }
           />
 
-          {/* Shared list entry row inside Our Space */}
-          {isOursMode && (
-            <Pressable
-              onPress={() => router.push("/shared-list" as any)}
-              style={({ pressed }) => [
-                styles.sharedListEntryRow,
-                pressed && styles.sharedListEntryRowPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Open shared list"
-            >
-              <View style={styles.sharedListEntryTextCol}>
-                <Text style={styles.sharedListEntryTitle}>Shared list</Text>
-                <Text style={styles.sharedListEntrySubtitle}>
-                  Groceries, home and errands
-                </Text>
-              </View>
-              <Text style={styles.sharedListEntryChevron}>›</Text>
-            </Pressable>
-          )}
+          {/* 1. Our Space Dashboard */}
+          {isOursMode && coupleId && !hasSpaceError && (
+            <View style={styles.dashboardWrapper}>
+              {/* A. Shared Garden Hero */}
+              <GardenEntryCard coupleId={coupleId} />
 
-          {/* Segmented filter container: All, Mine, Ours */}
-          <View style={styles.segmentedFilterContainer} role="tablist">
-            {(["all", "mine", "ours"] as const).map((seg) => {
-              const isSelected = activeScope === seg;
-              const label =
-                seg === "all" ? "All" : seg === "mine" ? "Mine" : "Ours";
-
-              return (
+              {/* B. Quick-action row: Share a moment + View moments */}
+              <View
+                style={
+                  windowWidth < 350
+                    ? styles.quickActionStack
+                    : styles.quickActionRow
+                }
+              >
                 <Pressable
-                  key={seg}
-                  onPress={() => handleSelectScope(seg)}
-                  style={[
-                    styles.segmentButton,
-                    isSelected && styles.segmentButtonActive,
+                  onPress={() =>
+                    router.push("/record-moment?visibility=ours" as any)
+                  }
+                  style={({ pressed }) => [
+                    styles.quickActionTile,
+                    {
+                      backgroundColor: theme.secondarySurface,
+                      borderColor: pressed
+                        ? theme.primaryAccent
+                        : theme.borderSoft,
+                    },
+                    pressed && styles.quickActionTilePressed,
                   ]}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: isSelected }}
-                  accessibilityLabel={`Show ${label} moments`}
+                  accessibilityRole="button"
+                  accessibilityLabel="Share a moment in Our Space"
+                  accessibilityHint="Navigates to record a moment shared with your partner"
                 >
+                  <View style={styles.quickActionTopRow}>
+                    <Text
+                      style={[
+                        styles.quickActionOverline,
+                        { color: theme.primaryAccent },
+                      ]}
+                    >
+                      ADD
+                    </Text>
+                    <Text
+                      style={[
+                        styles.quickActionBadgeIcon,
+                        { color: theme.primaryAccent },
+                      ]}
+                    >
+                      +
+                    </Text>
+                  </View>
                   <Text
                     style={[
-                    styles.segmentButtonText,
-                    isSelected && styles.segmentButtonTextActive,
-                  ]}
+                      styles.quickActionTitle,
+                      { color: theme.primaryText },
+                    ]}
                   >
-                    {label}
+                    Share a moment
+                  </Text>
+                  <Text
+                    style={[
+                      styles.quickActionLink,
+                      { color: theme.primaryAccent },
+                    ]}
+                  >
+                    Share ›
                   </Text>
                 </Pressable>
-              );
-            })}
-          </View>
 
-          {/* If opened via scope=ours/mine, also show a quiet "View all moments" link if desired */}
-          {(isMineMode || isOursMode) && (
-            <View style={styles.mineNavRow}>
-              <Pressable
-                onPress={() => handleSelectScope("all")}
-                style={({ pressed }) => [
-                  styles.viewAllButton,
-                  pressed && styles.pressedState,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="View all moments"
-              >
-                <Text style={styles.viewAllButtonText}>View all moments</Text>
-              </Pressable>
-            </View>
-          )}
-
-          {/* Ours status filter chips */}
-          {isOursMode && (
-            <View style={styles.oursFilterSection}>
-              <View style={styles.oursFilterRow} role="tablist">
-                {(
-                  [
-                    { key: "open", label: "Open" },
-                    { key: "softening", label: "Softening" },
-                    { key: "reconnected", label: "Reconnected" },
-                  ] as const
-                ).map(({ key, label }) => {
-                  const isSelected = oursFilter === key;
-
-                  return (
-                    <Pressable
-                      key={key}
-                      onPress={() => setOursFilter(isSelected ? null : key)}
+                <Pressable
+                  onPress={scrollToMoments}
+                  style={({ pressed }) => [
+                    styles.quickActionTile,
+                    {
+                      backgroundColor: theme.surface,
+                      borderColor: pressed
+                        ? theme.primaryAccent
+                        : theme.borderSoft,
+                    },
+                    pressed && styles.quickActionTilePressed,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="View moments between you two"
+                  accessibilityHint="Scrolls down to the moments list"
+                >
+                  <View style={styles.quickActionTopRow}>
+                    <Text
                       style={[
-                        styles.oursFilterChip,
-                        isSelected && styles.oursFilterChipActive,
+                        styles.quickActionOverline,
+                        { color: theme.secondaryText },
                       ]}
-                      accessibilityRole="tab"
-                      accessibilityState={{ selected: isSelected }}
-                      accessibilityLabel={`Filter by ${label}`}
+                    >
+                      EXPLORE
+                    </Text>
+                    <Text
+                      style={[
+                        styles.quickActionBadgeIcon,
+                        { color: theme.secondaryText },
+                      ]}
+                    >
+                      ▾
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.quickActionTitle,
+                      { color: theme.primaryText },
+                    ]}
+                  >
+                    View moments
+                  </Text>
+                  <Text
+                    style={[
+                      styles.quickActionLink,
+                      { color: theme.secondaryText },
+                    ]}
+                  >
+                    Jump to list ›
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* C. Shared Tools: Single Grouped Tile with quiet divider */}
+              <View
+                style={[
+                  styles.sharedToolsCard,
+                  {
+                    backgroundColor: theme.secondarySurface,
+                    borderColor: theme.borderSoft,
+                  },
+                ]}
+              >
+                <View style={styles.sharedToolsCardHeader}>
+                  <Text
+                    style={[
+                      styles.sharedToolsCardOverline,
+                      { color: theme.primaryAccent },
+                    ]}
+                  >
+                    SHARED TOOLS
+                  </Text>
+                  <Text
+                    style={[
+                      styles.sharedToolsCardHeading,
+                      { color: theme.primaryText },
+                    ]}
+                  >
+                    Things you manage together
+                  </Text>
+                </View>
+
+                <View style={styles.sharedToolsRows}>
+                  <Pressable
+                    onPress={() => router.push("/shared-list" as any)}
+                    style={({ pressed }) => [
+                      styles.toolRowItem,
+                      pressed && styles.toolRowItemPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Open Shared List: Groceries, home and errands"
+                    accessibilityHint="Navigates to the couple's shared grocery and task list"
+                  >
+                    <View
+                      style={[
+                        styles.toolRowIconCircle,
+                        {
+                          backgroundColor:
+                            theme.status.celebration.bg,
+                        },
+                      ]}
                     >
                       <Text
                         style={[
-                          styles.oursFilterChipText,
-                          isSelected && styles.oursFilterChipTextActive,
+                          styles.toolRowIconText,
+                          { color: theme.primaryAccent },
+                        ]}
+                      >
+                        ✓
+                      </Text>
+                    </View>
+                    <View style={styles.toolRowTextCol}>
+                      <Text
+                        style={[
+                          styles.toolRowTitle,
+                          { color: theme.primaryText },
+                        ]}
+                      >
+                        Shared List
+                      </Text>
+                      <Text
+                        style={[
+                          styles.toolRowSubtitle,
+                          { color: theme.secondaryText },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        Groceries, home and errands
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.toolRowChevron,
+                        { color: theme.primaryAccent },
+                      ]}
+                    >
+                      ›
+                    </Text>
+                  </Pressable>
+
+                  <View
+                    style={[
+                      styles.toolRowDivider,
+                      { backgroundColor: theme.borderSoft },
+                    ]}
+                  />
+
+                  <Pressable
+                    onPress={() => router.push("/profile" as any)}
+                    style={({ pressed }) => [
+                      styles.toolRowItem,
+                      pressed && styles.toolRowItemPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Open Important Dates: Milestones and anniversaries"
+                    accessibilityHint="Navigates to profile to view milestone dates and relationship details"
+                  >
+                    <View
+                      style={[
+                        styles.toolRowIconCircle,
+                        {
+                          backgroundColor:
+                            theme.status.reconnected.bg,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.toolRowIconText,
+                          { color: theme.primaryAccent },
+                        ]}
+                      >
+                        ♡
+                      </Text>
+                    </View>
+                    <View style={styles.toolRowTextCol}>
+                      <Text
+                        style={[
+                          styles.toolRowTitle,
+                          { color: theme.primaryText },
+                        ]}
+                      >
+                        Important Dates
+                      </Text>
+                      <Text
+                        style={[
+                          styles.toolRowSubtitle,
+                          { color: theme.secondaryText },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        Milestones and anniversaries
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.toolRowChevron,
+                        { color: theme.primaryAccent },
+                      ]}
+                    >
+                      ›
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* 2. Shared Moments Section Header (when in Ours mode) */}
+          {isOursMode && (
+            <View
+              style={styles.sharedMomentsSection}
+              onLayout={(e) => {
+                momentsSectionY.current = e.nativeEvent.layout.y;
+              }}
+            >
+              <View style={styles.sharedMomentsHeaderRow}>
+                <View style={styles.sharedMomentsTextCol}>
+                  <Text
+                    style={[
+                      styles.sharedMomentsOverline,
+                      { color: theme.primaryAccent },
+                    ]}
+                  >
+                    SHARED MOMENTS
+                  </Text>
+                  <Text
+                    style={[
+                      styles.sharedMomentsHeading,
+                      { color: theme.primaryText },
+                    ]}
+                  >
+                    Moments between you two
+                  </Text>
+                  {openMomentsCount > 0 && (
+                    <Text
+                      style={[
+                        styles.sharedMomentsCountNote,
+                        { color: theme.secondaryText },
+                      ]}
+                    >
+                      {openMomentsCount}{" "}
+                      {openMomentsCount === 1 ? "moment" : "moments"} still open
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Ours status filter chips */}
+              <View style={styles.oursFilterSection}>
+                <View style={styles.oursFilterRow} role="tablist">
+                  {(
+                    [
+                      { key: "open", label: "Open" },
+                      { key: "softening", label: "Softening" },
+                      { key: "reconnected", label: "Reconnected" },
+                    ] as const
+                  ).map(({ key, label }) => {
+                    const isSelected = oursFilter === key;
+
+                    return (
+                      <Pressable
+                        key={key}
+                        onPress={() => setOursFilter(isSelected ? null : key)}
+                        style={[
+                          styles.oursFilterChip,
+                          isSelected && styles.oursFilterChipActive,
+                        ]}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: isSelected }}
+                        accessibilityLabel={`Filter by ${label}`}
+                      >
+                        <Text
+                          style={[
+                            styles.oursFilterChipText,
+                            isSelected && styles.oursFilterChipTextActive,
+                          ]}
+                        >
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {/* Quiet text action only when a filter is active */}
+                {oursFilter !== null && (
+                  <Pressable
+                    style={styles.clearFilterButton}
+                    onPress={() => setOursFilter(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear shared moment status filter"
+                  >
+                    <Text style={styles.clearFilterButtonText}>
+                      Show all shared moments
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Segmented filter container: All, Mine, Ours (Shown only when NOT in Ours mode) */}
+          {!isOursMode && (
+            <>
+              <View style={styles.segmentedFilterContainer} role="tablist">
+                {(["all", "mine", "ours"] as const).map((seg) => {
+                  const isSelected = activeScope === seg;
+                  const label =
+                    seg === "all" ? "All" : seg === "mine" ? "Mine" : "Ours";
+
+                  return (
+                    <Pressable
+                      key={seg}
+                      onPress={() => handleSelectScope(seg)}
+                      style={[
+                        styles.segmentButton,
+                        isSelected && styles.segmentButtonActive,
+                      ]}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={`Show ${label} moments`}
+                    >
+                      <Text
+                        style={[
+                          styles.segmentButtonText,
+                          isSelected && styles.segmentButtonTextActive,
                         ]}
                       >
                         {label}
@@ -471,20 +782,25 @@ export default function EventsScreen() {
                 })}
               </View>
 
-              {/* Quiet text action only when a filter is active */}
-              {oursFilter !== null && (
-                <Pressable
-                  style={styles.clearFilterButton}
-                  onPress={() => setOursFilter(null)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Clear shared moment status filter"
-                >
-                  <Text style={styles.clearFilterButtonText}>
-                    Show all shared moments
-                  </Text>
-                </Pressable>
+              {/* If opened via scope=mine, show quiet "View all moments" link */}
+              {isMineMode && (
+                <View style={styles.mineNavRow}>
+                  <Pressable
+                    onPress={() => handleSelectScope("all")}
+                    style={({ pressed }) => [
+                      styles.viewAllButton,
+                      pressed && styles.pressedState,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="View all moments"
+                  >
+                    <Text style={styles.viewAllButtonText}>
+                      View all moments
+                    </Text>
+                  </Pressable>
+                </View>
               )}
-            </View>
+            </>
           )}
 
           {/* Calm notice for local repair preview in Ours */}
@@ -851,7 +1167,7 @@ const createStyles = (theme: ThemeColors) =>
 
     scrollContent: {
       flexGrow: 1,
-      paddingHorizontal: 16,
+      paddingHorizontal: tokens.layout.pagePaddingMobile,
       paddingTop: 16,
       paddingBottom: 110,
       backgroundColor: theme.pageBackground,
@@ -859,7 +1175,7 @@ const createStyles = (theme: ThemeColors) =>
 
     mainColumn: {
       width: "100%",
-      maxWidth: 520,
+      maxWidth: tokens.layout.appShell,
       alignSelf: "center",
     },
 
@@ -918,6 +1234,175 @@ const createStyles = (theme: ThemeColors) =>
       fontSize: 13,
       fontWeight: "600",
       color: theme.primaryAccent,
+    },
+
+    mainColumnOurs: {
+      maxWidth: tokens.layout.appShell,
+      width: "100%",
+      alignSelf: "center",
+    },
+
+    /* Dashboard Container */
+    dashboardWrapper: {
+      width: "100%",
+      gap: 16,
+      marginBottom: 24,
+    },
+
+    /* Quick Action Row (directly below Garden) */
+    quickActionRow: {
+      flexDirection: "row",
+      gap: 12,
+      width: "100%",
+    },
+    quickActionStack: {
+      flexDirection: "column",
+      gap: 12,
+      width: "100%",
+    },
+    quickActionTile: {
+      flex: 1,
+      minWidth: 0,
+      minHeight: 104,
+      padding: 16,
+      borderRadius: 18,
+      borderWidth: 1.2,
+      justifyContent: "space-between",
+      shadowColor: "#2D1F33",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    quickActionTilePressed: {
+      opacity: 0.94,
+      transform: [{ scale: 0.995 }],
+    },
+    quickActionTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    quickActionOverline: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+    },
+    quickActionBadgeIcon: {
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    quickActionTitle: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "700",
+      marginVertical: 4,
+    },
+    quickActionLink: {
+      fontSize: tokens.typeScale.caption,
+      fontWeight: "700",
+    },
+
+    /* Shared Tools: Single Grouped Tile with quiet divider */
+    sharedToolsCard: {
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderRadius: 20,
+      borderWidth: 1.2,
+      shadowColor: "#2D1F33",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 2,
+      gap: 10,
+    },
+    sharedToolsCardHeader: {
+      gap: 2,
+    },
+    sharedToolsCardOverline: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+    },
+    sharedToolsCardHeading: {
+      fontSize: tokens.typeScale.sectionTitle,
+      fontWeight: "700",
+      lineHeight: 22,
+    },
+    sharedToolsRows: {
+      flexDirection: "column",
+    },
+    toolRowItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 10,
+      minHeight: 48,
+    },
+    toolRowItemPressed: {
+      opacity: 0.75,
+    },
+    toolRowIconCircle: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
+    toolRowIconText: {
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    toolRowTextCol: {
+      flex: 1,
+      gap: 2,
+    },
+    toolRowTitle: {
+      fontSize: tokens.typeScale.body,
+      fontWeight: "600",
+    },
+    toolRowSubtitle: {
+      fontSize: tokens.typeScale.caption,
+      lineHeight: 16,
+    },
+    toolRowChevron: {
+      fontSize: 18,
+      fontWeight: "600",
+      marginLeft: 8,
+    },
+    toolRowDivider: {
+      height: 1,
+      width: "100%",
+      marginVertical: 2,
+    },
+
+    /* Shared Moments Section */
+    sharedMomentsSection: {
+      width: "100%",
+      marginTop: 8,
+    },
+    sharedMomentsHeaderRow: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      justifyContent: "space-between",
+      marginBottom: 14,
+      gap: 8,
+    },
+    sharedMomentsTextCol: {
+      flex: 1,
+      gap: 2,
+    },
+    sharedMomentsOverline: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+    },
+    sharedMomentsHeading: {
+      fontSize: tokens.typeScale.sectionTitle,
+      fontWeight: "700",
+    },
+    sharedMomentsCountNote: {
+      fontSize: tokens.typeScale.caption,
+      marginTop: 2,
     },
 
     /* Shared list entry row inside Our Space */

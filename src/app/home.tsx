@@ -1,3 +1,4 @@
+import { tokens } from "@/components/couply-tokens";
 import { AppBottomNav } from "@/components/AppBottomNav";
 import {
   CouplyHeader,
@@ -1420,10 +1421,10 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       paddingTop: 8,
       paddingBottom: 110,
     },
-    /* Single Centered Column: Full width on mobile, capped at 520px on desktop/wide viewports */
+    /* Single Centered Column: Full width on mobile, capped at tokens.layout.appShell on desktop/wide viewports */
     mainColumn: {
       width: "100%",
-      maxWidth: 520,
+      maxWidth: tokens.layout.appShell,
       alignSelf: "center",
       gap: 16,
     },
@@ -2347,7 +2348,7 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
     },
     floatingButtonColumnWrapper: {
       width: "100%",
-      maxWidth: 520,
+      maxWidth: tokens.layout.appShell,
       paddingHorizontal: 16,
       alignItems: "flex-end",
     },
@@ -2398,7 +2399,7 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
     },
     sheetContainer: {
       width: "100%",
-      maxWidth: 520,
+      maxWidth: tokens.layout.modal,
       alignSelf: "center",
       backgroundColor: theme.surface,
       borderTopLeftRadius: 24,
@@ -2498,58 +2499,6 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       fontSize: 14,
       fontWeight: "600",
       color: theme.secondaryText,
-    },
-
-
-
-    /* Fixed Visual Bottom Navigation */
-    fixedBottomNav: {
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: theme.surface,
-      borderTopWidth: 1,
-      borderColor: theme.border,
-      shadowColor: "#000000",
-      shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.04,
-      shadowRadius: 6,
-      elevation: 4,
-    },
-    bottomNavInner: {
-      width: "100%",
-      maxWidth: 520,
-      alignSelf: "center",
-      flexDirection: "row",
-      justifyContent: "space-around",
-      alignItems: "center",
-      paddingVertical: 8,
-      paddingHorizontal: 8,
-    },
-    navItem: {
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 5,
-      paddingHorizontal: 10,
-      minWidth: 70,
-      minHeight: 48,
-      borderRadius: 14,
-    },
-    navItemActivePill: {
-      backgroundColor: theme.selectedNavigation,
-    },
-    navItemLabel: {
-      fontSize: 12.5,
-      marginTop: 3,
-    },
-    navItemLabelActive: {
-      color: theme.accent,
-      fontWeight: "600",
-    },
-    navItemLabelInactive: {
-      color: theme.secondaryText,
-      fontWeight: "500",
     },
   });
 

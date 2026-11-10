@@ -820,12 +820,11 @@ const createStyles = (theme: ThemeColors) => {
     backgroundColor: tokens.colors.pageBackground,
   },
   scrollContent: {
-    paddingHorizontal: tokens.spacing.page,
     paddingTop: tokens.spacing.md,
     paddingBottom: 48,
   },
   column: {
-    maxWidth: tokens.layout.maxContentWidth,
+    maxWidth: tokens.layout.appShell,
     width: "100%",
     alignSelf: "center",
     gap: tokens.spacing.lg,
@@ -860,6 +859,7 @@ const createStyles = (theme: ThemeColors) => {
   },
   perspectiveSection: {
     gap: 10,
+    marginHorizontal: tokens.spacing.page,
   },
   perspectiveHeaderRow: {
     gap: 2,
@@ -899,6 +899,7 @@ const createStyles = (theme: ThemeColors) => {
   },
   invitationHeaderTextGroup: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   invitationOverline: {
@@ -919,6 +920,7 @@ const createStyles = (theme: ThemeColors) => {
     lineHeight: 18,
   },
   lighterThoughtCard: {
+    marginHorizontal: 0,
     gap: tokens.spacing.sm,
     padding: tokens.spacing.md,
   },
@@ -1021,6 +1023,8 @@ const createStyles = (theme: ThemeColors) => {
     marginVertical: 4,
   },
   tweakChip: {
+    minHeight: 44,
+    justifyContent: "center",
     paddingVertical: 10,
     paddingHorizontal: tokens.spacing.lg - 2,
     borderRadius: tokens.radii.card,
@@ -1071,6 +1075,8 @@ const createStyles = (theme: ThemeColors) => {
     gap: 8,
   },
   memoryToggleButton: {
+    minHeight: 44,
+    justifyContent: "center",
     paddingVertical: 9,
     paddingHorizontal: tokens.spacing.lg - 2,
     borderRadius: tokens.radii.pill,

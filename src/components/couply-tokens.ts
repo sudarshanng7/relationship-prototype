@@ -62,6 +62,26 @@ export const tokens = {
     screenTitle: 28,
   },
   layout: {
+    /** Outer application shell for authenticated screens and bottom navigation alignment on web */
+    appShell: 560,
+
+    /** Standard readable content width for long-form reading and cards */
+    readableContent: 520,
+
+    /** Focused width for authentication, onboarding, and compact input forms */
+    focusedForm: 480,
+
+    /** Standard modal and bottom sheet dialog constraint */
+    modal: 460,
+
+    /** Compact alert / confirmation dialog constraint */
+    dialogCompact: 380,
+
+    /** Standard page horizontal paddings */
+    pagePaddingMobile: 16,
+    pagePaddingStandard: 20,
+
+    /** Temporary backwards-compatibility alias. Remove after legacy screens migrate. */
     maxContentWidth: 520,
   },
 } as const;

@@ -1,3 +1,4 @@
+import { tokens } from "@/components/couply-tokens";
 import { AppBottomNav } from "@/components/AppBottomNav";
 import { CouplyHeader } from "@/components/CouplyUI";
 import {
@@ -723,12 +724,12 @@ function createStyles(theme: ThemeColors) {
     },
     scrollContent: {
       paddingBottom: 96,
-      paddingHorizontal: 16,
+      paddingHorizontal: tokens.layout.pagePaddingMobile,
       paddingTop: 16,
     },
     mainColumn: {
       width: "100%",
-      maxWidth: 520,
+      maxWidth: tokens.layout.appShell,
       alignSelf: "center",
       gap: 20,
     },
@@ -1074,7 +1075,8 @@ function createStyles(theme: ThemeColors) {
     },
     modalCard: {
       width: "100%",
-      maxWidth: 380,
+      maxWidth: tokens.layout.dialogCompact,
+      alignSelf: "center",
       backgroundColor: theme.surface,
       borderRadius: 20,
       borderWidth: 1.2,

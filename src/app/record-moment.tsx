@@ -16,6 +16,7 @@ import {
   CouplyQuietButton,
   CouplySectionCard,
 } from "@/components/CouplyUI";
+import { tokens } from "@/components/couply-tokens";
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
@@ -612,13 +613,13 @@ const createStyles = (theme: ThemeColors) =>
       backgroundColor: theme.pageBackground,
     },
     scrollContent: {
-      paddingHorizontal: 20,
+      paddingHorizontal: tokens.layout.pagePaddingStandard,
       paddingTop: 12,
       paddingBottom: 60,
     },
     column: {
       width: "100%",
-      maxWidth: 520,
+      maxWidth: tokens.layout.appShell,
       alignSelf: "center",
       gap: 22,
     },
@@ -677,6 +678,7 @@ const createStyles = (theme: ThemeColors) =>
     },
     typeCard: {
       flex: 1,
+      minWidth: 0,
       backgroundColor: theme.surface,
       borderRadius: 18,
       padding: 14,
@@ -724,6 +726,8 @@ const createStyles = (theme: ThemeColors) =>
       gap: 8,
     },
     categoryChip: {
+      minHeight: 44,
+      justifyContent: "center",
       backgroundColor: theme.surface,
       borderWidth: 1.2,
       borderColor: theme.border,
@@ -812,6 +816,7 @@ const createStyles = (theme: ThemeColors) =>
     },
     visibilityCard: {
       flex: 1,
+      minWidth: 0,
       backgroundColor: theme.surface,
       borderRadius: 18,
       padding: 14,
@@ -916,6 +921,7 @@ const createStyles = (theme: ThemeColors) =>
     },
     reviewCard: {
       gap: 12,
+      marginHorizontal: 0,
     },
     reviewHeading: {
       fontSize: 17,

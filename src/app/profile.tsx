@@ -1,3 +1,4 @@
+import { tokens } from "@/components/couply-tokens";
 import {
   CouplyHeader,
   CouplyPrimaryButton,
@@ -21,7 +22,6 @@ import {
   Text,
   TextInput,
   View,
-  useWindowDimensions,
 } from "react-native";
 
 // ----------------------------------------------------
@@ -166,9 +166,7 @@ function normalizeTags(rawTags: string[]): string[] {
 export default function ProfileScreen() {
   const router = useRouter();
   const { theme } = useTheme();
-  const { width } = useWindowDimensions();
-  const isWide = width >= 900;
-  const styles = useMemo(() => createStyles(theme, isWide), [theme, isWide]);
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { refreshIdentity } = useUserIdentity();
 
   // Initial loading state
@@ -1275,7 +1273,7 @@ export default function ProfileScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.container, isWide && styles.containerWide]}>
+          <View style={styles.container}>
             {/* -------------------------------------------
                 1. HEADER (Full Width)
                ------------------------------------------- */}
@@ -1429,17 +1427,9 @@ export default function ProfileScreen() {
             </CouplySectionCard>
 
             {/* -------------------------------------------
-                PROFILE EXCHANGE ROW (Wide: Row, Mobile: Column)
-                Main: What I share (~62%) | Side: About partner (~38%)
+                3. WHAT I SHARE WITH MY PARTNER
                ------------------------------------------- */}
-            <View
-              style={[styles.responsiveRow, isWide && styles.responsiveRowWide]}
-            >
-              {/* 3. WHAT I SHARE WITH MY PARTNER (Primary Column) */}
-              <View
-                style={[styles.mainColumn, isWide && styles.mainColumnWide]}
-              >
-                <CouplySectionCard style={styles.cardCouply}>
+            <CouplySectionCard style={styles.cardCouply}>
                   <View style={styles.sectionHeaderRow}>
                     <Text style={styles.cardSectionHeading}>
                       What I share with my partner
@@ -1964,15 +1954,13 @@ export default function ProfileScreen() {
                     </View>
                   )}
                 </CouplySectionCard>
-              </View>
 
-              {/* 4. ABOUT MY PARTNER (Contextual Side Column, Read-Only) */}
-              <View
-                style={[styles.sideColumn, isWide && styles.sideColumnWide]}
-              >
-                <CouplySectionCard
-                  style={[styles.cardCouply, styles.partnerCard]}
-                >
+            {/* -------------------------------------------
+                4. ABOUT MY PARTNER (Read-Only)
+               ------------------------------------------- */}
+            <CouplySectionCard
+              style={[styles.cardCouply, styles.partnerCard]}
+            >
                   {/* Compact Identity Header */}
                   <View style={styles.partnerIdentityHeader}>
                     <View
@@ -2111,21 +2099,11 @@ export default function ProfileScreen() {
                     </View>
                   )}
                 </CouplySectionCard>
-              </View>
-            </View>
 
             {/* -------------------------------------------
-                SHARED RELATIONSHIP ROW (Wide: Row, Mobile: Column)
-                Main: Our relationship (~62%) | Side: Important dates (~38%)
+                5. OUR RELATIONSHIP (Couple-Owned)
                ------------------------------------------- */}
-            <View
-              style={[styles.responsiveRow, isWide && styles.responsiveRowWide]}
-            >
-              {/* 5. OUR RELATIONSHIP (Couple-Owned Main Card) */}
-              <View
-                style={[styles.mainColumn, isWide && styles.mainColumnWide]}
-              >
-                <CouplySectionCard style={styles.cardCouply}>
+            <CouplySectionCard style={styles.cardCouply}>
                   <View style={styles.sectionHeaderRow}>
                     <Text style={styles.cardSectionHeading}>
                       Our relationship
@@ -2629,13 +2607,11 @@ export default function ProfileScreen() {
                     </View>
                   )}
                 </CouplySectionCard>
-              </View>
 
-              {/* 6. IMPORTANT DATES (Contextual Side Column) */}
-              <View
-                style={[styles.sideColumn, isWide && styles.sideColumnWide]}
-              >
-                <CouplySectionCard style={styles.cardCouply}>
+            {/* -------------------------------------------
+                6. IMPORTANT DATES
+               ------------------------------------------- */}
+            <CouplySectionCard style={styles.cardCouply}>
                   <View style={styles.sectionHeaderRow}>
                     <Text style={styles.cardSectionHeading}>
                       Important dates
@@ -2882,8 +2858,6 @@ export default function ProfileScreen() {
                     </View>
                   )}
                 </CouplySectionCard>
-              </View>
-            </View>
 
             {/* -------------------------------------------
                 7. RELATIONSHIP SPACE / CONNECTION (Full Width, Infrastructure Hierarchy)
@@ -3180,7 +3154,7 @@ export default function ProfileScreen() {
 // STYLES
 // ----------------------------------------------------
 
-const createStyles = (theme: ThemeColors, isWide: boolean) =>
+const createStyles = (theme: ThemeColors) =>
   StyleSheet.create({
     screen: {
       flex: 1,
@@ -3194,45 +3168,12 @@ const createStyles = (theme: ThemeColors, isWide: boolean) =>
     },
     container: {
       width: "100%",
-      maxWidth: 520,
+      maxWidth: tokens.layout.appShell,
       alignSelf: "center",
-      paddingHorizontal: 16,
+      paddingHorizontal: tokens.layout.pagePaddingMobile,
       paddingTop: 20,
       paddingBottom: 48,
       gap: 16,
-    },
-    containerWide: {
-      maxWidth: 1080,
-      paddingHorizontal: 24,
-      paddingTop: 24,
-      gap: 20,
-    },
-
-    /* Responsive Grid / Column System */
-    responsiveRow: {
-      flexDirection: "column",
-      gap: 16,
-    },
-    responsiveRowWide: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      gap: 20,
-    },
-    mainColumn: {
-      width: "100%",
-      minWidth: 0,
-    },
-    mainColumnWide: {
-      flex: 62,
-      minWidth: 0,
-    },
-    sideColumn: {
-      width: "100%",
-      minWidth: 0,
-    },
-    sideColumnWide: {
-      flex: 38,
-      minWidth: 0,
     },
 
     /* Header */
@@ -3872,7 +3813,8 @@ const createStyles = (theme: ThemeColors, isWide: boolean) =>
     },
     modalCard: {
       width: "100%",
-      maxWidth: 380,
+      maxWidth: tokens.layout.dialogCompact,
+      alignSelf: "center",
       backgroundColor: theme.surface,
       borderRadius: 20,
       borderWidth: 1,

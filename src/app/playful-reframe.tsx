@@ -518,12 +518,11 @@ const createStyles = (theme: ThemeColors) => {
     backgroundColor: tokens.colors.pageBackground,
   },
   scrollContent: {
-    paddingHorizontal: tokens.spacing.page,
     paddingTop: tokens.spacing.md,
     paddingBottom: 48,
   },
   column: {
-    maxWidth: tokens.layout.maxContentWidth,
+    maxWidth: tokens.layout.appShell,
     width: "100%",
     alignSelf: "center",
     gap: tokens.spacing.lg,
@@ -591,6 +590,7 @@ const createStyles = (theme: ThemeColors) => {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    minHeight: 44,
     paddingVertical: tokens.spacing.sm,
     paddingHorizontal: tokens.spacing.md,
     borderRadius: tokens.radii.pill,
@@ -758,6 +758,7 @@ const createStyles = (theme: ThemeColors) => {
   },
   switchTextGroup: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   switchTitle: {
@@ -830,6 +831,8 @@ const createStyles = (theme: ThemeColors) => {
   },
   alternativeQuietButton: {
     alignSelf: "flex-start",
+    minHeight: 44,
+    justifyContent: "center",
     backgroundColor: tokens.colors.surface,
     borderWidth: 1,
     borderColor: tokens.colors.borderSoft,

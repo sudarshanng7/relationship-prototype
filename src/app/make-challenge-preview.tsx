@@ -743,12 +743,11 @@ const createStyles = (theme: ThemeColors) => {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: tokens.spacing.page,
     paddingTop: tokens.spacing.md,
     paddingBottom: 48,
   },
   column: {
-    maxWidth: tokens.layout.maxContentWidth,
+    maxWidth: tokens.layout.appShell,
     width: "100%",
     alignSelf: "center",
     gap: tokens.spacing.lg,
@@ -820,6 +819,7 @@ const createStyles = (theme: ThemeColors) => {
   },
   switchTextGroup: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   switchTitle: {
@@ -919,6 +919,8 @@ const createStyles = (theme: ThemeColors) => {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    minHeight: 44,
+    justifyContent: "center",
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: tokens.radii.pill,
@@ -965,6 +967,8 @@ const createStyles = (theme: ThemeColors) => {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    minHeight: 44,
+    justifyContent: "center",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: tokens.radii.pill,
@@ -1005,6 +1009,7 @@ const createStyles = (theme: ThemeColors) => {
   },
   previewHeaderTextGroup: {
     flex: 1,
+    minWidth: 0,
   },
   previewOverline: {
     fontSize: tokens.typeScale.overline,
@@ -1045,11 +1050,15 @@ const createStyles = (theme: ThemeColors) => {
   summaryLabel: {
     fontSize: tokens.typeScale.caption,
     color: tokens.colors.textSecondary,
+    flexShrink: 0,
+    marginRight: 8,
   },
   summaryValue: {
     fontSize: tokens.typeScale.caption,
     fontWeight: "600",
     color: tokens.colors.text,
+    flexShrink: 1,
+    textAlign: "right",
   },
   summaryDivider: {
     height: 1,

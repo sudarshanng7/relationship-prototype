@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
   pageContent: {
     flex: 1,
     width: "100%",
-    maxWidth: tokens.layout.maxContentWidth,
+    maxWidth: tokens.layout.appShell,
     alignSelf: "center",
   },
 

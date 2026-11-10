@@ -2001,7 +2001,7 @@ const createStyles = (theme: ThemeColors) => {
   },
   column: {
     width: "100%",
-    maxWidth: tokens.layout.maxContentWidth,
+    maxWidth: tokens.layout.appShell,
     alignSelf: "center",
     gap: 14,
   },
@@ -2267,6 +2267,7 @@ const createStyles = (theme: ThemeColors) => {
     flex: 1,
     minWidth: 0,
     flexShrink: 1,
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderRadius: tokens.radii.card - 6,
@@ -3030,6 +3031,8 @@ const createStyles = (theme: ThemeColors) => {
     marginHorizontal: tokens.spacing.page,
   },
   quietDeleteButton: {
+    minHeight: 44,
+    justifyContent: "center",
     paddingVertical: 10,
     paddingHorizontal: 16,
   },
@@ -3067,6 +3070,7 @@ const createStyles = (theme: ThemeColors) => {
   },
   deleteCancelButton: {
     flex: 1,
+    minHeight: 44,
     backgroundColor: tokens.colors.surface,
     borderWidth: 1,
     borderColor: tokens.colors.border,
@@ -3082,6 +3086,7 @@ const createStyles = (theme: ThemeColors) => {
   },
   deleteFinalButton: {
     flex: 1,
+    minHeight: 44,
     backgroundColor: tokens.colors.plum,
     borderRadius: tokens.radii.small,
     paddingVertical: 10,
