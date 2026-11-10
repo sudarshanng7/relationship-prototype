@@ -31,6 +31,9 @@ type EventPerspective = {
   sharing_status: "submitted" | "suspended";
 };
 
+type PerspectiveLoadPhase = "loading" | "ready" | "failed";
+const PERSPECTIVE_LOAD_FAILURE = "We couldn't load perspectives. Reopen this moment to check again.";
+
 type AccountBoundary = { userId: string | null; generation: number };
 
 export default function EventDetailScreen() {
@@ -123,7 +126,7 @@ function EventDetailContent({
   const [writing, setWriting] = useState(false);
   const changingVisibility = writing;
   const [perspectives, setPerspectives] = useState<EventPerspective[]>([]);
-  const [perspectivesLoading, setPerspectivesLoading] = useState(true);
+  const [perspectiveLoadPhase, setPerspectiveLoadPhase] = useState<PerspectiveLoadPhase>("loading");
   const [perspectiveInput, setPerspectiveInput] = useState("");
   const [editingPerspective, setEditingPerspective] = useState(false);
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
@@ -184,7 +187,7 @@ function EventDetailContent({
     setDeletionScope(null);
     setPrivateNote(null);
     setPerspectives([]);
-    setPerspectivesLoading(true);
+    setPerspectiveLoadPhase("loading");
     setPerspectiveInput("");
     setEditingPerspective(false);
     setSharedTopicInput("");
@@ -241,32 +244,32 @@ function EventDetailContent({
 
       // RLS exposes only the author's own perspective and submitted partner
       // perspectives. A suspended record is not visible to the partner.
-      const { data: perspectiveRows, error: perspectiveError } = await supabase
+      const perspectiveResult = await supabase
         .from("event_perspectives")
         .select("id, author_id, perspective_text, sharing_status")
         .eq("event_id", eventId)
         .setHeader("Authorization", `Bearer ${token}`);
       if (!valid() || !(await authorize()) || !valid()) return false;
+      const perspectiveRows = perspectiveResult?.data;
+      const perspectiveError = perspectiveResult?.error;
 
       // Publish only after ALL reads and the final identity check complete.
       setEvent(data);
       setDeletionScope({ generation: focusGeneration.current, request: id });
       setPrivateNote(reflection?.note ?? null);
 
-      if (perspectiveError) {
+      if (perspectiveError || !Array.isArray(perspectiveRows)) {
         setPerspectives([]);
-        setStatusMessage(
-          `Could not load perspectives: ${perspectiveError.message}`,
-        );
+        setPerspectiveLoadPhase("failed");
       } else {
-        setPerspectives((perspectiveRows ?? []) as EventPerspective[]);
-        setStatusMessage("");
+        setPerspectives(perspectiveRows as EventPerspective[]);
+        setPerspectiveLoadPhase("ready");
       }
-      setPerspectivesLoading(false);
+      setStatusMessage("");
       return true;
-    } catch (error) {
+    } catch {
       if (valid()) {
-        setStatusMessage(error instanceof Error ? error.message : "Could not load moment.");
+        setStatusMessage("We couldn't load this moment. Reopen it to check again.");
       }
       return false;
     }
@@ -306,9 +309,9 @@ function EventDetailContent({
       if (!valid() || !(await authorize()) || !valid()) return;
       if (message === null) router.back();
       else if (await loadEvent() && valid()) setStatusMessage(message);
-    } catch (error) {
+    } catch {
       if (valid()) {
-        setStatusMessage(error instanceof Error ? error.message : "Could not update moment.");
+        setStatusMessage("We couldn't confirm this update. Reopen the moment to check its current state before trying again.");
       }
     } finally {
       if (valid()) {
@@ -530,8 +533,10 @@ function EventDetailContent({
             not mean agreement or repair.
           </Text>
 
-          {perspectivesLoading ? (
+          {perspectiveLoadPhase === "loading" ? (
             <Text style={styles.helperText}>Loading perspectives...</Text>
+          ) : perspectiveLoadPhase === "failed" ? (
+            <Text accessibilityRole="alert" style={styles.helperText}>{PERSPECTIVE_LOAD_FAILURE}</Text>
           ) : (
             <>
               {/* Own perspective */}
@@ -873,6 +878,12 @@ function EventDetailContent({
             </CouplySectionCard>
           )}
         </View>
+      )}
+
+      {event.visibility === "mine" && perspectiveLoadPhase === "failed" && (
+        <CouplySectionCard variant="muted" style={styles.statusPanel}>
+          <Text accessibilityRole="alert" style={styles.status}>{PERSPECTIVE_LOAD_FAILURE}</Text>
+        </CouplySectionCard>
       )}
 
       {statusMessage !== "" && (

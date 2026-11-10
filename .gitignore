@@ -56,3 +56,5 @@ supabase/snippets/
 /docs/product/*.docx
 /docs/product/*.odt
 /docs/product/*.png
+
+ros-stage6b-credentials.json
