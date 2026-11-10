@@ -1,4 +1,5 @@
 import { tokens } from "@/components/couply-tokens";
+import { useTheme } from "@/context/ThemeContext";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -103,9 +104,15 @@ export function AppBottomNav({
   onPreviewPress,
 }: AppBottomNavProps) {
   const router = useRouter();
+  const { theme } = useTheme();
 
   const colors = {
-    ...DEFAULT_THEME,
+    surface: theme.surface,
+    border: theme.border,
+    accent: theme.primaryAccent,
+    iconMuted: theme.iconMuted,
+    selectedNavigation: theme.selectedNavigation,
+    secondaryText: theme.secondaryText,
     ...themeColors,
   };
 

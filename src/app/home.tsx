@@ -6,6 +6,7 @@ import {
   CouplySectionCard,
 } from "@/components/CouplyUI";
 import { useChallengePreview } from "@/context/ChallengePreviewContext";
+import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import * as ImagePicker from "expo-image-picker";
@@ -22,7 +23,13 @@ import {
   View,
 } from "react-native";
 
-export type ThemeKey = "lavender" | "sunrise" | "sage";
+export type ThemeKey =
+  | "lilac_morning"
+  | "violet_garden"
+  | "plum_evening"
+  | "lavender"
+  | "sunrise"
+  | "sage";
 
 export interface ThemeConfig {
   key: ThemeKey;
@@ -57,109 +64,119 @@ export interface ThemeConfig {
   buttonSecondaryBorder: string;
 }
 
+const lilacMorningTheme: ThemeConfig = {
+  key: "lilac_morning",
+  name: "Lilac Morning",
+  description: "Light, clear, and gently welcoming.",
+  paletteCircles: ["#FAF7FA", "#F2EDF7", "#6E416D"],
+  background: "#FAF7FA",
+  surface: "#FFFFFF",
+  surfaceBorder: "#E8DCE9",
+  privateSurface: "#F2EDF7",
+  privateBorder: "#E2D3E4",
+  privateText: "#453448",
+  sharedSurface: "#FAF0F7",
+  sharedBorder: "#EBD7E8",
+  sharedText: "#683462",
+  primaryText: "#362739",
+  secondaryText: "#66566B",
+  mutedText: "#8B7C90",
+  accent: "#6E416D",
+  accentPressed: "#583257",
+  accentText: "#FFFFFF",
+  border: "#E8DCE9",
+  selectedNavigation: "#EFE4F1",
+  iconMuted: "#7B6A80",
+  badgeBackground: "#F3EBF5",
+  badgeDot: "#6E416D",
+  avatarCircle: "#F1DDF0",
+  avatarBorder: "#DFBFDE",
+  savedBoxBg: "#F8EFF8",
+  savedBoxBorder: "#E6D6E8",
+  buttonSecondaryBg: "#F5EEF6",
+  buttonSecondaryBorder: "#E5D7E6",
+};
+
+const violetGardenTheme: ThemeConfig = {
+  key: "violet_garden",
+  name: "Violet Garden",
+  description: "The Purple Garden signature look.",
+  paletteCircles: ["#F4EFF7", "#5E336A", "#42684E"],
+  background: "#F4EFF7",
+  surface: "#FAF7FC",
+  surfaceBorder: "#DECDE3",
+  privateSurface: "#ECE3F2",
+  privateBorder: "#DAC9E0",
+  privateText: "#3C2B42",
+  sharedSurface: "#EAE4F2",
+  sharedBorder: "#D8CDE2",
+  sharedText: "#4B335A",
+  primaryText: "#2D1F33",
+  secondaryText: "#5D4D63",
+  mutedText: "#837389",
+  accent: "#5E336A",
+  accentPressed: "#4A2554",
+  accentText: "#FFFFFF",
+  border: "#DECDE3",
+  selectedNavigation: "#E8DCED",
+  iconMuted: "#75647C",
+  badgeBackground: "#EAF1EC",
+  badgeDot: "#42684E",
+  avatarCircle: "#EEDDEF",
+  avatarBorder: "#DCBEE0",
+  savedBoxBg: "#F2EBF5",
+  savedBoxBorder: "#DCCFE0",
+  buttonSecondaryBg: "#EFE6F3",
+  buttonSecondaryBorder: "#DCCFE0",
+};
+
+const plumEveningTheme: ThemeConfig = {
+  key: "plum_evening",
+  name: "Plum Evening",
+  description: "A quieter, lower-light way to reflect.",
+  paletteCircles: ["#1E1523", "#2A1F31", "#985AA3"],
+  background: "#1E1523",
+  surface: "#2A1F31",
+  surfaceBorder: "#493554",
+  privateSurface: "#34253D",
+  privateBorder: "#543C60",
+  privateText: "#EDE5F2",
+  sharedSurface: "#3A2744",
+  sharedBorder: "#5C3E68",
+  sharedText: "#EBD6F0",
+  primaryText: "#F3EDF6",
+  secondaryText: "#C5B6CC",
+  mutedText: "#9A89A2",
+  accent: "#985AA3",
+  accentPressed: "#7E4488",
+  accentText: "#FFFFFF",
+  border: "#493554",
+  selectedNavigation: "#3F2A4A",
+  iconMuted: "#8E7D96",
+  badgeBackground: "#3A2742",
+  badgeDot: "#B775C5",
+  avatarCircle: "#452E50",
+  avatarBorder: "#654575",
+  savedBoxBg: "#322339",
+  savedBoxBorder: "#4E3858",
+  buttonSecondaryBg: "#35253E",
+  buttonSecondaryBorder: "#523B5E",
+};
+
 export const THEMES: Record<ThemeKey, ThemeConfig> = {
-  lavender: {
-    key: "lavender",
-    name: "Lavender Calm",
-    description: "Soft purple, warm and reflective",
-    paletteCircles: ["#FBF7FC", "#F1EDF7", "#6E416D"],
-    background: "#FBF7FC",
-    surface: "#FFFFFF",
-    surfaceBorder: "#E8DCE9",
-    privateSurface: "#F1EDF7",
-    privateBorder: "#E3DBEB",
-    privateText: "#4E3F50",
-    sharedSurface: "#FBEFF7",
-    sharedBorder: "#EEDCEB",
-    sharedText: "#703866",
-    primaryText: "#3D3040",
-    secondaryText: "#6D6072",
-    mutedText: "#8E7E94",
-    accent: "#6E416D",
-    accentPressed: "#593258",
-    accentText: "#FFFFFF",
-    border: "#E8DCE9",
-    selectedNavigation: "#EFE4F0",
-    iconMuted: "#7E6D82",
-    badgeBackground: "#F3ECF4",
-    badgeDot: "#6E416D",
-    avatarCircle: "#F3DEEF",
-    avatarBorder: "#E3C9E1",
-    savedBoxBg: "#F7EEF7",
-    savedBoxBorder: "#E6D4E7",
-    buttonSecondaryBg: "#F8F3F9",
-    buttonSecondaryBorder: "#E5DAE6",
-  },
-  sunrise: {
-    key: "sunrise",
-    name: "Sunrise Warmth",
-    description: "Ivory, peach, and quiet optimism",
-    paletteCircles: ["#FDF9F5", "#FDF0EB", "#9E4D38"],
-    background: "#FDF9F5",
-    surface: "#FFFFFF",
-    surfaceBorder: "#EFE1D5",
-    privateSurface: "#F8EFE7",
-    privateBorder: "#EADCCE",
-    privateText: "#51392F",
-    sharedSurface: "#FDF0EB",
-    sharedBorder: "#F4D9CE",
-    sharedText: "#8B412D",
-    primaryText: "#3D2E28",
-    secondaryText: "#735B50",
-    mutedText: "#967A6E",
-    accent: "#9E4D38",
-    accentPressed: "#843E2C",
-    accentText: "#FFFFFF",
-    border: "#EFE1D5",
-    selectedNavigation: "#F8E6DE",
-    iconMuted: "#8A7369",
-    badgeBackground: "#F7EDE5",
-    badgeDot: "#9E4D38",
-    avatarCircle: "#FCE5DC",
-    avatarBorder: "#ECCDC1",
-    savedBoxBg: "#FDF3EE",
-    savedBoxBorder: "#F2D5C8",
-    buttonSecondaryBg: "#FAF1EB",
-    buttonSecondaryBorder: "#ECD9CD",
-  },
-  sage: {
-    key: "sage",
-    name: "Sage Quiet",
-    description: "Cream, soft green, and grounded calm",
-    paletteCircles: ["#F8FAF6", "#EBF2EA", "#3D6348"],
-    background: "#F8FAF6",
-    surface: "#FFFFFF",
-    surfaceBorder: "#DFE7DE",
-    privateSurface: "#EFF4ED",
-    privateBorder: "#DCE6DA",
-    privateText: "#314335",
-    sharedSurface: "#EBF2EA",
-    sharedBorder: "#D6E3D4",
-    sharedText: "#33553C",
-    primaryText: "#253429",
-    secondaryText: "#57685B",
-    mutedText: "#7A8C7E",
-    accent: "#3D6348",
-    accentPressed: "#30503A",
-    accentText: "#FFFFFF",
-    border: "#DFE7DE",
-    selectedNavigation: "#E5EDE4",
-    iconMuted: "#687C6C",
-    badgeBackground: "#ECF3EB",
-    badgeDot: "#3D6348",
-    avatarCircle: "#DFECE0",
-    avatarBorder: "#C7DBC8",
-    savedBoxBg: "#F0F5EF",
-    savedBoxBorder: "#D6E2D4",
-    buttonSecondaryBg: "#EDF3EC",
-    buttonSecondaryBorder: "#D9E4D8",
-  },
+  lilac_morning: lilacMorningTheme,
+  violet_garden: violetGardenTheme,
+  plum_evening: plumEveningTheme,
+  // Backwards compatibility aliases
+  lavender: violetGardenTheme,
+  sunrise: lilacMorningTheme,
+  sage: plumEveningTheme,
 };
 
 export const THEME_LIST: ThemeConfig[] = [
-  THEMES.lavender,
-  THEMES.sunrise,
-  THEMES.sage,
+  THEMES.lilac_morning,
+  THEMES.violet_garden,
+  THEMES.plum_evening,
 ];
 
 type PreviewState =
@@ -284,8 +301,6 @@ export default function HomeScreen() {
   }>();
   const mainScrollRef = useRef<ScrollView>(null);
   const reflectionCardY = useRef<number>(0);
-  const [selectedThemeKey, setSelectedThemeKey] =
-    useState<ThemeKey>("lavender");
   const [personalCoverUri, setPersonalCoverUri] = useState<string | null>(null);
   const identity = useUserIdentity();
   const { activeInvitation } = useChallengePreview();
@@ -480,7 +495,7 @@ export default function HomeScreen() {
   const [localFeedback, setLocalFeedback] = useState<string | null>(null);
   const [isRecordSheetOpen, setIsRecordSheetOpen] = useState(false);
 
-  const theme = THEMES[selectedThemeKey];
+  const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const greeting = getDeviceGreeting();
@@ -1388,21 +1403,13 @@ export default function HomeScreen() {
       {/* Fixed Visual Bottom Navigation */}
       <AppBottomNav
         activeTab="rhythm"
-        themeColors={{
-          surface: theme.surface,
-          border: theme.border,
-          accent: theme.accent,
-          iconMuted: theme.iconMuted,
-          selectedNavigation: theme.selectedNavigation,
-          secondaryText: theme.secondaryText,
-        }}
         onPreviewPress={(msg) => setLocalFeedback(msg)}
       />
     </SafeAreaView>
   );
 }
 
-const createStyles = (theme: ThemeConfig) =>
+const createStyles = (theme: ThemeConfig | ThemeColors) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,

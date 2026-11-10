@@ -4,10 +4,11 @@ import {
   CouplyQuietButton,
   CouplySectionCard,
 } from "@/components/CouplyUI";
+import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -23,6 +24,8 @@ import {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { refreshIdentity } = useUserIdentity();
 
   const [email, setEmail] = useState("");
@@ -304,28 +307,6 @@ export default function ProfileScreen() {
 
   // ---------------------------
   // SIGN OUT
-  // ---------------------------
-
-  async function signOut() {
-    const { error } = await supabase.auth.signOut({
-      scope: "local",
-    });
-
-    if (error) {
-      console.error(error);
-      setStatus(error.message);
-      return;
-    }
-
-    setInviteCode(null);
-    setPartnerName(null);
-    setPartnerConnected(false);
-    setCoupleId(null);
-    void refreshIdentity();
-
-    router.replace("/");
-  }
-
   // Safe user initial fallback
   const userInitial =
     (displayName.trim() || email.trim() || "?")[0]?.toUpperCase() ?? "•";
@@ -339,7 +320,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6E416D" />
+          <ActivityIndicator size="large" color={theme.primaryAccent} />
           <Text style={styles.loadingText}>Loading your profile...</Text>
         </View>
       </SafeAreaView>
@@ -363,6 +344,17 @@ export default function ProfileScreen() {
               overline="YOUR SPACE"
               title="Your profile"
               subtitle="Your details and the space you share, at your pace."
+              onBack={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace("/settings");
+                }
+              }}
+              backLabel="‹ Settings"
+              titleStyle={{ color: theme.primaryText }}
+              subtitleStyle={{ color: theme.secondaryText }}
+              backTextStyle={{ color: theme.primaryAccent }}
               style={styles.headerCouply}
             />
 
@@ -427,7 +419,7 @@ export default function ProfileScreen() {
                     value={editedName}
                     onChangeText={setEditedName}
                     placeholder="Your preferred name"
-                    placeholderTextColor="#9E90A3"
+                    placeholderTextColor={theme.mutedText}
                     autoCapitalize="words"
                     autoFocus
                     maxLength={60}
@@ -560,7 +552,7 @@ export default function ProfileScreen() {
                       value={joinCode}
                       onChangeText={setJoinCode}
                       placeholder="Enter invite code"
-                      placeholderTextColor="#9E90A3"
+                      placeholderTextColor={theme.mutedText}
                       autoCapitalize="characters"
                       accessibilityLabel="Partner invite code"
                     />
@@ -574,19 +566,6 @@ export default function ProfileScreen() {
                 </View>
               )}
             </CouplySectionCard>
-
-            {/* ACCOUNT CARD */}
-            <CouplySectionCard style={styles.cardCouply}>
-              <Text style={styles.cardSectionHeading}>Account</Text>
-
-              <CouplyQuietButton
-                label="Sign out"
-                onPress={signOut}
-                accessibilityLabel="Sign out of Couply"
-                variant="soft"
-                textStyle={styles.signOutButtonText}
-              />
-            </CouplySectionCard>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -598,398 +577,384 @@ export default function ProfileScreen() {
 // STYLES
 // ---------------------------
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#FBF7FC",
-  },
-  keyboardContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  container: {
-    width: "100%",
-    maxWidth: 520,
-    alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 48,
-    gap: 18,
-  },
-  headerCouply: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 4,
-  },
-  homeLinkBtnCouply: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  cardCouply: {
-    marginHorizontal: 0,
-    marginBottom: 0,
-  },
-  editBtnCouply: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
+const createStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: theme.pageBackground,
+    },
+    keyboardContainer: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
+    container: {
+      width: "100%",
+      maxWidth: 520,
+      alignSelf: "center",
+      paddingHorizontal: 20,
+      paddingTop: 24,
+      paddingBottom: 48,
+      gap: 18,
+    },
+    headerCouply: {
+      paddingHorizontal: 0,
+      paddingTop: 0,
+      paddingBottom: 4,
+    },
+    homeLinkBtnCouply: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+    },
+    cardCouply: {
+      marginHorizontal: 0,
+      marginBottom: 0,
+      backgroundColor: theme.surface,
+      borderColor: theme.border,
+    },
+    editBtnCouply: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+    },
 
-  /* Loading State */
-  loadingScreen: {
-    flex: 1,
-    backgroundColor: "#FBF7FC",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 14,
-    padding: 24,
-  },
-  loadingText: {
-    fontSize: 15,
-    color: "#6D6072",
-  },
+    /* Loading State */
+    loadingScreen: {
+      flex: 1,
+      backgroundColor: theme.pageBackground,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    loadingContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 14,
+      padding: 24,
+    },
+    loadingText: {
+      fontSize: 15,
+      color: theme.secondaryText,
+    },
 
-  /* In-Page Header */
-  header: {
-    marginBottom: 4,
-  },
-  headerTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  homeLinkButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: "#F7EEF7",
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-  },
-  homeLinkText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-  overline: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#6E416D",
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-  },
-  heading: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.4,
-    marginBottom: 6,
-  },
-  supportingText: {
-    fontSize: 15,
-    color: "#6D6072",
-    lineHeight: 22,
-  },
+    /* In-Page Header */
+    header: {
+      marginBottom: 4,
+    },
+    headerTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 6,
+    },
+    homeLinkButton: {
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      backgroundColor: theme.secondarySurface,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    homeLinkText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: theme.primaryAccent,
+    },
+    overline: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: theme.primaryAccent,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+    },
+    heading: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.4,
+      marginBottom: 6,
+    },
+    supportingText: {
+      fontSize: 15,
+      color: theme.secondaryText,
+      lineHeight: 22,
+    },
 
-  /* White Card */
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    padding: 22,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  cardSectionHeading: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.2,
-    marginBottom: 16,
-  },
+    /* White Card */
+    card: {
+      backgroundColor: theme.surface,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 22,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    cardSectionHeading: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.2,
+      marginBottom: 16,
+    },
 
-  /* Personal Details - View Mode */
-  profileViewRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  avatarBubble: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "#F1EDF7",
-    borderWidth: 1,
-    borderColor: "#E3DBEB",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarInitial: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#6E416D",
-  },
-  profileInfoColumn: {
-    flex: 1,
-    paddingHorizontal: 14,
-  },
-  profileDisplayName: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#3D3040",
-    marginBottom: 2,
-  },
-  profileEmail: {
-    fontSize: 13.5,
-    color: "#6D6072",
-  },
-  editButton: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  editButtonText: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
+    /* Personal Details - View Mode */
+    profileViewRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    avatarBubble: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      backgroundColor: theme.secondarySurface,
+      borderWidth: 1,
+      borderColor: theme.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarInitial: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: theme.primaryAccent,
+    },
+    profileInfoColumn: {
+      flex: 1,
+      paddingHorizontal: 14,
+    },
+    profileDisplayName: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: theme.primaryText,
+      marginBottom: 2,
+    },
+    profileEmail: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+    },
+    editButton: {
+      backgroundColor: theme.surface,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 12,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    editButtonText: {
+      fontSize: 13.5,
+      fontWeight: "600",
+      color: theme.primaryAccent,
+    },
 
-  /* Personal Details - Edit Mode */
-  editForm: {
-    gap: 8,
-  },
-  fieldLabel: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#3D3040",
-  },
-  input: {
-    height: 50,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: "#3D3040",
-  },
-  helperText: {
-    fontSize: 12.5,
-    color: "#6D6072",
-    marginBottom: 8,
-  },
-  editActionsRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  flexButton: {
-    flex: 1,
-  },
+    /* Personal Details - Edit Mode */
+    editForm: {
+      gap: 8,
+    },
+    fieldLabel: {
+      fontSize: 13.5,
+      fontWeight: "600",
+      color: theme.primaryText,
+    },
+    input: {
+      height: 50,
+      backgroundColor: theme.surface,
+      borderRadius: 14,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      paddingHorizontal: 14,
+      fontSize: 15,
+      color: theme.primaryText,
+    },
+    helperText: {
+      fontSize: 12.5,
+      color: theme.secondaryText,
+      marginBottom: 8,
+    },
+    editActionsRow: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    flexButton: {
+      flex: 1,
+    },
 
-  /* Relationship Space Content */
-  spaceContent: {
-    gap: 14,
-  },
-  connectedCard: {
-    backgroundColor: "#FBEFF7",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#EEDCEB",
-    padding: 16,
-    gap: 4,
-  },
-  connectedHeading: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#703866",
-    letterSpacing: -0.1,
-  },
-  connectedBody: {
-    fontSize: 13.5,
-    color: "#6D6072",
-    lineHeight: 19,
-  },
+    /* Relationship Space Content */
+    spaceContent: {
+      gap: 14,
+    },
+    connectedCard: {
+      backgroundColor: theme.blushSurface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 16,
+      gap: 4,
+    },
+    connectedHeading: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: theme.primaryAccent,
+      letterSpacing: -0.1,
+    },
+    connectedBody: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      lineHeight: 19,
+    },
 
-  pendingInviteSection: {
-    gap: 8,
-  },
-  stateHeading: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.1,
-  },
-  stateBody: {
-    fontSize: 13.5,
-    color: "#6D6072",
-    lineHeight: 19,
-  },
-  inviteBadgeCard: {
-    backgroundColor: "#F7EEF7",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    marginTop: 6,
-  },
-  inviteBadgeLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#6D6072",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
-  inviteBadgeCode: {
-    fontFamily: Platform.select({
-      ios: "Menlo",
-      android: "monospace",
-      default: "monospace",
-    }),
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#6E416D",
-    letterSpacing: 3,
-  },
+    pendingInviteSection: {
+      gap: 8,
+    },
+    stateHeading: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.1,
+    },
+    stateBody: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      lineHeight: 19,
+    },
+    inviteBadgeCard: {
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
+      marginTop: 6,
+    },
+    inviteBadgeLabel: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: theme.secondaryText,
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+    },
+    inviteBadgeCode: {
+      fontFamily: Platform.select({
+        ios: "Menlo",
+        android: "monospace",
+        default: "monospace",
+      }),
+      fontSize: 22,
+      fontWeight: "700",
+      color: theme.primaryAccent,
+      letterSpacing: 3,
+    },
 
-  spaceReadySection: {
-    gap: 12,
-  },
+    spaceReadySection: {
+      gap: 12,
+    },
 
-  /* No Space Section */
-  noSpaceSection: {
-    gap: 12,
-  },
-  orDividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginVertical: 4,
-  },
-  orLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E8DCE9",
-  },
-  orText: {
-    fontSize: 13,
-    color: "#9E90A3",
-    fontWeight: "500",
-  },
-  joinSection: {
-    gap: 8,
-  },
-  joinPartnerButton: {
-    backgroundColor: "#F7EEF7",
-    height: 48,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
-  joinPartnerButtonText: {
-    color: "#6E416D",
-    fontSize: 15,
-    fontWeight: "600",
-  },
+    /* No Space Section */
+    noSpaceSection: {
+      gap: 12,
+    },
+    orDividerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      marginVertical: 4,
+    },
+    orLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: theme.border,
+    },
+    orText: {
+      fontSize: 13,
+      color: theme.mutedText,
+      fontWeight: "500",
+    },
+    joinSection: {
+      gap: 8,
+    },
+    joinPartnerButton: {
+      backgroundColor: theme.secondarySurface,
+      height: 48,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 4,
+    },
+    joinPartnerButtonText: {
+      color: theme.primaryAccent,
+      fontSize: 15,
+      fontWeight: "600",
+    },
 
-  /* Primary Button */
-  primaryButton: {
-    backgroundColor: "#6E416D",
-    height: 50,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-  },
-  primaryButtonPressed: {
-    backgroundColor: "#593258",
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "600",
-    letterSpacing: -0.1,
-  },
-  buttonDisabled: {
-    opacity: 0.55,
-  },
+    /* Primary Button */
+    primaryButton: {
+      backgroundColor: theme.primaryAccent,
+      height: 50,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      width: "100%",
+    },
+    primaryButtonPressed: {
+      backgroundColor: theme.pressedAccent,
+    },
+    primaryButtonText: {
+      color: theme.primaryActionText,
+      fontSize: 15,
+      fontWeight: "600",
+      letterSpacing: -0.1,
+    },
+    buttonDisabled: {
+      opacity: 0.55,
+    },
 
-  /* Secondary Button */
-  secondaryButton: {
-    backgroundColor: "#FFFFFF",
-    height: 50,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-  },
-  secondaryButtonPressed: {
-    backgroundColor: "#F7EEF7",
-  },
-  secondaryButtonText: {
-    color: "#6E416D",
-    fontSize: 15,
-    fontWeight: "600",
-  },
+    /* Secondary Button */
+    secondaryButton: {
+      backgroundColor: theme.surface,
+      height: 50,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      alignItems: "center",
+      justifyContent: "center",
+      width: "100%",
+    },
+    secondaryButtonPressed: {
+      backgroundColor: theme.secondarySurface,
+    },
+    secondaryButtonText: {
+      color: theme.primaryAccent,
+      fontSize: 15,
+      fontWeight: "600",
+    },
 
-  /* Account Card - Sign Out */
-  signOutButton: {
-    backgroundColor: "#FFFFFF",
-    height: 48,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-  },
-  signOutButtonText: {
-    color: "#6D6072",
-    fontSize: 14.5,
-    fontWeight: "600",
-  },
-
-  /* Status Card */
-  statusCard: {
-    backgroundColor: "#F7EEF7",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statusText: {
-    fontSize: 13.5,
-    color: "#6D6072",
-    textAlign: "center",
-    lineHeight: 19,
-    fontWeight: "500",
-  },
-  statusErrorText: {
-    color: "#B42318",
-  },
-});
+    /* Status Card */
+    statusCard: {
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    statusText: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      textAlign: "center",
+      lineHeight: 19,
+      fontWeight: "500",
+    },
+    statusErrorText: {
+      color: theme.status.error.text,
+    },
+  });

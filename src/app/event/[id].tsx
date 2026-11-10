@@ -1,4 +1,4 @@
-import { tokens } from "@/components/couply-tokens";
+import { getThemedTokens, tokens } from "@/components/couply-tokens";
 import {
   CouplyChoiceCard,
   CouplyHeader,
@@ -8,11 +8,12 @@ import {
   CouplySectionCard,
   CouplyStatusPill,
 } from "@/components/CouplyUI";
+import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useRepairPreview } from "@/context/RepairPreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -137,6 +138,8 @@ type SharedTakeawayTag = (typeof SHARED_TAKEAWAY_OPTIONS)[number];
 
 export default function EventDetailScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const params = useLocalSearchParams<{
     id?: string | string[];
@@ -1526,7 +1529,7 @@ export default function EventDetailScreen() {
                               <TextInput
                                 style={styles.takeawayInput}
                                 placeholder="e.g., Pausing for a breath helped us hear each other."
-                                placeholderTextColor="#A89BB0"
+                                placeholderTextColor={theme.mutedText}
                                 value={takeawayNote}
                                 onChangeText={setTakeawayNote}
                                 accessibilityLabel="Your small takeaway"
@@ -1823,7 +1826,7 @@ export default function EventDetailScreen() {
                           value={sharedTopicInput}
                           onChangeText={setSharedTopicInput}
                           placeholder={`Enter a gentle topic ${partnerRef} can see`}
-                          placeholderTextColor="#9A8D9D"
+                          placeholderTextColor={theme.mutedText}
                           multiline
                           editable={!changingVisibility}
                         />
@@ -1990,7 +1993,9 @@ function formatDate(value: string) {
   }
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => {
+  const tokens = getThemedTokens(theme);
+  return StyleSheet.create({
   scrollContent: {
     paddingBottom: 64,
   },
@@ -2254,7 +2259,7 @@ const styles = StyleSheet.create({
   segmentedControlRow: {
     flexDirection: "row",
     gap: 8,
-    backgroundColor: "#EFE8F2",
+    backgroundColor: tokens.colors.surfaceLilac,
     borderRadius: tokens.radii.card - 4,
     padding: 4,
   },
@@ -3106,3 +3111,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+};

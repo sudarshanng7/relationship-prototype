@@ -6,11 +6,12 @@ import {
   CouplySectionCard,
   CouplyStatusPill,
 } from "@/components/CouplyUI";
-import { tokens } from "@/components/couply-tokens";
+import { getThemedTokens, tokens } from "@/components/couply-tokens";
+import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useChallengePreview } from "@/context/ChallengePreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -74,6 +75,8 @@ function getDisplayIcon(title: string): string {
 
 export default function ChallengeLifecyclePreviewScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { displayName, partnerName, partnerRef } = useUserIdentity();
   const { activeInvitation, updateInvitationStatus } = useChallengePreview();
   const params = useLocalSearchParams<{
@@ -809,7 +812,9 @@ export default function ChallengeLifecyclePreviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => {
+  const tokens = getThemedTokens(theme);
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: tokens.colors.pageBackground,
@@ -1124,3 +1129,4 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
 });
+};

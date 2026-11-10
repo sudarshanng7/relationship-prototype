@@ -17,7 +17,7 @@ export default function TabTwoScreen() {
     ...safeAreaInsets,
     bottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
   };
-  const theme = useTheme();
+  const { theme } = useTheme();
 
   const contentPlatformStyle = Platform.select({
     android: {
@@ -34,7 +34,7 @@ export default function TabTwoScreen() {
 
   return (
     <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
+      style={[styles.scrollView, { backgroundColor: theme.pageBackground }]}
       contentInset={insets}
       contentContainerStyle={[styles.contentContainer, contentPlatformStyle]}
     >
@@ -50,7 +50,7 @@ export default function TabTwoScreen() {
               <ThemedView type="backgroundElement" style={styles.linkButton}>
                 <ThemedText type="link">Expo documentation</ThemedText>
                 <SymbolView
-                  tintColor={theme.text}
+                  tintColor={theme.primaryText}
                   name={{
                     ios: "arrow.up.right.square",
                     android: "link",

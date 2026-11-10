@@ -1,4 +1,5 @@
 import { tokens } from "@/components/couply-tokens";
+import { useTheme } from "@/context/ThemeContext";
 import React from "react";
 import {
   ActivityIndicator,
@@ -29,9 +30,16 @@ export function CouplyPage({
   contentStyle,
   safe = true,
 }: CouplyPageProps) {
+  const { theme } = useTheme();
   const Container = safe ? SafeAreaView : View;
   return (
-    <Container style={[styles.pageWrapper, style]}>
+    <Container
+      style={[
+        styles.pageWrapper,
+        { backgroundColor: theme.pageBackground },
+        style,
+      ]}
+    >
       <View style={[styles.pageContent, contentStyle]}>{children}</View>
     </Container>
   );
@@ -48,6 +56,9 @@ export interface CouplyHeaderProps {
   backLabel?: string;
   rightSlot?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  titleStyle?: StyleProp<TextStyle>;
+  subtitleStyle?: StyleProp<TextStyle>;
+  backTextStyle?: StyleProp<TextStyle>;
 }
 
 export function CouplyHeader({
@@ -58,7 +69,12 @@ export function CouplyHeader({
   backLabel = "‹ Back",
   rightSlot,
   style,
+  titleStyle,
+  subtitleStyle,
+  backTextStyle,
 }: CouplyHeaderProps) {
+  const { theme } = useTheme();
+
   return (
     <View style={[styles.headerContainer, style]}>
       {onBack && (
@@ -72,20 +88,52 @@ export function CouplyHeader({
             accessibilityRole="button"
             accessibilityLabel={backLabel}
           >
-            <Text style={styles.headerBackText}>{backLabel}</Text>
+            <Text
+              style={[
+                styles.headerBackText,
+                { color: theme.primaryAccent },
+                backTextStyle,
+              ]}
+            >
+              {backLabel}
+            </Text>
           </Pressable>
           {rightSlot && <View style={styles.headerRightSlot}>{rightSlot}</View>}
         </View>
       )}
 
-      {overline ? <Text style={styles.headerOverline}>{overline}</Text> : null}
+      {overline ? (
+        <Text
+          style={[styles.headerOverline, { color: theme.primaryAccent }]}
+        >
+          {overline}
+        </Text>
+      ) : null}
       <View style={styles.headerTitleRow}>
-        <Text style={styles.headerTitle}>{title}</Text>
+        <Text
+          style={[
+            styles.headerTitle,
+            { color: theme.primaryText },
+            titleStyle,
+          ]}
+        >
+          {title}
+        </Text>
         {!onBack && rightSlot ? (
           <View style={styles.headerRightSlot}>{rightSlot}</View>
         ) : null}
       </View>
-      {subtitle ? <Text style={styles.headerSubtitle}>{subtitle}</Text> : null}
+      {subtitle ? (
+        <Text
+          style={[
+            styles.headerSubtitle,
+            { color: theme.secondaryText },
+            subtitleStyle,
+          ]}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -108,18 +156,29 @@ export function CouplySectionCard({
   onLayout,
   testID,
 }: CouplySectionCardProps) {
-  const variantStyle =
+  const { theme } = useTheme();
+
+  const cardBg =
     variant === "lilac"
-      ? styles.cardLilac
+      ? theme.secondarySurface
       : variant === "blush"
-        ? styles.cardBlush
+        ? theme.blushSurface
         : variant === "muted"
-          ? styles.cardMuted
-          : styles.cardDefault;
+          ? theme.secondarySurface
+          : theme.surface;
+
+  const cardBorder =
+    variant === "lilac" || variant === "blush"
+      ? theme.borderSoft
+      : theme.border;
 
   return (
     <View
-      style={[styles.cardBase, variantStyle, style]}
+      style={[
+        styles.cardBase,
+        { backgroundColor: cardBg, borderColor: cardBorder },
+        style,
+      ]}
       onLayout={onLayout}
       testID={testID}
     >
@@ -150,13 +209,15 @@ export function CouplyPrimaryButton({
   style,
   textStyle,
 }: CouplyPrimaryButtonProps) {
+  const { theme } = useTheme();
   const isDisabled = disabled || loading;
 
   return (
     <Pressable
       style={({ pressed }) => [
         styles.primaryButton,
-        pressed && !isDisabled && styles.primaryButtonPressed,
+        { backgroundColor: theme.primaryAccent },
+        pressed && !isDisabled && { backgroundColor: theme.pressedAccent },
         isDisabled && styles.primaryButtonDisabled,
         style,
       ]}
@@ -167,9 +228,17 @@ export function CouplyPrimaryButton({
       disabled={isDisabled}
     >
       {loading ? (
-        <ActivityIndicator size="small" color="#FFFFFF" />
+        <ActivityIndicator size="small" color={theme.primaryActionText} />
       ) : (
-        <Text style={[styles.primaryButtonText, textStyle]}>{label}</Text>
+        <Text
+          style={[
+            styles.primaryButtonText,
+            { color: theme.primaryActionText },
+            textStyle,
+          ]}
+        >
+          {label}
+        </Text>
       )}
     </Pressable>
   );
@@ -197,15 +266,29 @@ export function CouplyQuietButton({
   style,
   textStyle,
 }: CouplyQuietButtonProps) {
+  const { theme } = useTheme();
   const isSoft = variant === "soft";
 
   return (
     <Pressable
       style={({ pressed }) => [
-        isSoft ? styles.quietButtonSoft : styles.quietButtonText,
+        isSoft
+          ? [
+              styles.quietButtonSoft,
+              {
+                backgroundColor: theme.secondarySurface,
+                borderColor: theme.border,
+              },
+            ]
+          : styles.quietButtonText,
         pressed &&
           !disabled &&
-          (isSoft ? styles.quietButtonSoftPressed : styles.quietButtonTextPressed),
+          (isSoft
+            ? {
+                backgroundColor: theme.borderSoft,
+                borderColor: theme.primaryAccent,
+              }
+            : { opacity: 0.7 }),
         disabled && styles.quietButtonDisabled,
         style,
       ]}
@@ -217,7 +300,9 @@ export function CouplyQuietButton({
     >
       <Text
         style={[
-          isSoft ? styles.quietButtonSoftText : styles.quietButtonPlainText,
+          isSoft
+            ? [styles.quietButtonSoftText, { color: theme.primaryAccent }]
+            : [styles.quietButtonPlainText, { color: theme.secondaryText }],
           textStyle,
         ]}
       >
@@ -234,8 +319,12 @@ export type CouplyStatusVariant =
   | "neutral"
   | "open"
   | "softening"
+  | "inCare"
+  | "reconnecting"
   | "reconnected"
   | "positive"
+  | "celebration"
+  | "error"
   | "preview";
 
 export interface CouplyStatusPillProps {
@@ -251,35 +340,34 @@ export function CouplyStatusPill({
   style,
   textStyle,
 }: CouplyStatusPillProps) {
-  const pillStyle =
-    variant === "open"
-      ? styles.pillOpen
-      : variant === "softening"
-        ? styles.pillSoftening
-        : variant === "reconnected"
-          ? styles.pillReconnected
-          : variant === "positive"
-            ? styles.pillPositive
-            : variant === "preview"
-              ? styles.pillPreview
-              : styles.pillNeutral;
+  const { theme } = useTheme();
 
-  const pillTextStyle =
+  const config =
     variant === "open"
-      ? styles.pillOpenText
-      : variant === "softening"
-        ? styles.pillSofteningText
-        : variant === "reconnected"
-          ? styles.pillReconnectedText
-          : variant === "positive"
-            ? styles.pillPositiveText
-            : variant === "preview"
-              ? styles.pillPreviewText
-              : styles.pillNeutralText;
+      ? theme.status.open
+      : variant === "softening" || variant === "inCare"
+        ? theme.status.inCare
+        : variant === "reconnecting"
+          ? theme.status.reconnecting
+          : variant === "reconnected"
+            ? theme.status.reconnected
+            : variant === "positive" || variant === "celebration"
+              ? theme.status.celebration
+              : variant === "error"
+                ? theme.status.error
+                : variant === "preview"
+                  ? theme.status.preview
+                  : theme.status.neutral;
 
   return (
-    <View style={[styles.pillBase, pillStyle, style]}>
-      <Text style={[styles.pillBaseText, pillTextStyle, textStyle]}>
+    <View
+      style={[
+        styles.pillBase,
+        { backgroundColor: config.bg, borderColor: config.border },
+        style,
+      ]}
+    >
+      <Text style={[styles.pillBaseText, { color: config.text }, textStyle]}>
         {label}
       </Text>
     </View>
@@ -302,10 +390,22 @@ export function CouplyEmptyState({
   action,
   style,
 }: CouplyEmptyStateProps) {
+  const { theme } = useTheme();
+
   return (
-    <View style={[styles.emptyContainer, style]}>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyBody}>{body}</Text>
+    <View
+      style={[
+        styles.emptyContainer,
+        { backgroundColor: theme.surface, borderColor: theme.border },
+        style,
+      ]}
+    >
+      <Text style={[styles.emptyTitle, { color: theme.primaryText }]}>
+        {title}
+      </Text>
+      <Text style={[styles.emptyBody, { color: theme.secondaryText }]}>
+        {body}
+      </Text>
       {action ? <View style={styles.emptyActionRow}>{action}</View> : null}
     </View>
   );
@@ -341,17 +441,26 @@ export function CouplyChoiceCard({
   testID,
   disabled = false,
 }: CouplyChoiceCardProps) {
+  const { theme } = useTheme();
+
   return (
     <Pressable
       testID={testID}
       style={({ pressed }) => [
         styles.choiceCard,
-        selected && styles.choiceCardSelected,
+        {
+          backgroundColor: selected
+            ? theme.secondarySurface
+            : theme.surface,
+          borderColor: selected ? theme.primaryAccent : theme.border,
+          borderWidth: selected ? 1.6 : 1.2,
+        },
         pressed &&
-          !disabled &&
-          (selected
-            ? styles.choiceCardSelectedPressed
-            : styles.choiceCardPressed),
+          !disabled && {
+            backgroundColor: selected
+              ? theme.borderSoft
+              : theme.secondarySurface,
+          },
         disabled && styles.choiceCardDisabled,
         style,
       ]}
@@ -371,7 +480,8 @@ export function CouplyChoiceCard({
             <Text
               style={[
                 styles.choiceCardTitle,
-                selected && styles.choiceCardTitleSelected,
+                { color: selected ? theme.primaryAccent : theme.primaryText },
+                selected && { fontWeight: "700" },
               ]}
             >
               {title}
@@ -380,7 +490,7 @@ export function CouplyChoiceCard({
               <Text
                 style={[
                   styles.choiceCardDescription,
-                  selected && styles.choiceCardDescriptionSelected,
+                  { color: theme.secondaryText },
                 ]}
               >
                 {description}
@@ -388,8 +498,20 @@ export function CouplyChoiceCard({
             ) : null}
           </View>
           {badge ? (
-            <View style={styles.choiceCardBadge}>
-              <Text style={styles.choiceCardBadgeText}>{badge}</Text>
+            <View
+              style={[
+                styles.choiceCardBadge,
+                { backgroundColor: theme.blushSurface },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.choiceCardBadgeText,
+                  { color: theme.primaryAccent },
+                ]}
+              >
+                {badge}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -399,12 +521,11 @@ export function CouplyChoiceCard({
 }
 
 /* --------------------------------------------------
-   Styles
+   Styles (Layout, Spacing, Radii, Typography)
    -------------------------------------------------- */
 const styles = StyleSheet.create({
   pageWrapper: {
     flex: 1,
-    backgroundColor: tokens.colors.pageBackground,
   },
   pageContent: {
     flex: 1,
@@ -437,7 +558,6 @@ const styles = StyleSheet.create({
   headerBackText: {
     fontSize: tokens.typeScale.bodyLarge,
     fontWeight: "600",
-    color: tokens.colors.plum,
   },
   headerRightSlot: {
     flexDirection: "row",
@@ -447,7 +567,6 @@ const styles = StyleSheet.create({
     fontSize: tokens.typeScale.overline,
     fontWeight: "700",
     letterSpacing: 0.8,
-    color: tokens.colors.plum,
     textTransform: "uppercase",
   },
   headerTitleRow: {
@@ -458,12 +577,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: tokens.typeScale.screenTitle,
     fontWeight: "700",
-    color: tokens.colors.text,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
     lineHeight: 20,
     marginTop: 2,
   },
@@ -476,58 +593,31 @@ const styles = StyleSheet.create({
     marginHorizontal: tokens.spacing.page,
     marginBottom: tokens.spacing.md,
   },
-  cardDefault: {
-    backgroundColor: tokens.colors.surface,
-    borderColor: tokens.colors.border,
-  },
-  cardLilac: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderColor: tokens.colors.borderSoft,
-  },
-  cardBlush: {
-    backgroundColor: tokens.colors.surfaceBlush,
-    borderColor: tokens.colors.borderSoft,
-  },
-  cardMuted: {
-    backgroundColor: tokens.colors.surfaceMuted,
-    borderColor: tokens.colors.border,
-  },
 
   /* Primary Button */
   primaryButton: {
-    backgroundColor: tokens.colors.plum,
     paddingVertical: tokens.spacing.md,
     paddingHorizontal: tokens.spacing.xl,
     borderRadius: tokens.radii.small,
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryButtonPressed: {
-    backgroundColor: tokens.colors.plumPressed,
-  },
   primaryButtonDisabled: {
     opacity: 0.5,
   },
   primaryButtonText: {
-    color: "#FFFFFF",
     fontSize: tokens.typeScale.bodyLarge,
     fontWeight: "600",
   },
 
   /* Quiet Button */
   quietButtonSoft: {
-    backgroundColor: tokens.colors.surfaceLilac,
     borderWidth: 1.2,
-    borderColor: tokens.colors.border,
     paddingVertical: tokens.spacing.sm + 2,
     paddingHorizontal: tokens.spacing.lg,
     borderRadius: tokens.radii.small,
     alignItems: "center",
     justifyContent: "center",
-  },
-  quietButtonSoftPressed: {
-    backgroundColor: tokens.colors.borderSoft,
-    borderColor: tokens.colors.plum,
   },
   quietButtonText: {
     paddingVertical: tokens.spacing.xs,
@@ -535,19 +625,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  quietButtonTextPressed: {
-    opacity: 0.7,
-  },
   quietButtonDisabled: {
     opacity: 0.5,
   },
   quietButtonSoftText: {
-    color: tokens.colors.plum,
     fontSize: tokens.typeScale.body,
     fontWeight: "600",
   },
   quietButtonPlainText: {
-    color: tokens.colors.textSecondary,
     fontSize: tokens.typeScale.caption,
     fontWeight: "600",
   },
@@ -564,55 +649,11 @@ const styles = StyleSheet.create({
     fontSize: tokens.typeScale.overline + 0.5,
     fontWeight: "600",
   },
-  pillNeutral: {
-    backgroundColor: tokens.colors.surfaceMuted,
-    borderColor: tokens.colors.border,
-  },
-  pillNeutralText: {
-    color: tokens.colors.textSecondary,
-  },
-  pillOpen: {
-    backgroundColor: tokens.colors.openSoft,
-    borderColor: tokens.colors.openBorder,
-  },
-  pillOpenText: {
-    color: tokens.colors.openText,
-  },
-  pillSoftening: {
-    backgroundColor: tokens.colors.softeningSoft,
-    borderColor: tokens.colors.softeningBorder,
-  },
-  pillSofteningText: {
-    color: tokens.colors.softeningText,
-  },
-  pillReconnected: {
-    backgroundColor: tokens.colors.reconnectedSoft,
-    borderColor: tokens.colors.reconnectedBorder,
-  },
-  pillReconnectedText: {
-    color: tokens.colors.reconnectedText,
-  },
-  pillPositive: {
-    backgroundColor: tokens.colors.celebrationSoft,
-    borderColor: tokens.colors.celebrationBorder,
-  },
-  pillPositiveText: {
-    color: tokens.colors.celebrationText,
-  },
-  pillPreview: {
-    backgroundColor: tokens.colors.previewSoft,
-    borderColor: tokens.colors.previewBorder,
-  },
-  pillPreviewText: {
-    color: tokens.colors.previewText,
-  },
 
   /* Empty State */
   emptyContainer: {
-    backgroundColor: tokens.colors.surface,
     borderRadius: tokens.radii.large,
     borderWidth: 1.2,
-    borderColor: tokens.colors.border,
     padding: tokens.spacing.xl,
     alignItems: "center",
     justifyContent: "center",
@@ -623,12 +664,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: tokens.typeScale.sectionTitle,
     fontWeight: "700",
-    color: tokens.colors.text,
     textAlign: "center",
   },
   emptyBody: {
     fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
     lineHeight: 20,
     textAlign: "center",
     maxWidth: 320,
@@ -639,22 +678,9 @@ const styles = StyleSheet.create({
 
   /* Choice Card */
   choiceCard: {
-    backgroundColor: tokens.colors.surface,
     borderRadius: tokens.radii.card,
     borderWidth: 1.2,
-    borderColor: tokens.colors.border,
     padding: tokens.spacing.md,
-  },
-  choiceCardSelected: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderColor: tokens.colors.plum,
-    borderWidth: 1.5,
-  },
-  choiceCardPressed: {
-    backgroundColor: tokens.colors.surfaceLilac,
-  },
-  choiceCardSelectedPressed: {
-    backgroundColor: tokens.colors.borderSoft,
   },
   choiceCardDisabled: {
     opacity: 0.5,
@@ -680,22 +706,12 @@ const styles = StyleSheet.create({
   choiceCardTitle: {
     fontSize: tokens.typeScale.bodyLarge,
     fontWeight: "600",
-    color: tokens.colors.text,
-  },
-  choiceCardTitleSelected: {
-    color: tokens.colors.plum,
-    fontWeight: "700",
   },
   choiceCardDescription: {
     fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
     lineHeight: 18,
   },
-  choiceCardDescriptionSelected: {
-    color: tokens.colors.text,
-  },
   choiceCardBadge: {
-    backgroundColor: tokens.colors.surfaceBlush,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: tokens.radii.pill,
@@ -706,6 +722,5 @@ const styles = StyleSheet.create({
   choiceCardBadgeText: {
     fontSize: tokens.typeScale.overline,
     fontWeight: "600",
-    color: tokens.colors.plum,
   },
 });

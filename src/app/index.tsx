@@ -1,6 +1,7 @@
+import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -16,6 +17,8 @@ import {
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -154,10 +157,10 @@ export default function LoginScreen() {
             <View style={styles.brandContainer}>
               <View style={styles.logoRow}>
                 <Text style={styles.logoHeart}>♡</Text>
-                <Text style={styles.brandTitle}>Couply</Text>
+                <Text style={styles.brandTitle}>Purple Garden</Text>
               </View>
               <Text style={styles.brandSubtitle}>
-                A private place to notice, repair, and reconnect together.
+                A quieter place to tend to what matters between you.
               </Text>
             </View>
 
@@ -221,7 +224,7 @@ export default function LoginScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="name@example.com"
-                  placeholderTextColor="#8E7E94"
+                  placeholderTextColor={theme.mutedText}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   autoComplete="email"
@@ -247,7 +250,7 @@ export default function LoginScreen() {
                         ? "At least 6 characters"
                         : "Enter your password"
                     }
-                    placeholderTextColor="#8E7E94"
+                    placeholderTextColor={theme.mutedText}
                     autoComplete="password"
                     textContentType="password"
                     returnKeyType="go"
@@ -298,7 +301,7 @@ export default function LoginScreen() {
               >
                 {isSubmitting ? (
                   <View style={styles.buttonLoadingRow}>
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={theme.primaryActionText} />
                     <Text style={styles.primaryButtonText}>
                       {mode === "sign_in"
                         ? "Signing in..."
@@ -344,227 +347,228 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FBF7FC",
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-  },
-  column: {
-    width: "100%",
-    maxWidth: 440,
-    alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 28,
-    gap: 18,
-  },
+const createStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.pageBackground,
+    },
+    keyboardAvoid: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: "center",
+    },
+    column: {
+      width: "100%",
+      maxWidth: 440,
+      alignSelf: "center",
+      paddingHorizontal: 20,
+      paddingVertical: 28,
+      gap: 18,
+    },
 
-  /* Brand Area */
-  brandContainer: {
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 8,
-  },
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  logoHeart: {
-    fontSize: 26,
-    color: "#6E416D",
-    lineHeight: 30,
-  },
-  brandTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.4,
-  },
-  brandSubtitle: {
-    fontSize: 14.5,
-    color: "#6D6072",
-    textAlign: "center",
-    lineHeight: 21,
-    paddingHorizontal: 12,
-  },
+    /* Brand Area */
+    brandContainer: {
+      alignItems: "center",
+      gap: 6,
+      paddingVertical: 8,
+    },
+    logoRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    logoHeart: {
+      fontSize: 26,
+      color: theme.primaryAccent,
+      lineHeight: 30,
+    },
+    brandTitle: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.4,
+    },
+    brandSubtitle: {
+      fontSize: 14.5,
+      color: theme.secondaryText,
+      textAlign: "center",
+      lineHeight: 21,
+      paddingHorizontal: 12,
+    },
 
-  /* Form Card */
-  formCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    padding: 22,
-    gap: 16,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
+    /* Form Card */
+    formCard: {
+      backgroundColor: theme.surface,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 22,
+      gap: 16,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 8,
+      elevation: 2,
+    },
 
-  /* Segmented Mode Selector */
-  modeSelector: {
-    flexDirection: "row",
-    backgroundColor: "#F1EDF7",
-    borderRadius: 14,
-    padding: 3,
-    marginBottom: 4,
-  },
-  modeTab: {
-    flex: 1,
-    paddingVertical: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 11,
-  },
-  modeTabActive: {
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  modeTabText: {
-    fontSize: 13.5,
-    fontWeight: "500",
-    color: "#6D6072",
-  },
-  modeTabTextActive: {
-    fontWeight: "600",
-    color: "#6E416D",
-  },
+    /* Segmented Mode Selector */
+    modeSelector: {
+      flexDirection: "row",
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 14,
+      padding: 3,
+      marginBottom: 4,
+    },
+    modeTab: {
+      flex: 1,
+      paddingVertical: 9,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 11,
+    },
+    modeTabActive: {
+      backgroundColor: theme.surface,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 3,
+      elevation: 1,
+    },
+    modeTabText: {
+      fontSize: 13.5,
+      fontWeight: "500",
+      color: theme.secondaryText,
+    },
+    modeTabTextActive: {
+      fontWeight: "600",
+      color: theme.primaryAccent,
+    },
 
-  /* Form Fields */
-  fieldBlock: {
-    gap: 6,
-  },
-  fieldLabel: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#3D3040",
-  },
-  input: {
-    height: 50,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: "#3D3040",
-  },
+    /* Form Fields */
+    fieldBlock: {
+      gap: 6,
+    },
+    fieldLabel: {
+      fontSize: 13.5,
+      fontWeight: "600",
+      color: theme.primaryText,
+    },
+    input: {
+      height: 50,
+      backgroundColor: theme.surface,
+      borderRadius: 14,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      paddingHorizontal: 14,
+      fontSize: 15,
+      color: theme.primaryText,
+    },
 
-  /* Password Field Container with Show/Hide */
-  passwordContainer: {
-    height: 50,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingLeft: 14,
-    paddingRight: 6,
-  },
-  passwordInput: {
-    flex: 1,
-    height: "100%",
-    fontSize: 15,
-    color: "#3D3040",
-  },
-  passwordToggleBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  passwordToggleText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
+    /* Password Field Container with Show/Hide */
+    passwordContainer: {
+      height: 50,
+      backgroundColor: theme.surface,
+      borderRadius: 14,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingLeft: 14,
+      paddingRight: 6,
+    },
+    passwordInput: {
+      flex: 1,
+      height: "100%",
+      fontSize: 15,
+      color: theme.primaryText,
+    },
+    passwordToggleBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    passwordToggleText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: theme.primaryAccent,
+    },
 
-  /* Primary Action Button */
-  primaryButton: {
-    backgroundColor: "#6E416D",
-    height: 50,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
-  primaryButtonPressed: {
-    backgroundColor: "#593258",
-  },
-  primaryButtonDisabled: {
-    opacity: 0.75,
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "600",
-    letterSpacing: -0.1,
-  },
-  buttonLoadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+    /* Primary Action Button */
+    primaryButton: {
+      backgroundColor: theme.primaryAccent,
+      height: 50,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 4,
+    },
+    primaryButtonPressed: {
+      backgroundColor: theme.pressedAccent,
+    },
+    primaryButtonDisabled: {
+      opacity: 0.75,
+    },
+    primaryButtonText: {
+      color: theme.primaryActionText,
+      fontSize: 15,
+      fontWeight: "600",
+      letterSpacing: -0.1,
+    },
+    buttonLoadingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
 
-  /* Status and Feedback */
-  statusCard: {
-    backgroundColor: "#F7EEF7",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statusText: {
-    fontSize: 13.5,
-    color: "#6D6072",
-    textAlign: "center",
-    lineHeight: 19,
-    fontWeight: "500",
-  },
+    /* Status and Feedback */
+    statusCard: {
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    statusText: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      textAlign: "center",
+      lineHeight: 19,
+      fontWeight: "500",
+    },
 
-  /* Privacy Reassurance Card */
-  reassuranceCard: {
-    backgroundColor: "#F7EEF7",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    gap: 4,
-  },
-  reassuranceHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  reassuranceIcon: {
-    fontSize: 14,
-  },
-  reassuranceHeading: {
-    fontSize: 13.5,
-    fontWeight: "700",
-    color: "#3D3040",
-  },
-  reassuranceBody: {
-    fontSize: 13,
-    color: "#6D6072",
-    lineHeight: 18,
-  },
-});
+    /* Privacy Reassurance Card */
+    reassuranceCard: {
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingVertical: 14,
+      paddingHorizontal: 18,
+      gap: 4,
+    },
+    reassuranceHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    reassuranceIcon: {
+      fontSize: 14,
+    },
+    reassuranceHeading: {
+      fontSize: 13.5,
+      fontWeight: "700",
+      color: theme.primaryText,
+    },
+    reassuranceBody: {
+      fontSize: 13,
+      color: theme.secondaryText,
+      lineHeight: 18,
+    },
+  });

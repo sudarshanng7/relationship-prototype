@@ -1,36 +1,83 @@
 import { AppBottomNav } from "@/components/AppBottomNav";
+import { CouplyHeader } from "@/components/CouplyUI";
 import {
-  CouplyHeader,
-  CouplyPrimaryButton,
-  CouplySectionCard,
-} from "@/components/CouplyUI";
+  APPEARANCE_CHOICES,
+  AppearanceMode,
+  ThemeColors,
+  useTheme,
+} from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
-import { THEMES, THEME_LIST, ThemeKey } from "./home";
+import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Modal,
   Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
+
+function getAppearanceModeDescription(mode: AppearanceMode): string {
+  switch (mode) {
+    case "system":
+      return "System";
+    case "light":
+      return "Light · Lilac Morning";
+    case "dim":
+      return "Dim · Violet Garden";
+    case "dark":
+      return "Dark · Plum Night";
+    default:
+      return "System";
+  }
+}
 
 export default function SettingsScreen() {
   const router = useRouter();
   const identity = useUserIdentity();
-  const [selectedThemeKey, setSelectedThemeKey] = useState<ThemeKey>("lavender");
+  const { width } = useWindowDimensions();
+  const isWide = width >= 480;
+  const { mode, theme, setMode } = useTheme();
+
   const [settingsDetailView, setSettingsDetailView] = useState<
     "appearance" | "sharing" | "help" | null
   >(null);
 
-  const theme = THEMES[selectedThemeKey];
-  const styles = createStyles(theme);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isSignOutModalVisible, setIsSignOutModalVisible] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const effectivePartnerName = identity.partnerName;
   const effectivePartnerConnected = identity.partnerConnected;
   const effectivePartnerRef = identity.partnerRef || "your partner";
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadUser() {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (isMounted && user?.email) {
+          setUserEmail(user.email);
+        }
+      } catch {
+        // Safe fallback in-session
+      }
+    }
+    void loadUser();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -40,12 +87,37 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleOpenEveningReflection = () => {
-    router.push({
-      pathname: "/home",
-      params: { openReflection: "true" },
-    });
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    setSignOutError(null);
+
+    try {
+      const { error } = await supabase.auth.signOut({
+        scope: "local",
+      });
+
+      if (error) {
+        console.error("Sign out error:", error);
+        setSignOutError("We couldn’t sign you out. Please try again.");
+        setIsSigningOut(false);
+        return;
+      }
+
+      setIsSigningOut(false);
+      setIsSignOutModalVisible(false);
+      void identity.refreshIdentity();
+      router.replace("/");
+    } catch (err) {
+      console.error("Sign out error:", err);
+      setSignOutError("We couldn’t sign you out. Please try again.");
+      setIsSigningOut(false);
+    }
   };
+
+  const relationshipSpaceDescription = effectivePartnerConnected
+    ? `Connected with ${effectivePartnerName || "your partner"}`
+    : "Invite or connect with a partner";
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -59,64 +131,20 @@ export default function SettingsScreen() {
             <View style={styles.detailWrapper}>
               <CouplyHeader
                 title="Appearance"
-                subtitle="Choose the look that feels right for you."
+                subtitle="Change the atmosphere without changing how anything works."
                 onBack={() => setSettingsDetailView(null)}
                 backLabel="‹ Settings"
+                titleStyle={{ color: theme.primaryText }}
+                subtitleStyle={{ color: theme.secondaryText }}
+                backTextStyle={{ color: theme.primaryAccent }}
                 style={styles.headerCouply}
               />
 
-              <CouplySectionCard style={styles.cardCouply}>
-                {THEME_LIST.map((t, index) => {
-                  const isSelected = t.key === selectedThemeKey;
-                  return (
-                    <View key={t.key}>
-                      {index > 0 && <View style={styles.divider} />}
-                      <Pressable
-                        style={[
-                          styles.actionRow,
-                          isSelected && styles.themeRowSelected,
-                        ]}
-                        onPress={() => setSelectedThemeKey(t.key)}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: isSelected }}
-                        accessibilityLabel={`${t.name}: ${t.description}`}
-                      >
-                        <View style={styles.rowLeft}>
-                          <View style={styles.paletteCirclesGroup}>
-                            {t.paletteCircles.map((circleCol, idx) => (
-                              <View
-                                key={idx}
-                                style={[
-                                  styles.paletteMiniCircle,
-                                  { backgroundColor: circleCol },
-                                ]}
-                              />
-                            ))}
-                          </View>
-                          <View style={styles.rowTextGroup}>
-                            <Text style={styles.rowHeading}>{t.name}</Text>
-                            <Text style={styles.rowSubtext}>{t.description}</Text>
-                          </View>
-                        </View>
-                        <View
-                          style={[
-                            styles.radioOuter,
-                            isSelected && styles.radioOuterSelected,
-                          ]}
-                        >
-                          {isSelected && <View style={styles.radioInner} />}
-                        </View>
-                      </Pressable>
-                    </View>
-                  );
-                })}
-              </CouplySectionCard>
-
-              <CouplyPrimaryButton
-                label="Done"
-                onPress={() => setSettingsDetailView(null)}
-                accessibilityLabel="Done"
-                style={styles.detailFooterAction}
+              <GardenLightSelector
+                mode={mode}
+                setMode={setMode}
+                isWide={isWide}
+                styles={styles}
               />
             </View>
           )}
@@ -125,60 +153,70 @@ export default function SettingsScreen() {
           {settingsDetailView === "sharing" && (
             <View style={styles.detailWrapper}>
               <CouplyHeader
-                title="Sharing choices"
-                subtitle="You decide what stays private and what is shared."
+                title="Sharing and privacy"
+                subtitle="Understand what stays Mine and what enters Our Space."
                 onBack={() => setSettingsDetailView(null)}
                 backLabel="‹ Settings"
+                titleStyle={{ color: theme.primaryText }}
+                subtitleStyle={{ color: theme.secondaryText }}
+                backTextStyle={{ color: theme.primaryAccent }}
                 style={styles.headerCouply}
               />
 
-              <CouplySectionCard style={styles.cardCouply}>
+              <View style={styles.sectionCard}>
                 <View style={styles.detailBodyContainer}>
+                  <Text style={styles.detailSectionTitle}>Mine</Text>
                   <Text style={styles.detailBody}>
-                    Mine is for your private reflections, notes, and drafts.
+                    Mine is for your private reflections, personal notes, and
+                    drafts. Only you can see what is stored in Mine.
                   </Text>
-                  <Text style={[styles.detailBody, { marginTop: 12 }]}>
-                    Ours contains only moments you intentionally choose to share
-                    with {effectivePartnerRef}.
+
+                  <View style={styles.detailDivider} />
+
+                  <Text style={styles.detailSectionTitle}>Our Space</Text>
+                  <Text style={styles.detailBody}>
+                    Our Space contains only moments, check-ins, and takeaways
+                    that you intentionally choose to share with{" "}
+                    {effectivePartnerRef}.
                   </Text>
                 </View>
-              </CouplySectionCard>
-
-              <CouplyPrimaryButton
-                label="Got it"
-                onPress={() => setSettingsDetailView(null)}
-                accessibilityLabel="Got it"
-                style={styles.detailFooterAction}
-              />
+              </View>
             </View>
           )}
 
-          {/* Detail View: Help */}
+          {/* Detail View: How Purple Garden works */}
           {settingsDetailView === "help" && (
             <View style={styles.detailWrapper}>
               <CouplyHeader
-                title="How My Rhythm works"
-                subtitle="A gentle rhythm for your relationship."
+                title="How Purple Garden works"
+                subtitle="A short guide to Mine, Our Space and shared moments."
                 onBack={() => setSettingsDetailView(null)}
                 backLabel="‹ Settings"
+                titleStyle={{ color: theme.primaryText }}
+                subtitleStyle={{ color: theme.secondaryText }}
+                backTextStyle={{ color: theme.primaryAccent }}
                 style={styles.headerCouply}
               />
 
-              <CouplySectionCard style={styles.cardCouply}>
+              <View style={styles.sectionCard}>
                 <View style={styles.detailBodyContainer}>
+                  <Text style={styles.detailSectionTitle}>A quieter rhythm</Text>
                   <Text style={styles.detailBody}>
-                    My Rhythm helps you notice what matters now, keep private
-                    reflections in Mine, and choose what becomes part of Ours.
+                    Purple Garden helps you notice what matters, keep private
+                    thoughts safe in Mine, and bring intentional moments into
+                    Our Space.
+                  </Text>
+
+                  <View style={styles.detailDivider} />
+
+                  <Text style={styles.detailSectionTitle}>Shared with intention</Text>
+                  <Text style={styles.detailBody}>
+                    Nothing is shared automatically. Moments, reframes, and
+                    repair invitations only enter Our Space when you decide to
+                    share them.
                   </Text>
                 </View>
-              </CouplySectionCard>
-
-              <CouplyPrimaryButton
-                label="Got it"
-                onPress={() => setSettingsDetailView(null)}
-                accessibilityLabel="Got it"
-                style={styles.detailFooterAction}
-              />
+              </View>
             </View>
           )}
 
@@ -191,266 +229,500 @@ export default function SettingsScreen() {
                 subtitle="A few quiet choices for your space."
                 onBack={handleBack}
                 backLabel="‹ Back"
+                titleStyle={{ color: theme.primaryText }}
+                subtitleStyle={{ color: theme.secondaryText }}
+                backTextStyle={{ color: theme.primaryAccent }}
                 style={styles.headerCouply}
               />
 
-              {/* 1. Appearance */}
+              {/* 1. ACCOUNT */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Appearance</Text>
-                <CouplySectionCard style={styles.cardCouply}>
+                <Text style={styles.sectionTitle}>Account</Text>
+
+                <View style={styles.sectionCard}>
                   <Pressable
-                    style={styles.actionRow}
-                    onPress={() => setSettingsDetailView("appearance")}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Appearance, current theme: ${theme.name}`}
-                  >
-                    <View style={styles.rowLeft}>
-                      <View style={styles.paletteCirclesGroup}>
-                        {theme.paletteCircles.map((circleCol, idx) => (
-                          <View
-                            key={idx}
-                            style={[
-                              styles.paletteMiniCircle,
-                              { backgroundColor: circleCol },
-                            ]}
-                          />
-                        ))}
-                      </View>
-                      <View style={styles.rowTextGroup}>
-                        <Text style={styles.rowHeading}>Appearance</Text>
-                        <Text style={styles.rowSubtext}>{theme.name}</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.chevron}>›</Text>
-                  </Pressable>
-                </CouplySectionCard>
-              </View>
-
-              {/* 2. Your rhythm */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Your rhythm</Text>
-                <CouplySectionCard style={styles.cardCouply}>
-                  <Pressable
-                    style={styles.actionRow}
-                    onPress={handleOpenEveningReflection}
-                    accessibilityRole="button"
-                    accessibilityLabel="Evening reflection: Take a quiet moment whenever it feels useful."
-                  >
-                    <View style={styles.rowTextGroup}>
-                      <Text style={styles.rowHeading}>Evening reflection</Text>
-                      <Text style={styles.rowSubtext}>
-                        Take a quiet moment whenever it feels useful.
-                      </Text>
-                    </View>
-                    <Text style={styles.chevron}>›</Text>
-                  </Pressable>
-                </CouplySectionCard>
-                <Text style={styles.infoNote}>
-                  You can always skip a reflection. Nothing is required every day.
-                </Text>
-              </View>
-
-              {/* 3. Privacy and sharing */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Privacy and sharing</Text>
-                <CouplySectionCard style={styles.cardCouply}>
-                  <View style={styles.staticRow}>
-                    <View style={styles.rowTextGroup}>
-                      <Text style={styles.rowHeading}>Private by default</Text>
-                      <Text style={styles.rowSubtext}>
-                        Your reflections stay in Mine unless you choose to share
-                        them.
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.divider} />
-
-                  <Pressable
-                    style={styles.actionRow}
-                    onPress={() => setSettingsDetailView("sharing")}
-                    accessibilityRole="button"
-                    accessibilityLabel="Sharing choices. You decide what becomes part of Ours."
-                  >
-                    <View style={styles.rowTextGroup}>
-                      <Text style={styles.rowHeading}>Sharing choices</Text>
-                      <Text style={styles.rowSubtext}>
-                        You decide what becomes part of Ours.
-                      </Text>
-                    </View>
-                    <Text style={styles.chevron}>›</Text>
-                  </Pressable>
-                </CouplySectionCard>
-              </View>
-
-              {/* 4. Your connection */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Your connection</Text>
-                <CouplySectionCard style={styles.cardCouply}>
-                  <View style={styles.connectionHeaderRow}>
-                    <View style={styles.rowTextGroup}>
-                      <Text style={styles.rowHeading}>Your connection</Text>
-                      <Text style={styles.rowSubtext}>
-                        {effectivePartnerConnected
-                          ? effectivePartnerName
-                            ? `You and ${effectivePartnerName} are connected.`
-                            : "You and your partner are connected."
-                          : "You can connect with a partner whenever you feel ready."}
-                      </Text>
-                    </View>
-                    {effectivePartnerConnected && (
-                      <View style={styles.connectionBadge}>
-                        <View style={styles.connectionDot} />
-                        <Text style={styles.connectionLabel}>Connected</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.divider} />
-
-                  <Pressable
-                    style={styles.actionRow}
+                    style={({ pressed }) => [
+                      styles.settingsRow,
+                      pressed && styles.settingsRowPressed,
+                    ]}
                     onPress={() => router.push("/profile")}
                     accessibilityRole="button"
-                    accessibilityLabel="Manage connection"
+                    accessibilityLabel="Your profile: Name and personal details"
                   >
                     <View style={styles.rowTextGroup}>
-                      <Text style={styles.rowHeading}>Manage connection</Text>
+                      <Text style={styles.rowHeading}>Your profile</Text>
                       <Text style={styles.rowSubtext}>
-                        View your profile, connection details, and invite code.
+                        Name and personal details
                       </Text>
                     </View>
                     <Text style={styles.chevron}>›</Text>
                   </Pressable>
-                </CouplySectionCard>
-              </View>
 
-              {/* 5. Help */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Help</Text>
-                <CouplySectionCard style={styles.cardCouply}>
+                  <View style={styles.divider} />
+
                   <Pressable
-                    style={styles.actionRow}
-                    onPress={() => setSettingsDetailView("help")}
+                    style={({ pressed }) => [
+                      styles.settingsRow,
+                      pressed && styles.settingsRowPressed,
+                    ]}
+                    onPress={() => router.push("/profile")}
                     accessibilityRole="button"
-                    accessibilityLabel="How My Rhythm works"
+                    accessibilityLabel={`Relationship space: ${relationshipSpaceDescription}`}
                   >
                     <View style={styles.rowTextGroup}>
-                      <Text style={styles.rowHeading}>How My Rhythm works</Text>
+                      <Text style={styles.rowHeading}>Relationship space</Text>
+                      <Text style={styles.rowSubtext}>
+                        {relationshipSpaceDescription}
+                      </Text>
                     </View>
                     <Text style={styles.chevron}>›</Text>
                   </Pressable>
-                </CouplySectionCard>
+                </View>
               </View>
 
-              {/* 6. Developer previews (Dev only) */}
+              {/* 2. PREFERENCES */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Preferences</Text>
+
+                <View style={styles.sectionCard}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.settingsRow,
+                      pressed && styles.settingsRowPressed,
+                    ]}
+                    onPress={() => setSettingsDetailView("appearance")}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Appearance: ${getAppearanceModeDescription(
+                      mode
+                    )}`}
+                  >
+                    <View style={styles.rowTextGroup}>
+                      <Text style={styles.rowHeading}>Appearance</Text>
+                      <Text style={styles.rowSubtext}>
+                        {getAppearanceModeDescription(mode)}
+                      </Text>
+                    </View>
+                    <Text style={styles.chevron}>›</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* 3. PRIVACY */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Privacy</Text>
+
+                <View style={styles.sectionCard}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.settingsRow,
+                      pressed && styles.settingsRowPressed,
+                    ]}
+                    onPress={() => setSettingsDetailView("sharing")}
+                    accessibilityRole="button"
+                    accessibilityLabel="Sharing and privacy: Understand what stays Mine and what enters Our Space"
+                  >
+                    <View style={styles.rowTextGroup}>
+                      <Text style={styles.rowHeading}>Sharing and privacy</Text>
+                      <Text style={styles.rowSubtext}>
+                        Understand what stays Mine and what enters Our Space
+                      </Text>
+                    </View>
+                    <Text style={styles.chevron}>›</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* 4. SUPPORT */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Support</Text>
+
+                <View style={styles.sectionCard}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.settingsRow,
+                      pressed && styles.settingsRowPressed,
+                    ]}
+                    onPress={() => setSettingsDetailView("help")}
+                    accessibilityRole="button"
+                    accessibilityLabel="How Purple Garden works: A short guide to Mine, Our Space and shared moments"
+                  >
+                    <View style={styles.rowTextGroup}>
+                      <Text style={styles.rowHeading}>
+                        How Purple Garden works
+                      </Text>
+                      <Text style={styles.rowSubtext}>
+                        A short guide to Mine, Our Space and shared moments
+                      </Text>
+                    </View>
+                    <Text style={styles.chevron}>›</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* 5. DEVELOPER PREVIEWS */}
               {__DEV__ && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Developer previews</Text>
-                  <CouplySectionCard style={styles.cardCouply}>
-                    <Pressable
-                      style={styles.actionRow}
-                      onPress={handleOpenEveningReflection}
-                      accessibilityRole="button"
-                      accessibilityLabel="Preview: Evening reflection"
-                    >
-                      <View style={styles.rowTextGroup}>
-                        <Text style={styles.rowHeading}>Evening reflection</Text>
-                        <Text style={styles.rowSubtext}>
-                          Check-in prompt and feelings before day ends.
-                        </Text>
-                      </View>
-                      <Text style={styles.chevron}>›</Text>
-                    </Pressable>
+                  <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>Developer Previews</Text>
+                    <View style={styles.devOnlyTag}>
+                      <Text style={styles.devOnlyTagText}>Development only</Text>
+                    </View>
+                  </View>
 
-                    <View style={styles.divider} />
-
+                  <View style={styles.sectionCard}>
                     <Pressable
-                      style={styles.actionRow}
-                      onPress={() => router.push("/playful-reframe")}
+                      style={({ pressed }) => [
+                        styles.settingsRow,
+                        pressed && styles.settingsRowPressed,
+                      ]}
+                      onPress={() =>
+                        router.push("/make-challenge-preview" as any)
+                      }
                       accessibilityRole="button"
-                      accessibilityLabel="Dev preview: Playful Reframe"
+                      accessibilityLabel="Make Your Own Tiny Challenge: Compose a small, kind invitation with optional timing and preview"
                     >
                       <View style={styles.rowTextGroup}>
                         <Text style={styles.rowHeading}>
-                          Dev preview: Playful Reframe
+                          Make Your Own Tiny Challenge
                         </Text>
                         <Text style={styles.rowSubtext}>
-                          A lighthearted way to look at a small everyday irritation.
+                          Compose a small, kind invitation with optional timing
+                          and preview
                         </Text>
                       </View>
                       <Text style={styles.chevron}>›</Text>
                     </Pressable>
-
-                    <View style={styles.divider} />
-
-                    <Pressable
-                      style={styles.actionRow}
-                      onPress={() => router.push("/challenge-lifecycle-preview")}
-                      accessibilityRole="button"
-                      accessibilityLabel="Dev preview: Challenge Lifecycle"
-                    >
-                      <View style={styles.rowTextGroup}>
-                        <Text style={styles.rowHeading}>
-                          Dev preview: Challenge Lifecycle
-                        </Text>
-                        <Text style={styles.rowSubtext}>
-                          Sample outcomes: waiting, accepted, declined, expired, and won.
-                        </Text>
-                      </View>
-                      <Text style={styles.chevron}>›</Text>
-                    </Pressable>
-
-                    <View style={styles.divider} />
-
-                    <Pressable
-                      style={styles.actionRow}
-                      onPress={() => router.push("/make-challenge-preview" as any)}
-                      accessibilityRole="button"
-                      accessibilityLabel="Dev preview: Make Your Own Tiny Challenge"
-                    >
-                      <View style={styles.rowTextGroup}>
-                        <Text style={styles.rowHeading}>
-                          Dev preview: Make Your Own Tiny Challenge
-                        </Text>
-                        <Text style={styles.rowSubtext}>
-                          Compose a small, kind invitation with optional timing and preview.
-                        </Text>
-                      </View>
-                      <Text style={styles.chevron}>›</Text>
-                    </Pressable>
-                  </CouplySectionCard>
+                  </View>
                 </View>
               )}
+
+              {/* 6. ACCOUNT SESSION */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Account Session</Text>
+
+                <View style={styles.sectionCard}>
+                  <View style={styles.sessionInfoRow}>
+                    <Text style={styles.sessionHeading}>Signed in</Text>
+                    {userEmail ? (
+                      <Text style={styles.sessionEmail} numberOfLines={1}>
+                        {userEmail}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.signOutRow,
+                      pressed && styles.settingsRowPressed,
+                    ]}
+                    onPress={() => {
+                      setSignOutError(null);
+                      setIsSignOutModalVisible(true);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Sign out of Purple Garden"
+                  >
+                    <Text style={styles.signOutText}>Sign out</Text>
+                  </Pressable>
+                </View>
+              </View>
             </>
           )}
         </View>
       </ScrollView>
 
-      {/* Fixed Visual Bottom Navigation */}
-      <AppBottomNav
-        activeTab="settings"
-        themeColors={{
-          surface: theme.surface,
-          border: theme.border,
-          accent: theme.accent,
-          iconMuted: theme.iconMuted,
-          selectedNavigation: theme.selectedNavigation,
-          secondaryText: theme.secondaryText,
+      {/* Sign-out Confirmation Modal */}
+      <Modal
+        visible={isSignOutModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          if (!isSigningOut) {
+            setIsSignOutModalVisible(false);
+            setSignOutError(null);
+          }
         }}
-      />
+        accessibilityViewIsModal={true}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => {
+            if (!isSigningOut) {
+              setIsSignOutModalVisible(false);
+              setSignOutError(null);
+            }
+          }}
+        >
+          <Pressable
+            style={styles.modalCard}
+            onPress={(e) => e.stopPropagation()}
+            accessibilityRole="alert"
+            accessibilityViewIsModal={true}
+            accessibilityLabel="Sign out of Purple Garden confirmation"
+          >
+            <Text style={styles.modalHeading}>
+              Sign out of Purple Garden?
+            </Text>
+            <Text style={styles.modalBody}>
+              Your shared and private moments will remain in your account. You can
+              sign in again anytime.
+            </Text>
+
+            {signOutError ? (
+              <View
+                style={styles.modalErrorBanner}
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+              >
+                <Text style={styles.modalErrorText}>{signOutError}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.modalActionsCol}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.modalConfirmButton,
+                  pressed && styles.modalConfirmButtonPressed,
+                  isSigningOut && styles.modalButtonDisabled,
+                ]}
+                onPress={handleSignOut}
+                disabled={isSigningOut}
+                accessibilityRole="button"
+                accessibilityState={{
+                  disabled: isSigningOut,
+                  busy: isSigningOut,
+                }}
+                accessibilityLabel={
+                  isSigningOut ? "Signing out..." : "Sign out"
+                }
+              >
+                {isSigningOut ? (
+                  <View style={styles.buttonLoadingRow}>
+                    <ActivityIndicator
+                      size="small"
+                      color={theme.status.error.text}
+                    />
+                    <Text style={styles.modalConfirmButtonText}>
+                      Signing out...
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.modalConfirmButtonText}>Sign out</Text>
+                )}
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.modalCancelButton,
+                  pressed && styles.modalCancelButtonPressed,
+                  isSigningOut && styles.modalButtonDisabled,
+                ]}
+                onPress={() => {
+                  if (!isSigningOut) {
+                    setIsSignOutModalVisible(false);
+                    setSignOutError(null);
+                  }
+                }}
+                disabled={isSigningOut}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isSigningOut }}
+                accessibilityLabel="Stay signed in"
+              >
+                <Text style={styles.modalCancelButtonText}>
+                  Stay signed in
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Fixed Visual Bottom Navigation */}
+      <AppBottomNav activeTab="settings" />
     </SafeAreaView>
   );
 }
 
-function createStyles(theme: (typeof THEMES)["lavender"]) {
+function GardenLightSelector({
+  mode,
+  setMode,
+  isWide,
+  styles,
+}: {
+  mode: AppearanceMode;
+  setMode: (mode: AppearanceMode) => void;
+  isWide: boolean;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  return (
+    <View style={styles.appearanceContainer}>
+      <View style={styles.appearanceIntro}>
+        <Text style={styles.appearanceHeading}>Choose your garden light</Text>
+        <Text style={styles.appearanceBody}>
+          Use your device setting or choose the atmosphere that feels most
+          comfortable.
+        </Text>
+      </View>
+
+      {isWide ? (
+        <View
+          style={styles.segmentedContainer}
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Appearance mode selection"
+        >
+          {APPEARANCE_CHOICES.map((choice) => {
+            const isSelected = choice.key === mode;
+            return (
+              <Pressable
+                key={choice.key}
+                style={[
+                  styles.segmentItem,
+                  isSelected && styles.segmentItemSelected,
+                ]}
+                onPress={() => setMode(choice.key)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={`${choice.name}: ${choice.brandedCaption}. ${choice.description}${
+                  isSelected ? ", selected" : ""
+                }`}
+              >
+                <View style={styles.segmentPaletteRow}>
+                  {choice.paletteCircles.map((circleCol, idx) => (
+                    <View
+                      key={idx}
+                      style={[
+                        styles.paletteMiniCircle,
+                        { backgroundColor: circleCol },
+                      ]}
+                    />
+                  ))}
+                </View>
+                <View style={styles.segmentTextRow}>
+                  {isSelected && <Text style={styles.segmentCheckIcon}>✓ </Text>}
+                  <Text
+                    style={[
+                      styles.segmentTitle,
+                      isSelected && styles.segmentTitleSelected,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {choice.name}
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.segmentCaption,
+                    isSelected && styles.segmentCaptionSelected,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {choice.brandedCaption}
+                </Text>
+                {choice.isRecommended && (
+                  <View style={styles.recommendedBadgeSmall}>
+                    <Text style={styles.recommendedBadgeSmallText}>Rec</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : (
+        <View
+          style={styles.appearanceCardsGroup}
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Appearance mode selection"
+        >
+          {APPEARANCE_CHOICES.map((choice) => {
+            const isSelected = choice.key === mode;
+            return (
+              <Pressable
+                key={choice.key}
+                style={[
+                  styles.appearanceCard,
+                  isSelected && styles.appearanceCardSelected,
+                ]}
+                onPress={() => setMode(choice.key)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={`${choice.name}: ${choice.brandedCaption}. ${choice.description}${
+                  isSelected ? ", selected" : ""
+                }`}
+              >
+                <View style={styles.appearanceCardLeft}>
+                  <View style={styles.paletteCirclesGroup}>
+                    {choice.paletteCircles.map((circleCol, idx) => (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.paletteMiniCircle,
+                          { backgroundColor: circleCol },
+                        ]}
+                      />
+                    ))}
+                  </View>
+                  <View style={styles.appearanceCardTextCol}>
+                    <View style={styles.appearanceCardTitleRow}>
+                      <Text
+                        style={[
+                          styles.appearanceCardTitle,
+                          isSelected && styles.appearanceCardTitleSelected,
+                        ]}
+                      >
+                        {choice.brandedCaption}
+                      </Text>
+                      <View style={styles.nameTag}>
+                        <Text style={styles.nameTagText}>{choice.name}</Text>
+                      </View>
+                      {choice.isRecommended && (
+                        <View style={styles.defaultPill}>
+                          <Text style={styles.defaultPillText}>Recommended</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        styles.appearanceCardSubtitle,
+                        isSelected && styles.appearanceCardSubtitleSelected,
+                      ]}
+                    >
+                      {choice.description}
+                    </Text>
+                  </View>
+                </View>
+
+                <View
+                  style={[
+                    styles.radioOuter,
+                    isSelected && styles.radioOuterSelected,
+                  ]}
+                >
+                  {isSelected && <View style={styles.radioInner} />}
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+
+      <Text style={styles.appearanceQuietNote}>
+        Appearance changes only how Purple Garden looks. It does not change sharing
+        or privacy.
+      </Text>
+    </View>
+  );
+}
+
+function createStyles(theme: ThemeColors) {
   return StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: "#FBF7FC",
+      backgroundColor: theme.pageBackground,
     },
     scrollContent: {
-      paddingBottom: 90,
+      paddingBottom: 96,
       paddingHorizontal: 16,
       paddingTop: 16,
     },
@@ -458,80 +730,50 @@ function createStyles(theme: (typeof THEMES)["lavender"]) {
       width: "100%",
       maxWidth: 520,
       alignSelf: "center",
-      gap: 16,
+      gap: 20,
     },
     headerCouply: {
       paddingHorizontal: 0,
       paddingTop: 0,
       paddingBottom: 4,
     },
-    cardCouply: {
-      marginHorizontal: 0,
-      marginBottom: 0,
-      padding: 0,
-      overflow: "hidden",
-    },
-    header: {
+    section: {
       gap: 6,
-      paddingVertical: 4,
     },
-    headerTopRow: {
+    sectionHeaderRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      paddingHorizontal: 4,
       marginBottom: 2,
     },
-    backBtn: {
-      paddingVertical: 6,
-      paddingHorizontal: 10,
-      marginLeft: -10,
-      borderRadius: 8,
-    },
-    backBtnText: {
-      fontSize: 15,
-      fontWeight: "600",
-      color: theme.accent,
-    },
-    closeBtn: {
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: 8,
-    },
-    closeBtnText: {
-      fontSize: 14.5,
-      fontWeight: "600",
-      color: theme.accent,
-    },
-    pageHeading: {
-      fontSize: 26,
-      fontWeight: "700",
-      color: theme.primaryText,
-      letterSpacing: -0.4,
-    },
-    pageSubtitle: {
-      fontSize: 14,
-      color: theme.secondaryText,
-      lineHeight: 20,
-    },
-    section: {
-      gap: 8,
-    },
     sectionTitle: {
-      fontSize: 13,
+      fontSize: 12.5,
       fontWeight: "700",
-      color: theme.secondaryText,
+      color: theme.mutedText,
       textTransform: "uppercase",
       letterSpacing: 0.8,
       marginLeft: 4,
     },
-    card: {
-      backgroundColor: "#FFFFFF",
-      borderRadius: 14,
+    devOnlyTag: {
+      backgroundColor: theme.badgeBackground,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    devOnlyTagText: {
+      fontSize: 10.5,
+      fontWeight: "600",
+      color: theme.primaryAccent,
+    },
+    sectionCard: {
+      backgroundColor: theme.surface,
+      borderRadius: 16,
       borderWidth: 1.2,
-      borderColor: "#E8DCE9",
+      borderColor: theme.border,
       overflow: "hidden",
     },
-    actionRow: {
+    settingsRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
@@ -539,25 +781,8 @@ function createStyles(theme: (typeof THEMES)["lavender"]) {
       paddingHorizontal: 16,
       minHeight: 52,
     },
-    staticRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingVertical: 14,
-      paddingHorizontal: 16,
-    },
-    connectionHeaderRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: 14,
-      paddingHorizontal: 16,
-      gap: 12,
-    },
-    rowLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-      flex: 1,
+    settingsRowPressed: {
+      backgroundColor: theme.selectedNavigation,
     },
     rowTextGroup: {
       flex: 1,
@@ -582,34 +807,230 @@ function createStyles(theme: (typeof THEMES)["lavender"]) {
     },
     divider: {
       height: 1,
-      backgroundColor: "#F0E4F1",
+      backgroundColor: theme.border,
       marginHorizontal: 16,
     },
-    infoNote: {
+    sessionInfoRow: {
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      gap: 2,
+    },
+    sessionHeading: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: theme.primaryText,
+      letterSpacing: -0.1,
+    },
+    sessionEmail: {
+      fontSize: 13,
+      color: theme.secondaryText,
+    },
+    signOutRow: {
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      minHeight: 50,
+      justifyContent: "center",
+    },
+    signOutText: {
+      fontSize: 14.5,
+      fontWeight: "600",
+      color: theme.status.error.text,
+    },
+
+    /* Detail View Styling */
+    detailWrapper: {
+      gap: 14,
+    },
+    detailBodyContainer: {
+      padding: 18,
+      gap: 6,
+    },
+    detailSectionTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.2,
+    },
+    detailBody: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      lineHeight: 20,
+    },
+    detailDivider: {
+      height: 1,
+      backgroundColor: theme.border,
+      marginVertical: 10,
+    },
+
+    /* Appearance selector styles */
+    appearanceContainer: {
+      gap: 12,
+    },
+    appearanceIntro: {
+      gap: 4,
+      paddingHorizontal: 4,
+      marginBottom: 2,
+    },
+    appearanceHeading: {
+      fontSize: 15.5,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.2,
+    },
+    appearanceBody: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      lineHeight: 19,
+    },
+    appearanceQuietNote: {
       fontSize: 12.5,
       color: theme.mutedText,
       lineHeight: 17,
-      marginLeft: 4,
+      paddingHorizontal: 4,
+      marginTop: 2,
     },
-    connectionBadge: {
+    segmentedContainer: {
+      flexDirection: "row",
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 14,
+      padding: 4,
+      gap: 4,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    segmentItem: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 10,
+      paddingHorizontal: 4,
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: "transparent",
+      gap: 3,
+    },
+    segmentItemSelected: {
+      backgroundColor: theme.surface,
+      borderColor: theme.primaryAccent,
+    },
+    segmentPaletteRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 5,
-      backgroundColor: theme.badgeBackground,
-      paddingVertical: 4,
-      paddingHorizontal: 8,
-      borderRadius: 10,
+      gap: 3,
+      marginBottom: 2,
     },
-    connectionDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: theme.badgeDot,
+    segmentTextRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
     },
-    connectionLabel: {
-      fontSize: 11.5,
+    segmentCheckIcon: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: theme.primaryAccent,
+    },
+    segmentTitle: {
+      fontSize: 13,
       fontWeight: "600",
-      color: theme.accent,
+      color: theme.secondaryText,
+    },
+    segmentTitleSelected: {
+      color: theme.primaryText,
+      fontWeight: "700",
+    },
+    segmentCaption: {
+      fontSize: 10.5,
+      color: theme.mutedText,
+    },
+    segmentCaptionSelected: {
+      color: theme.secondaryText,
+    },
+    recommendedBadgeSmall: {
+      backgroundColor: theme.badgeBackground,
+      borderRadius: 6,
+      paddingHorizontal: 4,
+      paddingVertical: 1,
+      marginTop: 2,
+    },
+    recommendedBadgeSmallText: {
+      fontSize: 9,
+      fontWeight: "700",
+      color: theme.primaryAccent,
+    },
+    appearanceCardsGroup: {
+      gap: 10,
+    },
+    appearanceCard: {
+      backgroundColor: theme.surface,
+      borderRadius: 16,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    appearanceCardSelected: {
+      borderColor: theme.primaryAccent,
+      borderWidth: 1.8,
+      backgroundColor: theme.selectedNavigation,
+    },
+    appearanceCardLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+      flex: 1,
+    },
+    appearanceCardTextCol: {
+      flex: 1,
+      gap: 3,
+    },
+    appearanceCardTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      flexWrap: "wrap",
+    },
+    appearanceCardTitle: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: theme.primaryText,
+      letterSpacing: -0.2,
+    },
+    appearanceCardTitleSelected: {
+      color: theme.primaryText,
+      fontWeight: "700",
+    },
+    nameTag: {
+      backgroundColor: theme.secondarySurface,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    nameTagText: {
+      fontSize: 11,
+      color: theme.secondaryText,
+      fontWeight: "500",
+    },
+    appearanceCardSubtitle: {
+      fontSize: 12.5,
+      color: theme.secondaryText,
+      lineHeight: 17,
+    },
+    appearanceCardSubtitleSelected: {
+      color: theme.secondaryText,
+    },
+    defaultPill: {
+      backgroundColor: theme.badgeBackground,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 8,
+    },
+    defaultPillText: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: theme.primaryAccent,
     },
     paletteCirclesGroup: {
       flexDirection: "row",
@@ -621,51 +1042,121 @@ function createStyles(theme: (typeof THEMES)["lavender"]) {
       height: 10,
       borderRadius: 5,
       borderWidth: 1,
-      borderColor: "#DCD0DF",
+      borderColor: theme.border,
     },
     radioOuter: {
       width: 20,
       height: 20,
       borderRadius: 10,
       borderWidth: 1.5,
-      borderColor: "#C5B6C8",
+      borderColor: theme.border,
       alignItems: "center",
       justifyContent: "center",
       marginLeft: 8,
     },
     radioOuterSelected: {
-      borderColor: theme.accent,
+      borderColor: theme.primaryAccent,
     },
     radioInner: {
       width: 10,
       height: 10,
       borderRadius: 5,
-      backgroundColor: theme.accent,
+      backgroundColor: theme.primaryAccent,
     },
-    themeRowSelected: {
-      backgroundColor: "#FAF4FB",
+
+    /* Modal Confirmation Dialog */
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.45)",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 20,
     },
-    detailWrapper: {
-      gap: 12,
+    modalCard: {
+      width: "100%",
+      maxWidth: 380,
+      backgroundColor: theme.surface,
+      borderRadius: 20,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      padding: 22,
+      gap: 14,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 6,
     },
-    detailHeader: {
+    modalHeading: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.3,
+    },
+    modalBody: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      lineHeight: 19,
+    },
+    modalErrorBanner: {
+      backgroundColor: theme.status.error.bg,
+      borderWidth: 1,
+      borderColor: theme.status.error.border,
+      borderRadius: 10,
+      padding: 10,
+    },
+    modalErrorText: {
+      fontSize: 12.5,
+      color: theme.status.error.text,
+      textAlign: "center",
+      lineHeight: 17,
+    },
+    modalActionsCol: {
+      gap: 8,
+      marginTop: 6,
+    },
+    modalConfirmButton: {
+      backgroundColor: theme.status.error.bg,
+      borderWidth: 1.2,
+      borderColor: theme.status.error.border,
+      borderRadius: 12,
+      paddingVertical: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 46,
+    },
+    modalConfirmButtonPressed: {
+      opacity: 0.85,
+    },
+    modalConfirmButtonText: {
+      fontSize: 14.5,
+      fontWeight: "600",
+      color: theme.status.error.text,
+    },
+    modalCancelButton: {
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 12,
+      paddingVertical: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 46,
+    },
+    modalCancelButtonPressed: {
+      opacity: 0.85,
+    },
+    modalCancelButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: theme.primaryText,
+    },
+    modalButtonDisabled: {
+      opacity: 0.6,
+    },
+    buttonLoadingRow: {
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: 4,
-    },
-    detailBodyContainer: {
-      padding: 16,
-    },
-    detailBody: {
-      fontSize: 14,
-      color: theme.secondaryText,
-      lineHeight: 21,
-    },
-    detailFooterAction: {
-      marginTop: 20,
-      minHeight: 48,
-      width: "100%",
+      justifyContent: "center",
+      gap: 8,
     },
   });
 }

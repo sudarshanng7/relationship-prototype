@@ -1,6 +1,7 @@
+import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -16,6 +17,8 @@ import {
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -113,8 +116,8 @@ export default function OnboardingScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#6E416D" />
-          <Text style={styles.loadingText}>Loading your setup...</Text>
+          <ActivityIndicator size="large" color={theme.primaryAccent} />
+          <Text style={styles.loadingText}>Loading Purple Garden...</Text>
         </View>
       </SafeAreaView>
     );
@@ -136,11 +139,11 @@ export default function OnboardingScreen() {
             <View style={styles.headerContainer}>
               <View style={styles.logoRow}>
                 <Text style={styles.logoHeart}>♡</Text>
-                <Text style={styles.brandTitle}>Couply</Text>
+                <Text style={styles.brandTitle}>Purple Garden</Text>
               </View>
               <Text style={styles.mainHeading}>Welcome to your space</Text>
               <Text style={styles.supportingText}>
-                A calm, private place to notice, reflect, and reconnect.
+                A quieter place to tend to what matters between you.
               </Text>
             </View>
 
@@ -158,7 +161,7 @@ export default function OnboardingScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="Your preferred name"
-                  placeholderTextColor="#8E7E94"
+                  placeholderTextColor={theme.mutedText}
                   value={displayName}
                   onChangeText={setDisplayName}
                   maxLength={60}
@@ -235,7 +238,7 @@ export default function OnboardingScreen() {
             >
               {saving ? (
                 <View style={styles.buttonLoadingRow}>
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={theme.primaryActionText} />
                   <Text style={styles.primaryButtonText}>
                     Setting up your space...
                   </Text>
@@ -253,224 +256,225 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FBF7FC",
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-  },
-  column: {
-    width: "100%",
-    maxWidth: 480,
-    alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingTop: 28,
-    paddingBottom: 40,
-    gap: 18,
-  },
+const createStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.pageBackground,
+    },
+    keyboardAvoid: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: "center",
+    },
+    column: {
+      width: "100%",
+      maxWidth: 480,
+      alignSelf: "center",
+      paddingHorizontal: 20,
+      paddingTop: 28,
+      paddingBottom: 40,
+      gap: 18,
+    },
 
-  /* Center / Loading State */
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 14.5,
-    color: "#6D6072",
-    fontWeight: "500",
-  },
+    /* Center / Loading State */
+    centerContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+      gap: 12,
+    },
+    loadingText: {
+      fontSize: 14.5,
+      color: theme.secondaryText,
+      fontWeight: "500",
+    },
 
-  /* Brand / Header */
-  headerContainer: {
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 6,
-  },
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  logoHeart: {
-    fontSize: 24,
-    color: "#6E416D",
-    lineHeight: 28,
-  },
-  brandTitle: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.4,
-  },
-  mainHeading: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.3,
-    textAlign: "center",
-  },
-  supportingText: {
-    fontSize: 14.5,
-    color: "#6D6072",
-    textAlign: "center",
-    lineHeight: 21,
-    paddingHorizontal: 10,
-  },
+    /* Brand / Header */
+    headerContainer: {
+      alignItems: "center",
+      gap: 6,
+      paddingVertical: 6,
+    },
+    logoRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    logoHeart: {
+      fontSize: 24,
+      color: theme.primaryAccent,
+      lineHeight: 28,
+    },
+    brandTitle: {
+      fontSize: 26,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.4,
+    },
+    mainHeading: {
+      fontSize: 22,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.3,
+      textAlign: "center",
+    },
+    supportingText: {
+      fontSize: 14.5,
+      color: theme.secondaryText,
+      textAlign: "center",
+      lineHeight: 21,
+      paddingHorizontal: 10,
+    },
 
-  /* White Card */
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    padding: 22,
-    gap: 16,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  cardHeaderGroup: {
-    gap: 4,
-  },
-  cardHeading: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.2,
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: "#6D6072",
-    lineHeight: 20,
-  },
+    /* White Card */
+    card: {
+      backgroundColor: theme.surface,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 22,
+      gap: 16,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    cardHeaderGroup: {
+      gap: 4,
+    },
+    cardHeading: {
+      fontSize: 17,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.2,
+    },
+    cardDescription: {
+      fontSize: 14,
+      color: theme.secondaryText,
+      lineHeight: 20,
+    },
 
-  /* Field Block */
-  fieldBlock: {
-    gap: 6,
-  },
-  fieldLabel: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#3D3040",
-  },
-  input: {
-    height: 50,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: "#3D3040",
-  },
+    /* Field Block */
+    fieldBlock: {
+      gap: 6,
+    },
+    fieldLabel: {
+      fontSize: 13.5,
+      fontWeight: "600",
+      color: theme.primaryText,
+    },
+    input: {
+      height: 50,
+      backgroundColor: theme.surface,
+      borderRadius: 14,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      paddingHorizontal: 14,
+      fontSize: 15,
+      color: theme.primaryText,
+    },
 
-  /* Privacy Spaces Block */
-  spacesBlock: {
-    gap: 10,
-  },
-  spaceCardMine: {
-    backgroundColor: "#F1EDF7",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E3DBEB",
-    padding: 14,
-    gap: 4,
-  },
-  spaceBadgeMine: {
-    fontSize: 13.5,
-    fontWeight: "700",
-    color: "#4E3F50",
-    letterSpacing: 0.2,
-  },
-  spaceCardOurs: {
-    backgroundColor: "#FBEFF7",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#EEDCEB",
-    padding: 14,
-    gap: 4,
-  },
-  spaceBadgeOurs: {
-    fontSize: 13.5,
-    fontWeight: "700",
-    color: "#703866",
-    letterSpacing: 0.2,
-  },
-  spaceText: {
-    fontSize: 13.5,
-    color: "#6D6072",
-    lineHeight: 19,
-  },
-  reassuranceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingTop: 2,
-  },
-  reassuranceIcon: {
-    fontSize: 13,
-  },
-  reassuranceText: {
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 17,
-    flex: 1,
-  },
+    /* Privacy Spaces Block */
+    spacesBlock: {
+      gap: 10,
+    },
+    spaceCardMine: {
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 14,
+      gap: 4,
+    },
+    spaceBadgeMine: {
+      fontSize: 13.5,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: 0.2,
+    },
+    spaceCardOurs: {
+      backgroundColor: theme.blushSurface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 14,
+      gap: 4,
+    },
+    spaceBadgeOurs: {
+      fontSize: 13.5,
+      fontWeight: "700",
+      color: theme.primaryAccent,
+      letterSpacing: 0.2,
+    },
+    spaceText: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      lineHeight: 19,
+    },
+    reassuranceRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingTop: 2,
+    },
+    reassuranceIcon: {
+      fontSize: 13,
+    },
+    reassuranceText: {
+      fontSize: 12.5,
+      color: theme.secondaryText,
+      lineHeight: 17,
+      flex: 1,
+    },
 
-  /* Primary Button */
-  primaryButton: {
-    backgroundColor: "#6E416D",
-    height: 50,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-  },
-  primaryButtonPressed: {
-    backgroundColor: "#593258",
-  },
-  primaryButtonDisabled: {
-    opacity: 0.75,
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "600",
-    letterSpacing: -0.1,
-  },
-  buttonLoadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+    /* Primary Button */
+    primaryButton: {
+      backgroundColor: theme.primaryAccent,
+      height: 50,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      width: "100%",
+    },
+    primaryButtonPressed: {
+      backgroundColor: theme.pressedAccent,
+    },
+    primaryButtonDisabled: {
+      opacity: 0.75,
+    },
+    primaryButtonText: {
+      color: theme.primaryActionText,
+      fontSize: 15,
+      fontWeight: "600",
+      letterSpacing: -0.1,
+    },
+    buttonLoadingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
 
-  /* Error Feedback Card */
-  errorCard: {
-    backgroundColor: "#F7EEF7",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  errorText: {
-    fontSize: 13.5,
-    color: "#B42318",
-    textAlign: "center",
-    lineHeight: 19,
-    fontWeight: "500",
-  },
-});
+    /* Error Feedback Card */
+    errorCard: {
+      backgroundColor: theme.status.error.bg,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.status.error.border,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    errorText: {
+      fontSize: 13.5,
+      color: theme.status.error.text,
+      textAlign: "center",
+      lineHeight: 19,
+      fontWeight: "500",
+    },
+  });

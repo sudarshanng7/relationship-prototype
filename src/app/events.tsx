@@ -6,11 +6,12 @@ import {
   CouplyPrimaryButton,
   CouplyStatusPill,
 } from "@/components/CouplyUI";
+import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useRepairPreview } from "@/context/RepairPreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -37,6 +38,8 @@ type OursFilter = "open" | "softening" | "reconnected";
 
 export default function EventsScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const params = useLocalSearchParams<{ scope?: string | string[] }>();
   const { previewEventId, previewStatus, hasSharedTakeaway } =
     useRepairPreview();
@@ -818,618 +821,619 @@ function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FAF7FC",
-  },
-
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 110,
-    backgroundColor: "#FAF7FC",
-  },
-
-  mainColumn: {
-    width: "100%",
-    maxWidth: 520,
-    alignSelf: "center",
-  },
-
-  /* Header */
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 16,
-  },
-
-  headerTextWrap: {
-    flex: 1,
-  },
-
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.4,
-  },
-
-  subtitle: {
-    fontSize: 13.5,
-    color: "#6D6072",
-    fontStyle: "italic",
-    marginTop: 4,
-    lineHeight: 18,
-  },
-
-  recordHeaderButton: {
-    backgroundColor: "#F3EDF7",
-    borderColor: "#E2D3E5",
-    borderWidth: 1.2,
-    borderRadius: 18,
-    paddingVertical: 8,
-    paddingHorizontal: 13,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 2,
-  },
-
-  recordHeaderBtnCouply: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-
-  recordHeaderBtnCouplyText: {
-    fontSize: 12.5,
-    fontWeight: "600",
-  },
-
-  recordHeaderButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-
-  /* Mine mode navigation */
-  mineNavRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 18,
-  },
-
-  viewAllButton: {
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: "#F3EDF7",
-    borderWidth: 1,
-    borderColor: "#E2D3E5",
-  },
-
-  viewAllButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-
-  /* Segmented control */
-  segmentedFilterContainer: {
-    flexDirection: "row",
-    backgroundColor: "#EFE8F2",
-    borderRadius: 14,
-    padding: 4,
-    marginBottom: 20,
-  },
-
-  segmentButton: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  segmentButtonActive: {
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-
-  segmentButtonText: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: tokens.colors.textSecondary,
-  },
-
-  segmentButtonTextActive: {
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-
-  /* Ours mode status filter chips */
-  oursFilterSection: {
-    marginBottom: 16,
-    gap: 8,
-  },
-
-  oursFilterRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-
-  clearFilterButton: {
-    alignSelf: "flex-start",
-    paddingVertical: 4,
-    paddingHorizontal: 2,
-  },
-
-  clearFilterButtonText: {
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: tokens.colors.plum,
-  },
-
-  oursFilterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: "#F3EDF7",
-    borderWidth: 1,
-    borderColor: "#E2D3E5",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  oursFilterChipActive: {
-    backgroundColor: tokens.colors.plum,
-    borderColor: tokens.colors.plum,
-  },
-
-  oursFilterChipText: {
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: tokens.colors.textSecondary,
-  },
-
-  oursFilterChipTextActive: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-
-  /* Cards */
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1.2,
-    borderColor: "#EAE0EC",
-    shadowColor: "#2A1828",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-
-  positiveCard: {
-    backgroundColor: "#FDF8F5",
-    borderColor: "#F2DFD4",
-  },
-
-  cardPressed: {
-    opacity: 0.88,
-    backgroundColor: "#FCFAFD",
-  },
-
-  cardHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-
-  cardHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    gap: 12,
-  },
-
-  iconBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  positiveIconBadge: {
-    backgroundColor: "#F9EEF6",
-    borderWidth: 1,
-    borderColor: "#EDD6E6",
-  },
-
-  frictionIconBadge: {
-    backgroundColor: "#F1EDF8",
-    borderWidth: 1,
-    borderColor: "#DDD6EB",
-  },
-
-  iconSymbol: {
-    fontSize: 16,
-    color: "#6E416D",
-  },
-
-  positiveIconSymbol: {
-    color: "#9E4D38",
-  },
-
-  categoryWrap: {
-    flex: 1,
-  },
-
-  categoryTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.2,
-  },
-
-  attributionText: {
-    fontSize: 12.5,
-    color: "#7E6F86",
-    marginTop: 2,
-  },
-
-  cardHeaderRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-
-  dateText: {
-    fontSize: 12.5,
-    color: "#7E6F86",
-    fontWeight: "500",
-  },
-
-  chevron: {
-    fontSize: 18,
-    color: "#B2A3B8",
-    fontWeight: "600",
-    marginTop: -2,
-  },
-
-  cardFooterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#F4EDF5",
-  },
-
-  positiveCardFooterRow: {
-    borderTopColor: "#F5E6DC",
-  },
-
-  privacyBadge: {
-    borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 4.5,
-    borderWidth: 1,
-  },
-
-  minePrivacyBadge: {
-    backgroundColor: "#F3EDF7",
-    borderColor: "#E3D5E7",
-  },
-
-  minePositivePrivacyBadge: {
-    backgroundColor: "#FDF4EE",
-    borderColor: "#EEDAD0",
-  },
-
-  oursPrivacyBadge: {
-    backgroundColor: "#FBEFF7",
-    borderColor: "#EBD8E8",
-  },
-
-  oursPositivePrivacyBadge: {
-    backgroundColor: "#FDF0EB",
-    borderColor: "#F4D9CE",
-  },
-
-  privacyBadgeText: {
-    fontSize: 11.5,
-    fontWeight: "600",
-  },
-
-  minePrivacyText: {
-    color: "#533C64",
-  },
-
-  minePositivePrivacyText: {
-    color: "#7E4938",
-  },
-
-  oursPrivacyText: {
-    color: "#6E416D",
-  },
-
-  oursPositivePrivacyText: {
-    color: "#8B412D",
-  },
-
-  statusBadge: {
-    backgroundColor: "#F6F1F8",
-    borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 4.5,
-    borderWidth: 1,
-    borderColor: "#E5DAE8",
-  },
-
-  statusBadgeText: {
-    fontSize: 11.5,
-    fontWeight: "600",
-    color: "#6D6072",
-  },
-
-  positiveBadge: {
-    backgroundColor: "#FDF0EB",
-    borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 4.5,
-    borderWidth: 1,
-    borderColor: "#F4D9CE",
-  },
-
-  positiveBadgeText: {
-    fontSize: 11.5,
-    fontWeight: "600",
-    color: "#8B412D",
-  },
-
-  /* Preview Reconnected treatment */
-  previewNoticeBanner: {
-    backgroundColor: "#FAF5FB",
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderWidth: 1.2,
-    borderColor: "#EBD8EA",
-    marginBottom: 16,
-  },
-  previewNoticeBannerText: {
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 18,
-    textAlign: "center",
-  },
-  previewReconnectedBadge: {
-    backgroundColor: "#F4ECF5",
-    borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 4.5,
-    borderWidth: 1,
-    borderColor: "#E2D3E4",
-  },
-  previewReconnectedBadgeText: {
-    fontSize: 11.5,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-  previewCardNoticeWrap: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#F3EBF4",
-  },
-  previewCardNoticeText: {
-    fontSize: 11.5,
-    color: "#8E7E94",
-    fontStyle: "italic",
-    lineHeight: 16,
-  },
-  previewTakeawaySubtleIndicator: {
-    fontSize: 11.5,
-    color: "#6E416D",
-    fontWeight: "500",
-    marginTop: 3,
-  },
-
-  /* Empty states */
-  emptyContainer: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    marginTop: 12,
-    marginBottom: 20,
-    borderWidth: 1.2,
-    borderColor: "#EAE0EC",
-    gap: 8,
-  },
-
-  emptyTitle: {
-    fontSize: 16.5,
-    fontWeight: "700",
-    color: "#3D3040",
-    textAlign: "center",
-  },
-
-  emptySubtitle: {
-    fontSize: 13.5,
-    color: "#6D6072",
-    textAlign: "center",
-    lineHeight: 19,
-    maxWidth: 280,
-  },
-
-  emptyActionButton: {
-    marginTop: 12,
-    backgroundColor: "#F3EDF7",
-    borderColor: "#E0D0E2",
-    borderWidth: 1.2,
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  emptyActionText: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-
-  /* Loading */
-  loadingContainer: {
-    marginTop: 8,
-    gap: 12,
-  },
-
-  loadingText: {
-    fontSize: 14,
-    color: "#6D6072",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-
-  skeletonCard: {
-    backgroundColor: "#FFFFFF",
-    height: 94,
-    borderRadius: 18,
-    borderWidth: 1.2,
-    borderColor: "#EAE0EC",
-  },
-
-  /* Notices & Errors */
-  centeredNoticeCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 24,
-    alignItems: "center",
-    marginVertical: 16,
-    borderWidth: 1.2,
-    borderColor: "#EAE0EC",
-    gap: 6,
-  },
-
-  centeredNoticeTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#3D3040",
-  },
-
-  centeredNoticeText: {
-    fontSize: 13.5,
-    color: "#6D6072",
-    textAlign: "center",
-  },
-
-  errorNoticeCard: {
-    backgroundColor: "#FFF5F7",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1.2,
-    borderColor: "#F0D5DA",
-  },
-
-  errorNoticeText: {
-    fontSize: 13,
-    color: "#8B2E42",
-    textAlign: "center",
-  },
-
-  /* Development section */
-  devSection: {
-    marginTop: 32,
-    borderWidth: 1.2,
-    borderColor: "#DCD0DF",
-    borderRadius: 16,
-    padding: 16,
-    backgroundColor: "#FAF5FB",
-  },
-
-  devHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-
-  devHeading: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#5B4D60",
-  },
-
-  devTag: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#6E416D",
-    backgroundColor: "#EBDDEE",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    letterSpacing: 0.5,
-  },
-
-  devDescription: {
-    fontSize: 12,
-    color: "#7E6F86",
-    lineHeight: 16,
-    marginBottom: 14,
-  },
-
-  devButtonsRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-
-  devButton: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.2,
-    borderColor: "#D8C9DB",
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  devButtonText: {
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: "#5B4D60",
-    textAlign: "center",
-  },
-
-  devStatusText: {
-    marginTop: 10,
-    fontSize: 12,
-    color: "#6E416D",
-    fontStyle: "italic",
-    textAlign: "center",
-  },
-
-  pressedState: {
-    opacity: 0.75,
-  },
-});
+const createStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.pageBackground,
+    },
+
+    scrollContent: {
+      flexGrow: 1,
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 110,
+      backgroundColor: theme.pageBackground,
+    },
+
+    mainColumn: {
+      width: "100%",
+      maxWidth: 520,
+      alignSelf: "center",
+    },
+
+    /* Header */
+    header: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: 12,
+      marginBottom: 16,
+    },
+
+    headerTextWrap: {
+      flex: 1,
+    },
+
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.4,
+    },
+
+    subtitle: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      fontStyle: "italic",
+      marginTop: 4,
+      lineHeight: 18,
+    },
+
+    recordHeaderButton: {
+      backgroundColor: theme.secondarySurface,
+      borderColor: theme.border,
+      borderWidth: 1.2,
+      borderRadius: 18,
+      paddingVertical: 8,
+      paddingHorizontal: 13,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 2,
+    },
+
+    recordHeaderBtnCouply: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 12,
+    },
+
+    recordHeaderBtnCouplyText: {
+      fontSize: 12.5,
+      fontWeight: "600",
+    },
+
+    recordHeaderButtonText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: theme.primaryAccent,
+    },
+
+    /* Mine mode navigation */
+    mineNavRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 18,
+    },
+
+    viewAllButton: {
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      borderRadius: 12,
+      backgroundColor: theme.secondarySurface,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+
+    viewAllButtonText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: theme.primaryAccent,
+    },
+
+    /* Segmented control */
+    segmentedFilterContainer: {
+      flexDirection: "row",
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 14,
+      padding: 4,
+      marginBottom: 20,
+    },
+
+    segmentButton: {
+      flex: 1,
+      paddingVertical: 9,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    segmentButtonActive: {
+      backgroundColor: theme.surface,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+
+    segmentButtonText: {
+      fontSize: 13.5,
+      fontWeight: "600",
+      color: theme.secondaryText,
+    },
+
+    segmentButtonTextActive: {
+      fontWeight: "700",
+      color: theme.primaryText,
+    },
+
+    /* Ours mode status filter chips */
+    oursFilterSection: {
+      marginBottom: 16,
+      gap: 8,
+    },
+
+    oursFilterRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+
+    clearFilterButton: {
+      alignSelf: "flex-start",
+      paddingVertical: 4,
+      paddingHorizontal: 2,
+    },
+
+    clearFilterButtonText: {
+      fontSize: 12.5,
+      fontWeight: "600",
+      color: theme.primaryAccent,
+    },
+
+    oursFilterChip: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 16,
+      backgroundColor: theme.secondarySurface,
+      borderWidth: 1,
+      borderColor: theme.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    oursFilterChipActive: {
+      backgroundColor: theme.primaryAccent,
+      borderColor: theme.primaryAccent,
+    },
+
+    oursFilterChipText: {
+      fontSize: 12.5,
+      fontWeight: "600",
+      color: theme.secondaryText,
+    },
+
+    oursFilterChipTextActive: {
+      color: theme.primaryActionText,
+      fontWeight: "600",
+    },
+
+    /* Cards */
+    card: {
+      backgroundColor: theme.surface,
+      borderRadius: 18,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.03,
+      shadowRadius: 4,
+      elevation: 1,
+    },
+
+    positiveCard: {
+      backgroundColor: theme.blushSurface,
+      borderColor: theme.border,
+    },
+
+    cardPressed: {
+      opacity: 0.88,
+      backgroundColor: theme.secondarySurface,
+    },
+
+    cardHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+
+    cardHeaderLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      gap: 12,
+    },
+
+    iconBadge: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    positiveIconBadge: {
+      backgroundColor: theme.blushSurface,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+
+    frictionIconBadge: {
+      backgroundColor: theme.secondarySurface,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+
+    iconSymbol: {
+      fontSize: 16,
+      color: theme.primaryAccent,
+    },
+
+    positiveIconSymbol: {
+      color: theme.status.celebration.text,
+    },
+
+    categoryWrap: {
+      flex: 1,
+    },
+
+    categoryTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.2,
+    },
+
+    attributionText: {
+      fontSize: 12.5,
+      color: theme.mutedText,
+      marginTop: 2,
+    },
+
+    cardHeaderRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+
+    dateText: {
+      fontSize: 12.5,
+      color: theme.mutedText,
+      fontWeight: "500",
+    },
+
+    chevron: {
+      fontSize: 18,
+      color: theme.iconMuted,
+      fontWeight: "600",
+      marginTop: -2,
+    },
+
+    cardFooterRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 14,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: theme.borderSoft,
+    },
+
+    positiveCardFooterRow: {
+      borderTopColor: theme.borderSoft,
+    },
+
+    privacyBadge: {
+      borderRadius: 10,
+      paddingHorizontal: 9,
+      paddingVertical: 4.5,
+      borderWidth: 1,
+    },
+
+    minePrivacyBadge: {
+      backgroundColor: theme.secondarySurface,
+      borderColor: theme.border,
+    },
+
+    minePositivePrivacyBadge: {
+      backgroundColor: theme.blushSurface,
+      borderColor: theme.border,
+    },
+
+    oursPrivacyBadge: {
+      backgroundColor: theme.blushSurface,
+      borderColor: theme.border,
+    },
+
+    oursPositivePrivacyBadge: {
+      backgroundColor: theme.status.celebration.bg,
+      borderColor: theme.status.celebration.border,
+    },
+
+    privacyBadgeText: {
+      fontSize: 11.5,
+      fontWeight: "600",
+    },
+
+    minePrivacyText: {
+      color: theme.primaryText,
+    },
+
+    minePositivePrivacyText: {
+      color: theme.status.celebration.text,
+    },
+
+    oursPrivacyText: {
+      color: theme.primaryAccent,
+    },
+
+    oursPositivePrivacyText: {
+      color: theme.status.celebration.text,
+    },
+
+    statusBadge: {
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 10,
+      paddingHorizontal: 9,
+      paddingVertical: 4.5,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+
+    statusBadgeText: {
+      fontSize: 11.5,
+      fontWeight: "600",
+      color: theme.secondaryText,
+    },
+
+    positiveBadge: {
+      backgroundColor: theme.status.celebration.bg,
+      borderRadius: 10,
+      paddingHorizontal: 9,
+      paddingVertical: 4.5,
+      borderWidth: 1,
+      borderColor: theme.status.celebration.border,
+    },
+
+    positiveBadgeText: {
+      fontSize: 11.5,
+      fontWeight: "600",
+      color: theme.status.celebration.text,
+    },
+
+    /* Preview Reconnected treatment */
+    previewNoticeBanner: {
+      backgroundColor: theme.status.preview.bg,
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderWidth: 1.2,
+      borderColor: theme.status.preview.border,
+      marginBottom: 16,
+    },
+    previewNoticeBannerText: {
+      fontSize: 12.5,
+      color: theme.status.preview.text,
+      lineHeight: 18,
+      textAlign: "center",
+    },
+    previewReconnectedBadge: {
+      backgroundColor: theme.status.preview.bg,
+      borderRadius: 10,
+      paddingHorizontal: 9,
+      paddingVertical: 4.5,
+      borderWidth: 1,
+      borderColor: theme.status.preview.border,
+    },
+    previewReconnectedBadgeText: {
+      fontSize: 11.5,
+      fontWeight: "600",
+      color: theme.status.preview.text,
+    },
+    previewCardNoticeWrap: {
+      marginTop: 8,
+      paddingTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: theme.borderSoft,
+    },
+    previewCardNoticeText: {
+      fontSize: 11.5,
+      color: theme.mutedText,
+      fontStyle: "italic",
+      lineHeight: 16,
+    },
+    previewTakeawaySubtleIndicator: {
+      fontSize: 11.5,
+      color: theme.primaryAccent,
+      fontWeight: "500",
+      marginTop: 3,
+    },
+
+    /* Empty states */
+    emptyContainer: {
+      backgroundColor: theme.surface,
+      borderRadius: 20,
+      paddingVertical: 32,
+      paddingHorizontal: 20,
+      alignItems: "center",
+      marginTop: 12,
+      marginBottom: 20,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      gap: 8,
+    },
+
+    emptyTitle: {
+      fontSize: 16.5,
+      fontWeight: "700",
+      color: theme.primaryText,
+      textAlign: "center",
+    },
+
+    emptySubtitle: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      textAlign: "center",
+      lineHeight: 19,
+      maxWidth: 280,
+    },
+
+    emptyActionButton: {
+      marginTop: 12,
+      backgroundColor: theme.secondarySurface,
+      borderColor: theme.border,
+      borderWidth: 1.2,
+      borderRadius: 20,
+      paddingVertical: 10,
+      paddingHorizontal: 22,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    emptyActionText: {
+      fontSize: 13.5,
+      fontWeight: "600",
+      color: theme.primaryAccent,
+    },
+
+    /* Loading */
+    loadingContainer: {
+      marginTop: 8,
+      gap: 12,
+    },
+
+    loadingText: {
+      fontSize: 14,
+      color: theme.secondaryText,
+      textAlign: "center",
+      marginBottom: 4,
+    },
+
+    skeletonCard: {
+      backgroundColor: theme.surface,
+      height: 94,
+      borderRadius: 18,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+    },
+
+    /* Notices & Errors */
+    centeredNoticeCard: {
+      backgroundColor: theme.surface,
+      borderRadius: 18,
+      padding: 24,
+      alignItems: "center",
+      marginVertical: 16,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      gap: 6,
+    },
+
+    centeredNoticeTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: theme.primaryText,
+    },
+
+    centeredNoticeText: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      textAlign: "center",
+    },
+
+    errorNoticeCard: {
+      backgroundColor: theme.status.error.bg,
+      borderRadius: 14,
+      padding: 14,
+      marginBottom: 16,
+      borderWidth: 1.2,
+      borderColor: theme.status.error.border,
+    },
+
+    errorNoticeText: {
+      fontSize: 13,
+      color: theme.status.error.text,
+      textAlign: "center",
+    },
+
+    /* Development section */
+    devSection: {
+      marginTop: 32,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      borderRadius: 16,
+      padding: 16,
+      backgroundColor: theme.secondarySurface,
+    },
+
+    devHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 6,
+    },
+
+    devHeading: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: theme.primaryText,
+    },
+
+    devTag: {
+      fontSize: 10,
+      fontWeight: "800",
+      color: theme.primaryAccent,
+      backgroundColor: theme.badgeBackground,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+      letterSpacing: 0.5,
+    },
+
+    devDescription: {
+      fontSize: 12,
+      color: theme.secondaryText,
+      lineHeight: 16,
+      marginBottom: 14,
+    },
+
+    devButtonsRow: {
+      flexDirection: "row",
+      gap: 10,
+    },
+
+    devButton: {
+      flex: 1,
+      backgroundColor: theme.surface,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    devButtonText: {
+      fontSize: 12.5,
+      fontWeight: "600",
+      color: theme.secondaryText,
+      textAlign: "center",
+    },
+
+    devStatusText: {
+      marginTop: 10,
+      fontSize: 12,
+      color: theme.primaryAccent,
+      fontStyle: "italic",
+      textAlign: "center",
+    },
+
+    pressedState: {
+      opacity: 0.75,
+    },
+  });

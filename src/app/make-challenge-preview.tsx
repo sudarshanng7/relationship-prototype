@@ -5,11 +5,12 @@ import {
   CouplyQuietButton,
   CouplySectionCard,
 } from "@/components/CouplyUI";
-import { tokens } from "@/components/couply-tokens";
+import { getThemedTokens, tokens } from "@/components/couply-tokens";
+import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useChallengePreview } from "@/context/ChallengePreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -71,6 +72,8 @@ const REWARD_OPTIONS = [
 
 export default function MakeChallengePreviewScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { displayName, partnerName, partnerRef } = useUserIdentity();
   const { activeInvitation, shareInvitation, clearInvitation } =
     useChallengePreview();
@@ -298,7 +301,7 @@ export default function MakeChallengePreviewScreen() {
                         false: tokens.colors.border,
                         true: tokens.colors.plum,
                       }}
-                      thumbColor="#FFFFFF"
+                      thumbColor={theme.primaryActionText}
                       accessibilityRole="switch"
                       accessibilityLabel="Include your lighter thought"
                       accessibilityState={{ checked: shareLighterThought }}
@@ -729,7 +732,9 @@ export default function MakeChallengePreviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => {
+  const tokens = getThemedTokens(theme);
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: tokens.colors.pageBackground,
@@ -791,7 +796,7 @@ const styles = StyleSheet.create({
   reframeBannerBadgeText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: theme.primaryActionText,
     letterSpacing: 0.5,
   },
   reframeBannerBody: {
@@ -1142,3 +1147,4 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
 });
+};

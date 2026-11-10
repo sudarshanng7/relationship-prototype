@@ -5,10 +5,11 @@ import {
   CouplyQuietButton,
   CouplySectionCard,
 } from "@/components/CouplyUI";
-import { tokens } from "@/components/couply-tokens";
+import { getThemedTokens, tokens } from "@/components/couply-tokens";
+import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -130,6 +131,8 @@ const CUSTOM_REFRAMES: Record<
 
 export default function PlayfulReframeScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { partnerName } = useUserIdentity();
 
   const [selectedSampleKey, setSelectedSampleKey] =
@@ -473,7 +476,7 @@ export default function PlayfulReframeScreen() {
                       false: tokens.colors.border,
                       true: tokens.colors.plum,
                     }}
-                    thumbColor="#FFFFFF"
+                    thumbColor={theme.primaryActionText}
                     accessibilityRole="switch"
                     accessibilityLabel={
                       shareLighterThought
@@ -507,7 +510,9 @@ export default function PlayfulReframeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => {
+  const tokens = getThemedTokens(theme);
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: tokens.colors.pageBackground,
@@ -847,3 +852,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
+};

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -16,6 +16,7 @@ import {
   CouplyQuietButton,
   CouplySectionCard,
 } from "@/components/CouplyUI";
+import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 
@@ -49,6 +50,8 @@ const frictionCategories = [
 
 export default function RecordMomentScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const params = useLocalSearchParams<{
     type?: string;
     visibility?: "mine" | "ours" | string;
@@ -419,7 +422,7 @@ export default function RecordMomentScreen() {
                   ? "What happened? What are you feeling?"
                   : "What happened? How did you feel?"
               }
-              placeholderTextColor="#9A8D9D"
+              placeholderTextColor={theme.mutedText}
               multiline
               editable={!saving}
               accessibilityLabel={
@@ -517,7 +520,7 @@ export default function RecordMomentScreen() {
                 value={sharedTopic}
                 onChangeText={setSharedTopic}
                 placeholder="What would you like your partner to know?"
-                placeholderTextColor="#9A8D9D"
+                placeholderTextColor={theme.mutedText}
                 multiline
                 editable={!saving}
                 accessibilityLabel="Shared note, visible in Our Space"
@@ -602,373 +605,374 @@ export default function RecordMomentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FBF7FC",
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 60,
-  },
-  column: {
-    width: "100%",
-    maxWidth: 520,
-    alignSelf: "center",
-    gap: 22,
-  },
-  headerCouply: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 4,
-  },
-  topNavRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: -8,
-  },
-  backButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    alignSelf: "flex-start",
-  },
-  backButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-  headerBlock: {
-    gap: 4,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: 14.5,
-    color: "#6D6072",
-    lineHeight: 20,
-  },
-  sectionBlock: {
-    gap: 10,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.2,
-  },
-  sectionSubtitle: {
-    fontSize: 13.5,
-    color: "#6D6072",
-    lineHeight: 18,
-    marginTop: -4,
-  },
-  typeCardsRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  typeCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1.5,
-    borderColor: "#E8DCE9",
-    minHeight: 110,
-    justifyContent: "flex-start",
-  },
-  typeCardSelected: {
-    borderColor: "#6E416D",
-    backgroundColor: "#FBEFF7",
-  },
-  typeIconBubble: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F1EDF7",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  typeIconBubbleSelected: {
-    backgroundColor: "#F4E0EF",
-  },
-  typeIcon: {
-    fontSize: 16,
-  },
-  typeCardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#3D3040",
-    marginBottom: 4,
-  },
-  typeCardTitleSelected: {
-    color: "#6E416D",
-  },
-  typeCardSubtitle: {
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 16,
-  },
-  categoriesWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  categoryChip: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    borderRadius: 20,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-  },
-  categoryChipSelected: {
-    backgroundColor: "#F1E8F3",
-    borderColor: "#6E416D",
-  },
-  categoryChipText: {
-    fontSize: 13.5,
-    fontWeight: "500",
-    color: "#3D3040",
-  },
-  categoryChipTextSelected: {
-    fontWeight: "600",
-    color: "#6E416D",
-  },
-  intensityCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    gap: 12,
-  },
-  intensityRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 8,
-  },
-  intensityButton: {
-    flex: 1,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#FBF7FC",
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  intensityButtonSelected: {
-    backgroundColor: "#6E416D",
-    borderColor: "#6E416D",
-  },
-  intensityButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#3D3040",
-  },
-  intensityButtonTextSelected: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-  },
-  intensityLabelsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 4,
-  },
-  intensityLabelText: {
-    fontSize: 12.5,
-    color: "#6D6072",
-    fontWeight: "500",
-  },
-  textInput: {
-    minHeight: 110,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1.2,
-    borderColor: "#E8DCE9",
-    padding: 14,
-    fontSize: 14.5,
-    color: "#3D3040",
-    lineHeight: 21,
-    textAlignVertical: "top",
-  },
-  sharedTopicInput: {
-    minHeight: 90,
-  },
-  visibilityCardsRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  visibilityCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1.5,
-    borderColor: "#E8DCE9",
-    minHeight: 96,
-    justifyContent: "flex-start",
-  },
-  visibilityCardMineSelected: {
-    borderColor: "#6E416D",
-    backgroundColor: "#F1EDF7",
-  },
-  visibilityCardOursSelected: {
-    borderColor: "#6E416D",
-    backgroundColor: "#FBEFF7",
-  },
-  visibilityCardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#3D3040",
-    marginBottom: 4,
-  },
-  visibilityCardTitleSelected: {
-    color: "#6E416D",
-  },
-  visibilityCardSubtitle: {
-    fontSize: 12.5,
-    color: "#6D6072",
-    lineHeight: 16,
-  },
-  saveButtonWrap: {
-    marginTop: 8,
-  },
-  saveButton: {
-    backgroundColor: "#6E416D",
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 48,
-    shadowColor: "#39203B",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  saveButtonDisabled: {
-    opacity: 0.65,
-  },
-  saveButtonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "600",
-    letterSpacing: 0.2,
-  },
-  statusCard: {
-    backgroundColor: "#F7EEF7",
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "center",
-  },
-  statusText: {
-    fontSize: 13.5,
-    color: "#6E416D",
-    fontWeight: "500",
-    textAlign: "center",
-  },
-  privacyMessageBlock: {
-    backgroundColor: "#F7EEF7",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-  },
-  privacyMessageText: {
-    fontSize: 13.5,
-    color: "#6E416D",
-    lineHeight: 18,
-    fontWeight: "500",
-  },
-  sharedContextBlock: {
-    backgroundColor: "#F7EEF7",
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    gap: 4,
-  },
-  sharedContextHeading: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#3D3040",
-  },
-  sharedContextText: {
-    fontSize: 13,
-    color: "#6D6072",
-    lineHeight: 18,
-  },
-  reviewCard: {
-    gap: 12,
-  },
-  reviewHeading: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#3D3040",
-    letterSpacing: -0.2,
-  },
-  reviewBody: {
-    fontSize: 14,
-    color: "#6D6072",
-    lineHeight: 20,
-  },
-  reviewSummaryBox: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-    padding: 14,
-    gap: 10,
-    marginTop: 4,
-  },
-  reviewSummaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  reviewSummaryLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#7E6E82",
-  },
-  reviewSummaryValue: {
-    fontSize: 13.5,
-    fontWeight: "600",
-    color: "#3D3040",
-  },
-  reviewSummaryTopicRow: {
-    gap: 4,
-    borderTopWidth: 1,
-    borderTopColor: "#F2E8F4",
-    paddingTop: 8,
-  },
-  reviewSummaryValueText: {
-    fontSize: 13.5,
-    color: "#3D3040",
-    lineHeight: 19,
-  },
-  reviewPrivacyReminder: {
-    fontSize: 12.5,
-    color: "#7E6E82",
-    lineHeight: 17,
-  },
-  reviewActionsCol: {
-    gap: 8,
-    marginTop: 6,
-  },
-  reviewKeepEditingBtn: {
-    alignSelf: "stretch",
-  },
-});
+const createStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.pageBackground,
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 60,
+    },
+    column: {
+      width: "100%",
+      maxWidth: 520,
+      alignSelf: "center",
+      gap: 22,
+    },
+    headerCouply: {
+      paddingHorizontal: 0,
+      paddingTop: 0,
+      paddingBottom: 4,
+    },
+    topNavRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: -8,
+    },
+    backButton: {
+      paddingVertical: 6,
+      paddingHorizontal: 4,
+      alignSelf: "flex-start",
+    },
+    backButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: theme.primaryAccent,
+    },
+    headerBlock: {
+      gap: 4,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.3,
+    },
+    subtitle: {
+      fontSize: 14.5,
+      color: theme.secondaryText,
+      lineHeight: 20,
+    },
+    sectionBlock: {
+      gap: 10,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.2,
+    },
+    sectionSubtitle: {
+      fontSize: 13.5,
+      color: theme.secondaryText,
+      lineHeight: 18,
+      marginTop: -4,
+    },
+    typeCardsRow: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    typeCard: {
+      flex: 1,
+      backgroundColor: theme.surface,
+      borderRadius: 18,
+      padding: 14,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      minHeight: 110,
+      justifyContent: "flex-start",
+    },
+    typeCardSelected: {
+      borderColor: theme.primaryAccent,
+      backgroundColor: theme.selectedNavigation,
+    },
+    typeIconBubble: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme.secondarySurface,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 8,
+    },
+    typeIconBubbleSelected: {
+      backgroundColor: theme.badgeBackground,
+    },
+    typeIcon: {
+      fontSize: 16,
+    },
+    typeCardTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: theme.primaryText,
+      marginBottom: 4,
+    },
+    typeCardTitleSelected: {
+      color: theme.primaryAccent,
+    },
+    typeCardSubtitle: {
+      fontSize: 12.5,
+      color: theme.secondaryText,
+      lineHeight: 16,
+    },
+    categoriesWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    categoryChip: {
+      backgroundColor: theme.surface,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      borderRadius: 20,
+      paddingVertical: 9,
+      paddingHorizontal: 14,
+    },
+    categoryChipSelected: {
+      backgroundColor: theme.secondarySurface,
+      borderColor: theme.primaryAccent,
+    },
+    categoryChipText: {
+      fontSize: 13.5,
+      fontWeight: "500",
+      color: theme.primaryText,
+    },
+    categoryChipTextSelected: {
+      fontWeight: "600",
+      color: theme.primaryAccent,
+    },
+    intensityCard: {
+      backgroundColor: theme.surface,
+      borderRadius: 18,
+      padding: 16,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      gap: 12,
+    },
+    intensityRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 8,
+    },
+    intensityButton: {
+      flex: 1,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.secondarySurface,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    intensityButtonSelected: {
+      backgroundColor: theme.primaryAccent,
+      borderColor: theme.primaryAccent,
+    },
+    intensityButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: theme.primaryText,
+    },
+    intensityButtonTextSelected: {
+      color: theme.primaryActionText,
+      fontWeight: "700",
+    },
+    intensityLabelsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 4,
+    },
+    intensityLabelText: {
+      fontSize: 12.5,
+      color: theme.secondaryText,
+      fontWeight: "500",
+    },
+    textInput: {
+      minHeight: 110,
+      backgroundColor: theme.surface,
+      borderRadius: 16,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      padding: 14,
+      fontSize: 14.5,
+      color: theme.primaryText,
+      lineHeight: 21,
+      textAlignVertical: "top",
+    },
+    sharedTopicInput: {
+      minHeight: 90,
+    },
+    visibilityCardsRow: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    visibilityCard: {
+      flex: 1,
+      backgroundColor: theme.surface,
+      borderRadius: 18,
+      padding: 14,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      minHeight: 96,
+      justifyContent: "flex-start",
+    },
+    visibilityCardMineSelected: {
+      borderColor: theme.primaryAccent,
+      backgroundColor: theme.secondarySurface,
+    },
+    visibilityCardOursSelected: {
+      borderColor: theme.primaryAccent,
+      backgroundColor: theme.blushSurface,
+    },
+    visibilityCardTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: theme.primaryText,
+      marginBottom: 4,
+    },
+    visibilityCardTitleSelected: {
+      color: theme.primaryAccent,
+    },
+    visibilityCardSubtitle: {
+      fontSize: 12.5,
+      color: theme.secondaryText,
+      lineHeight: 16,
+    },
+    saveButtonWrap: {
+      marginTop: 8,
+    },
+    saveButton: {
+      backgroundColor: theme.primaryAccent,
+      borderRadius: 16,
+      paddingVertical: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 48,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+      elevation: 3,
+    },
+    saveButtonDisabled: {
+      opacity: 0.65,
+    },
+    saveButtonText: {
+      color: theme.primaryActionText,
+      fontSize: 15,
+      fontWeight: "600",
+      letterSpacing: 0.2,
+    },
+    statusCard: {
+      backgroundColor: theme.secondarySurface,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 12,
+      padding: 12,
+      alignItems: "center",
+    },
+    statusText: {
+      fontSize: 13.5,
+      color: theme.primaryAccent,
+      fontWeight: "500",
+      textAlign: "center",
+    },
+    privacyMessageBlock: {
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    privacyMessageText: {
+      fontSize: 13.5,
+      color: theme.primaryAccent,
+      lineHeight: 18,
+      fontWeight: "500",
+    },
+    sharedContextBlock: {
+      backgroundColor: theme.secondarySurface,
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderWidth: 1,
+      borderColor: theme.border,
+      gap: 4,
+    },
+    sharedContextHeading: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: theme.primaryText,
+    },
+    sharedContextText: {
+      fontSize: 13,
+      color: theme.secondaryText,
+      lineHeight: 18,
+    },
+    reviewCard: {
+      gap: 12,
+    },
+    reviewHeading: {
+      fontSize: 17,
+      fontWeight: "700",
+      color: theme.primaryText,
+      letterSpacing: -0.2,
+    },
+    reviewBody: {
+      fontSize: 14,
+      color: theme.secondaryText,
+      lineHeight: 20,
+    },
+    reviewSummaryBox: {
+      backgroundColor: theme.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 14,
+      gap: 10,
+      marginTop: 4,
+    },
+    reviewSummaryRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    reviewSummaryLabel: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: theme.mutedText,
+    },
+    reviewSummaryValue: {
+      fontSize: 13.5,
+      fontWeight: "600",
+      color: theme.primaryText,
+    },
+    reviewSummaryTopicRow: {
+      gap: 4,
+      borderTopWidth: 1,
+      borderTopColor: theme.borderSoft,
+      paddingTop: 8,
+    },
+    reviewSummaryValueText: {
+      fontSize: 13.5,
+      color: theme.primaryText,
+      lineHeight: 19,
+    },
+    reviewPrivacyReminder: {
+      fontSize: 12.5,
+      color: theme.mutedText,
+      lineHeight: 17,
+    },
+    reviewActionsCol: {
+      gap: 8,
+      marginTop: 6,
+    },
+    reviewKeepEditingBtn: {
+      alignSelf: "stretch",
+    },
+  });
