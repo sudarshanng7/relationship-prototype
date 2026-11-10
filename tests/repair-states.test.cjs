@@ -143,10 +143,11 @@ function harness(db, visibility = "ours") {
     },
   };
   const jsx = (type, props) => ({ type, props });
-  const { EventRepairSection } = loadSource("src/components/EventRepairSection.tsx", {
+  const imports = {
     "@/lib/repair-states": db.lib,
     "@/lib/supabase": { supabase: db.supabase },
     react,
+    "react-native-safe-area-context": { SafeAreaView: "SafeAreaView" },
     "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "Fragment" },
     "react-native": {
       ActivityIndicator: "ActivityIndicator", Pressable: "Pressable",
@@ -158,14 +159,21 @@ function harness(db, visibility = "ours") {
         effects.push(() => { focusCleanup?.(); focusCleanup = effect(); });
       }, [effect]);
     } },
-  });
+  };
+  imports["@/components/couply-tokens"] = loadSource("src/components/couply-tokens.ts", {});
+  imports["@/components/CouplyUI"] = loadSource("src/components/CouplyUI.tsx", imports);
+  const { EventRepairSection } = loadSource("src/components/EventRepairSection.tsx", imports);
   const props = {
     eventId: "event-a", userId: "user-a", visibility,
     authorize: () => state.authorize(), isCurrent: () => state.current,
   };
+  const resolve = (node) => !node || typeof node !== "object" ? node
+    : Array.isArray(node) ? node.map(resolve)
+    : typeof node.type === "function" ? resolve(node.type(node.props))
+    : { ...node, props: { ...node.props, children: resolve(node.props?.children) } };
   state.render = () => {
     cursor = 0;
-    tree = EventRepairSection(props);
+    tree = resolve(EventRepairSection(props));
     while (effects.length) effects.shift()();
   };
   state.flush = async () => {

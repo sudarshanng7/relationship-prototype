@@ -6,6 +6,8 @@
  * Never read or write relationship_events.status, repair_method or reconnected_at.
  * Database RLS controls which partner reports this caller can read.
  */
+import { CouplySectionCard, CouplyStatusPill } from "@/components/CouplyUI";
+import { tokens } from "@/components/couply-tokens";
 import {
   isRepairSaveConflict,
   isRepairSharingRejection,
@@ -617,23 +619,24 @@ export function EventRepairSection({
   }
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.title}>Your repair update</Text>
+    <CouplySectionCard style={styles.section}>
+      <Text accessibilityRole="header" style={styles.title}>Your repair update</Text>
       <Text style={styles.helper}>
         Your experience belongs to you. Choose to save privately or explicitly
         share your update with your partner.
       </Text>
 
       {loading ? (
-        <View style={styles.loadingRow}>
-          <ActivityIndicator size="small" color="#6E416D" />
-          <Text style={styles.helper}>Loading personal updates…</Text>
-        </View>
+        <CouplySectionCard variant="muted" style={styles.loadingRow}>
+          <ActivityIndicator size="small" color={tokens.colors.plum} />
+          <Text accessibilityLiveRegion="polite" style={styles.helper}>Loading personal updates…</Text>
+        </CouplySectionCard>
       ) : error && !mine && draftStatus === null ? (
         <Pressable
           onPress={() => void refresh()}
           style={styles.outlineButton}
           accessibilityRole="button"
+          accessibilityLabel="Could not load updates. Tap to retry."
         >
           <Text style={styles.buttonLabel}>
             Could not load updates. Tap to retry.
@@ -642,7 +645,7 @@ export function EventRepairSection({
       ) : (
         <>
           {mine ? (
-            <View style={styles.summary}>
+            <CouplySectionCard variant="lilac" style={styles.summary}>
               <Text style={styles.summaryTitle}>
                 {mine.status_origin === "legacy_default_unconfirmed"
                   ? `Imported status: ${IMPORTED_STATUS_LABELS[mine.repair_status]} — not confirmed by you`
@@ -650,13 +653,14 @@ export function EventRepairSection({
                     ? `Earlier report: ${statusLabel(mine.repair_status)}`
                     : `${reloadRequired ? "Last loaded for you" : "Saved for you"}: ${statusLabel(mine.repair_status)}`}
               </Text>
-              <Text style={styles.summarySecondary}>
-                {sharingUnverified
+              <CouplyStatusPill
+                label={sharingUnverified
                   ? "Sharing status needs verification"
                   : mine.sharing_status === "shared"
                   ? "Shared with your partner"
                   : "Private — not shared"}
-              </Text>
+                style={styles.sharingBadge}
+              />
               {mine.what_helped && mine.status_origin !== "legacy_default_unconfirmed" && (
                 <Text style={styles.summarySecondary}>
                   {mine.status_origin === "legacy_creator_report" ? "What helped in that report" : "What helped"}: {methodLabel(mine.what_helped)}
@@ -674,7 +678,7 @@ export function EventRepairSection({
                   you feel now before saving a current update.
                 </Text>
               )}
-            </View>
+            </CouplySectionCard>
           ) : (
             <Text style={styles.helper}>
               {sharingUnverified
@@ -685,12 +689,13 @@ export function EventRepairSection({
             </Text>
           )}
 
-          <Text style={styles.subheading}>How does this feel now?</Text>
-          <View style={styles.choices}>
+          <Text accessibilityRole="header" style={styles.subheading}>How does this feel now?</Text>
+          <View style={styles.choices} accessibilityRole="radiogroup" accessibilityLabel="How does this feel now?">
             {STATUSES.map((item) => (
               <Pressable
                 key={item.value}
                 accessibilityRole="radio"
+                accessibilityLabel={item.label}
                 accessibilityState={{
                   checked: draftStatus === item.value,
                   disabled: busy,
@@ -699,6 +704,7 @@ export function EventRepairSection({
                 style={[
                   styles.choice,
                   draftStatus === item.value && styles.selected,
+                  busy && styles.disabled,
                 ]}
                 onPress={() => {
                   setDraftStatus(item.value);
@@ -720,12 +726,13 @@ export function EventRepairSection({
 
           {draftStatus !== null && draftStatus !== "open" && (
             <>
-              <Text style={styles.subheading}>What helped? (optional)</Text>
-              <View style={styles.choices}>
+              <Text accessibilityRole="header" style={styles.subheading}>What helped? (optional)</Text>
+              <View style={styles.choices} accessibilityRole="radiogroup" accessibilityLabel="What helped? (optional)">
                 {METHODS.map((item) => (
                   <Pressable
                     key={item.value ?? "none"}
                     accessibilityRole="radio"
+                    accessibilityLabel={item.label}
                     accessibilityState={{
                       checked: draftMethod === item.value,
                       disabled: busy,
@@ -734,6 +741,7 @@ export function EventRepairSection({
                     style={[
                       styles.choice,
                       draftMethod === item.value && styles.selected,
+                      busy && styles.disabled,
                     ]}
                     onPress={() => {
                       setDraftMethod(item.value);
@@ -767,6 +775,7 @@ export function EventRepairSection({
             <Pressable
               style={[styles.primaryButton, (busy || !canSave) && styles.disabled]}
               accessibilityRole="button"
+              accessibilityLabel="Save privately"
               accessibilityState={{ disabled: busy || !canSave }}
               disabled={busy || !canSave}
               onPress={() => void savePrivately()}
@@ -782,6 +791,8 @@ export function EventRepairSection({
               <Pressable
                 style={[styles.outlineButton, busy && styles.disabled]}
                 accessibilityRole="button"
+                accessibilityLabel={canSave ? "Save & share with partner" : "Share saved update"}
+                accessibilityState={{ disabled: busy }}
                 disabled={busy}
                 onPress={() => setConfirmShare(true)}
               >
@@ -790,7 +801,7 @@ export function EventRepairSection({
                 </Text>
               </Pressable>
             ) : (
-              <View style={styles.confirm}>
+              <CouplySectionCard variant="muted" style={styles.confirm}>
                 <Text style={styles.helper}>
                   Share “{statusLabel(draftStatus!)}”
                   {currentMethod
@@ -806,6 +817,8 @@ export function EventRepairSection({
                 <Pressable
                   style={[styles.primaryButton, busy && styles.disabled]}
                   accessibilityRole="button"
+                  accessibilityLabel="Confirm save & share"
+                  accessibilityState={{ disabled: busy }}
                   disabled={busy}
                   onPress={() => void saveAndShare()}
                 >
@@ -816,17 +829,19 @@ export function EventRepairSection({
                 <Pressable
                   style={styles.outlineButton}
                   accessibilityRole="button"
+                  accessibilityLabel="Cancel sharing"
+                  accessibilityState={{ disabled: busy }}
                   disabled={busy}
                   onPress={() => setConfirmShare(false)}
                 >
                   <Text style={styles.buttonLabel}>Cancel</Text>
                 </Pressable>
-              </View>
+              </CouplySectionCard>
             ))}
 
           {!reloadRequired && visibility === "ours" && mine?.sharing_status === "shared" && (
             <View style={styles.shareSection}>
-              <Text style={styles.subheading}>Sharing your update</Text>
+              <Text accessibilityRole="header" style={styles.subheading}>Sharing your update</Text>
               <Text style={styles.helper}>
                 Your current saved update is visible to your partner.
               </Text>
@@ -834,13 +849,15 @@ export function EventRepairSection({
                 <Pressable
                   style={[styles.outlineButton, busy && styles.disabled]}
                   accessibilityRole="button"
+                  accessibilityLabel="Withdraw shared update"
+                  accessibilityState={{ disabled: busy }}
                   disabled={busy}
                   onPress={() => setConfirmWithdraw(true)}
                 >
                   <Text style={styles.buttonLabel}>Withdraw shared update</Text>
                 </Pressable>
               ) : (
-                <View style={styles.confirm}>
+                <CouplySectionCard variant="muted" style={styles.confirm}>
                   <Text style={styles.helper}>
                     Withdraw sharing? Your private record will remain, but your
                     partner will no longer be able to fetch it.
@@ -848,6 +865,8 @@ export function EventRepairSection({
                   <Pressable
                     style={[styles.primaryButton, busy && styles.disabled]}
                     accessibilityRole="button"
+                    accessibilityLabel="Confirm withdrawal"
+                    accessibilityState={{ disabled: busy }}
                     disabled={busy}
                     onPress={() => void withdraw()}
                   >
@@ -856,12 +875,14 @@ export function EventRepairSection({
                   <Pressable
                     style={styles.outlineButton}
                     accessibilityRole="button"
+                    accessibilityLabel="Cancel withdrawal"
+                    accessibilityState={{ disabled: busy }}
                     disabled={busy}
                     onPress={() => setConfirmWithdraw(false)}
                   >
                     <Text style={styles.buttonLabel}>Cancel</Text>
                   </Pressable>
-                </View>
+                </CouplySectionCard>
               )}
             </View>
           )}
@@ -869,10 +890,10 @@ export function EventRepairSection({
       )}
 
       {visibility === "ours" && !loading && !error && (
-        <View style={styles.partnerSection}>
-          <Text style={styles.subheading}>Your partner&apos;s shared update</Text>
+        <CouplySectionCard variant="blush" style={styles.partnerSection}>
+          <Text accessibilityRole="header" style={styles.partnerTitle}>Your partner&apos;s shared update</Text>
           {partner ? (
-            <View style={styles.summary}>
+            <CouplySectionCard style={styles.summary}>
               <Text style={styles.summaryTitle}>
                 {statusLabel(partner.repair_status)}
               </Text>
@@ -885,24 +906,31 @@ export function EventRepairSection({
                 This is your partner&apos;s reported experience, not a joint
                 conclusion.
               </Text>
-            </View>
+            </CouplySectionCard>
           ) : (
             <Text style={styles.helper}>
               No repair update has been shared with you.
             </Text>
           )}
-        </View>
+        </CouplySectionCard>
       )}
 
       {!!error && (
-        <Text style={styles.error} accessibilityRole="alert">
-          {error}
-        </Text>
+        <CouplySectionCard variant="muted" style={styles.feedback}>
+          <Text style={styles.error} accessibilityRole="alert">
+            {error}
+          </Text>
+        </CouplySectionCard>
       )}
-      {!!notice && <Text style={styles.notice}>{notice}</Text>}
+      {!!notice && (
+        <CouplySectionCard variant="muted" style={styles.feedback}>
+          <Text accessibilityLiveRegion="polite" style={styles.notice}>{notice}</Text>
+        </CouplySectionCard>
+      )}
       <Pressable
         style={styles.refreshButton}
         accessibilityRole="button"
+        accessibilityState={{ disabled: busy || loading }}
         onPress={() => void refresh()}
         disabled={busy || loading}
       >
@@ -914,99 +942,38 @@ export function EventRepairSection({
             : "Refresh updates"}
         </Text>
       </Pressable>
-    </View>
+    </CouplySectionCard>
   );
 }
 
 const styles = StyleSheet.create({
-  section: {
-    marginTop: 28,
-    padding: 18,
-    backgroundColor: "#FAF7FC",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-  },
-  title: { fontSize: 20, fontWeight: "700", color: "#3D3040" },
-  subheading: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginTop: 18,
-    marginBottom: 9,
-    color: "#3D3040",
-  },
-  helper: { fontSize: 13, lineHeight: 20, color: "#6D6072", marginTop: 7 },
-  choices: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  choice: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#D8C8DC",
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 11,
-    paddingVertical: 10,
-  },
-  selected: { backgroundColor: "#6E416D", borderColor: "#6E416D" },
-  choiceText: { fontSize: 13, color: "#6E416D", fontWeight: "600" },
-  selectedText: { color: "#FFFFFF" },
-  summary: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 13,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: "#E8DCE9",
-  },
-  summaryTitle: { fontSize: 15, fontWeight: "700", color: "#3D3040" },
-  summarySecondary: { fontSize: 13, color: "#6D6072", marginTop: 5 },
-  legacyNote: { fontSize: 13, marginTop: 9, color: "#8B4A34", lineHeight: 19 },
-  primaryButton: {
-    marginTop: 14,
-    backgroundColor: "#6E416D",
-    borderRadius: 11,
-    padding: 13,
-    alignItems: "center",
-  },
-  primaryLabel: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
-  outlineButton: {
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: "#6E416D",
-    padding: 12,
-    marginTop: 11,
-    alignItems: "center",
-  },
-  buttonLabel: {
-    color: "#6E416D",
-    fontWeight: "700",
-    fontSize: 14,
-    textAlign: "center",
-  },
+  section: { marginTop: tokens.spacing.xl },
+  title: { color: tokens.colors.text, fontSize: tokens.typeScale.sectionTitle, fontWeight: "700" },
+  subheading: { color: tokens.colors.text, fontSize: tokens.typeScale.bodyLarge, fontWeight: "700", marginTop: tokens.spacing.lg, marginBottom: tokens.spacing.sm },
+  helper: { color: tokens.colors.textSecondary, fontSize: tokens.typeScale.body, lineHeight: 20, marginTop: tokens.spacing.sm },
+  choices: { flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.sm },
+  choice: { minHeight: tokens.layout.minTouchTarget, maxWidth: "100%", flexShrink: 1, borderRadius: tokens.radii.small, borderWidth: 1, borderColor: tokens.colors.border, backgroundColor: tokens.colors.surface, paddingHorizontal: tokens.spacing.md, paddingVertical: tokens.spacing.sm, alignItems: "center", justifyContent: "center" },
+  selected: { backgroundColor: tokens.colors.plum, borderColor: tokens.colors.plum },
+  choiceText: { color: tokens.colors.plum, fontSize: tokens.typeScale.bodyLarge, fontWeight: "600", textAlign: "center" },
+  selectedText: { color: tokens.colors.surface },
+  summary: { marginTop: tokens.spacing.md },
+  summaryTitle: { color: tokens.colors.text, fontSize: tokens.typeScale.bodyLarge, fontWeight: "700", lineHeight: 22 },
+  summarySecondary: { color: tokens.colors.textSecondary, fontSize: tokens.typeScale.body, marginTop: tokens.spacing.sm, lineHeight: 20 },
+  sharingBadge: { marginTop: tokens.spacing.sm },
+  legacyNote: { color: tokens.colors.celebrationText, fontSize: tokens.typeScale.body, marginTop: tokens.spacing.sm, lineHeight: 20 },
+  primaryButton: { minHeight: tokens.layout.minTouchTarget, marginTop: tokens.spacing.md, backgroundColor: tokens.colors.plum, borderRadius: tokens.radii.small, padding: tokens.spacing.md, alignItems: "center", justifyContent: "center" },
+  primaryLabel: { color: tokens.colors.surface, fontSize: tokens.typeScale.bodyLarge, fontWeight: "700", textAlign: "center" },
+  outlineButton: { minHeight: tokens.layout.minTouchTarget, borderRadius: tokens.radii.small, borderWidth: 1, borderColor: tokens.colors.plum, padding: tokens.spacing.md, marginTop: tokens.spacing.md, alignItems: "center", justifyContent: "center" },
+  buttonLabel: { color: tokens.colors.plum, fontSize: tokens.typeScale.bodyLarge, fontWeight: "700", textAlign: "center" },
   disabled: { opacity: 0.55 },
-  shareSection: {
-    marginTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: "#E8DCE9",
-    paddingTop: 5,
-  },
-  partnerSection: {
-    marginTop: 19,
-    borderTopWidth: 1,
-    borderTopColor: "#E8DCE9",
-    paddingTop: 8,
-  },
-  confirm: { marginTop: 8 },
-  notice: { color: "#226F57", fontSize: 13, marginTop: 14 },
-  error: { color: "#A33C43", fontSize: 13, marginTop: 14 },
-  refreshButton: { alignSelf: "flex-start", marginTop: 12, padding: 6 },
-  refreshLabel: {
-    color: "#6E416D",
-    fontSize: 13,
-    textDecorationLine: "underline",
-  },
-  loadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 12,
-  },
+  shareSection: { marginTop: tokens.spacing.md, borderTopWidth: 1, borderTopColor: tokens.colors.borderSoft, paddingTop: tokens.spacing.xs },
+  partnerSection: { marginTop: tokens.spacing.xl },
+  partnerTitle: { color: tokens.colors.text, fontSize: tokens.typeScale.bodyLarge, fontWeight: "700" },
+  confirm: { marginTop: tokens.spacing.md },
+  feedback: { marginTop: tokens.spacing.md },
+  error: { color: tokens.colors.dangerText, fontSize: tokens.typeScale.body, lineHeight: 20 },
+  notice: { color: tokens.colors.plum, fontSize: tokens.typeScale.body, lineHeight: 20 },
+  refreshButton: { minHeight: tokens.layout.minTouchTarget, marginTop: tokens.spacing.md, paddingVertical: tokens.spacing.sm, paddingHorizontal: tokens.spacing.sm, alignItems: "center", justifyContent: "center" },
+  refreshLabel: { color: tokens.colors.plum, fontSize: tokens.typeScale.body, fontWeight: "600", textAlign: "center" },
+  loadingRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: tokens.spacing.sm, marginTop: tokens.spacing.md },
 });
