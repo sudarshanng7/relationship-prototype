@@ -12,8 +12,9 @@ import { useRepairPreview } from "@/context/RepairPreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
+  AppState,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -47,8 +48,24 @@ export default function EventsScreen() {
     useRepairPreview();
   const { partnerName, partnerRef } = useUserIdentity();
 
+  const reactInstanceId = useId();
+  const screenInstanceId = useMemo(
+    () => reactInstanceId.replace(/[^a-zA-Z0-9_-]/g, "") || "screen",
+    [reactInstanceId],
+  );
+
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [coupleId, setCoupleId] = useState<string | null>(null);
+
+  const mountedRef = useRef(true);
+  const coupleIdRef = useRef<string | null>(null);
+  coupleIdRef.current = coupleId;
+  const hasLoadedOnceRef = useRef(false);
+  const isFetchingEventsRef = useRef(false);
+  const pendingRefetchRef = useRef(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const subscriptionSeqRef = useRef(0);
 
   const [events, setEvents] = useState<RelationshipEvent[]>([]);
   const [status, setStatus] = useState("Loading...");
@@ -62,6 +79,13 @@ export default function EventsScreen() {
   const [hasFinishedInitialLoad, setHasFinishedInitialLoad] = useState(false);
   const { width: windowWidth } = useWindowDimensions();
   const isCompactScreen = windowWidth < 340;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const rawScope = Array.isArray(params.scope) ? params.scope[0] : params.scope;
@@ -98,70 +122,88 @@ export default function EventsScreen() {
     }
   }
 
-  useFocusEffect(
-    useCallback(() => {
-      loadPage();
-    }, []),
+  const loadEvents = useCallback(
+    async (currentCoupleId: string, silent = false): Promise<boolean> => {
+      if (isFetchingEventsRef.current) {
+        if (silent) {
+          pendingRefetchRef.current = true;
+        }
+        return true;
+      }
+
+      isFetchingEventsRef.current = true;
+
+      try {
+        const { data, error } = await supabase
+          .from("relationship_events")
+          .select(
+            `
+            id,
+            creator_id,
+            event_type,
+            category,
+            intensity,
+            visibility,
+            status,
+            created_at
+          `,
+          )
+          .eq("couple_id", currentCoupleId)
+          .order("created_at", { ascending: false });
+
+        if (!mountedRef.current) {
+          return false;
+        }
+
+        if (error) {
+          console.error("loadEvents failed:", error.message);
+          if (!silent) {
+            setStatus(error.message);
+          }
+          return false;
+        }
+
+        // Authoritative replacement reconciled by event ID (no duplicates, no retained deletes)
+        const reconciledMap = new Map<string, RelationshipEvent>();
+        for (const row of data ?? []) {
+          reconciledMap.set(row.id, row as RelationshipEvent);
+        }
+
+        setEvents(Array.from(reconciledMap.values()));
+        setStatus("");
+        return true;
+      } finally {
+        isFetchingEventsRef.current = false;
+        if (
+          pendingRefetchRef.current &&
+          mountedRef.current &&
+          coupleIdRef.current
+        ) {
+          pendingRefetchRef.current = false;
+          void loadEventsRef.current(coupleIdRef.current, true);
+        }
+      }
+    },
+    [],
   );
 
-  useEffect(() => {
-    if (!coupleId) {
-      return;
+  const loadEventsRef = useRef(loadEvents);
+  loadEventsRef.current = loadEvents;
+
+  const loadPage = useCallback(async (silent = false) => {
+    if (!silent && mountedRef.current) {
+      setStatus("Loading...");
+      setHasFinishedInitialLoad(false);
     }
-
-    const channelName = `relationship-events-${coupleId}`;
-    let isDisposed = false;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-
-    const startRealtime = async () => {
-      const existingChannel = supabase
-        .getChannels()
-        .find((candidate) => candidate.topic === `realtime:${channelName}`);
-
-      if (existingChannel) {
-        await supabase.removeChannel(existingChannel);
-      }
-
-      if (isDisposed) {
-        return;
-      }
-
-      channel = supabase
-        .channel(channelName)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "relationship_events",
-            filter: `couple_id=eq.${coupleId}`,
-          },
-          () => {
-            loadEvents(coupleId);
-          },
-        )
-        .subscribe();
-    };
-
-    void startRealtime();
-
-    return () => {
-      isDisposed = true;
-
-      if (channel) {
-        void supabase.removeChannel(channel);
-      }
-    };
-  }, [coupleId]);
-
-  async function loadPage() {
-    setStatus("Loading...");
-    setHasFinishedInitialLoad(false);
 
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
+
+    if (!mountedRef.current) {
+      return;
+    }
 
     if (userError || !user) {
       setStatus("No signed-in user");
@@ -176,8 +218,12 @@ export default function EventsScreen() {
       .eq("user_id", user.id)
       .maybeSingle();
 
+    if (!mountedRef.current) {
+      return;
+    }
+
     if (membershipError) {
-      console.error(membershipError);
+      console.error("membership query failed:", membershipError.message);
       setStatus(membershipError.message);
       return;
     }
@@ -189,40 +235,96 @@ export default function EventsScreen() {
 
     setCoupleId(membership.couple_id);
 
-    const didLoadEvents = await loadEvents(membership.couple_id);
-    if (didLoadEvents) {
+    const didLoadEvents = await loadEventsRef.current(
+      membership.couple_id,
+      silent,
+    );
+    if (didLoadEvents && mountedRef.current) {
+      hasLoadedOnceRef.current = true;
       setHasFinishedInitialLoad(true);
     }
-  }
+  }, []);
 
-  async function loadEvents(currentCoupleId: string) {
-    const { data, error } = await supabase
-      .from("relationship_events")
-      .select(
-        `
-        id,
-        creator_id,
-        event_type,
-        category,
-        intensity,
-        visibility,
-        status,
-        created_at
-      `,
-      )
-      .eq("couple_id", currentCoupleId)
-      .order("created_at", { ascending: false });
+  useFocusEffect(
+    useCallback(() => {
+      void loadPage(hasLoadedOnceRef.current);
+    }, [loadPage]),
+  );
 
-    if (error) {
-      console.error(error);
-      setStatus(error.message);
-      return false;
+  // Focus/AppState foreground refresh fallback (silent, no spinner flicker)
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (
+        nextState === "active" &&
+        mountedRef.current &&
+        coupleIdRef.current
+      ) {
+        void loadEventsRef.current(coupleIdRef.current, true);
+      }
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // Screen-owned Realtime subscription for relationship_events scoped to active couple
+  useEffect(() => {
+    if (!coupleId) {
+      return;
     }
 
-    setEvents(data ?? []);
-    setStatus("");
-    return true;
-  }
+    const subscriptionSeq = ++subscriptionSeqRef.current;
+    const channelName = `couple-events-${coupleId}-${screenInstanceId}-${subscriptionSeq}`;
+    const channel = supabase.channel(channelName);
+    channelRef.current = channel;
+
+    const scheduleSilentRefresh = () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        debounceTimerRef.current = null;
+        if (mountedRef.current) {
+          void loadEventsRef.current(coupleId, true);
+        }
+      }, 200);
+    };
+
+    // Register handler synchronously before subscribe()
+    channel.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "relationship_events",
+        filter: `couple_id=eq.${coupleId}`,
+      },
+      () => {
+        scheduleSilentRefresh();
+      },
+    );
+
+    channel.subscribe((subStatus, err) => {
+      if (
+        __DEV__ &&
+        (subStatus === "CHANNEL_ERROR" || subStatus === "TIMED_OUT")
+      ) {
+        console.warn("Events Realtime status:", subStatus, err?.message || "");
+      }
+    });
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      const ownedChannel = channelRef.current;
+      channelRef.current = null;
+      if (ownedChannel) {
+        void supabase.removeChannel(ownedChannel);
+      }
+    };
+  }, [coupleId, screenInstanceId]);
 
   async function createTestEvent(visibility: "mine" | "ours") {
     if (!coupleId) {
@@ -247,7 +349,7 @@ export default function EventsScreen() {
       return;
     }
 
-    await loadEvents(coupleId);
+    await loadEvents(coupleId, true);
 
     setStatus(`${capitalize(visibility)} test event created`);
   }
@@ -268,45 +370,53 @@ export default function EventsScreen() {
     });
   }
 
-  const visibleEvents = events.filter((event) => {
-    if (isMineMode) {
-      return (
-        event.visibility === "mine" &&
-        event.creator_id === currentUserId
-      );
-    }
-    if (isOursMode) {
-      if (event.visibility !== "ours") {
-        return false;
+  const visibleEvents = useMemo(() => {
+    return events.filter((event) => {
+      if (isMineMode) {
+        return (
+          event.visibility === "mine" &&
+          event.creator_id === currentUserId
+        );
       }
+      if (isOursMode) {
+        if (event.visibility !== "ours") {
+          return false;
+        }
 
-      const isPreviewReconnected =
-        isOursMode &&
-        previewStatus === "reconnected" &&
-        event.id === previewEventId;
+        const isPreviewReconnected =
+          previewStatus === "reconnected" && event.id === previewEventId;
 
-      if (isPreviewReconnected) {
+        if (isPreviewReconnected) {
+          return true;
+        }
+
+        if (oursFilter === "open") {
+          return event.event_type === "friction" && event.status === "open";
+        }
+        if (oursFilter === "softening") {
+          return (
+            event.event_type === "friction" &&
+            event.status === "partially_repaired"
+          );
+        }
+        if (oursFilter === "reconnected") {
+          return (
+            event.event_type === "friction" && event.status === "reconnected"
+          );
+        }
         return true;
       }
-
-      if (oursFilter === "open") {
-        return event.event_type === "friction" && event.status === "open";
-      }
-      if (oursFilter === "softening") {
-        return (
-          event.event_type === "friction" &&
-          event.status === "partially_repaired"
-        );
-      }
-      if (oursFilter === "reconnected") {
-        return (
-          event.event_type === "friction" && event.status === "reconnected"
-        );
-      }
       return true;
-    }
-    return true;
-  });
+    });
+  }, [
+    events,
+    isMineMode,
+    isOursMode,
+    currentUserId,
+    oursFilter,
+    previewStatus,
+    previewEventId,
+  ]);
 
   const isPreviewReconnectedActive =
     isOursMode &&
@@ -578,6 +688,7 @@ export default function EventsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -1217,6 +1328,11 @@ function capitalize(value: string) {
 const createStyles = (theme: ThemeColors) =>
   StyleSheet.create({
     safeArea: {
+      flex: 1,
+      backgroundColor: theme.pageBackground,
+    },
+
+    scrollView: {
       flex: 1,
       backgroundColor: theme.pageBackground,
     },

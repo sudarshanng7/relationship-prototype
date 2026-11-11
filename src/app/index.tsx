@@ -1,7 +1,7 @@
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -28,6 +28,7 @@ export default function LoginScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const passwordRef = useRef<TextInput>(null);
+  const isMountedRef = useRef(true);
 
   async function navigateAfterAuthentication(userId: string) {
     const { data: profile, error } = await supabase
@@ -38,11 +39,15 @@ export default function LoginScreen() {
 
     if (error || !profile) {
       console.error("Could not check onboarding:", error);
-      setStatus(error?.message ?? "Profile not found. Please try again.");
+      if (isMountedRef.current) {
+        setStatus(error?.message ?? "Profile not found. Please try again.");
+      }
       return;
     }
 
-    setStatus("");
+    if (isMountedRef.current) {
+      setStatus("");
+    }
 
     if (profile.onboarding_completed) {
       router.replace("/home");
@@ -50,6 +55,32 @@ export default function LoginScreen() {
       router.replace("/onboarding");
     }
   }
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    async function checkExistingSession() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!isMountedRef.current) return;
+
+        if (session?.user) {
+          await navigateAfterAuthentication(session.user.id);
+        }
+      } catch (err) {
+        console.error("Existing session check failed:", err);
+      }
+    }
+
+    void checkExistingSession();
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   async function signIn() {
     if (isSubmitting) return;

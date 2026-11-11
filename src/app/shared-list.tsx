@@ -1222,7 +1222,14 @@ export default function SharedListScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.modalOverlay}
         >
-          <View style={styles.modalContainer}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setIsFormModalVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close dialog"
+            accessibilityHint="Closes this dialog without making changes"
+          />
+          <View style={styles.modalContainer} accessibilityViewIsModal={true}>
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>
                 {editingTask ? "Edit item" : "Add an item"}
@@ -1323,7 +1330,14 @@ export default function SharedListScreen() {
         onRequestClose={() => setTaskToDelete(null)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.deleteConfirmContainer}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setTaskToDelete(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Close dialog"
+            accessibilityHint="Closes this dialog without making changes"
+          />
+          <View style={styles.deleteConfirmContainer} accessibilityViewIsModal={true}>
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Remove this item?</Text>
               <Text style={styles.modalSubtitle}>
@@ -1373,7 +1387,14 @@ export default function SharedListScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.modalOverlay}
         >
-          <View style={styles.modalContainer}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setIsQuickStartModalVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close dialog"
+            accessibilityHint="Closes this dialog without making changes"
+          />
+          <View style={styles.modalContainer} accessibilityViewIsModal={true}>
             <View style={[styles.modalCard, styles.quickStartModalCard]}>
               {!activeTemplate ? (
                 // Step 1: Template Selection
@@ -1546,15 +1567,17 @@ export default function SharedListScreen() {
         animationType="fade"
         onRequestClose={() => setIsCategoryMenuVisible(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setIsCategoryMenuVisible(false)}
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss category actions"
-        >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setIsCategoryMenuVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close dialog"
+            accessibilityHint="Closes this dialog without making changes"
+          />
           <View
             style={[styles.modalCard, styles.menuCard]}
-            onStartShouldSetResponder={() => true}
+            accessibilityViewIsModal={true}
           >
             <View style={styles.menuHeader}>
               <Text style={styles.modalTitle}>
@@ -1683,7 +1706,7 @@ export default function SharedListScreen() {
               />
             </View>
           </View>
-        </Pressable>
+        </View>
       </Modal>
 
       {/* Clear Completed Confirmation Modal */}
@@ -1698,7 +1721,18 @@ export default function SharedListScreen() {
         }}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.deleteConfirmContainer}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              if (!isBulkActionSubmitting) {
+                setIsClearCompletedConfirmVisible(false);
+              }
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Close dialog"
+            accessibilityHint="Closes this dialog without making changes"
+          />
+          <View style={styles.deleteConfirmContainer} accessibilityViewIsModal={true}>
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>
                 Clear completed{" "}
@@ -1767,7 +1801,18 @@ export default function SharedListScreen() {
         }}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.deleteConfirmContainer}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              if (!isBulkActionSubmitting) {
+                setIsRemoveAllConfirmVisible(false);
+              }
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Close dialog"
+            accessibilityHint="Closes this dialog without making changes"
+          />
+          <View style={styles.deleteConfirmContainer} accessibilityViewIsModal={true}>
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>
                 Remove all{" "}

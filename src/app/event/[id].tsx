@@ -2,20 +2,29 @@ import { getThemedTokens, tokens } from "@/components/couply-tokens";
 import {
   CouplyChoiceCard,
   CouplyHeader,
-  CouplyPage,
   CouplyPrimaryButton,
   CouplyQuietButton,
   CouplySectionCard,
   CouplyStatusPill,
 } from "@/components/CouplyUI";
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
-import { useRepairPreview } from "@/context/RepairPreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  ArrivalResponseCode,
+  SettlementResponseCode,
+  SETTLEMENT_LABELS,
+  SuggestedStepCode,
+  SUGGESTED_STEP_LABELS,
+  TakeawayTagCode,
+  TAKEAWAY_TAG_LABELS,
+  useRepairWorkflow,
+} from "@/lib/use-repair-workflow";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -48,94 +57,6 @@ const repairMethods = [
   { value: "other", label: "Other" },
 ];
 
-type PreviewPerspective = "alex" | "sam";
-type PartnerResponseChoice =
-  | "none"
-  | "heard"
-  | "need_time"
-  | "suggest_next_step";
-type SuggestedNextStep =
-  | "A quiet chat"
-  | "A warm hug"
-  | "A walk outside"
-  | "Quiet time side-by-side"
-  | "Fresh tea together";
-
-type ClosingCheckInChoice = "ready" | "reconnecting" | "need_time";
-
-export type RepairPreviewPhase =
-  | "open"
-  | "in_care"
-  | "reconnecting"
-  | "reconnected";
-
-function deriveRepairPreviewPhase(
-  sharedResponse: PartnerResponseChoice,
-  alexShared: ClosingCheckInChoice | null,
-  samShared: ClosingCheckInChoice | null,
-): RepairPreviewPhase {
-  // 4. open: Only when no recipient response has been shared.
-  if (sharedResponse === "none") {
-    return "open";
-  }
-
-  // 1. reconnected: Only if BOTH latest shared check-ins are:
-  // "ready" / “I feel ready to leave this here”
-  if (alexShared === "ready" && samShared === "ready") {
-    return "reconnected";
-  }
-
-  // 2. reconnecting:
-  // If neither latest shared check-in is:
-  // "needs_time" / “I need more time”
-  // AND at least one latest shared check-in is:
-  // "reconnecting" / “The issue feels settled, but I’m still reconnecting”
-  const neitherNeedsTime =
-    alexShared !== "need_time" &&
-    (alexShared as string) !== "needs_time" &&
-    samShared !== "need_time" &&
-    (samShared as string) !== "needs_time";
-  const atLeastOneReconnecting =
-    alexShared === "reconnecting" || samShared === "reconnecting";
-
-  if (neitherNeedsTime && atLeastOneReconnecting) {
-    return "reconnecting";
-  }
-
-  // 3. in_care:
-  // If any latest shared check-in is "needs_time", OR only one person has shared a closing check-in,
-  // OR a shared recipient response exists but no completed closing check-in exists.
-  return "in_care";
-}
-
-const SUGGESTED_NEXT_STEPS: SuggestedNextStep[] = [
-  "A quiet chat",
-  "A warm hug",
-  "A walk outside",
-  "Quiet time side-by-side",
-  "Fresh tea together",
-];
-
-const PRIVATE_HELP_OPTIONS = [
-  "Feeling heard",
-  "Having space",
-  "A small gesture",
-  "Talking it through",
-  "Time together",
-] as const;
-
-type PrivateHelpTag = (typeof PRIVATE_HELP_OPTIONS)[number];
-
-const SHARED_TAKEAWAY_OPTIONS = [
-  "Feeling heard",
-  "Giving space",
-  "A small gesture",
-  "Talking it through",
-  "Time together",
-] as const;
-
-type SharedTakeawayTag = (typeof SHARED_TAKEAWAY_OPTIONS)[number];
-
 export default function EventDetailScreen() {
   const router = useRouter();
   const { theme } = useTheme();
@@ -155,162 +76,30 @@ export default function EventDetailScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("Loading...");
   const [showRepairMethods, setShowRepairMethods] = useState(false);
-  const [privateNote, setPrivateNote] = useState<string | null>(null);
 
   const { displayName, partnerName, partnerRef } = useUserIdentity();
-
-  const isCurrentUserCreator = event
-    ? event.creator_id === currentUserId
-    : true;
-  const creatorLabel = isCurrentUserCreator
-    ? displayName || "You"
-    : partnerName || "Your partner";
-  const recipientLabel = isCurrentUserCreator
-    ? partnerName || "your partner"
-    : displayName || "You";
-  const recipientCapitalized = isCurrentUserCreator
-    ? partnerName || "Your partner"
-    : displayName || "You";
 
   const [showSharingControls, setShowSharingControls] = useState(false);
   const [sharedTopicInput, setSharedTopicInput] = useState("");
   const [changingVisibility, setChangingVisibility] = useState(false);
-
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Consolidated repair journey preview local state
-  const [previewPerspective, setPreviewPerspective] =
-    useState<PreviewPerspective>("alex");
-
-  // Draft vs. shared recipient initial response
-  const [draftPartnerResponse, setDraftPartnerResponse] =
-    useState<PartnerResponseChoice>("none");
-  const [sharedPartnerResponse, setSharedPartnerResponse] =
-    useState<PartnerResponseChoice>("none");
-
-  // Draft vs. shared suggested next step
+  // Local drafting state for user actions (not saved until explicitly shared)
+  const [draftArrivalCode, setDraftArrivalCode] =
+    useState<ArrivalResponseCode | null>(null);
   const [draftSuggestedStep, setDraftSuggestedStep] =
-    useState<SuggestedNextStep | null>(null);
-  const [sharedSuggestedStep, setSharedSuggestedStep] =
-    useState<SuggestedNextStep | null>(null);
+    useState<SuggestedStepCode | null>(null);
+  const [isEditingArrival, setIsEditingArrival] = useState(false);
 
-  // Draft vs. shared closing check-in
-  const [alexDraftCheckIn, setAlexDraftCheckIn] =
-    useState<ClosingCheckInChoice | null>(null);
-  const [alexSharedCheckIn, setAlexSharedCheckIn] =
-    useState<ClosingCheckInChoice | null>(null);
-  const [alexEditingCheckIn, setAlexEditingCheckIn] = useState(false);
-  const [alexHasUpdatedCheckIn, setAlexHasUpdatedCheckIn] = useState(false);
+  const [draftSettlementCode, setDraftSettlementCode] =
+    useState<SettlementResponseCode | null>(null);
+  const [isEditingSettlement, setIsEditingSettlement] = useState(false);
 
-  const [samDraftCheckIn, setSamDraftCheckIn] =
-    useState<ClosingCheckInChoice | null>(null);
-  const [samSharedCheckIn, setSamSharedCheckIn] =
-    useState<ClosingCheckInChoice | null>(null);
-  const [samEditingCheckIn, setSamEditingCheckIn] = useState(false);
-  const [samHasUpdatedCheckIn, setSamHasUpdatedCheckIn] = useState(false);
-
-  // Private individual reflections (separate for Alex and Sam)
-  const [alexPrivateTag, setAlexPrivateTag] = useState<PrivateHelpTag | null>(
-    null,
-  );
-  const [alexPrivateDismissed, setAlexPrivateDismissed] = useState(false);
-  const [samPrivateTag, setSamPrivateTag] = useState<PrivateHelpTag | null>(
-    null,
-  );
-  const [samPrivateDismissed, setSamPrivateDismissed] = useState(false);
-
-  // Creator-only shared takeaway (Alex)
-  const [showTakeawayForm, setShowTakeawayForm] = useState(false);
-  const [takeawayDismissed, setTakeawayDismissed] = useState(false);
-  const [takeawayTag, setTakeawayTag] = useState<SharedTakeawayTag | null>(
-    null,
-  );
+  const [takeawayTag, setTakeawayTag] = useState<TakeawayTagCode | null>(null);
   const [takeawayNote, setTakeawayNote] = useState("");
-  const [isTakeawaySaved, setIsTakeawaySaved] = useState(false);
 
-  const {
-    previewEventId,
-    previewStatus,
-    sharedTakeawayNote,
-    sharedTakeawayTag,
-    hasSharedTakeaway,
-    setReconnectedPreview,
-    setSharedTakeaway,
-    clearRepairPreview,
-  } = useRepairPreview();
-
-  function handleResetPreview() {
-    clearRepairPreview();
-    setPreviewPerspective("alex");
-    setDraftPartnerResponse("none");
-    setSharedPartnerResponse("none");
-    setDraftSuggestedStep(null);
-    setSharedSuggestedStep(null);
-    setAlexDraftCheckIn(null);
-    setAlexSharedCheckIn(null);
-    setAlexEditingCheckIn(false);
-    setAlexHasUpdatedCheckIn(false);
-    setSamDraftCheckIn(null);
-    setSamSharedCheckIn(null);
-    setSamEditingCheckIn(false);
-    setSamHasUpdatedCheckIn(false);
-    setAlexPrivateTag(null);
-    setAlexPrivateDismissed(false);
-    setSamPrivateTag(null);
-    setSamPrivateDismissed(false);
-    setShowTakeawayForm(false);
-    setTakeawayDismissed(false);
-    setTakeawayTag(null);
-    setTakeawayNote("");
-    setIsTakeawaySaved(false);
-  }
-
-  const repairPreviewPhase = deriveRepairPreviewPhase(
-    sharedPartnerResponse,
-    alexSharedCheckIn,
-    samSharedCheckIn,
-  );
-  const isOpen = repairPreviewPhase === "open";
-  const isInCare = repairPreviewPhase === "in_care";
-  const isReconnecting = repairPreviewPhase === "reconnecting";
-  const isReconnected = repairPreviewPhase === "reconnected";
-
-  useEffect(() => {
-    if (repairPreviewPhase === "reconnected" && event?.id) {
-      setReconnectedPreview(event.id);
-    } else {
-      clearRepairPreview();
-    }
-  }, [repairPreviewPhase, event?.id, setReconnectedPreview, clearRepairPreview]);
-
-  useEffect(() => {
-    if (event?.id && event.id === previewEventId) {
-      if (previewStatus === "reconnected") {
-        setAlexDraftCheckIn("ready");
-        setAlexSharedCheckIn("ready");
-        setSamDraftCheckIn("ready");
-        setSamSharedCheckIn("ready");
-        setDraftPartnerResponse((prev) => (prev === "none" ? "heard" : prev));
-        setSharedPartnerResponse((prev) => (prev === "none" ? "heard" : prev));
-      }
-      if (hasSharedTakeaway) {
-        setIsTakeawaySaved(true);
-        if (sharedTakeawayNote !== null) {
-          setTakeawayNote(sharedTakeawayNote);
-        }
-        if (sharedTakeawayTag !== null) {
-          setTakeawayTag(sharedTakeawayTag as SharedTakeawayTag);
-        }
-      }
-    }
-  }, [
-    event?.id,
-    previewEventId,
-    previewStatus,
-    hasSharedTakeaway,
-    sharedTakeawayNote,
-    sharedTakeawayTag,
-  ]);
+  const [isEditingReflection, setIsEditingReflection] = useState(false);
+  const [reflectionInput, setReflectionInput] = useState("");
 
   useEffect(() => {
     loadEvent();
@@ -355,7 +144,7 @@ export default function EventDetailScreen() {
       .maybeSingle();
 
     if (error) {
-      console.error(error);
+      console.error("loadEvent error:", error.message);
       setStatusMessage(error.message);
       return;
     }
@@ -368,25 +157,18 @@ export default function EventDetailScreen() {
       return;
     }
 
-    setPrivateNote(null);
-
-    const { data: reflection, error: reflectionError } = await supabase
-      .from("event_private_reflections")
-      .select("note")
-      .eq("event_id", eventId)
-      .eq("author_id", user.id)
-      .maybeSingle();
-
-    if (reflectionError) {
-      console.error("Failed to load private reflection:", reflectionError);
-      setStatusMessage(reflectionError.message);
-      return;
-    }
-
-    setPrivateNote(reflection?.note ?? null);
-    setEvent(data);
+    setEvent(data as RelationshipEvent);
     setStatusMessage("");
   }
+
+  // Hook for real repair workflow persistence, RPCs, and Realtime sync
+  const repairWorkflow = useRepairWorkflow({
+    eventId: event?.id,
+    currentUserId,
+    creatorId: event?.creator_id,
+    eventStatus: event?.status,
+    onEventRefetch: loadEvent,
+  });
 
   async function updateEventStatus(newStatus: "open" | "partially_repaired") {
     if (!event) return;
@@ -403,7 +185,7 @@ export default function EventDetailScreen() {
       .eq("id", event.id);
 
     if (error) {
-      console.error(error);
+      console.error("updateEventStatus error:", error.message);
       setStatusMessage(error.message);
       return;
     }
@@ -428,7 +210,7 @@ export default function EventDetailScreen() {
       .eq("id", event.id);
 
     if (error) {
-      console.error(error);
+      console.error("markReconnected error:", error.message);
       setStatusMessage(error.message);
       return;
     }
@@ -473,7 +255,10 @@ export default function EventDetailScreen() {
           : "Moment moved to Mine. Shared topic cleared.",
       );
     } catch (error) {
-      console.error("Visibility change failed:", error);
+      console.error(
+        "Visibility change failed:",
+        error instanceof Error ? error.message : "unknown",
+      );
       setStatusMessage(
         error instanceof Error ? error.message : "Could not change visibility.",
       );
@@ -493,7 +278,7 @@ export default function EventDetailScreen() {
       .eq("id", event.id);
 
     if (error) {
-      console.error(error);
+      console.error("deleteEvent error:", error.message);
       setStatusMessage(error.message);
       return;
     }
@@ -541,24 +326,32 @@ export default function EventDetailScreen() {
 
   if (!event) {
     return (
-      <CouplyPage>
-        <CouplyHeader
-          title={screenTitle}
-          onBack={handleBack}
-          backLabel={backLabel}
-        />
-        <View style={styles.centerContainer}>
-          <Text style={styles.centerStatusText}>{statusMessage}</Text>
-          <Pressable
-            style={styles.centerBackButton}
-            onPress={handleBack}
-            accessibilityRole="button"
-            accessibilityLabel={backAccessibilityLabel}
-          >
-            <Text style={styles.centerBackButtonText}>{backLabel}</Text>
-          </Pressable>
-        </View>
-      </CouplyPage>
+      <SafeAreaView style={styles.safeArea}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.column}>
+            <CouplyHeader
+              title={screenTitle}
+              onBack={handleBack}
+              backLabel={backLabel}
+            />
+            <View style={styles.centerContainer}>
+              <Text style={styles.centerStatusText}>{statusMessage}</Text>
+              <Pressable
+                style={styles.centerBackButton}
+                onPress={handleBack}
+                accessibilityRole="button"
+                accessibilityLabel={backAccessibilityLabel}
+              >
+                <Text style={styles.centerBackButtonText}>{backLabel}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 
@@ -566,43 +359,28 @@ export default function EventDetailScreen() {
   const isPositive = event.event_type === "positive";
   const isSharedFriction = !isPositive && event.visibility === "ours";
 
-  const currentDraftCheckIn =
-    previewPerspective === "alex" ? alexDraftCheckIn : samDraftCheckIn;
-  const currentSharedCheckIn =
-    previewPerspective === "alex" ? alexSharedCheckIn : samSharedCheckIn;
-  const otherSharedCheckIn =
-    previewPerspective === "alex" ? samSharedCheckIn : alexSharedCheckIn;
-  const currentIsEditingCheckIn =
-    previewPerspective === "alex" ? alexEditingCheckIn : samEditingCheckIn;
-  const otherHasUpdatedCheckIn =
-    previewPerspective === "alex" ? samHasUpdatedCheckIn : alexHasUpdatedCheckIn;
-  const partnerNameForCurrent =
-    previewPerspective === "alex" ? recipientCapitalized : creatorLabel;
-
-  const currentPrivateTag =
-    previewPerspective === "alex" ? alexPrivateTag : samPrivateTag;
-  const currentPrivateDismissed =
-    previewPerspective === "alex"
-      ? alexPrivateDismissed
-      : samPrivateDismissed;
-
-  const authoredTakeawayText =
-    takeawayNote.trim().length > 0
-      ? takeawayNote.trim()
-      : takeawayTag ?? "";
+  const partnerDisplayName = partnerName || "your partner";
+  const creatorDisplayName = isCreator
+    ? displayName || "You"
+    : partnerDisplayName;
+  const recipientDisplayName = isCreator
+    ? partnerDisplayName
+    : displayName || "You";
 
   return (
-    <CouplyPage>
-      <CouplyHeader
-        title={screenTitle}
-        onBack={handleBack}
-        backLabel={backLabel}
-      />
+    <SafeAreaView style={styles.safeArea}>
+      <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.column}>
+          <CouplyHeader
+            title={screenTitle}
+            onBack={handleBack}
+            backLabel={backLabel}
+          />
           {/* B. Moment Context Card */}
           <CouplySectionCard>
             <View style={styles.momentCardTopRow}>
@@ -616,11 +394,13 @@ export default function EventDetailScreen() {
               <CouplyStatusPill
                 label={
                   isSharedFriction
-                    ? repairPreviewPhase === "reconnected"
+                    ? repairWorkflow.derivedStage === "reconnected"
                       ? "Reconnected"
-                      : repairPreviewPhase === "reconnecting"
+                      : repairWorkflow.derivedStage === "both_ready"
+                      ? "Ready"
+                      : repairWorkflow.derivedStage === "reconnecting"
                       ? "Reconnecting"
-                      : repairPreviewPhase === "in_care"
+                      : repairWorkflow.derivedStage === "in_care"
                       ? "In care"
                       : "Open"
                     : isPositive
@@ -629,11 +409,13 @@ export default function EventDetailScreen() {
                 }
                 variant={
                   isSharedFriction
-                    ? repairPreviewPhase === "reconnected"
+                    ? repairWorkflow.derivedStage === "reconnected"
                       ? "reconnected"
-                      : repairPreviewPhase === "reconnecting"
+                      : repairWorkflow.derivedStage === "both_ready"
                       ? "softening"
-                      : repairPreviewPhase === "in_care"
+                      : repairWorkflow.derivedStage === "reconnecting"
+                      ? "softening"
+                      : repairWorkflow.derivedStage === "in_care"
                       ? "softening"
                       : "open"
                     : isPositive
@@ -653,7 +435,9 @@ export default function EventDetailScreen() {
 
             {isSharedFriction && event.shared_topic ? (
               <View style={styles.sharedTopicContextBox}>
-                <Text style={styles.sharedTopicContextLabel}>Shared context</Text>
+                <Text style={styles.sharedTopicContextLabel}>
+                  Shared context
+                </Text>
                 <Text style={styles.sharedTopicContextText}>
                   {event.shared_topic}
                 </Text>
@@ -663,10 +447,17 @@ export default function EventDetailScreen() {
             <View style={styles.summaryMetaRow}>
               <Text style={styles.metaRecordedDate}>
                 Recorded {formatDate(event.created_at)}
+                {event.visibility === "ours"
+                  ? ` · ${
+                      isCreator
+                        ? "Recorded by you"
+                        : `Shared by ${partnerName || "partner"}`
+                    }`
+                  : ""}
               </Text>
               {!isPositive &&
                 event.intensity !== null &&
-                (!isSharedFriction || previewPerspective === "alex") && (
+                (!isSharedFriction || isCreator) && (
                   <View style={styles.intensityPill}>
                     <Text style={styles.intensityPillText}>
                       It weighed on you: {event.intensity} of 5
@@ -676,38 +467,19 @@ export default function EventDetailScreen() {
             </View>
           </CouplySectionCard>
 
-          {/* C. Privacy Boundary */}
-          {/* Creator private note */}
-          {privateNote && (!isSharedFriction || previewPerspective === "alex") && (
-            <CouplySectionCard variant="lilac" style={styles.privacyCardSpacing}>
-              <View style={styles.privacyCardHeaderRow}>
-                <View style={styles.privatePill}>
-                  <Text style={styles.privatePillText}>Private to you</Text>
-                </View>
-                <Text style={styles.privacySubtext}>Only you can see this.</Text>
-              </View>
-              <Text style={styles.noteBodyText}>{privateNote}</Text>
-            </CouplySectionCard>
-          )}
-
-          {/* Recipient perspective privacy notice (Sam view) */}
-          {isSharedFriction && previewPerspective === "sam" && (
-            <CouplySectionCard variant="muted" style={styles.privacyCardSpacing}>
-              <View style={styles.privacySafeNoticeRow}>
-                <Text style={styles.privacySafeIcon}>🔒</Text>
-                <Text style={styles.privacySafeText}>
-                  Private reflections remain hidden. You only see what was tenderly shared.
-                </Text>
-              </View>
-            </CouplySectionCard>
-          )}
-
           {/* Shared wording card (Ours & topic exists) */}
           {event.visibility === "ours" && event.shared_topic && (
-            <CouplySectionCard variant="default" style={styles.privacyCardSpacing}>
+            <CouplySectionCard
+              variant="default"
+              style={styles.privacyCardSpacing}
+            >
               <View style={styles.privacyCardHeaderRow}>
                 <View style={styles.sharedPill}>
-                  <Text style={styles.sharedPillText}>Shared with {partnerRef}</Text>
+                  <Text style={styles.sharedPillText}>
+                    {isCreator
+                      ? `Shared with ${partnerRef}`
+                      : `Shared by ${partnerDisplayName}`}
+                  </Text>
                 </View>
               </View>
               <Text style={styles.noteBodyText}>{event.shared_topic}</Text>
@@ -773,7 +545,7 @@ export default function EventDetailScreen() {
             </CouplySectionCard>
           )}
 
-          {/* D. Consolidated Repair Journey (Shared Friction) */}
+          {/* D. REAL SHARED FRICTION REPAIR JOURNEY */}
           {isSharedFriction && (
             <View style={styles.journeyContainer}>
               {/* Journey Header */}
@@ -785,161 +557,184 @@ export default function EventDetailScreen() {
                 </Text>
               </View>
 
-              {/* Local Walkthrough Notice */}
-              <View style={styles.localWalkthroughCard}>
-                <Text style={styles.localWalkthroughOverline}>LOCAL WALKTHROUGH</Text>
-                <Text style={styles.localWalkthroughText}>
-                  Use this space to explore how a shared moment can gently move forward. Changes here are only visible in this browser.
-                </Text>
-              </View>
-
-              {/* Perspective Segmented Control */}
-              <View style={styles.segmentedControlCard}>
-                <View
-                  style={styles.segmentedControlRow}
-                  role="tablist"
-                  accessibilityRole="tablist"
-                >
-                  <Pressable
+              {/* Action Error / Success Feedback */}
+              {repairWorkflow.actionError ? (
+                <View style={styles.statusBanner}>
+                  <Text
                     style={[
-                      styles.segmentTab,
-                      previewPerspective === "alex" && styles.segmentTabSelected,
+                      styles.statusBannerText,
+                      { color: tokens.colors.dangerText },
                     ]}
-                    onPress={() => setPreviewPerspective("alex")}
-                    accessibilityRole="tab"
-                    accessibilityState={{
-                      selected: previewPerspective === "alex",
-                    }}
-                    accessibilityLabel={`Viewing as ${creatorLabel}`}
                   >
-                    <Text
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                      style={[
-                        styles.segmentTabText,
-                        previewPerspective === "alex" && styles.segmentTabTextSelected,
-                      ]}
-                    >
-                      Viewing as {creatorLabel}
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    style={[
-                      styles.segmentTab,
-                      previewPerspective === "sam" && styles.segmentTabSelected,
-                    ]}
-                    onPress={() => setPreviewPerspective("sam")}
-                    accessibilityRole="tab"
-                    accessibilityState={{
-                      selected: previewPerspective === "sam",
-                    }}
-                    accessibilityLabel={`Viewing as ${recipientCapitalized}`}
-                  >
-                    <Text
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                      style={[
-                        styles.segmentTabText,
-                        previewPerspective === "sam" && styles.segmentTabTextSelected,
-                      ]}
-                    >
-                      Viewing as {recipientCapitalized}
-                    </Text>
-                  </Pressable>
+                    {repairWorkflow.actionError}
+                  </Text>
                 </View>
-                <Text style={styles.segmentCaption}>
-                  Explore each person’s view without changing what is saved.
-                </Text>
-              </View>
+              ) : null}
 
-              {/* One Next Action at Each Stage: "What feels right next?" Card */}
-              <CouplySectionCard style={styles.nextActionCard}>
-                {repairPreviewPhase === "reconnecting" ? (
-                  <View style={styles.reconnectingHeaderBlock}>
-                    <View style={styles.reconnectingStatusRow}>
-                      <Text style={styles.reconnectingOverline}>RECONNECTING</Text>
-                      <CouplyStatusPill label="Reconnecting" variant="softening" />
+              {repairWorkflow.actionSuccess ? (
+                <View
+                  style={[
+                    styles.statusBanner,
+                    { borderColor: tokens.colors.plum },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusBannerText,
+                      { color: tokens.colors.plum },
+                    ]}
+                  >
+                    {repairWorkflow.actionSuccess}
+                  </Text>
+                </View>
+              ) : null}
+
+              {/* Stage: Reconnected Outcome */}
+              {repairWorkflow.derivedStage === "reconnected" ? (
+                <CouplySectionCard
+                  variant="lilac"
+                  style={styles.reconnectedSection}
+                >
+                  <View style={styles.reconnectedHeaderRow}>
+                    <Text style={styles.reconnectedEmoji}>🌱</Text>
+                    <View style={styles.reconnectedTitleGroup}>
+                      <Text style={styles.reconnectingOverline}>
+                        RECONNECTED
+                      </Text>
+                      <Text style={styles.reconnectedHeading}>
+                        We found our way back.
+                      </Text>
                     </View>
-                    <Text style={styles.reconnectingHeading}>
-                      The issue feels lighter, and connection is still finding its way.
-                    </Text>
-                    <Text style={styles.reconnectingBody}>
-                      There is nothing to force or finish today.
-                    </Text>
                   </View>
-                ) : (
-                  <View style={styles.nextActionHeader}>
-                    <Text style={styles.nextActionOverline}>
-                      {repairPreviewPhase === "in_care" ? "IN CARE" : "NEXT STEP"}
-                    </Text>
-                    <Text style={styles.nextActionTitle}>What feels right next?</Text>
-                  </View>
-                )}
+                  <Text style={styles.reconnectedBody}>
+                    This moment has been tenderly resolved and reconnected.
+                    Everything you navigated together remains part of your
+                    shared care.
+                  </Text>
+                  <Text style={styles.statusSubtext}>
+                    Reconnected on{" "}
+                    {formatDate(
+                      repairWorkflow.repairOutcome?.completed_at ||
+                        event.reconnected_at ||
+                        event.created_at,
+                    )}
+                  </Text>
 
-                {/* STAGE A: OPEN */}
-                {isOpen && (
-                  <View style={styles.stageContentBlock}>
-                    {previewPerspective === "alex" ? (
-                      <View style={styles.openAlexBlock}>
-                        <Text style={styles.stageSubheading}>
-                          Waiting quietly for {recipientLabel}
-                        </Text>
-                        <Text style={styles.stageBodyText}>
-                          You shared this moment with {recipientLabel}. In this preview, you can switch to viewing as {recipientCapitalized} above to see how they can respond in their own rhythm.
-                        </Text>
+                  {repairWorkflow.repairOutcome?.takeaway_tag && (
+                    <View style={styles.sharedTakeawayPill}>
+                      <Text style={styles.sharedTakeawayPillText}>
+                        What helped:{" "}
+                        {TAKEAWAY_TAG_LABELS[
+                          repairWorkflow.repairOutcome
+                            .takeaway_tag as TakeawayTagCode
+                        ] || repairWorkflow.repairOutcome.takeaway_tag}
+                      </Text>
+                    </View>
+                  )}
+
+                  {repairWorkflow.repairOutcome?.takeaway_note && (
+                    <View style={styles.sharedTakeawayCard}>
+                      <Text style={styles.sharedTakeawayOverline}>
+                        SHARED TAKEAWAY
+                      </Text>
+                      <Text style={styles.sharedTakeawayBodyText}>
+                        “{repairWorkflow.repairOutcome.takeaway_note}”
+                      </Text>
+                    </View>
+                  )}
+                </CouplySectionCard>
+              ) : (
+                /* Active Stages: Open, In Care, Reconnecting, Both Ready */
+                <CouplySectionCard style={styles.nextActionCard}>
+                  {/* Phase 1: Arrival */}
+                  {!repairWorkflow.arrivalResponse ? (
+                    /* No recipient response yet */
+                    isCreator ? (
+                      <View style={styles.stageContentBlock}>
+                        <View style={styles.nextActionHeader}>
+                          <Text style={styles.nextActionOverline}>
+                            INITIAL RESPONSE
+                          </Text>
+                          <Text style={styles.nextActionTitle}>
+                            Waiting quietly for {recipientDisplayName}
+                          </Text>
+                        </View>
+                        <View style={styles.openAlexBlock}>
+                          <Text style={styles.stageBodyText}>
+                            You shared this moment with {recipientDisplayName}.
+                            They can respond here in their own rhythm whenever
+                            they feel ready. There is nothing you need to do
+                            right now.
+                          </Text>
+                        </View>
                       </View>
                     ) : (
-                      <View style={styles.openSamBlock}>
-                        <Text style={styles.stageSubheading}>
-                          {recipientCapitalized}’s response
-                        </Text>
+                      <View style={styles.stageContentBlock}>
+                        <View style={styles.nextActionHeader}>
+                          <Text style={styles.nextActionOverline}>
+                            FIRST RESPONSE
+                          </Text>
+                          <Text style={styles.nextActionTitle}>
+                            What feels right as a first response?
+                          </Text>
+                        </View>
                         <Text style={styles.stageBodyText}>
-                          Respond in your own rhythm. There is no deadline, score, or requirement to fix anything right away.
+                          Respond in your own rhythm. There is no deadline,
+                          score, or requirement to fix anything right away.
                         </Text>
 
                         <View style={styles.choicesStack}>
                           <CouplyChoiceCard
-                            title="🤍 I hear you"
+                            title="🤍 I’ve heard this"
                             description="Acknowledge without feeling pushed to debate or solve right now"
-                            selected={draftPartnerResponse === "heard"}
-                            onPress={() => setDraftPartnerResponse("heard")}
-                            accessibilityLabel="I hear you: Acknowledge without feeling pushed to debate or solve right now"
-                          />
-                          <CouplyChoiceCard
-                            title="⏳ I need a little time"
-                            description="Signal care while taking gentle breathing room"
-                            selected={draftPartnerResponse === "need_time"}
-                            onPress={() => setDraftPartnerResponse("need_time")}
-                            accessibilityLabel="I need a little time: Signal care while taking gentle breathing room"
-                          />
-                          <CouplyChoiceCard
-                            title="🌿 Suggest a small next step"
-                            description="Propose a kind, concrete step to help you both soften"
-                            selected={
-                              draftPartnerResponse === "suggest_next_step"
-                            }
+                            selected={draftArrivalCode === "heard"}
                             onPress={() => {
-                              setDraftPartnerResponse("suggest_next_step");
+                              setDraftArrivalCode("heard");
+                              setDraftSuggestedStep(null);
+                            }}
+                            accessibilityLabel="I’ve heard this: Acknowledge without feeling pushed to debate or solve right now"
+                          />
+                          <CouplyChoiceCard
+                            title="⏳ I need a little more time"
+                            description="Signal care while taking gentle breathing room"
+                            selected={draftArrivalCode === "need_time"}
+                            onPress={() => {
+                              setDraftArrivalCode("need_time");
+                              setDraftSuggestedStep(null);
+                            }}
+                            accessibilityLabel="I need a little more time: Signal care while taking gentle breathing room"
+                          />
+                          <CouplyChoiceCard
+                            title="🌿 I’d like to suggest a small next step"
+                            description="Propose a kind, concrete step to help you both soften"
+                            selected={draftArrivalCode === "suggest_next_step"}
+                            onPress={() => {
+                              setDraftArrivalCode("suggest_next_step");
                               if (!draftSuggestedStep) {
-                                setDraftSuggestedStep("A quiet chat");
+                                setDraftSuggestedStep("quiet_chat");
                               }
                             }}
                             accessibilityLabel="Suggest a small next step: Propose a kind, concrete step to help you both soften"
                           />
                         </View>
 
-                        {/* Optional step chooser if Sam drafted suggest_next_step */}
-                        {draftPartnerResponse === "suggest_next_step" && (
+                        {draftArrivalCode === "suggest_next_step" && (
                           <View style={styles.nextStepChooserBlock}>
                             <Text style={styles.nextStepChooserHeading}>
                               What might feel easier?
                             </Text>
                             <View style={styles.stepChipsRow}>
-                              {SUGGESTED_NEXT_STEPS.map((step) => {
+                              {(
+                                [
+                                  "quiet_chat",
+                                  "warm_hug",
+                                  "walk_outside",
+                                  "quiet_time_together",
+                                  "tea_together",
+                                ] as SuggestedStepCode[]
+                              ).map((step) => {
                                 const isSelected =
-                                  (draftSuggestedStep || "A quiet chat") ===
-                                  step;
+                                  (draftSuggestedStep || "quiet_chat") === step;
                                 return (
                                   <Pressable
                                     key={step}
@@ -952,7 +747,9 @@ export default function EventDetailScreen() {
                                     accessibilityState={{
                                       selected: isSelected,
                                     }}
-                                    accessibilityLabel={step}
+                                    accessibilityLabel={
+                                      SUGGESTED_STEP_LABELS[step]
+                                    }
                                   >
                                     <Text
                                       style={[
@@ -961,7 +758,7 @@ export default function EventDetailScreen() {
                                           styles.stepChipTextSelected,
                                       ]}
                                     >
-                                      {step}
+                                      {SUGGESTED_STEP_LABELS[step]}
                                     </Text>
                                   </Pressable>
                                 );
@@ -970,52 +767,51 @@ export default function EventDetailScreen() {
                           </View>
                         )}
 
-                        {/* Review Card for Recipient Initial Response */}
-                        {draftPartnerResponse !== "none" && (
+                        {draftArrivalCode !== null && (
                           <View style={styles.reviewCard}>
                             <Text style={styles.reviewCardOverline}>
-                              YOUR RESPONSE
+                              YOUR FIRST RESPONSE
                             </Text>
                             <Text style={styles.reviewCardHeading}>
-                              {draftPartnerResponse === "heard"
+                              {draftArrivalCode === "heard"
                                 ? "You chose to acknowledge this."
-                                : draftPartnerResponse === "need_time"
-                                ? "You chose to take a little time."
+                                : draftArrivalCode === "need_time"
+                                ? "You chose to take a little more time."
                                 : "You chose to suggest a small next step."}
                             </Text>
                             <Text style={styles.reviewCardBody}>
-                              Choose whether to share this with {creatorLabel}.
+                              Share this response with {creatorDisplayName}. You
+                              can revise it later if things shift.
                             </Text>
                             <View style={styles.reviewCardActionsRow}>
                               <CouplyPrimaryButton
                                 label={
-                                  draftPartnerResponse === "suggest_next_step"
-                                    ? `Share suggestion with ${creatorLabel}`
-                                    : `Share with ${creatorLabel}`
+                                  repairWorkflow.actionLoading
+                                    ? "Sharing..."
+                                    : `Share with ${creatorDisplayName}`
                                 }
-                                onPress={() => {
-                                  setSharedPartnerResponse(
-                                    draftPartnerResponse,
-                                  );
-                                  if (
-                                    draftPartnerResponse === "suggest_next_step"
-                                  ) {
-                                    setSharedSuggestedStep(
-                                      draftSuggestedStep || "A quiet chat",
+                                disabled={repairWorkflow.actionLoading}
+                                onPress={async () => {
+                                  const ok =
+                                    await repairWorkflow.submitArrivalResponse(
+                                      draftArrivalCode,
+                                      draftArrivalCode === "suggest_next_step"
+                                        ? draftSuggestedStep || "quiet_chat"
+                                        : null,
                                     );
+                                  if (ok) {
+                                    setDraftArrivalCode(null);
+                                    setDraftSuggestedStep(null);
                                   }
                                 }}
-                                accessibilityLabel={
-                                  draftPartnerResponse === "suggest_next_step"
-                                    ? `Share suggestion with ${creatorLabel}`
-                                    : `Share with ${creatorLabel}`
-                                }
+                                accessibilityLabel={`Share with ${creatorDisplayName}`}
                               />
                               <CouplyQuietButton
                                 variant="text"
                                 label="Keep deciding"
+                                disabled={repairWorkflow.actionLoading}
                                 onPress={() => {
-                                  setDraftPartnerResponse("none");
+                                  setDraftArrivalCode(null);
                                   setDraftSuggestedStep(null);
                                 }}
                                 accessibilityLabel="Keep deciding"
@@ -1024,625 +820,695 @@ export default function EventDetailScreen() {
                           </View>
                         )}
                       </View>
-                    )}
-                  </View>
-                )}
-
-                {/* STAGE B: IN CARE, RECONNECTING, OR RECONNECTED */}
-                {!isOpen && (
-                  <View style={styles.stageContentBlock}>
-                    {/* Selected response banner - only during In Care */}
-                    {repairPreviewPhase === "in_care" && (
-                      <>
-                        <View style={styles.responseDisplayBanner}>
-                      <Text style={styles.responseDisplayTitle}>
-                        {previewPerspective === "sam" ? (
-                          sharedPartnerResponse === "heard" ? (
-                            "🤍 You acknowledged this in preview: 'I hear you'"
-                          ) : sharedPartnerResponse === "need_time" ? (
-                            "⏳ You signaled in preview: 'I need a little time'"
-                          ) : (
-                            `🌿 You suggested in preview: ${sharedSuggestedStep || "A quiet chat"}`
-                          )
-                        ) : sharedPartnerResponse === "heard" ? (
-                          `🤍 ${recipientCapitalized} hears you.`
-                        ) : sharedPartnerResponse === "need_time" ? (
-                          `⏳ ${recipientCapitalized} needs a little time.`
-                        ) : (
-                          `🌿 ${recipientCapitalized} suggested a small next step.`
-                        )}
-                      </Text>
-
-                      <Text style={styles.responseDisplayBody}>
-                        {sharedPartnerResponse === "need_time"
-                          ? previewPerspective === "sam"
-                            ? "Taking quiet space to process emotions gently. Nothing needs to happen immediately."
-                            : `${recipientCapitalized} needs a little quiet space right now. Giving each other time protects emotional safety.`
-                          : sharedPartnerResponse === "heard"
-                          ? previewPerspective === "sam"
-                            ? `${creatorLabel} knows you received this with care and no defense. You can talk when ready.`
-                            : "Your shared thoughts were received with openness. Connection is softening."
-                          : previewPerspective === "sam"
-                          ? "Offering a kind, low-pressure gesture to help you both reconnect."
-                          : `${recipientCapitalized} suggested: "${sharedSuggestedStep || "A quiet chat"}". ${recipientCapitalized} offered a gentle next step whenever you both feel ready.`}
-                      </Text>
-
-                      {/* Compact confirmation for Sam */}
-                      {previewPerspective === "sam" && (
-                        <View style={styles.sharedConfirmationCard}>
-                          <Text style={styles.sharedConfirmationText}>
-                            Shared with {creatorLabel} in this walkthrough.
-                          </Text>
-                          <Text style={styles.sharedConfirmationTruthNote}>
-                            Only visible in this browser. Nothing has been sent or saved.
-                          </Text>
-                        </View>
-                      )}
-
-                      {previewPerspective === "sam" && !isReconnected && (
-                        <Pressable
-                          style={styles.changeResponseButton}
-                          onPress={() => {
-                            setDraftPartnerResponse("none");
-                            setSharedPartnerResponse("none");
-                            setDraftSuggestedStep(null);
-                            setSharedSuggestedStep(null);
-                          }}
-                          accessibilityRole="button"
-                          accessibilityLabel="Change your response"
-                        >
-                          <Text style={styles.changeResponseText}>
-                            Change response
-                          </Text>
-                        </Pressable>
-                      )}
-                    </View>
-
-                    {/* Step chooser if Sam selected suggest_next_step */}
-                    {sharedPartnerResponse === "suggest_next_step" &&
-                      previewPerspective === "sam" && (
-                        <View style={styles.nextStepChooserBlock}>
-                          <Text style={styles.nextStepChooserHeading}>
-                            What might feel easier?
-                          </Text>
-                          <View style={styles.stepChipsRow}>
-                            {SUGGESTED_NEXT_STEPS.map((step) => {
-                              const isSelected =
-                                (draftSuggestedStep ||
-                                  sharedSuggestedStep ||
-                                  "A quiet chat") === step;
-                              return (
-                                <Pressable
-                                  key={step}
-                                  style={[
-                                    styles.stepChip,
-                                    isSelected && styles.stepChipSelected,
-                                  ]}
-                                  onPress={() => setDraftSuggestedStep(step)}
-                                  accessibilityRole="button"
-                                  accessibilityState={{ selected: isSelected }}
-                                  accessibilityLabel={step}
-                                >
-                                  <Text
-                                    style={[
-                                      styles.stepChipText,
-                                      isSelected && styles.stepChipTextSelected,
-                                    ]}
-                                  >
-                                    {step}
-                                  </Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
-
-                          {/* Review card if Sam chooses a new draft suggestion */}
-                          {draftSuggestedStep !== null &&
-                            draftSuggestedStep !== sharedSuggestedStep && (
-                              <View style={styles.reviewCard}>
-                                <Text style={styles.reviewCardOverline}>
-                                  YOUR RESPONSE
-                                </Text>
-                                <Text style={styles.reviewCardHeading}>
-                                  You chose to suggest a small next step.
-                                </Text>
-                                <Text style={styles.reviewCardBody}>
-                                  Choose whether to share this with {creatorLabel}.
-                                </Text>
-                                <View style={styles.reviewCardActionsRow}>
-                                  <CouplyPrimaryButton
-                                    label={`Share suggestion with ${creatorLabel}`}
-                                    onPress={() => {
-                                      setSharedSuggestedStep(
-                                        draftSuggestedStep,
-                                      );
-                                    }}
-                                    accessibilityLabel={`Share suggestion with ${creatorLabel}`}
-                                  />
-                                  <CouplyQuietButton
-                                    variant="text"
-                                    label="Keep deciding"
-                                    onPress={() => {
-                                      setDraftSuggestedStep(
-                                        sharedSuggestedStep,
-                                      );
-                                    }}
-                                    accessibilityLabel="Keep deciding"
-                                  />
-                                </View>
-                              </View>
-                            )}
-                        </View>
-                      )}
-                      </>
-                    )}
-
-                    {/* CLOSING CHECK-IN */}
-                    <View style={styles.settlementBlock}>
-                      <View style={styles.journeyDivider} />
-                      <Text style={styles.checkInOverline}>YOUR CHECK-IN</Text>
-
-                      {currentSharedCheckIn !== null && !currentIsEditingCheckIn ? (
-                        <View style={styles.currentSharedCheckInCard}>
-                          <Text style={styles.currentSharedCheckInTitle}>
-                            {currentSharedCheckIn === "ready"
-                              ? "I feel ready to leave this here"
-                              : currentSharedCheckIn === "reconnecting"
-                              ? "The issue feels settled, but I’m still reconnecting"
-                              : "I need more time"}
-                          </Text>
-                          <Text style={styles.currentSharedCheckInDescription}>
-                            {currentSharedCheckIn === "ready"
-                              ? "The issue feels settled and I feel connected again."
-                              : currentSharedCheckIn === "reconnecting"
-                              ? "The practical part feels lighter, while closeness may need more time."
-                              : "There is no need to close this before it feels right."}
-                          </Text>
-
-                          <View style={styles.sharedConfirmationCard}>
-                            <Text style={styles.sharedConfirmationText}>
-                              Your check-in is shared. {partnerNameForCurrent} can take their time.
-                            </Text>
-                            <Text style={styles.sharedConfirmationTruthNote}>
-                              Only visible in this browser walkthrough. Nothing has been sent or saved.
-                            </Text>
-                          </View>
-
-                          <CouplyQuietButton
-                            variant="soft"
-                            label="Update my check-in"
-                            onPress={() => {
-                              if (previewPerspective === "alex") {
-                                setAlexDraftCheckIn(alexSharedCheckIn);
-                                setAlexEditingCheckIn(true);
-                              } else {
-                                setSamDraftCheckIn(samSharedCheckIn);
-                                setSamEditingCheckIn(true);
-                              }
-                            }}
-                            accessibilityLabel="Update my check-in"
-                            style={styles.updateCheckInButton}
-                          />
-                        </View>
-                      ) : (
-                        <>
-                          <Text style={styles.settlementHeading}>
-                            How are things feeling for you now?
-                          </Text>
-                          <Text style={styles.settlementSubtext}>
-                            Choose what feels true. Your answer does not decide this for anyone else.
-                          </Text>
-
-                          <View style={styles.checkInChoicesStack}>
-                            <CouplyChoiceCard
-                              title="I feel ready to leave this here"
-                              description="The issue feels settled and I feel connected again."
-                              selected={currentDraftCheckIn === "ready"}
-                              onPress={() => {
-                                if (previewPerspective === "alex") {
-                                  setAlexDraftCheckIn("ready");
-                                } else {
-                                  setSamDraftCheckIn("ready");
-                                }
-                              }}
-                              accessibilityLabel="I feel ready to leave this here: The issue feels settled and I feel connected again."
-                            />
-                            <CouplyChoiceCard
-                              title="The issue feels settled, but I’m still reconnecting"
-                              description="The practical part feels lighter, while closeness may need more time."
-                              selected={currentDraftCheckIn === "reconnecting"}
-                              onPress={() => {
-                                if (previewPerspective === "alex") {
-                                  setAlexDraftCheckIn("reconnecting");
-                                } else {
-                                  setSamDraftCheckIn("reconnecting");
-                                }
-                              }}
-                              accessibilityLabel="The issue feels settled, but I’m still reconnecting: The practical part feels lighter, while closeness may need more time."
-                            />
-                            <CouplyChoiceCard
-                              title="I need more time"
-                              description="There is no need to close this before it feels right."
-                              selected={currentDraftCheckIn === "need_time"}
-                              onPress={() => {
-                                if (previewPerspective === "alex") {
-                                  setAlexDraftCheckIn("need_time");
-                                } else {
-                                  setSamDraftCheckIn("need_time");
-                                }
-                              }}
-                              accessibilityLabel="I need more time: There is no need to close this before it feels right."
-                            />
-                          </View>
-
-                          {/* Confirmation area when choice is drafted and not yet shared */}
-                          {currentDraftCheckIn !== null &&
-                            currentDraftCheckIn !== currentSharedCheckIn && (
-                              <View style={styles.reviewCard}>
-                                <Text style={styles.reviewCardHeading}>
-                                  Share this with {partnerNameForCurrent}?
-                                </Text>
-                                <Text style={styles.reviewCardBody}>
-                                  They will see only where you are right now.
-                                </Text>
-                                <View style={styles.reviewCardActionsRow}>
-                                  <CouplyPrimaryButton
-                                    label={`Share with ${partnerNameForCurrent}`}
-                                    onPress={() => {
-                                      if (previewPerspective === "alex") {
-                                        const wasShared =
-                                          alexSharedCheckIn !== null;
-                                        setAlexSharedCheckIn(alexDraftCheckIn);
-                                        if (wasShared) {
-                                          setAlexHasUpdatedCheckIn(true);
-                                        }
-                                        setAlexEditingCheckIn(false);
-                                      } else {
-                                        const wasShared =
-                                          samSharedCheckIn !== null;
-                                        setSamSharedCheckIn(samDraftCheckIn);
-                                        if (wasShared) {
-                                          setSamHasUpdatedCheckIn(true);
-                                        }
-                                        setSamEditingCheckIn(false);
-                                      }
-                                    }}
-                                    accessibilityLabel={`Share with ${partnerNameForCurrent}`}
-                                  />
-                                  <CouplyQuietButton
-                                    variant="text"
-                                    label="Keep deciding"
-                                    onPress={() => {
-                                      if (currentSharedCheckIn !== null) {
-                                        if (previewPerspective === "alex") {
-                                          setAlexDraftCheckIn(alexSharedCheckIn);
-                                          setAlexEditingCheckIn(false);
-                                        } else {
-                                          setSamDraftCheckIn(samSharedCheckIn);
-                                          setSamEditingCheckIn(false);
-                                        }
-                                      } else {
-                                        if (previewPerspective === "alex") {
-                                          setAlexDraftCheckIn(null);
-                                        } else {
-                                          setSamDraftCheckIn(null);
-                                        }
-                                      }
-                                    }}
-                                    accessibilityLabel="Keep deciding"
-                                  />
-                                </View>
-                              </View>
-                            )}
-
-                          {/* If editing and choice hasn't changed, allow keeping current check-in */}
-                          {currentIsEditingCheckIn &&
-                            currentDraftCheckIn === currentSharedCheckIn && (
-                              <CouplyQuietButton
-                                variant="text"
-                                label="Keep deciding"
-                                onPress={() => {
-                                  if (previewPerspective === "alex") {
-                                    setAlexEditingCheckIn(false);
-                                  } else {
-                                    setSamEditingCheckIn(false);
-                                  }
-                                }}
-                                accessibilityLabel="Keep deciding"
-                                style={styles.keepCurrentCheckInButton}
-                              />
-                            )}
-                        </>
-                      )}
-
-                      {/* Partner's shared check-in answer summary */}
-                      {otherSharedCheckIn !== null && (
-                        <View style={styles.otherReconnectionNoticeCard}>
-                          {otherHasUpdatedCheckIn && (
-                            <Text style={styles.updatedCheckInCaption}>
-                              Updated check-in
-                            </Text>
+                    )
+                  ) : (
+                    /* Recipient arrival response already exists - both see it */
+                    <View style={styles.stageContentBlock}>
+                      <View style={styles.responseDisplayBanner}>
+                        <Text style={styles.responseDisplayTitle}>
+                          {!isCreator
+                            ? repairWorkflow.arrivalResponse.response_code ===
+                              "heard"
+                              ? "🤍 You shared: 'I’ve heard this'"
+                              : repairWorkflow.arrivalResponse.response_code ===
+                                "need_time"
+                              ? "⏳ You shared: 'I need a little more time'"
+                              : `🌿 You suggested: ${
+                                  repairWorkflow.arrivalResponse
+                                    .suggested_step_code
+                                    ? SUGGESTED_STEP_LABELS[
+                                        repairWorkflow.arrivalResponse
+                                          .suggested_step_code as SuggestedStepCode
+                                      ] ||
+                                      repairWorkflow.arrivalResponse
+                                        .suggested_step_code
+                                    : "A small next step"
+                                }`
+                            : repairWorkflow.arrivalResponse.response_code ===
+                              "heard"
+                            ? `🤍 ${recipientDisplayName} has heard this.`
+                            : repairWorkflow.arrivalResponse.response_code ===
+                              "need_time"
+                            ? `⏳ ${recipientDisplayName} needs a little more time.`
+                            : `🌿 ${recipientDisplayName} suggested: ${
+                                repairWorkflow.arrivalResponse
+                                  .suggested_step_code
+                                  ? SUGGESTED_STEP_LABELS[
+                                      repairWorkflow.arrivalResponse
+                                        .suggested_step_code as SuggestedStepCode
+                                    ] ||
+                                    repairWorkflow.arrivalResponse
+                                      .suggested_step_code
+                                  : "A small next step"
+                              }`}
+                        </Text>
+                        <Text style={styles.responseDisplayBody}>
+                          Shared{" "}
+                          {formatDate(
+                            repairWorkflow.arrivalResponse.shared_at,
                           )}
-                          <Text style={styles.otherReconnectionNoticeHeading}>
-                            {otherSharedCheckIn === "ready"
-                              ? `In this preview, ${partnerNameForCurrent} feels ready to leave this here.`
-                              : otherSharedCheckIn === "reconnecting"
-                              ? `In this preview, ${partnerNameForCurrent} feels the issue is settled, but is still reconnecting.`
-                              : `In this preview, ${partnerNameForCurrent} needs a little more time.`}
-                          </Text>
-                          <Text style={styles.otherReconnectionNoticeText}>
-                            {otherSharedCheckIn === "ready"
-                              ? "The issue feels settled and they feel connected again."
-                              : otherSharedCheckIn === "reconnecting"
-                              ? "The practical part feels lighter, while closeness may need more time."
-                              : "There is no need to close this before it feels right."}
-                          </Text>
-                        </View>
-                      )}
+                          {repairWorkflow.arrivalResponse.updated_at !==
+                          repairWorkflow.arrivalResponse.shared_at
+                            ? ` (revised ${formatDate(repairWorkflow.arrivalResponse.updated_at)})`
+                            : ""}
+                        </Text>
 
-                      {/* Private individual reflection */}
-                      {(currentDraftCheckIn !== null ||
-                        currentSharedCheckIn !== null) &&
-                        !currentPrivateDismissed && (
-                        <View style={styles.privateReflectionCard}>
-                          <View style={styles.privateReflectionBadgeRow}>
-                            <View style={styles.privatePill}>
-                              <Text style={styles.privatePillText}>Private to you</Text>
-                            </View>
-                          </View>
-                          <Text style={styles.privateReflectionHeading}>
-                            What helped you feel more connected again?
-                          </Text>
-                          <Text style={styles.privateReflectionSubtext}>
-                            A small private reflection, only for you.
-                          </Text>
-
-                          <View style={styles.reflectionChipsRow}>
-                            {PRIVATE_HELP_OPTIONS.map((tag) => {
-                              const isSelected = currentPrivateTag === tag;
-                              return (
-                                <Pressable
-                                  key={tag}
-                                  style={[
-                                    styles.reflectionChip,
-                                    isSelected && styles.reflectionChipSelected,
-                                  ]}
+                        {!isCreator &&
+                          (!isEditingArrival ? (
+                            <Pressable
+                              style={styles.changeResponseButton}
+                              onPress={() => {
+                                setDraftArrivalCode(
+                                  (repairWorkflow.arrivalResponse
+                                    ?.response_code as ArrivalResponseCode) ||
+                                    "heard",
+                                );
+                                setDraftSuggestedStep(
+                                  (repairWorkflow.arrivalResponse
+                                    ?.suggested_step_code as SuggestedStepCode) ||
+                                    null,
+                                );
+                                setIsEditingArrival(true);
+                              }}
+                              accessibilityRole="button"
+                              accessibilityLabel="Revise initial response"
+                            >
+                              <Text style={styles.changeResponseText}>
+                                Revise initial response
+                              </Text>
+                            </Pressable>
+                          ) : (
+                            <View style={{ marginTop: 10, gap: 10 }}>
+                              <Text style={styles.stageSubheading}>
+                                Revise your first response
+                              </Text>
+                              <View style={styles.choicesStack}>
+                                <CouplyChoiceCard
+                                  title="🤍 I’ve heard this"
+                                  description="Acknowledge without feeling pushed to debate or solve right now"
+                                  selected={draftArrivalCode === "heard"}
                                   onPress={() => {
-                                    if (previewPerspective === "alex") {
-                                      setAlexPrivateTag(tag);
-                                    } else {
-                                      setSamPrivateTag(tag);
+                                    setDraftArrivalCode("heard");
+                                    setDraftSuggestedStep(null);
+                                  }}
+                                  accessibilityLabel="I’ve heard this"
+                                />
+                                <CouplyChoiceCard
+                                  title="⏳ I need a little more time"
+                                  description="Signal care while taking gentle breathing room"
+                                  selected={draftArrivalCode === "need_time"}
+                                  onPress={() => {
+                                    setDraftArrivalCode("need_time");
+                                    setDraftSuggestedStep(null);
+                                  }}
+                                  accessibilityLabel="I need a little more time"
+                                />
+                                <CouplyChoiceCard
+                                  title="🌿 I’d like to suggest a small next step"
+                                  description="Propose a kind, concrete step to help you both soften"
+                                  selected={
+                                    draftArrivalCode === "suggest_next_step"
+                                  }
+                                  onPress={() => {
+                                    setDraftArrivalCode("suggest_next_step");
+                                    if (!draftSuggestedStep) {
+                                      setDraftSuggestedStep("quiet_chat");
                                     }
                                   }}
-                                  accessibilityRole="button"
-                                  accessibilityState={{ selected: isSelected }}
-                                  accessibilityLabel={tag}
-                                >
-                                  <Text
-                                    style={[
-                                      styles.reflectionChipText,
-                                      isSelected && styles.reflectionChipTextSelected,
-                                    ]}
-                                  >
-                                    {tag}
-                                  </Text>
-                                </Pressable>
-                              );
-                            })}
-                          </View>
-
-                          <View style={styles.privateReflectionFooterRow}>
-                            <CouplyQuietButton
-                              variant="text"
-                              label="Not now"
-                              onPress={() => {
-                                if (previewPerspective === "alex") {
-                                  setAlexPrivateDismissed(true);
-                                } else {
-                                  setSamPrivateDismissed(true);
-                                }
-                              }}
-                              accessibilityLabel="Not now"
-                            />
-                            <Text style={styles.privateReflectionFootnote}>
-                              Private reflection — only visible in your view.
-                            </Text>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-
-                    {/* STAGE E & F: MUTUAL RECONNECTION & SHARED TAKEAWAY */}
-                    {isReconnected && (
-                      <View style={styles.reconnectedSection}>
-                        <View style={styles.journeyDivider} />
-                        <View style={styles.reconnectedHeaderRow}>
-                          <Text style={styles.reconnectedEmoji}>✨</Text>
-                          <View style={styles.reconnectedTitleGroup}>
-                            <Text style={styles.reconnectedHeading}>
-                              You both feel ready to leave this moment here.
-                            </Text>
-                            <Text style={styles.reconnectedBody}>
-                              A small shared moment can be enough.
-                            </Text>
-                          </View>
-                        </View>
-
-                        {/* Quiet action to see in Ours preview */}
-                        <CouplyQuietButton
-                          variant="soft"
-                          label="See this in Ours"
-                          onPress={() => {
-                            router.push("/events?scope=ours");
-                          }}
-                          accessibilityLabel="See this in Ours"
-                          style={styles.seeInOursButton}
-                        />
-
-                        {/* Creator-only Takeaway Prompt */}
-                        {previewPerspective === "alex" &&
-                          !isTakeawaySaved &&
-                          !takeawayDismissed && (
-                            <View style={styles.takeawayPromptCard}>
-                              <Text style={styles.takeawayPromptHeading}>
-                                Leave a small note for {recipientLabel}?
-                              </Text>
-                              <Text style={styles.takeawayPromptText}>
-                                Share one gentle thought about what helped this moment soften. It is optional.
-                              </Text>
-
-                              <View style={styles.reflectionChipsRow}>
-                                {SHARED_TAKEAWAY_OPTIONS.map((tag) => {
-                                  const isSelected = takeawayTag === tag;
-                                  return (
-                                    <Pressable
-                                      key={tag}
-                                      style={[
-                                        styles.reflectionChip,
-                                        isSelected && styles.reflectionChipSelected,
-                                      ]}
-                                      onPress={() =>
-                                        setTakeawayTag(isSelected ? null : tag)
-                                      }
-                                      accessibilityRole="button"
-                                      accessibilityState={{
-                                        selected: isSelected,
-                                      }}
-                                      accessibilityLabel={tag}
-                                    >
-                                      <Text
-                                        style={[
-                                          styles.reflectionChipText,
-                                          isSelected && styles.reflectionChipTextSelected,
-                                        ]}
-                                      >
-                                        {tag}
-                                      </Text>
-                                    </Pressable>
-                                  );
-                                })}
+                                  accessibilityLabel="Suggest a small next step"
+                                />
                               </View>
 
-                              <Text style={styles.takeawayInputLabel}>
-                                Your small takeaway
-                              </Text>
-                              <TextInput
-                                style={styles.takeawayInput}
-                                placeholder="e.g., Pausing for a breath helped us hear each other."
-                                placeholderTextColor={theme.mutedText}
-                                value={takeawayNote}
-                                onChangeText={setTakeawayNote}
-                                accessibilityLabel="Your small takeaway"
-                              />
-
-                              <View style={styles.takeawayActionsRow}>
-                                <CouplyPrimaryButton
-                                  label="Share this takeaway"
-                                  disabled={!authoredTakeawayText}
-                                  onPress={() => {
-                                    if (authoredTakeawayText) {
-                                      setIsTakeawaySaved(true);
-                                      setSharedTakeaway(
-                                        takeawayNote.trim(),
-                                        takeawayTag,
+                              {draftArrivalCode === "suggest_next_step" && (
+                                <View style={styles.nextStepChooserBlock}>
+                                  <Text style={styles.nextStepChooserHeading}>
+                                    What might feel easier?
+                                  </Text>
+                                  <View style={styles.stepChipsRow}>
+                                    {(
+                                      [
+                                        "quiet_chat",
+                                        "warm_hug",
+                                        "walk_outside",
+                                        "quiet_time_together",
+                                        "tea_together",
+                                      ] as SuggestedStepCode[]
+                                    ).map((step) => {
+                                      const isSelected =
+                                        (draftSuggestedStep ||
+                                          "quiet_chat") === step;
+                                      return (
+                                        <Pressable
+                                          key={step}
+                                          style={[
+                                            styles.stepChip,
+                                            isSelected &&
+                                              styles.stepChipSelected,
+                                          ]}
+                                          onPress={() =>
+                                            setDraftSuggestedStep(step)
+                                          }
+                                          accessibilityRole="button"
+                                          accessibilityState={{
+                                            selected: isSelected,
+                                          }}
+                                          accessibilityLabel={
+                                            SUGGESTED_STEP_LABELS[step]
+                                          }
+                                        >
+                                          <Text
+                                            style={[
+                                              styles.stepChipText,
+                                              isSelected &&
+                                                styles.stepChipTextSelected,
+                                            ]}
+                                          >
+                                            {SUGGESTED_STEP_LABELS[step]}
+                                          </Text>
+                                        </Pressable>
                                       );
+                                    })}
+                                  </View>
+                                </View>
+                              )}
+
+                              <View style={styles.reviewCardActionsRow}>
+                                <CouplyPrimaryButton
+                                  label={
+                                    repairWorkflow.actionLoading
+                                      ? "Updating..."
+                                      : `Update with ${creatorDisplayName}`
+                                  }
+                                  disabled={
+                                    !draftArrivalCode ||
+                                    repairWorkflow.actionLoading
+                                  }
+                                  onPress={async () => {
+                                    if (!draftArrivalCode) return;
+                                    const ok =
+                                      await repairWorkflow.submitArrivalResponse(
+                                        draftArrivalCode,
+                                        draftArrivalCode === "suggest_next_step"
+                                          ? draftSuggestedStep || "quiet_chat"
+                                          : null,
+                                      );
+                                    if (ok) {
+                                      setIsEditingArrival(false);
                                     }
                                   }}
-                                  accessibilityLabel="Share this takeaway"
+                                  accessibilityLabel={`Update with ${creatorDisplayName}`}
                                 />
                                 <CouplyQuietButton
                                   variant="text"
-                                  label="Not now"
-                                  onPress={() => setTakeawayDismissed(true)}
-                                  accessibilityLabel="Not now"
+                                  label="Cancel"
+                                  disabled={repairWorkflow.actionLoading}
+                                  onPress={() => {
+                                    setDraftArrivalCode(
+                                      (repairWorkflow.arrivalResponse
+                                        ?.response_code as ArrivalResponseCode) ||
+                                        null,
+                                    );
+                                    setDraftSuggestedStep(
+                                      (repairWorkflow.arrivalResponse
+                                        ?.suggested_step_code as SuggestedStepCode) ||
+                                        null,
+                                    );
+                                    setIsEditingArrival(false);
+                                  }}
+                                  accessibilityLabel="Cancel revising initial response"
                                 />
                               </View>
-
-                              <Text style={styles.takeawayPrivacyReassuranceText}>
-                                In this preview, {recipientCapitalized} will see only this note. Private reflections stay private.
-                              </Text>
                             </View>
-                          )}
-
-                        {/* After creator shares: creator's perspective view */}
-                        {isTakeawaySaved &&
-                          authoredTakeawayText.length > 0 &&
-                          previewPerspective === "alex" && (
-                            <View style={styles.sharedTakeawayCard}>
-                              <Text style={styles.sharedTakeawayOverline}>
-                                SHARED IN THIS PREVIEW
-                              </Text>
-                              {takeawayTag && takeawayNote.trim().length > 0 && (
-                                <View style={styles.sharedTakeawayPill}>
-                                  <Text style={styles.sharedTakeawayPillText}>
-                                    🏷️ {takeawayTag}
-                                  </Text>
-                                </View>
-                              )}
-                              <Text style={styles.sharedTakeawayBodyText}>
-                                "{authoredTakeawayText}"
-                              </Text>
-                              <Text style={styles.sharedTakeawaySupporting}>
-                                In this preview, {recipientLabel} would see this small takeaway in the moment.
-                              </Text>
-                              <Text style={styles.takeawayPreviewNoticeText}>
-                                Preview only — this has not been saved or shared outside this browser.
-                              </Text>
-                            </View>
-                          )}
-
-                        {/* After creator shares: recipient's perspective read-only card */}
-                        {isTakeawaySaved &&
-                          authoredTakeawayText.length > 0 &&
-                          previewPerspective === "sam" && (
-                            <View style={styles.sharedTakeawayCard}>
-                              <Text style={styles.sharedTakeawayOverline}>
-                                A SMALL TAKEAWAY FROM {creatorLabel.toUpperCase()}
-                              </Text>
-                              {takeawayTag && takeawayNote.trim().length > 0 && (
-                                <View style={styles.sharedTakeawayPill}>
-                                  <Text style={styles.sharedTakeawayPillText}>
-                                    🏷️ {takeawayTag}
-                                  </Text>
-                                </View>
-                              )}
-                              <Text style={styles.sharedTakeawayBodyText}>
-                                "{authoredTakeawayText}"
-                              </Text>
-                              <Text style={styles.sharedTakeawaySupporting}>
-                                {creatorLabel} shared this as a gentle closing note.
-                              </Text>
-                              <Text style={styles.takeawayPreviewNoticeText}>
-                                Preview only — this has not been saved or shared outside this browser.
-                              </Text>
-                            </View>
-                          )}
+                          ))}
                       </View>
-                    )}
-                  </View>
-                )}
-              </CouplySectionCard>
 
-              {/* Reset preview simulator action */}
-              <CouplyQuietButton
-                variant="soft"
-                label="Start this preview again"
-                onPress={handleResetPreview}
-                accessibilityLabel="Start this preview again"
-                style={styles.resetPreviewButton}
-              />
+                      {/* Phase 2: Settlement (Available after arrival exists) */}
+                      <View style={styles.settlementBlock}>
+                        <View style={styles.journeyDivider} />
+                        <View style={styles.reconnectCheckinHeader}>
+                          <Text style={styles.checkInOverline}>
+                            CLOSING CHECK-IN
+                          </Text>
+                          <Text style={styles.settlementHeading}>
+                            Where do you stand?
+                          </Text>
+                          <Text style={styles.settlementSubtext}>
+                            Share where you are whenever you feel ready. Each
+                            person responds in their own time.
+                          </Text>
+                        </View>
+
+                        {/* Guidance notice based on settlement state */}
+                        {repairWorkflow.mySettlement?.response_code ===
+                          "need_time" ||
+                        repairWorkflow.partnerSettlement?.response_code ===
+                          "need_time" ? (
+                          <View style={styles.calmInlineNotice}>
+                            <Text style={styles.calmInlineNoticeText}>
+                              ⏳ More time is welcome here. There is no rush to
+                              close this moment.
+                            </Text>
+                          </View>
+                        ) : repairWorkflow.derivedStage === "reconnecting" ? (
+                          <View style={styles.calmInlineNotice}>
+                            <Text style={styles.calmInlineNoticeText}>
+                              🌱 The issue feels settled, but connection is
+                              still finding its way. There is nothing to force
+                              or finish today.
+                            </Text>
+                          </View>
+                        ) : null}
+
+                        {/* Check-in selector: if user has not checked in OR user is editing */}
+                        {!repairWorkflow.mySettlement ||
+                        isEditingSettlement ? (
+                          <View style={{ gap: 10 }}>
+                            <View style={styles.checkInChoicesStack}>
+                              <CouplyChoiceCard
+                                title="🌿 I feel ready to leave this here"
+                                description="Ready to gently set this moment down"
+                                selected={draftSettlementCode === "ready"}
+                                onPress={() => setDraftSettlementCode("ready")}
+                                accessibilityLabel="I feel ready to leave this here: Ready to gently set this moment down"
+                              />
+                              <CouplyChoiceCard
+                                title="🌱 The issue feels settled, but I’m still reconnecting"
+                                description="The tension has softened, but connection is still finding its way"
+                                selected={
+                                  draftSettlementCode === "reconnecting"
+                                }
+                                onPress={() =>
+                                  setDraftSettlementCode("reconnecting")
+                                }
+                                accessibilityLabel="The issue feels settled, but I’m still reconnecting"
+                              />
+                              <CouplyChoiceCard
+                                title="⏳ I need more time"
+                                description="More space or care is needed before closing this"
+                                selected={draftSettlementCode === "need_time"}
+                                onPress={() =>
+                                  setDraftSettlementCode("need_time")
+                                }
+                                accessibilityLabel="I need more time: More space or care is needed before closing this"
+                              />
+                            </View>
+
+                            <View style={styles.reviewCardActionsRow}>
+                              <CouplyPrimaryButton
+                                label={
+                                  repairWorkflow.actionLoading
+                                    ? "Sharing..."
+                                    : repairWorkflow.mySettlement
+                                    ? "Update where I am"
+                                    : "Share where I am"
+                                }
+                                disabled={
+                                  !draftSettlementCode ||
+                                  repairWorkflow.actionLoading
+                                }
+                                onPress={async () => {
+                                  if (!draftSettlementCode) return;
+                                  const ok =
+                                    await repairWorkflow.submitSettlementResponse(
+                                      draftSettlementCode,
+                                    );
+                                  if (ok) {
+                                    setIsEditingSettlement(false);
+                                  }
+                                }}
+                                accessibilityLabel={
+                                  repairWorkflow.mySettlement
+                                    ? "Update where I am"
+                                    : "Share where I am"
+                                }
+                              />
+                              {repairWorkflow.mySettlement && (
+                                <CouplyQuietButton
+                                  variant="text"
+                                  label="Cancel"
+                                  disabled={repairWorkflow.actionLoading}
+                                  onPress={() => {
+                                    setDraftSettlementCode(
+                                      (repairWorkflow.mySettlement
+                                        ?.response_code as SettlementResponseCode) ||
+                                        null,
+                                    );
+                                    setIsEditingSettlement(false);
+                                  }}
+                                  accessibilityLabel="Cancel editing check-in"
+                                />
+                              )}
+                            </View>
+                          </View>
+                        ) : (
+                          /* Current user shared status */
+                          <View style={styles.currentSharedCheckInCard}>
+                            <Text style={styles.checkInOverline}>
+                              YOUR CHECK-IN
+                            </Text>
+                            <Text style={styles.currentSharedCheckInTitle}>
+                              {SETTLEMENT_LABELS[
+                                repairWorkflow.mySettlement
+                                  .response_code as SettlementResponseCode
+                              ]?.title ||
+                                repairWorkflow.mySettlement.response_code}
+                            </Text>
+                            <Text
+                              style={styles.currentSharedCheckInDescription}
+                            >
+                              {
+                                SETTLEMENT_LABELS[
+                                  repairWorkflow.mySettlement
+                                    .response_code as SettlementResponseCode
+                                ]?.description
+                              }
+                            </Text>
+                            <Pressable
+                              style={styles.updateCheckInButton}
+                              onPress={() => {
+                                setDraftSettlementCode(
+                                  (repairWorkflow.mySettlement
+                                    ?.response_code as SettlementResponseCode) ||
+                                    "ready",
+                                );
+                                setIsEditingSettlement(true);
+                              }}
+                              accessibilityRole="button"
+                              accessibilityLabel="Revise where you stand"
+                            >
+                              <Text style={styles.changeResponseText}>
+                                Revise where I am
+                              </Text>
+                            </Pressable>
+                          </View>
+                        )}
+
+                        {/* Partner settlement status */}
+                        <View style={styles.otherReconnectionNoticeCard}>
+                          <Text style={styles.checkInOverline}>
+                            {partnerDisplayName.toUpperCase()}’S CHECK-IN
+                          </Text>
+                          {repairWorkflow.partnerSettlement ? (
+                            <>
+                              <Text
+                                style={styles.otherReconnectionNoticeHeading}
+                              >
+                                {SETTLEMENT_LABELS[
+                                  repairWorkflow.partnerSettlement
+                                    .response_code as SettlementResponseCode
+                                ]?.title ||
+                                  repairWorkflow.partnerSettlement
+                                    .response_code}
+                              </Text>
+                              <Text style={styles.otherReconnectionNoticeText}>
+                                {
+                                  SETTLEMENT_LABELS[
+                                    repairWorkflow.partnerSettlement
+                                      .response_code as SettlementResponseCode
+                                  ]?.description
+                                }
+                              </Text>
+                            </>
+                          ) : (
+                            <Text style={styles.otherReconnectionNoticeText}>
+                              Waiting gently for {partnerDisplayName} to check
+                              in.
+                            </Text>
+                          )}
+                        </View>
+
+                        {/* When both partners are ready */}
+                        {repairWorkflow.derivedStage === "both_ready" && (
+                          <View style={{ marginTop: 12 }}>
+                            <View style={styles.journeyDivider} />
+                            {isCreator ? (
+                              <View style={styles.takeawayPromptCard}>
+                                <Text style={styles.checkInOverline}>
+                                  MUTUAL READINESS
+                                </Text>
+                                <Text style={styles.takeawayPromptHeading}>
+                                  Gently close this moment
+                                </Text>
+                                <Text style={styles.takeawayPromptText}>
+                                  Both of you feel ready to leave this here. You
+                                  can choose what helped soften this moment and
+                                  add an optional takeaway for your shared
+                                  story.
+                                </Text>
+
+                                <Text style={styles.takeawayInputLabel}>
+                                  What helped you reconnect? (optional)
+                                </Text>
+                                <View style={styles.stepChipsRow}>
+                                  {(
+                                    [
+                                      "feeling_heard",
+                                      "giving_space",
+                                      "small_gesture",
+                                      "talking_it_through",
+                                      "time_together",
+                                    ] as TakeawayTagCode[]
+                                  ).map((tag) => {
+                                    const isSelected = takeawayTag === tag;
+                                    return (
+                                      <Pressable
+                                        key={tag}
+                                        style={[
+                                          styles.stepChip,
+                                          isSelected && styles.stepChipSelected,
+                                        ]}
+                                        onPress={() =>
+                                          setTakeawayTag(
+                                            isSelected ? null : tag,
+                                          )
+                                        }
+                                        accessibilityRole="button"
+                                        accessibilityState={{
+                                          selected: isSelected,
+                                        }}
+                                        accessibilityLabel={
+                                          TAKEAWAY_TAG_LABELS[tag]
+                                        }
+                                      >
+                                        <Text
+                                          style={[
+                                            styles.stepChipText,
+                                            isSelected &&
+                                              styles.stepChipTextSelected,
+                                          ]}
+                                        >
+                                          {TAKEAWAY_TAG_LABELS[tag]}
+                                        </Text>
+                                      </Pressable>
+                                    );
+                                  })}
+                                </View>
+
+                                <View style={{ gap: 4, marginTop: 4 }}>
+                                  <Text style={styles.takeawayInputLabel}>
+                                    A gentle takeaway for your shared story
+                                    (optional)
+                                  </Text>
+                                  <TextInput
+                                    style={[
+                                      styles.takeawayInput,
+                                      {
+                                        minHeight: 64,
+                                        textAlignVertical: "top",
+                                      },
+                                    ]}
+                                    value={takeawayNote}
+                                    onChangeText={(text) => {
+                                      if (text.length <= 500) {
+                                        setTakeawayNote(text);
+                                      }
+                                    }}
+                                    placeholder="What helped soften this moment..."
+                                    placeholderTextColor={theme.mutedText}
+                                    maxLength={500}
+                                    multiline
+                                    editable={!repairWorkflow.actionLoading}
+                                  />
+                                  <Text
+                                    style={{
+                                      fontSize: tokens.typeScale.caption,
+                                      color: tokens.colors.textSecondary,
+                                      alignSelf: "flex-end",
+                                    }}
+                                  >
+                                    {takeawayNote.length} / 500
+                                  </Text>
+                                </View>
+
+                                <View style={styles.takeawayActionsRow}>
+                                  <CouplyPrimaryButton
+                                    label={
+                                      repairWorkflow.actionLoading
+                                        ? "Closing moment..."
+                                        : "Complete reconnection"
+                                    }
+                                    disabled={repairWorkflow.actionLoading}
+                                    onPress={async () => {
+                                      await repairWorkflow.completeReconnection(
+                                        takeawayTag,
+                                        takeawayNote,
+                                      );
+                                    }}
+                                    accessibilityLabel="Complete reconnection"
+                                  />
+                                </View>
+                              </View>
+                            ) : (
+                              <View style={styles.calmInlineNotice}>
+                                <Text style={styles.checkInOverline}>
+                                  MUTUAL READINESS
+                                </Text>
+                                <Text style={styles.oneSidedNoticeHeading}>
+                                  You both feel ready
+                                </Text>
+                                <Text style={styles.calmInlineNoticeText}>
+                                  Waiting for {creatorDisplayName} to gently
+                                  close this moment and complete reconnection.
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  )}
+                </CouplySectionCard>
+              )}
             </View>
           )}
 
-          {/* Non-creator partner informational card (Mine friction only - legacy) */}
+          {/* C. INDIVIDUAL PRIVATE REFLECTION (Confidential to authenticated author) */}
+          <CouplySectionCard variant="lilac" style={styles.privacyCardSpacing}>
+            <View style={styles.privacyCardHeaderRow}>
+              <View style={styles.privatePill}>
+                <Text style={styles.privatePillText}>Private to you</Text>
+              </View>
+              <Text style={styles.privacySubtext}>
+                Only you can see this. It is never shared with {partnerRef}.
+              </Text>
+            </View>
+
+            {repairWorkflow.reflectionError ? (
+              <View style={styles.calmInlineNotice}>
+                <Text
+                  style={[
+                    styles.calmInlineNoticeText,
+                    { color: tokens.colors.dangerText },
+                  ]}
+                >
+                  {repairWorkflow.reflectionError}
+                </Text>
+              </View>
+            ) : null}
+
+            {isEditingReflection ? (
+              <View style={{ gap: 10, marginTop: 4 }}>
+                <TextInput
+                  style={[
+                    styles.takeawayInput,
+                    { minHeight: 80, textAlignVertical: "top" },
+                  ]}
+                  value={reflectionInput}
+                  onChangeText={setReflectionInput}
+                  placeholder="Add your personal notes or reflections here..."
+                  placeholderTextColor={theme.mutedText}
+                  multiline
+                  editable={!repairWorkflow.reflectionLoading}
+                />
+                <View style={styles.takeawayActionsRow}>
+                  <CouplyPrimaryButton
+                    label={
+                      repairWorkflow.reflectionLoading
+                        ? "Saving..."
+                        : "Save note"
+                    }
+                    disabled={
+                      repairWorkflow.reflectionLoading ||
+                      !reflectionInput.trim()
+                    }
+                    onPress={async () => {
+                      const ok =
+                        await repairWorkflow.savePrivateReflection(
+                          reflectionInput,
+                        );
+                      if (ok) {
+                        setIsEditingReflection(false);
+                      }
+                    }}
+                    accessibilityLabel="Save private reflection"
+                  />
+                  <CouplyQuietButton
+                    variant="text"
+                    label="Cancel"
+                    disabled={repairWorkflow.reflectionLoading}
+                    onPress={() => {
+                      setReflectionInput(repairWorkflow.privateNote || "");
+                      setIsEditingReflection(false);
+                    }}
+                    accessibilityLabel="Cancel editing private reflection"
+                  />
+                </View>
+              </View>
+            ) : repairWorkflow.privateNote ? (
+              <View style={{ gap: 10 }}>
+                <Text style={styles.noteBodyText}>
+                  {repairWorkflow.privateNote}
+                </Text>
+                <View style={styles.reviewCardActionsRow}>
+                  <CouplyQuietButton
+                    variant="soft"
+                    label="Edit note"
+                    onPress={() => {
+                      setReflectionInput(repairWorkflow.privateNote || "");
+                      setIsEditingReflection(true);
+                    }}
+                    accessibilityLabel="Edit private reflection"
+                  />
+                  <CouplyQuietButton
+                    variant="text"
+                    label="Remove note"
+                    disabled={repairWorkflow.reflectionLoading}
+                    onPress={async () => {
+                      await repairWorkflow.deletePrivateReflection();
+                      setReflectionInput("");
+                    }}
+                    accessibilityLabel="Remove private reflection"
+                  />
+                </View>
+              </View>
+            ) : (
+              <View style={{ gap: 8 }}>
+                <Text style={styles.reconnectingBody}>
+                  Write down personal thoughts or feelings. This stays strictly
+                  private to your account.
+                </Text>
+                <CouplyQuietButton
+                  variant="soft"
+                  label="+ Add a private reflection"
+                  onPress={() => {
+                    setReflectionInput("");
+                    setIsEditingReflection(true);
+                  }}
+                  accessibilityLabel="Add a private reflection"
+                />
+              </View>
+            )}
+          </CouplySectionCard>
+
+          {/* Non-creator partner informational card (Mine friction only) */}
           {!isPositive && !isCreator && !isSharedFriction && (
             <CouplySectionCard>
               <Text style={styles.partnerNoticeHeading}>
                 A moment to reconnect
               </Text>
               <Text style={styles.partnerNoticeText}>
-                This was shared so you can reconnect when you feel ready. There’s
-                nothing you need to do in the app right now.
+                This was shared so you can reconnect when you feel ready.
+                There’s nothing you need to do in the app right now.
               </Text>
             </CouplySectionCard>
           )}
@@ -1687,7 +1553,7 @@ export default function EventDetailScreen() {
                   accessibilityState={{
                     selected: event.status === "partially_repaired",
                   }}
-                  accessibilityLabel="Softening: It is beginning to ease."
+                  accessibilityLabel="In care: It is beginning to ease."
                 >
                   <Text
                     style={[
@@ -1696,7 +1562,7 @@ export default function EventDetailScreen() {
                         styles.repairCardTitleActive,
                     ]}
                   >
-                    Softening
+                    In care
                   </Text>
                   <Text style={styles.repairCardSubtitle}>
                     It is beginning to ease.
@@ -1835,7 +1701,7 @@ export default function EventDetailScreen() {
                           style={[
                             styles.primaryConfirmButton,
                             (changingVisibility || !sharedTopicInput.trim()) &&
-                            styles.buttonDisabled,
+                              styles.buttonDisabled,
                           ]}
                           disabled={
                             changingVisibility || !sharedTopicInput.trim()
@@ -1855,8 +1721,10 @@ export default function EventDetailScreen() {
                       <>
                         <View style={styles.warningNoticeBox}>
                           <Text style={styles.warningNoticeText}>
-                            Moving this to Mine removes {partnerName ? `${partnerName}’s` : "your partner’s"} future access.
-                            Anything already seen cannot be taken back.
+                            Moving this to Mine removes{" "}
+                            {partnerName ? `${partnerName}’s` : "your partner’s"}{" "}
+                            future access. Anything already seen cannot be taken
+                            back.
                           </Text>
                         </View>
 
@@ -1950,7 +1818,7 @@ export default function EventDetailScreen() {
           )}
         </View>
       </ScrollView>
-    </CouplyPage>
+    </SafeAreaView>
   );
 }
 
@@ -1965,7 +1833,7 @@ function formatStatus(status: RelationshipEvent["status"]) {
     case "open":
       return "Still lingering";
     case "partially_repaired":
-      return "Softening";
+      return "In care";
     case "reconnected":
       return "Reconnected";
     default:
@@ -1996,1124 +1864,846 @@ function formatDate(value: string) {
 const createStyles = (theme: ThemeColors) => {
   const tokens = getThemedTokens(theme);
   return StyleSheet.create({
-  scrollContent: {
-    paddingBottom: 64,
-  },
-  column: {
-    width: "100%",
-    maxWidth: tokens.layout.appShell,
-    alignSelf: "center",
-    gap: 14,
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: tokens.spacing.xl,
-    gap: tokens.spacing.md,
-  },
-  centerStatusText: {
-    fontSize: tokens.typeScale.bodyLarge,
-    color: tokens.colors.textSecondary,
-    textAlign: "center",
-  },
-  centerBackButton: {
-    minHeight: 44,
-    justifyContent: "center",
-    paddingVertical: tokens.spacing.sm,
-    paddingHorizontal: tokens.spacing.lg,
-    borderRadius: tokens.radii.small,
-    backgroundColor: tokens.colors.surfaceLilac,
-  },
-  centerBackButtonText: {
-    fontSize: tokens.typeScale.body,
-    fontWeight: "600",
-    color: tokens.colors.plum,
-  },
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.pageBackground,
+    },
+    scrollView: {
+      flex: 1,
+      backgroundColor: theme.pageBackground,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingTop: 4,
+      paddingBottom: 64,
+      backgroundColor: theme.pageBackground,
+    },
+    column: {
+      width: "100%",
+      maxWidth: tokens.layout.appShell,
+      alignSelf: "center",
+      gap: 14,
+    },
+    centerContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: tokens.spacing.xl,
+      gap: tokens.spacing.md,
+    },
+    centerStatusText: {
+      fontSize: tokens.typeScale.bodyLarge,
+      color: tokens.colors.textSecondary,
+      textAlign: "center",
+    },
+    centerBackButton: {
+      minHeight: 44,
+      justifyContent: "center",
+      paddingVertical: tokens.spacing.sm,
+      paddingHorizontal: tokens.spacing.lg,
+      borderRadius: tokens.radii.small,
+      backgroundColor: tokens.colors.surfaceLilac,
+    },
+    centerBackButtonText: {
+      fontSize: tokens.typeScale.body,
+      fontWeight: "600",
+      color: tokens.colors.plum,
+    },
 
-  /* Moment Card */
-  momentCardTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: tokens.spacing.xs,
-  },
-  momentOverline: {
-    fontSize: tokens.typeScale.overline,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    color: tokens.colors.plum,
-    textTransform: "uppercase",
-  },
-  categoryTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: tokens.colors.text,
-    letterSpacing: -0.3,
-  },
-  sharedTopicContextBox: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderRadius: tokens.radii.small,
-    padding: tokens.spacing.sm + 2,
-    marginTop: tokens.spacing.sm,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderSoft,
-  },
-  sharedTopicContextLabel: {
-    fontSize: tokens.typeScale.overline,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  sharedTopicContextText: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.text,
-    lineHeight: 20,
-  },
-  summaryMetaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: tokens.spacing.md,
-  },
-  metaRecordedDate: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-  },
-  intensityPill: {
-    backgroundColor: tokens.colors.surfaceBlush,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: tokens.radii.small,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderSoft,
-  },
-  intensityPillText: {
-    fontSize: tokens.typeScale.caption,
-    fontWeight: "600",
-    color: tokens.colors.plum,
-  },
+    /* Moment Card */
+    momentCardTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: tokens.spacing.xs,
+    },
+    momentOverline: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+      color: tokens.colors.plum,
+      textTransform: "uppercase",
+    },
+    categoryTitle: {
+      fontSize: 22,
+      fontWeight: "700",
+      color: tokens.colors.text,
+      marginBottom: tokens.spacing.xs,
+    },
+    sharedTopicContextBox: {
+      backgroundColor: tokens.colors.surfaceLilac,
+      borderRadius: tokens.radii.small,
+      padding: tokens.spacing.sm,
+      borderLeftWidth: 3,
+      borderLeftColor: tokens.colors.plum,
+      marginVertical: tokens.spacing.xs,
+      gap: 2,
+    },
+    sharedTopicContextLabel: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+    },
+    sharedTopicContextText: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.text,
+      lineHeight: 18,
+    },
+    summaryMetaRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: tokens.spacing.xs,
+      marginTop: tokens.spacing.xs,
+    },
+    metaRecordedDate: {
+      fontSize: tokens.typeScale.caption,
+      color: tokens.colors.textSecondary,
+    },
+    intensityPill: {
+      backgroundColor: tokens.colors.surfaceMuted,
+      borderRadius: tokens.radii.pill,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+    },
+    intensityPillText: {
+      fontSize: tokens.typeScale.caption,
+      color: tokens.colors.textSecondary,
+      fontWeight: "500",
+    },
 
-  /* Privacy boundary */
-  privacyCardSpacing: {
-    marginTop: -4,
-  },
-  privacyCardHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
-  },
-  privatePill: {
-    backgroundColor: tokens.colors.surfaceBlush,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: tokens.radii.pill,
-  },
-  privatePillText: {
-    fontSize: tokens.typeScale.overline,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  privacySubtext: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-  },
-  privacySafeNoticeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  privacySafeIcon: {
-    fontSize: 14,
-  },
-  privacySafeText: {
-    flex: 1,
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-    lineHeight: 18,
-  },
-  sharedPill: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: tokens.radii.pill,
-  },
-  sharedPillText: {
-    fontSize: tokens.typeScale.overline,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-    letterSpacing: 0.5,
-  },
-  noteBodyText: {
-    fontSize: tokens.typeScale.bodyLarge,
-    color: tokens.colors.text,
-    lineHeight: 22,
-    marginTop: 4,
-  },
+    /* Privacy Boundary Card */
+    privacyCardSpacing: {
+      marginTop: 2,
+    },
+    privacyCardHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: tokens.spacing.xs,
+      marginBottom: tokens.spacing.xs,
+    },
+    privatePill: {
+      backgroundColor: tokens.colors.surfaceLilac,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: tokens.radii.pill,
+    },
+    privatePillText: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+      letterSpacing: 0.5,
+    },
+    privacySubtext: {
+      fontSize: tokens.typeScale.caption,
+      color: tokens.colors.textSecondary,
+      flex: 1,
+    },
+    sharedPill: {
+      backgroundColor: tokens.colors.surfaceBlush,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: tokens.radii.pill,
+    },
+    sharedPillText: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+      letterSpacing: 0.5,
+    },
+    noteBodyText: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.text,
+      lineHeight: 20,
+    },
 
-  /* Outcomes */
-  positiveOutcomeTitle: {
-    fontSize: tokens.typeScale.bodyLarge,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-    textAlign: "center",
-  },
-  positiveOutcomeSubtitle: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    textAlign: "center",
-    marginTop: 4,
-  },
+    /* Positive Outcome */
+    positiveOutcomeTitle: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "700",
+      color: tokens.colors.text,
+      marginBottom: 4,
+    },
+    positiveOutcomeSubtitle: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 18,
+    },
 
-  /* Mine Friction Status Display */
-  statusRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  statusLabel: {
-    fontSize: tokens.typeScale.body,
-    fontWeight: "600",
-    color: tokens.colors.textSecondary,
-  },
-  statusMethodText: {
-    fontSize: tokens.typeScale.body,
-    fontWeight: "600",
-    color: tokens.colors.text,
-  },
-  statusSubtext: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-  },
-  statusGuidanceText: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 20,
-    marginTop: 8,
-  },
+    /* Status Display */
+    statusRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    statusLabel: {
+      fontSize: tokens.typeScale.caption,
+      fontWeight: "600",
+      color: tokens.colors.textSecondary,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    statusMethodText: {
+      fontSize: tokens.typeScale.body,
+      fontWeight: "600",
+      color: tokens.colors.plum,
+    },
+    statusSubtext: {
+      fontSize: tokens.typeScale.caption,
+      color: tokens.colors.textSecondary,
+    },
+    statusGuidanceText: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      marginTop: tokens.spacing.xs,
+      lineHeight: 18,
+    },
 
-  /* Journey Header & Preview Notice */
-  journeyContainer: {
-    gap: 14,
-    width: "100%",
-  },
-  journeyHeaderBlock: {
-    marginHorizontal: tokens.spacing.page,
-    gap: 4,
-    paddingTop: tokens.spacing.sm,
-  },
-  journeyOverline: {
-    fontSize: tokens.typeScale.overline,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    color: tokens.colors.plum,
-    textTransform: "uppercase",
-  },
-  journeyHeading: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: tokens.colors.text,
-    letterSpacing: -0.3,
-  },
-  journeySupportingText: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 20,
-  },
-  localWalkthroughCard: {
-    backgroundColor: tokens.colors.surfaceMuted,
-    borderRadius: tokens.radii.card,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.border,
-    padding: tokens.spacing.md,
-    marginHorizontal: tokens.spacing.page,
-    gap: 4,
-  },
-  localWalkthroughOverline: {
-    fontSize: tokens.typeScale.overline,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    color: tokens.colors.plum,
-  },
-  localWalkthroughText: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-    lineHeight: 18,
-  },
+    /* Journey Container */
+    journeyContainer: {
+      gap: 12,
+    },
+    journeyHeaderBlock: {
+      gap: 4,
+      paddingHorizontal: tokens.spacing.page,
+    },
+    journeyOverline: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+    },
+    journeyHeading: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: tokens.colors.text,
+    },
+    journeySupportingText: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 18,
+    },
 
-  /* Perspective Segmented Control */
-  segmentedControlCard: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderRadius: tokens.radii.card,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.borderSoft,
-    padding: tokens.spacing.sm,
-    marginHorizontal: tokens.spacing.page,
-    gap: tokens.spacing.xs,
-  },
-  segmentedControlRow: {
-    flexDirection: "row",
-    gap: 8,
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderRadius: tokens.radii.card - 4,
-    padding: 4,
-  },
-  segmentTab: {
-    flex: 1,
-    minWidth: 0,
-    flexShrink: 1,
-    minHeight: 44,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: tokens.radii.card - 6,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.2,
-    borderColor: "transparent",
-  },
-  segmentTabSelected: {
-    backgroundColor: tokens.colors.surface,
-    borderColor: tokens.colors.plum,
-    shadowColor: tokens.colors.plum,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  segmentTabText: {
-    fontSize: tokens.typeScale.body,
-    fontWeight: "500",
-    color: tokens.colors.textSecondary,
-    textAlign: "center",
-  },
-  segmentTabTextSelected: {
-    fontWeight: "700",
-    color: tokens.colors.plum,
-  },
-  segmentCaption: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-    textAlign: "center",
-    paddingTop: 2,
-  },
+    /* Next Action Card */
+    nextActionCard: {
+      gap: 12,
+    },
+    nextActionHeader: {
+      gap: 4,
+    },
+    nextActionOverline: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+      letterSpacing: 0.8,
+    },
+    nextActionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: tokens.colors.text,
+    },
+    stageContentBlock: {
+      gap: 12,
+    },
+    openAlexBlock: {
+      gap: 8,
+    },
+    stageSubheading: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "700",
+      color: tokens.colors.text,
+    },
+    stageBodyText: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 20,
+    },
+    choicesStack: {
+      gap: 10,
+      marginTop: 4,
+    },
 
-  /* One Next Action Card */
-  nextActionCard: {
-    gap: tokens.spacing.md,
-  },
-  nextActionHeader: {
-    gap: 2,
-  },
-  nextActionOverline: {
-    fontSize: tokens.typeScale.overline,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    color: tokens.colors.plum,
-  },
-  nextActionTitle: {
-    fontSize: tokens.typeScale.sectionTitle,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  stageContentBlock: {
-    gap: tokens.spacing.md,
-  },
-  openAlexBlock: {
-    gap: 6,
-  },
-  openSamBlock: {
-    gap: 10,
-  },
-  stageSubheading: {
-    fontSize: tokens.typeScale.bodyLarge,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  stageBodyText: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 20,
-  },
-  choicesStack: {
-    gap: 10,
-    marginTop: 4,
-  },
+    /* Response Display Banner */
+    responseDisplayBanner: {
+      backgroundColor: tokens.colors.surfaceLilac,
+      borderRadius: tokens.radii.card,
+      padding: 14,
+      borderWidth: 1.2,
+      borderColor: tokens.colors.borderSoft,
+      gap: 6,
+    },
+    responseDisplayTitle: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+    },
+    responseDisplayBody: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 18,
+    },
+    changeResponseButton: {
+      alignSelf: "flex-start",
+      marginTop: 4,
+      minHeight: 44,
+      justifyContent: "center",
+      paddingVertical: 4,
+    },
+    changeResponseText: {
+      fontSize: tokens.typeScale.caption,
+      fontWeight: "600",
+      color: tokens.colors.plum,
+      textDecorationLine: "underline",
+    },
 
-  /* Response Display Banner */
-  responseDisplayBanner: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderRadius: tokens.radii.card,
-    padding: 14,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.borderSoft,
-    gap: 6,
-  },
-  responseDisplayTitle: {
-    fontSize: tokens.typeScale.bodyLarge,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-  },
-  responseDisplayBody: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 18,
-  },
-  changeResponseButton: {
-    alignSelf: "flex-start",
-    marginTop: 4,
-    paddingVertical: 4,
-  },
-  changeResponseText: {
-    fontSize: tokens.typeScale.caption,
-    fontWeight: "600",
-    color: tokens.colors.plum,
-    textDecorationLine: "underline",
-  },
+    /* Next step chooser */
+    nextStepChooserBlock: {
+      gap: 8,
+      marginTop: 4,
+    },
+    nextStepChooserHeading: {
+      fontSize: tokens.typeScale.body,
+      fontWeight: "600",
+      color: tokens.colors.text,
+    },
+    stepChipsRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    stepChip: {
+      backgroundColor: tokens.colors.surfaceLilac,
+      borderRadius: tokens.radii.small,
+      minHeight: 44,
+      justifyContent: "center",
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      borderWidth: 1.2,
+      borderColor: tokens.colors.border,
+    },
+    stepChipSelected: {
+      backgroundColor: tokens.colors.plum,
+      borderColor: tokens.colors.plum,
+    },
+    stepChipText: {
+      fontSize: tokens.typeScale.caption,
+      fontWeight: "600",
+      color: tokens.colors.text,
+    },
+    stepChipTextSelected: {
+      color: theme.primaryActionText,
+    },
 
-  /* Next step chooser */
-  nextStepChooserBlock: {
-    gap: 8,
-    marginTop: 4,
-  },
-  nextStepChooserHeading: {
-    fontSize: tokens.typeScale.body,
-    fontWeight: "600",
-    color: tokens.colors.text,
-  },
-  stepChipsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  stepChip: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderRadius: tokens.radii.small,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.border,
-  },
-  stepChipSelected: {
-    backgroundColor: tokens.colors.plum,
-    borderColor: tokens.colors.plum,
-  },
-  stepChipText: {
-    fontSize: tokens.typeScale.caption,
-    fontWeight: "600",
-    color: tokens.colors.text,
-  },
-  stepChipTextSelected: {
-    color: "#FFFFFF",
-  },
+    /* Review Card */
+    reviewCard: {
+      backgroundColor: tokens.colors.surfaceLilac,
+      borderRadius: tokens.radii.card,
+      padding: 14,
+      borderWidth: 1.2,
+      borderColor: tokens.colors.borderSoft,
+      gap: 8,
+      marginTop: 8,
+    },
+    reviewCardOverline: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+      letterSpacing: 0.8,
+    },
+    reviewCardHeading: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "700",
+      color: tokens.colors.text,
+    },
+    reviewCardBody: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 18,
+    },
+    reviewCardActionsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: 10,
+      marginTop: 4,
+    },
 
-  /* Settlement */
-  settlementBlock: {
-    gap: 12,
-  },
-  journeyDivider: {
-    height: 1,
-    backgroundColor: tokens.colors.borderSoft,
-    marginVertical: 4,
-  },
-  settlementHeading: {
-    fontSize: tokens.typeScale.bodyLarge,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  settlementSubtext: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 18,
-  },
-  checkInOverline: {
-    fontSize: tokens.typeScale.overline,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-    letterSpacing: 0.8,
-  },
-  checkInChoicesStack: {
-    gap: 8,
-  },
-  calmInlineNotice: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderRadius: tokens.radii.small,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderSoft,
-  },
-  calmInlineNoticeText: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-    lineHeight: 17,
-  },
-  oneSidedNoticeCard: {
-    backgroundColor: tokens.colors.surfaceMuted,
-    borderRadius: tokens.radii.small,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-    gap: 4,
-  },
-  oneSidedNoticeHeading: {
-    fontSize: tokens.typeScale.body,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-  },
-  oneSidedNoticeText: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-    lineHeight: 17,
-  },
+    /* Settlement */
+    settlementBlock: {
+      gap: 12,
+    },
+    journeyDivider: {
+      height: 1,
+      backgroundColor: tokens.colors.borderSoft,
+      marginVertical: 4,
+    },
+    settlementHeading: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "700",
+      color: tokens.colors.text,
+    },
+    settlementSubtext: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 18,
+    },
+    checkInOverline: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+      letterSpacing: 0.8,
+    },
+    checkInChoicesStack: {
+      gap: 8,
+    },
+    calmInlineNotice: {
+      backgroundColor: tokens.colors.surfaceLilac,
+      borderRadius: tokens.radii.small,
+      padding: 10,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderSoft,
+      gap: 4,
+    },
+    calmInlineNoticeText: {
+      fontSize: tokens.typeScale.caption,
+      color: tokens.colors.textSecondary,
+      lineHeight: 17,
+    },
+    currentSharedCheckInCard: {
+      backgroundColor: tokens.colors.surfaceLilac,
+      borderRadius: tokens.radii.card,
+      padding: 14,
+      borderWidth: 1.2,
+      borderColor: tokens.colors.borderSoft,
+      gap: 6,
+      marginTop: 4,
+    },
+    currentSharedCheckInTitle: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "700",
+      color: tokens.colors.text,
+    },
+    currentSharedCheckInDescription: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 18,
+    },
+    updateCheckInButton: {
+      alignSelf: "flex-start",
+      marginTop: 2,
+      minHeight: 44,
+      justifyContent: "center",
+    },
+    otherReconnectionNoticeCard: {
+      backgroundColor: tokens.colors.surfaceMuted,
+      borderRadius: tokens.radii.small,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      gap: 4,
+      marginTop: 4,
+    },
+    otherReconnectionNoticeHeading: {
+      fontSize: tokens.typeScale.body,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+    },
+    otherReconnectionNoticeText: {
+      fontSize: tokens.typeScale.caption,
+      color: tokens.colors.textSecondary,
+      lineHeight: 17,
+    },
+    reconnectCheckinHeader: {
+      gap: 4,
+      marginTop: 4,
+    },
 
-  /* Walkthrough Review Card */
-  reviewCard: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderRadius: tokens.radii.card,
-    padding: 14,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.borderSoft,
-    gap: 8,
-    marginTop: 8,
-  },
-  reviewCardOverline: {
-    fontSize: tokens.typeScale.overline,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-    letterSpacing: 0.8,
-  },
-  reviewCardHeading: {
-    fontSize: tokens.typeScale.bodyLarge,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  reviewCardBody: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 18,
-  },
-  reviewCardActionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 4,
-  },
+    /* Reconnection Mutual Readiness */
+    oneSidedNoticeHeading: {
+      fontSize: tokens.typeScale.body,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+    },
+    takeawayPromptCard: {
+      backgroundColor: tokens.colors.surfaceLilac,
+      borderRadius: tokens.radii.card,
+      padding: 14,
+      borderWidth: 1.2,
+      borderColor: tokens.colors.borderSoft,
+      gap: 8,
+      marginTop: 6,
+    },
+    takeawayPromptHeading: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: tokens.colors.text,
+    },
+    takeawayPromptText: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 18,
+    },
+    takeawayInputLabel: {
+      fontSize: tokens.typeScale.caption,
+      fontWeight: "600",
+      color: tokens.colors.text,
+      marginTop: 2,
+    },
+    takeawayInput: {
+      backgroundColor: tokens.colors.surface,
+      borderRadius: tokens.radii.small,
+      borderWidth: 1.2,
+      borderColor: tokens.colors.border,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.text,
+    },
+    takeawayActionsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginTop: 4,
+    },
 
-  /* Shared Walkthrough Confirmation */
-  sharedConfirmationCard: {
-    backgroundColor: tokens.colors.surfaceBlush,
-    borderRadius: tokens.radii.small,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderSoft,
-    gap: 2,
-    marginTop: 6,
-  },
-  sharedConfirmationText: {
-    fontSize: tokens.typeScale.caption,
-    fontWeight: "600",
-    color: tokens.colors.plum,
-  },
-  sharedConfirmationTruthNote: {
-    fontSize: tokens.typeScale.overline,
-    color: tokens.colors.textSecondary,
-    fontStyle: "italic",
-    lineHeight: 15,
-  },
+    /* Reconnected Section */
+    reconnectedSection: {
+      gap: 10,
+    },
+    reconnectedHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    reconnectedEmoji: {
+      fontSize: 20,
+    },
+    reconnectedTitleGroup: {
+      flex: 1,
+      gap: 2,
+    },
+    reconnectingOverline: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+      letterSpacing: 0.8,
+    },
+    reconnectedHeading: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: tokens.colors.text,
+    },
+    reconnectedBody: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 19,
+    },
+    sharedTakeawayPill: {
+      backgroundColor: tokens.colors.surfaceBlush,
+      alignSelf: "flex-start",
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: tokens.radii.pill,
+    },
+    sharedTakeawayPillText: {
+      fontSize: tokens.typeScale.caption,
+      fontWeight: "600",
+      color: tokens.colors.plum,
+    },
+    sharedTakeawayCard: {
+      backgroundColor: tokens.colors.surfaceLilac,
+      borderRadius: tokens.radii.card,
+      padding: 14,
+      borderWidth: 1.2,
+      borderColor: tokens.colors.borderSoft,
+      gap: 6,
+      marginTop: 6,
+    },
+    sharedTakeawayOverline: {
+      fontSize: tokens.typeScale.overline,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+      letterSpacing: 0.8,
+    },
+    sharedTakeawayBodyText: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "500",
+      color: tokens.colors.text,
+      lineHeight: 20,
+      fontStyle: "italic",
+      marginVertical: 2,
+    },
+    reconnectingBody: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 18,
+    },
 
-  /* Private reflection */
-  privateReflectionCard: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderRadius: tokens.radii.card,
-    padding: 14,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.borderSoft,
-    gap: 10,
-    marginTop: 4,
-  },
-  privateReflectionBadgeRow: {
-    flexDirection: "row",
-  },
-  privateReflectionHeading: {
-    fontSize: tokens.typeScale.bodyLarge,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  privateReflectionSubtext: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-  },
-  reflectionChipsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  reflectionChip: {
-    backgroundColor: tokens.colors.surface,
-    borderRadius: tokens.radii.small,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.border,
-  },
-  reflectionChipSelected: {
-    backgroundColor: tokens.colors.plum,
-    borderColor: tokens.colors.plum,
-  },
-  reflectionChipText: {
-    fontSize: tokens.typeScale.caption,
-    fontWeight: "600",
-    color: tokens.colors.text,
-  },
-  reflectionChipTextSelected: {
-    color: "#FFFFFF",
-  },
-  privateReflectionFooterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 2,
-  },
-  privateReflectionFootnote: {
-    fontSize: tokens.typeScale.overline,
-    color: tokens.colors.textSecondary,
-    fontStyle: "italic",
-  },
+    /* Mine Friction Controls */
+    sectionContainer: {
+      gap: 10,
+      marginHorizontal: tokens.spacing.page,
+    },
+    sectionHeading: {
+      fontSize: tokens.typeScale.sectionTitle,
+      fontWeight: "700",
+      color: tokens.colors.text,
+    },
+    partnerNoticeHeading: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "700",
+      color: tokens.colors.text,
+      marginBottom: tokens.spacing.xs,
+    },
+    partnerNoticeText: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 20,
+    },
+    repairCardsContainer: {
+      gap: tokens.spacing.sm,
+    },
+    repairCard: {
+      backgroundColor: tokens.colors.surface,
+      borderRadius: tokens.radii.card,
+      padding: tokens.spacing.md,
+      borderWidth: 1.5,
+      borderColor: tokens.colors.border,
+    },
+    repairCardActive: {
+      borderColor: tokens.colors.plum,
+      backgroundColor: tokens.colors.surfaceLilac,
+    },
+    repairCardTitle: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "600",
+      color: tokens.colors.text,
+      marginBottom: 2,
+    },
+    repairCardTitleActive: {
+      color: tokens.colors.plum,
+      fontWeight: "700",
+    },
+    repairCardSubtitle: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 18,
+    },
+    repairMethodsSubcard: {
+      backgroundColor: tokens.colors.surfaceMuted,
+      borderRadius: tokens.radii.card,
+      padding: tokens.spacing.md,
+      marginTop: tokens.spacing.xs,
+      gap: tokens.spacing.sm,
+    },
+    repairMethodsTitle: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "600",
+      color: tokens.colors.text,
+    },
+    repairMethodsSubtitle: {
+      fontSize: tokens.typeScale.caption,
+      color: tokens.colors.textSecondary,
+    },
+    methodsWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: tokens.spacing.xs,
+    },
+    methodChip: {
+      backgroundColor: tokens.colors.surface,
+      borderRadius: tokens.radii.pill,
+      minHeight: 44,
+      justifyContent: "center",
+      paddingVertical: tokens.spacing.xs,
+      paddingHorizontal: tokens.spacing.sm,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+    },
+    methodChipSelected: {
+      backgroundColor: tokens.colors.plum,
+      borderColor: tokens.colors.plum,
+    },
+    methodChipText: {
+      fontSize: tokens.typeScale.caption,
+      fontWeight: "500",
+      color: tokens.colors.text,
+    },
+    methodChipTextSelected: {
+      color: theme.primaryActionText,
+    },
+    cancelLinkButton: {
+      alignSelf: "center",
+      paddingVertical: tokens.spacing.xs,
+      minHeight: 44,
+      justifyContent: "center",
+    },
+    cancelLinkText: {
+      fontSize: tokens.typeScale.caption,
+      color: tokens.colors.textSecondary,
+      textDecorationLine: "underline",
+    },
 
-  /* Reconnecting Stage */
-  reconnectingSection: {
-    gap: 12,
-  },
-  reconnectingHeaderBlock: {
-    gap: 6,
-  },
-  reconnectingStatusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  reconnectingOverline: {
-    fontSize: tokens.typeScale.overline,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-    letterSpacing: 0.8,
-  },
-  reconnectingHeading: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  reconnectingBody: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 18,
-  },
-  reconnectingStatusBlock: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 4,
-    backgroundColor: tokens.colors.surfaceLilac,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: tokens.radii.small,
-  },
-  reconnectingStatusExplanation: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.plum,
-    fontWeight: "600",
-    flex: 1,
-  },
-  reconnectCheckinHeader: {
-    gap: 4,
-    marginTop: 4,
-  },
-  reconnectCheckinTitle: {
-    fontSize: tokens.typeScale.bodyLarge,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  reconnectCheckinBody: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 18,
-  },
-  reconnectChoicesStack: {
-    gap: 8,
-  },
-  otherReconnectionNoticeCard: {
-    backgroundColor: tokens.colors.surfaceMuted,
-    borderRadius: tokens.radii.small,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-    gap: 4,
-    marginTop: 4,
-  },
-  otherReconnectionNoticeHeading: {
-    fontSize: tokens.typeScale.body,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-  },
-  otherReconnectionNoticeText: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-    lineHeight: 17,
-  },
-  currentSharedCheckInCard: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderRadius: tokens.radii.card,
-    padding: 14,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.borderSoft,
-    gap: 10,
-    marginTop: 4,
-  },
-  currentSharedCheckInTitle: {
-    fontSize: tokens.typeScale.bodyLarge,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  currentSharedCheckInDescription: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 18,
-  },
-  updateCheckInButton: {
-    alignSelf: "flex-start",
-    marginTop: 2,
-  },
-  keepCurrentCheckInButton: {
-    alignSelf: "flex-start",
-    marginTop: 4,
-  },
-  updatedCheckInCaption: {
-    fontSize: tokens.typeScale.caption,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 2,
-  },
+    /* Sharing section */
+    sharingCard: {
+      backgroundColor: tokens.colors.surface,
+      borderRadius: tokens.radii.card,
+      padding: tokens.spacing.md,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      gap: tokens.spacing.sm,
+    },
+    sharingExplanationText: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+      lineHeight: 20,
+    },
+    secondaryActionButton: {
+      minHeight: 44,
+      borderRadius: tokens.radii.small,
+      borderWidth: 1.5,
+      borderColor: tokens.colors.plum,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: tokens.spacing.sm,
+      paddingHorizontal: tokens.spacing.md,
+    },
+    secondaryActionText: {
+      fontSize: tokens.typeScale.body,
+      fontWeight: "600",
+      color: tokens.colors.plum,
+    },
+    sharingActivePanel: {
+      gap: tokens.spacing.sm,
+    },
+    sharingFieldLabel: {
+      fontSize: tokens.typeScale.body,
+      fontWeight: "600",
+      color: tokens.colors.text,
+    },
+    sharingInput: {
+      backgroundColor: tokens.colors.surfaceMuted,
+      borderRadius: tokens.radii.small,
+      padding: tokens.spacing.sm,
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.text,
+      minHeight: 70,
+      textAlignVertical: "top",
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+    },
+    primaryConfirmButton: {
+      minHeight: 44,
+      borderRadius: tokens.radii.small,
+      backgroundColor: tokens.colors.plum,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: tokens.spacing.sm,
+      paddingHorizontal: tokens.spacing.md,
+    },
+    primaryConfirmText: {
+      fontSize: tokens.typeScale.body,
+      fontWeight: "600",
+      color: theme.primaryActionText,
+    },
+    warningNoticeBox: {
+      backgroundColor: tokens.colors.surfaceBlush,
+      borderRadius: tokens.radii.small,
+      padding: tokens.spacing.sm,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderSoft,
+    },
+    warningNoticeText: {
+      fontSize: tokens.typeScale.caption,
+      color: tokens.colors.plum,
+      lineHeight: 18,
+    },
+    buttonDisabled: {
+      opacity: 0.5,
+    },
 
-  /* Reconnected section */
-  reconnectedSection: {
-    gap: 10,
-  },
-  reconnectedHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  reconnectedEmoji: {
-    fontSize: 20,
-  },
-  reconnectedTitleGroup: {
-    flex: 1,
-    gap: 2,
-  },
-  reconnectedHeading: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  reconnectedBody: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 19,
-  },
-  seeInOursButton: {
-    alignSelf: "flex-start",
-    marginTop: 4,
-  },
+    /* Delete */
+    deleteContainer: {
+      marginTop: tokens.spacing.md,
+      marginHorizontal: tokens.spacing.page,
+      alignItems: "center",
+    },
+    quietDeleteButton: {
+      minHeight: 44,
+      justifyContent: "center",
+      paddingVertical: tokens.spacing.xs,
+    },
+    quietDeleteText: {
+      fontSize: tokens.typeScale.caption,
+      color: tokens.colors.textSecondary,
+      textDecorationLine: "underline",
+    },
+    deleteConfirmCard: {
+      backgroundColor: tokens.colors.surfaceBlush,
+      borderRadius: tokens.radii.card,
+      padding: tokens.spacing.md,
+      borderWidth: 1,
+      borderColor: tokens.colors.borderSoft,
+      gap: tokens.spacing.xs,
+      width: "100%",
+    },
+    deleteConfirmTitle: {
+      fontSize: tokens.typeScale.bodyLarge,
+      fontWeight: "700",
+      color: tokens.colors.plum,
+    },
+    deleteConfirmSubtitle: {
+      fontSize: tokens.typeScale.caption,
+      color: tokens.colors.textSecondary,
+    },
+    deleteActionsRow: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: tokens.spacing.sm,
+      marginTop: tokens.spacing.sm,
+    },
+    deleteCancelButton: {
+      minHeight: 44,
+      justifyContent: "center",
+      paddingHorizontal: tokens.spacing.md,
+    },
+    deleteCancelText: {
+      fontSize: tokens.typeScale.body,
+      color: tokens.colors.textSecondary,
+    },
+    deleteFinalButton: {
+      minHeight: 44,
+      backgroundColor: tokens.colors.plum,
+      borderRadius: tokens.radii.small,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: tokens.spacing.md,
+    },
+    deleteFinalText: {
+      fontSize: tokens.typeScale.body,
+      fontWeight: "600",
+      color: theme.primaryActionText,
+    },
 
-  /* Takeaway Prompt */
-  takeawayPromptCard: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderRadius: tokens.radii.card,
-    padding: 14,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.borderSoft,
-    gap: 8,
-    marginTop: 6,
-  },
-  takeawayPromptHeading: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  takeawayPromptText: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 18,
-  },
-  takeawayInputLabel: {
-    fontSize: tokens.typeScale.caption,
-    fontWeight: "600",
-    color: tokens.colors.text,
-    marginTop: 2,
-  },
-  takeawayInput: {
-    backgroundColor: tokens.colors.surface,
-    borderRadius: tokens.radii.small,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.text,
-  },
-  takeawayActionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 4,
-  },
-  takeawayPrivacyReassuranceText: {
-    fontSize: tokens.typeScale.overline,
-    color: tokens.colors.textSecondary,
-    fontStyle: "italic",
-    marginTop: 2,
-    lineHeight: 16,
-  },
-  takeawayPreviewNoticeText: {
-    fontSize: tokens.typeScale.overline,
-    color: tokens.colors.textSecondary,
-    fontStyle: "italic",
-    marginTop: 4,
-    lineHeight: 15,
-  },
-
-  /* Shared Takeaway Display Card */
-  sharedTakeawayCard: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderRadius: tokens.radii.card,
-    padding: 14,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.borderSoft,
-    gap: 6,
-    marginTop: 6,
-  },
-  sharedTakeawayOverline: {
-    fontSize: tokens.typeScale.overline,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-    letterSpacing: 0.8,
-  },
-  sharedTakeawaySupporting: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-    lineHeight: 17,
-  },
-  sharedTakeawayPill: {
-    backgroundColor: tokens.colors.surfaceBlush,
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: tokens.radii.pill,
-  },
-  sharedTakeawayPillText: {
-    fontSize: tokens.typeScale.caption,
-    fontWeight: "600",
-    color: tokens.colors.plum,
-  },
-  sharedTakeawayBodyText: {
-    fontSize: tokens.typeScale.bodyLarge,
-    fontWeight: "500",
-    color: tokens.colors.text,
-    lineHeight: 20,
-    fontStyle: "italic",
-    marginVertical: 2,
-  },
-
-  /* Reset Preview Button */
-  resetPreviewButton: {
-    alignSelf: "center",
-    marginTop: 8,
-  },
-
-  /* Sections */
-  sectionContainer: {
-    gap: 10,
-    marginHorizontal: tokens.spacing.page,
-  },
-  sectionHeading: {
-    fontSize: tokens.typeScale.sectionTitle,
-    fontWeight: "700",
-    color: tokens.colors.text,
-    letterSpacing: -0.2,
-  },
-  partnerNoticeHeading: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  partnerNoticeText: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 20,
-    marginTop: 4,
-  },
-
-  /* Friction repair reflection cards */
-  repairCardsContainer: {
-    gap: 10,
-  },
-  repairCard: {
-    backgroundColor: tokens.colors.surface,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.border,
-    borderRadius: tokens.radii.card,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    justifyContent: "center",
-  },
-  repairCardActive: {
-    borderColor: tokens.colors.plum,
-    backgroundColor: tokens.colors.surfaceLilac,
-  },
-  repairCardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: tokens.colors.text,
-    marginBottom: 2,
-  },
-  repairCardTitleActive: {
-    color: tokens.colors.plum,
-  },
-  repairCardSubtitle: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-    lineHeight: 18,
-  },
-
-  repairMethodsSubcard: {
-    backgroundColor: tokens.colors.surface,
-    borderRadius: tokens.radii.card,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.border,
-    gap: 10,
-    marginTop: 6,
-  },
-  repairMethodsTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: tokens.colors.text,
-  },
-  repairMethodsSubtitle: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-  },
-  methodsWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 4,
-  },
-  methodChip: {
-    backgroundColor: tokens.colors.pageBackground,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.border,
-    borderRadius: tokens.radii.pill,
-    paddingVertical: 8,
-    paddingHorizontal: 13,
-  },
-  methodChipSelected: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderColor: tokens.colors.plum,
-  },
-  methodChipText: {
-    fontSize: tokens.typeScale.caption,
-    fontWeight: "500",
-    color: tokens.colors.text,
-  },
-  methodChipTextSelected: {
-    fontWeight: "600",
-    color: tokens.colors.plum,
-  },
-  cancelLinkButton: {
-    paddingVertical: 6,
-    alignItems: "center",
-  },
-  cancelLinkText: {
-    fontSize: tokens.typeScale.caption,
-    fontWeight: "600",
-    color: tokens.colors.textSecondary,
-  },
-
-  /* Sharing card */
-  sharingCard: {
-    backgroundColor: tokens.colors.surface,
-    borderRadius: tokens.radii.card,
-    padding: 16,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.border,
-    gap: 12,
-  },
-  sharingExplanationText: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    lineHeight: 19,
-  },
-  secondaryActionButton: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderRadius: tokens.radii.small,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryActionText: {
-    fontSize: tokens.typeScale.bodyLarge,
-    fontWeight: "600",
-    color: tokens.colors.plum,
-  },
-  sharingActivePanel: {
-    gap: 12,
-    paddingTop: 6,
-  },
-  sharingFieldLabel: {
-    fontSize: tokens.typeScale.bodyLarge,
-    fontWeight: "600",
-    color: tokens.colors.text,
-  },
-  sharingInput: {
-    minHeight: 80,
-    backgroundColor: tokens.colors.surface,
-    borderRadius: tokens.radii.small,
-    borderWidth: 1.2,
-    borderColor: tokens.colors.border,
-    padding: 12,
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.text,
-    textAlignVertical: "top",
-  },
-  warningNoticeBox: {
-    backgroundColor: tokens.colors.surfaceBlush,
-    borderColor: tokens.colors.borderSoft,
-    borderWidth: 1,
-    borderRadius: tokens.radii.small,
-    padding: 12,
-  },
-  warningNoticeText: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.plum,
-    lineHeight: 18,
-  },
-  primaryConfirmButton: {
-    backgroundColor: tokens.colors.plum,
-    borderRadius: tokens.radii.small,
-    paddingVertical: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryConfirmText: {
-    fontSize: tokens.typeScale.bodyLarge,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-
-  /* Delete */
-  deleteContainer: {
-    paddingTop: 8,
-    alignItems: "center",
-    marginHorizontal: tokens.spacing.page,
-  },
-  quietDeleteButton: {
-    minHeight: 44,
-    justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  quietDeleteText: {
-    fontSize: tokens.typeScale.body,
-    color: tokens.colors.textSecondary,
-    fontWeight: "500",
-    textDecorationLine: "underline",
-  },
-  deleteConfirmCard: {
-    width: "100%",
-    backgroundColor: tokens.colors.surfaceBlush,
-    borderColor: tokens.colors.borderSoft,
-    borderWidth: 1.2,
-    borderRadius: tokens.radii.card,
-    padding: 16,
-    alignItems: "center",
-    gap: 6,
-  },
-  deleteConfirmTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: tokens.colors.plum,
-  },
-  deleteConfirmSubtitle: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.textSecondary,
-    marginBottom: 8,
-  },
-  deleteActionsRow: {
-    flexDirection: "row",
-    gap: 10,
-    width: "100%",
-    marginTop: 4,
-  },
-  deleteCancelButton: {
-    flex: 1,
-    minHeight: 44,
-    backgroundColor: tokens.colors.surface,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-    borderRadius: tokens.radii.small,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  deleteCancelText: {
-    fontSize: tokens.typeScale.body,
-    fontWeight: "600",
-    color: tokens.colors.textSecondary,
-  },
-  deleteFinalButton: {
-    flex: 1,
-    minHeight: 44,
-    backgroundColor: tokens.colors.plum,
-    borderRadius: tokens.radii.small,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  deleteFinalText: {
-    fontSize: tokens.typeScale.body,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-
-  /* Status message */
-  statusBanner: {
-    backgroundColor: tokens.colors.surfaceLilac,
-    borderColor: tokens.colors.borderSoft,
-    borderWidth: 1,
-    borderRadius: tokens.radii.small,
-    padding: 12,
-    alignItems: "center",
-    marginHorizontal: tokens.spacing.page,
-  },
-  statusBannerText: {
-    fontSize: tokens.typeScale.caption,
-    color: tokens.colors.plum,
-    fontWeight: "500",
-    textAlign: "center",
-  },
-});
+    /* Status banner */
+    statusBanner: {
+      backgroundColor: tokens.colors.surfaceMuted,
+      borderRadius: tokens.radii.small,
+      padding: tokens.spacing.sm,
+      borderWidth: 1,
+      borderColor: tokens.colors.border,
+      marginHorizontal: tokens.spacing.page,
+    },
+    statusBannerText: {
+      fontSize: tokens.typeScale.caption,
+      color: tokens.colors.textSecondary,
+      textAlign: "center",
+    },
+  });
 };

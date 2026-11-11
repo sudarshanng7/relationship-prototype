@@ -312,12 +312,19 @@ export default function HomeScreen() {
   const [partnerConnected, setPartnerConnected] = useState(false);
   const [isIdentityLoading, setIsIdentityLoading] = useState(true);
 
-  const effectiveDisplayName = identity.displayName ?? displayName;
+  const cleanDisplayName =
+    (identity.displayName || displayName)?.trim() || null;
+  const effectiveDisplayName = cleanDisplayName;
   const effectivePartnerName = identity.partnerName ?? partnerName;
   const effectivePartnerConnected =
     identity.partnerConnected || partnerConnected;
   const effectivePartnerRef =
     identity.partnerRef || effectivePartnerName || "your partner";
+
+  const rhythmTitle =
+    cleanDisplayName && cleanDisplayName.toLowerCase() !== "there"
+      ? `${cleanDisplayName}’s Rhythm`
+      : "My Rhythm";
 
   const hasPendingChallengePreview = Boolean(
     activeInvitation &&
@@ -346,6 +353,8 @@ export default function HomeScreen() {
 
       async function fetchHomeData() {
         try {
+          void identity.refreshIdentity();
+
           const {
             data: { user },
             error: userError,
@@ -635,8 +644,12 @@ export default function HomeScreen() {
       >
         {/* Centered Single Mobile Content Column (capped at 520px) */}
         <View style={styles.mainColumn}>
-          {/* Top Title ("My Rhythm") */}
-          <CouplyHeader title="My Rhythm" style={styles.topHeaderCouply} />
+          {/* Top Title (Personalized, e.g. "Kaivlya’s Rhythm" or fallback "My Rhythm") */}
+          <CouplyHeader
+            title={rhythmTitle}
+            style={styles.topHeaderCouply}
+            titleStyle={styles.topHeaderTitle}
+          />
 
           {/* 1. Relationship Header */}
           <View style={styles.headerContainer}>
@@ -1441,6 +1454,10 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       paddingTop: 4,
       paddingBottom: 2,
       alignItems: "center",
+    },
+    topHeaderTitle: {
+      textAlign: "center",
+      flexShrink: 1,
     },
     topTitleText: {
       fontSize: 16,

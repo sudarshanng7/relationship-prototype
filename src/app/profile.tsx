@@ -296,7 +296,6 @@ export default function ProfileScreen() {
   const [draftTogetherMonth, setDraftTogetherMonth] = useState<number | null>(null);
   const [draftTogetherDay, setDraftTogetherDay] = useState<number | null>(null);
   const [draftSharedInterests, setDraftSharedInterests] = useState<string[]>([]);
-  const [draftRelDescription, setDraftRelDescription] = useState("");
   const [newSharedInterestInput, setNewSharedInterestInput] = useState("");
 
   // 6. Important dates (couple_important_dates)
@@ -824,7 +823,6 @@ export default function ProfileScreen() {
     }
 
     setDraftSharedInterests([...sharedInterests]);
-    setDraftRelDescription(relDescription);
     setNewSharedInterestInput("");
     setRelationshipFeedback(null);
     setIsEditingRelationship(true);
@@ -919,15 +917,7 @@ export default function ProfileScreen() {
       }
     }
 
-    const cleanDesc = draftRelDescription.trim() || null;
-    if (cleanDesc && cleanDesc.length > 500) {
-      setRelationshipFeedback({
-        type: "error",
-        text: "Relationship description must be 500 characters or fewer.",
-      });
-      return;
-    }
-
+    const preservedDesc = relDescription ? relDescription.trim() || null : null;
     const normSharedInterests = normalizeTags(draftSharedInterests);
 
     setIsSavingRelationship(true);
@@ -939,7 +929,7 @@ export default function ProfileScreen() {
         together_since: parsedDate,
         together_since_precision: precision || null,
         shared_interests: normSharedInterests,
-        relationship_description: cleanDesc,
+        relationship_description: preservedDesc,
       };
 
       if (hasCoupleProfileRow) {
@@ -979,7 +969,6 @@ export default function ProfileScreen() {
       setTogetherSince(parsedDate);
       setTogetherSincePrecision(precision || null);
       setSharedInterests(normSharedInterests);
-      setRelDescription(cleanDesc ?? "");
       setIsEditingRelationship(false);
       setRelationshipFeedback({
         type: "success",
@@ -2288,17 +2277,6 @@ export default function ProfileScreen() {
                             )}
                           </View>
 
-                          <View style={styles.divider} />
-
-                          <View style={styles.detailBlock}>
-                            <Text style={styles.detailLabel}>
-                              A little about us
-                            </Text>
-                            <Text style={styles.detailValue}>
-                              {relDescription || "Not added"}
-                            </Text>
-                          </View>
-
                           <CouplyQuietButton
                             label="Edit relationship details"
                             onPress={startEditingRelationship}
@@ -2638,32 +2616,6 @@ export default function ProfileScreen() {
                                 </View>
                               </>
                             )}
-                          </View>
-
-                          {/* Relationship description */}
-                          <View style={styles.fieldBlock}>
-                            <View style={styles.fieldLabelRow}>
-                              <Text style={styles.fieldLabel}>
-                                A little about us
-                              </Text>
-                              <Text style={styles.counterText}>
-                                {draftRelDescription.length}/500
-                              </Text>
-                            </View>
-                            <Text style={styles.helperText}>
-                              A shared note about the relationship you are
-                              building together.
-                            </Text>
-                            <TextInput
-                              style={styles.textArea}
-                              value={draftRelDescription}
-                              onChangeText={setDraftRelDescription}
-                              placeholder="What makes your shared rhythm feel like home"
-                              placeholderTextColor={theme.mutedText}
-                              multiline
-                              maxLength={500}
-                              accessibilityLabel="A little about us"
-                            />
                           </View>
 
                           {/* Actions */}

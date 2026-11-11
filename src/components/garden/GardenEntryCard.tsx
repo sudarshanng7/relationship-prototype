@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,11 +8,11 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { tokens } from "@/components/couply-tokens";
-import { CouplyStatusPill } from "@/components/CouplyUI";
 import { useTheme } from "@/context/ThemeContext";
 import { useGardenData } from "@/lib/use-garden-data";
+import { getAmbienceLabel } from "@/lib/garden-generator";
 import { GardenVisualizer } from "@/components/garden/GardenVisualizer";
 
 export interface GardenEntryCardProps {
@@ -29,6 +29,20 @@ export function GardenEntryCard({
   const { theme } = useTheme();
   const garden = useGardenData(coupleId);
 
+  useFocusEffect(
+    useCallback(() => {
+      void garden.refetch(true);
+    }, [garden.refetch])
+  );
+
+  // Explicit opaque background colors per theme mode
+  const footerBg =
+    theme.key === "light"
+      ? "#F4EEF7"
+      : theme.key === "dim"
+      ? "#514958"
+      : "#302536";
+
   // If loading, show a calm minimal placeholder
   if (garden.loading) {
     return (
@@ -36,7 +50,10 @@ export function GardenEntryCard({
         style={[
           styles.container,
           styles.loadingContainer,
-          { backgroundColor: theme.secondarySurface, borderColor: theme.borderSoft },
+          {
+            backgroundColor: footerBg,
+            borderColor: theme.borderSoft,
+          },
           style,
         ]}
       >
@@ -56,26 +73,65 @@ export function GardenEntryCard({
   const {
     totalGrowthUnits,
     careGrowthUnits,
+    timeGrowthUnits,
     seedString,
     stage,
     isResting,
+    careSignals,
+    careEvents,
   } = garden;
 
-  let headingText = "A quiet place growing with the two of you.";
-  let bodyText = stage.supportingCopy;
+  const ambienceLabel = getAmbienceLabel(stage.key, isResting);
 
-  if (isResting) {
-    headingText = "Your garden is resting peacefully.";
-    bodyText = "Everything you have grown remains here.";
-  } else if (
-    stage.key === "garden_in_bloom" ||
-    stage.key === "rooted_flourishing"
-  ) {
-    headingText = "Something new is blooming in your garden.";
-    bodyText = stage.supportingCopy;
-  }
+  // Clear, truth-aligned editorial lines
+  const primaryLine = stage.supportingCopy;
+  const secondaryLine = isResting
+    ? "Your garden is resting peacefully. Everything you have grown remains here."
+    : careGrowthUnits > 0
+    ? "The care you share is taking shape here."
+    : "Your roots are deepening quietly with time.";
 
-  const accessibilityLabel = `Your Shared Garden. Stage: ${stage.label}. ${headingText} Tap to enter your garden.`;
+  const accessibilityLabel = `Your Shared Garden. Stage: ${stage.label}. ${primaryLine} ${secondaryLine} Tap to enter your garden.`;
+
+  // Contrast-safe botanical pill colors aligned with Purple Garden identity
+  const isLight = theme.key === "light";
+  const isDim = theme.key === "dim";
+
+  const pillBg = isResting
+    ? isLight
+      ? "#ECE5F0"
+      : isDim
+      ? "#3F3746"
+      : "#2B2132"
+    : isLight
+    ? "#E8F0EA"
+    : isDim
+    ? "#324438"
+    : "#223528";
+
+  const pillBorder = isResting
+    ? isLight
+      ? "#DACFE0"
+      : isDim
+      ? "#584E61"
+      : "#45364E"
+    : isLight
+    ? "#CFDFD2"
+    : isDim
+    ? "#4A6352"
+    : "#35503D";
+
+  const pillText = isResting
+    ? isLight
+      ? "#5C4A63"
+      : isDim
+      ? "#D9CCE0"
+      : "#D6C7DC"
+    : isLight
+    ? "#244E2F"
+    : isDim
+    ? "#C7E5CF"
+    : "#BFE2CA";
 
   return (
     <Pressable
@@ -83,7 +139,7 @@ export function GardenEntryCard({
       style={({ pressed }) => [
         styles.container,
         {
-          backgroundColor: theme.secondarySurface,
+          backgroundColor: footerBg,
           borderColor: pressed ? theme.primaryAccent : theme.borderSoft,
         },
         pressed && styles.containerPressed,
@@ -93,48 +149,65 @@ export function GardenEntryCard({
       accessibilityLabel={accessibilityLabel}
       accessibilityHint="Opens the full interactive Shared Garden view"
     >
-      {/* Miniature Landscape Garden artwork on top */}
+      {/* 1. Botanical artwork region (top portion, 160px, full width) */}
       <View style={styles.artSection}>
         <GardenVisualizer
           compact={true}
           totalGrowthUnits={totalGrowthUnits}
           careGrowthUnits={careGrowthUnits}
+          timeGrowthUnits={timeGrowthUnits}
           seedString={seedString}
           isResting={isResting}
+          careSignals={careSignals}
+          careEvents={careEvents}
         />
       </View>
 
-      {/* Integrated Text & Action Column below */}
-      <View style={styles.textSection}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.overline, { color: theme.primaryAccent }]}>
-            YOUR SHARED GARDEN
+      {/* 2. Information footer (rendered directly below artwork as sibling) */}
+      <View
+        style={[
+          styles.infoFooter,
+          {
+            backgroundColor: footerBg,
+            borderTopColor: theme.borderSoft,
+          },
+        ]}
+      >
+        {/* Top row: Stage label + Quiet status pill */}
+        <View style={styles.footerTopRow}>
+          <Text
+            style={[styles.stageLabel, { color: theme.primaryText }]}
+            numberOfLines={1}
+          >
+            {stage.label}
           </Text>
-          <CouplyStatusPill
-            label={stage.label}
-            variant={isResting ? "neutral" : "positive"}
-          />
+          <View
+            style={[
+              styles.statusPill,
+              { backgroundColor: pillBg, borderColor: pillBorder },
+            ]}
+          >
+            <Text style={[styles.statusPillText, { color: pillText }]}>
+              {ambienceLabel}
+            </Text>
+          </View>
         </View>
 
+        {/* Primary line: Current stage developmental description */}
         <Text
-          style={[styles.heading, { color: theme.primaryText }]}
-          numberOfLines={3}
-        >
-          {headingText}
-        </Text>
-
-        <Text
-          style={[styles.subtext, { color: theme.secondaryText }]}
+          style={[styles.primaryLine, { color: theme.primaryText }]}
           numberOfLines={2}
         >
-          {bodyText}
+          {primaryLine}
         </Text>
 
-        <View style={styles.actionRow}>
-          <Text style={[styles.actionText, { color: theme.primaryAccent }]}>
-            Enter your garden ›
-          </Text>
-        </View>
+        {/* Secondary line: Quiet truth-aligned care-reflection line */}
+        <Text
+          style={[styles.secondaryLine, { color: theme.secondaryText }]}
+          numberOfLines={2}
+        >
+          {secondaryLine}
+        </Text>
       </View>
     </Pressable>
   );
@@ -167,42 +240,54 @@ const styles = StyleSheet.create({
     fontSize: tokens.typeScale.body,
   },
   artSection: {
-    width: "100%",
     height: 160,
+    flexShrink: 0,
+    position: "relative",
+    overflow: "hidden",
+    width: "100%",
   },
-  textSection: {
-    padding: 18,
-    gap: 8,
+  infoFooter: {
+    position: "relative",
+    zIndex: 2,
+    width: "100%",
+    opacity: 1,
+    borderTopWidth: 1,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 16,
+    gap: 5,
   },
-  headerRow: {
+  footerTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    flexWrap: "wrap",
     gap: 8,
     marginBottom: 2,
   },
-  overline: {
+  stageLabel: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "700",
+    letterSpacing: -0.2,
+  },
+  statusPill: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  statusPillText: {
     fontSize: tokens.typeScale.overline,
-    fontWeight: "700",
-    letterSpacing: 0.8,
+    fontWeight: "600",
+    letterSpacing: 0.2,
   },
-  heading: {
-    fontSize: tokens.typeScale.sectionTitle,
-    fontWeight: "700",
-    lineHeight: 23,
-  },
-  subtext: {
+  primaryLine: {
     fontSize: tokens.typeScale.body,
-    lineHeight: 19,
+    fontWeight: "500",
+    lineHeight: 20,
   },
-  actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 6,
-  },
-  actionText: {
-    fontSize: tokens.typeScale.body,
-    fontWeight: "700",
+  secondaryLine: {
+    fontSize: tokens.typeScale.caption,
+    fontWeight: "400",
+    lineHeight: 18,
   },
 });

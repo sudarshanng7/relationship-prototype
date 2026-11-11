@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { tokens } from "@/components/couply-tokens";
 import {
   CouplyEmptyState,
@@ -14,7 +14,6 @@ import {
   CouplyPage,
   CouplyPrimaryButton,
   CouplySectionCard,
-  CouplyStatusPill,
 } from "@/components/CouplyUI";
 import { useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
@@ -98,6 +97,12 @@ export default function GardenScreen() {
   }, [contextCoupleId]);
 
   const garden = useGardenData(resolvedCoupleId);
+
+  useFocusEffect(
+    useCallback(() => {
+      void garden.refetch(true);
+    }, [garden.refetch])
+  );
 
   const handleBackToOurSpace = () => {
     if (router.canGoBack()) {
@@ -189,10 +194,61 @@ export default function GardenScreen() {
     seedString,
     stage,
     isResting,
+    careSignals,
+    careEvents,
+    newGrowthNotice,
     latestEvent,
   } = garden;
 
   const ambienceLabel = getAmbienceLabel(stage.key, isResting);
+
+  // Contrast-safe botanical pill colors aligned with Purple Garden identity
+  const isLight = theme.key === "light";
+  const isDim = theme.key === "dim";
+
+  const summaryBg = isLight ? "#F4EEF7" : isDim ? "#514958" : "#302536";
+
+  const pillBg = isResting
+    ? isLight
+      ? "#ECE5F0"
+      : isDim
+      ? "#3F3746"
+      : "#2B2132"
+    : isLight
+    ? "#E8F0EA"
+    : isDim
+    ? "#324438"
+    : "#223528";
+
+  const pillBorder = isResting
+    ? isLight
+      ? "#DACFE0"
+      : isDim
+      ? "#584E61"
+      : "#45364E"
+    : isLight
+    ? "#CFDFD2"
+    : isDim
+    ? "#4A6352"
+    : "#35503D";
+
+  const pillText = isResting
+    ? isLight
+      ? "#5C4A63"
+      : isDim
+      ? "#D9CCE0"
+      : "#D6C7DC"
+    : isLight
+    ? "#244E2F"
+    : isDim
+    ? "#C7E5CF"
+    : "#BFE2CA";
+
+  const dynamicGrowthNote = isResting
+    ? "Your garden is resting peacefully. Everything you have grown remains here."
+    : careGrowthUnits > 0
+    ? "The care you share is taking shape here."
+    : "Your roots are deepening quietly with time.";
 
   return (
     <CouplyPage safe={true} contentStyle={styles.pageContent}>
@@ -214,61 +270,94 @@ export default function GardenScreen() {
             onBack={handleBackToOurSpace}
           />
 
-          {/* SECTION 1 — Immersive Garden Hero with Integrated Overlay */}
-          <View style={styles.heroSection}>
+          {/* Temporary Calm Growth Acknowledgement (PART 8) */}
+          {newGrowthNotice && (
+            <View
+              style={[
+                styles.noticeBanner,
+                {
+                  backgroundColor: pillBg,
+                  borderColor: pillBorder,
+                },
+              ]}
+              accessibilityLiveRegion="polite"
+            >
+              <Text style={[styles.noticeText, { color: pillText }]}>
+                {newGrowthNotice}
+              </Text>
+            </View>
+          )}
+
+          {/* SECTION 1 — Immersive Garden Hero and Sibling Summary */}
+          <View
+            style={[
+              styles.gardenHero,
+              {
+                backgroundColor: summaryBg,
+                borderColor: theme.borderSoft,
+              },
+            ]}
+          >
             <GardenVisualizer
               totalGrowthUnits={totalGrowthUnits}
               careGrowthUnits={careGrowthUnits}
               timeGrowthUnits={timeGrowthUnits}
               seedString={seedString}
               isResting={isResting}
+              careSignals={careSignals}
+              careEvents={careEvents}
+              style={styles.heroVisualizer}
+            />
+            <View
+              style={[
+                styles.gardenSummary,
+                {
+                  backgroundColor: summaryBg,
+                  borderTopColor: theme.borderSoft,
+                },
+              ]}
             >
-              {/* Integrated Scene Overlay: Stage, Single Ambience, Short Reflection */}
-              <View style={styles.heroOverlayBadgeContainer}>
+              <View style={styles.summaryTopRow}>
+                <Text
+                  style={[
+                    styles.summaryStageTitle,
+                    { color: theme.primaryText },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {stage.label}
+                </Text>
                 <View
                   style={[
-                    styles.heroOverlayPillBox,
+                    styles.statusPill,
                     {
-                      backgroundColor: isResting
-                        ? "rgba(45, 31, 51, 0.72)"
-                        : "rgba(255, 255, 255, 0.88)",
-                      borderColor: isResting
-                        ? "rgba(255, 255, 255, 0.15)"
-                        : "rgba(0, 0, 0, 0.08)",
+                      backgroundColor: pillBg,
+                      borderColor: pillBorder,
                     },
                   ]}
                 >
-                  <View style={styles.heroBadgeTopRow}>
-                    <Text
-                      style={[
-                        styles.heroStageTitle,
-                        {
-                          color: isResting ? "#FFFFFF" : theme.primaryText,
-                        },
-                      ]}
-                    >
-                      {stage.label}
-                    </Text>
-                    <CouplyStatusPill
-                      label={ambienceLabel}
-                      variant={isResting ? "neutral" : "positive"}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.heroStageSubtitle,
-                      {
-                        color: isResting
-                          ? "rgba(255, 255, 255, 0.85)"
-                          : theme.secondaryText,
-                      },
-                    ]}
-                  >
-                    {stage.supportingCopy}
+                  <Text style={[styles.statusPillText, { color: pillText }]}>
+                    {ambienceLabel}
                   </Text>
                 </View>
               </View>
-            </GardenVisualizer>
+              <Text
+                style={[
+                  styles.summarySupportingCopy,
+                  { color: theme.primaryText },
+                ]}
+              >
+                {stage.supportingCopy}
+              </Text>
+              <Text
+                style={[
+                  styles.summaryCareReflection,
+                  { color: theme.secondaryText },
+                ]}
+              >
+                {dynamicGrowthNote}
+              </Text>
+            </View>
           </View>
 
           {/* SECTION 2 — Recent Growth Reflection (Only when eligible event exists) */}
@@ -334,7 +423,7 @@ export default function GardenScreen() {
                 <Text
                   style={[styles.aboutRowText, { color: theme.secondaryText }]}
                 >
-                  Shared good moments bring new leaves.
+                  Shared good moments bring fresh growth, buds, and quiet abundance.
                 </Text>
               </View>
 
@@ -463,43 +552,78 @@ const styles = StyleSheet.create({
   emptyStateCard: {
     marginTop: 24,
   },
-  heroSection: {
-    width: "100%",
+  noticeBanner: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
     alignItems: "center",
   },
-  heroOverlayBadgeContainer: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
-    maxWidth: 440,
+  noticeText: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "600",
+    textAlign: "center",
   },
-  heroOverlayPillBox: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 18,
+  gardenHero: {
+    width: "100%",
+    borderRadius: 24,
     borderWidth: 1,
-    gap: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    overflow: "hidden",
+    shadowColor: "#2D1F33",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowRadius: 16,
+    elevation: 3,
   },
-  heroBadgeTopRow: {
+  heroVisualizer: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  gardenSummary: {
+    position: "relative",
+    zIndex: 2,
+    width: "100%",
+    opacity: 1,
+    borderTopWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 18,
+    gap: 6,
+  },
+  summaryTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
-    flexWrap: "wrap",
+    marginBottom: 2,
   },
-  heroStageTitle: {
+  summaryStageTitle: {
     fontSize: tokens.typeScale.sectionTitle,
     fontWeight: "700",
     letterSpacing: -0.2,
   },
-  heroStageSubtitle: {
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 3.5,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  statusPillText: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+  },
+  summarySupportingCopy: {
     fontSize: tokens.typeScale.body,
+    fontWeight: "500",
+    lineHeight: 20,
+  },
+  summaryCareReflection: {
+    fontSize: tokens.typeScale.caption,
+    fontWeight: "400",
     lineHeight: 18,
   },
   reflectionCard: {

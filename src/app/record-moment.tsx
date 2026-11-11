@@ -54,22 +54,36 @@ export default function RecordMomentScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const params = useLocalSearchParams<{
-    type?: string;
-    visibility?: "mine" | "ours" | string;
-    lockType?: string;
+    type?: string | string[];
+    visibility?: string | string[];
+    lockType?: string | string[];
   }>();
 
-  const isPrivateReflectionMode = params.visibility === "mine";
-  const isSharedMomentMode = params.visibility === "ours";
-  const isTypeLocked =
-    params.lockType === "true" &&
-    (params.type === "positive" || params.type === "friction");
+  const typeParam = Array.isArray(params.type) ? params.type[0] : params.type;
+  const visibilityParam = Array.isArray(params.visibility)
+    ? params.visibility[0]
+    : params.visibility;
+  const lockTypeParam = Array.isArray(params.lockType)
+    ? params.lockType[0]
+    : params.lockType;
 
-  const { partnerRef } = useUserIdentity();
-  const [coupleId, setCoupleId] = useState<string | null>(null);
+  const isPrivateReflectionMode = visibilityParam === "mine";
+  const isSharedMomentMode = visibilityParam === "ours";
+  const isTypeLocked =
+    lockTypeParam === "true" &&
+    (typeParam === "positive" || typeParam === "friction");
+
+  const { partnerRef, coupleId: contextCoupleId } = useUserIdentity();
+  const [coupleId, setCoupleId] = useState<string | null>(contextCoupleId);
+
+  useEffect(() => {
+    if (contextCoupleId && !coupleId) {
+      setCoupleId(contextCoupleId);
+    }
+  }, [contextCoupleId, coupleId]);
 
   const initialType: EventType =
-    params.type === "positive" ? "positive" : "friction";
+    typeParam === "positive" ? "positive" : "friction";
   const [eventType, setEventType] = useState<EventType>(initialType);
 
   const [category, setCategory] = useState("");
@@ -79,29 +93,32 @@ export default function RecordMomentScreen() {
   const [saving, setSaving] = useState(false);
 
   const [visibility, setVisibility] = useState<Visibility>(
-    params.visibility === "ours" ? "ours" : "mine"
+    visibilityParam === "ours" ? "ours" : "mine"
   );
 
   const [status, setStatus] = useState("");
+  const [isReviewingOurs, setIsReviewingOurs] = useState(false);
 
   useEffect(() => {
     loadCouple();
   }, []);
 
   useEffect(() => {
-    if (params.type === "positive" || params.type === "friction") {
-      setEventType(params.type);
+    if (typeParam === "positive" || typeParam === "friction") {
+      setEventType(typeParam);
       setCategory("");
+      setIsReviewingOurs(false);
     }
-  }, [params.type]);
+  }, [typeParam]);
 
   useEffect(() => {
-    if (params.visibility === "ours") {
+    if (visibilityParam === "ours") {
       setVisibility("ours");
-    } else if (params.visibility === "mine") {
+    } else if (visibilityParam === "mine") {
       setVisibility("mine");
     }
-  }, [params.visibility]);
+    setIsReviewingOurs(false);
+  }, [visibilityParam]);
 
   async function loadCouple() {
     const {
@@ -121,7 +138,7 @@ export default function RecordMomentScreen() {
       .maybeSingle();
 
     if (error) {
-      console.error(error);
+      console.error("Failed to load couple:", error.message);
       setStatus(error.message);
       return;
     }
@@ -139,9 +156,8 @@ export default function RecordMomentScreen() {
 
     // Categories differ between positive and friction moments.
     setCategory("");
+    setIsReviewingOurs(false);
   }
-
-  const [isReviewingOurs, setIsReviewingOurs] = useState(false);
 
   const categories =
     eventType === "positive" ? positiveCategories : frictionCategories;
@@ -221,7 +237,10 @@ export default function RecordMomentScreen() {
         params: { id: eventId, scope: finalVisibility },
       });
     } catch (error) {
-      console.error("Failed to save moment:", error);
+      console.error(
+        "Failed to save moment:",
+        error instanceof Error ? error.message : "unknown",
+      );
 
       setStatus(
         error instanceof Error ? error.message : "Could not save the moment.",
@@ -230,6 +249,14 @@ export default function RecordMomentScreen() {
       setSaving(false);
     }
   }
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(isSharedMomentMode ? "/events?scope=ours" : "/home");
+    }
+  };
 
   const saveButtonLabel = saving
     ? "Saving..."
@@ -242,8 +269,10 @@ export default function RecordMomentScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.column}>
           {/* Header */}
@@ -256,7 +285,7 @@ export default function RecordMomentScreen() {
                 : "Record a moment"
             }
             subtitle="A small place to notice what mattered."
-            onBack={() => router.back()}
+            onBack={handleBack}
             backLabel="‹ Back"
             style={styles.headerCouply}
           />
@@ -343,7 +372,10 @@ export default function RecordMomentScreen() {
                       styles.categoryChip,
                       isSelected && styles.categoryChipSelected,
                     ]}
-                    onPress={() => setCategory(item.value)}
+                    onPress={() => {
+                      setCategory(item.value);
+                      setIsReviewingOurs(false);
+                    }}
                     accessibilityRole="button"
                     accessibilityState={{ selected: isSelected }}
                     accessibilityLabel={item.label}
@@ -461,7 +493,10 @@ export default function RecordMomentScreen() {
                     styles.visibilityCard,
                     visibility === "mine" && styles.visibilityCardMineSelected,
                   ]}
-                  onPress={() => setVisibility("mine")}
+                  onPress={() => {
+                    setVisibility("mine");
+                    setIsReviewingOurs(false);
+                  }}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: visibility === "mine" }}
                   accessibilityLabel="Mine: Keep this reflection private."
@@ -612,7 +647,12 @@ const createStyles = (theme: ThemeColors) =>
       flex: 1,
       backgroundColor: theme.pageBackground,
     },
+    scrollView: {
+      flex: 1,
+      backgroundColor: theme.pageBackground,
+    },
     scrollContent: {
+      flexGrow: 1,
       paddingHorizontal: tokens.layout.pagePaddingStandard,
       paddingTop: 12,
       paddingBottom: 60,
