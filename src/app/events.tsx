@@ -1,13 +1,15 @@
+import { AccountSessionBoundary, useAccountSessionScope } from "@/components/AccountSessionBoundary";
 import { AppBottomNav } from "@/components/AppBottomNav";
 import {
   CouplyEmptyState, CouplyHeader, CouplyPage, CouplyPrimaryButton,
   CouplyQuietButton, CouplySectionCard, CouplyStatusPill,
 } from "@/components/CouplyUI";
 import { tokens } from "@/components/couply-tokens";
+import { useAccessRevalidation, type AccessResult } from "@/hooks/useAccessRevalidation";
 import type { EventRepairState } from "@/lib/repair-states";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -20,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 type RelationshipEvent = {
   id: string;
+  couple_id: string;
   creator_id: string;
   event_type: "positive" | "friction";
   category: string;
@@ -32,28 +35,53 @@ type RelationshipEvent = {
 // The database's repair RLS governs which records can reach this screen.
 type RepairCardState = Pick<
   EventRepairState,
-  "event_id" | "user_id" | "repair_status" | "what_helped" | "sharing_status" | "status_origin"
+  "event_id" | "user_id" | "repair_status" | "what_helped" | "sharing_status" | "status_origin" | "report_version"
 >;
 
 type MomentFilter = "all" | "mine" | "ours";
 
-type EventsState = {
-  loading: boolean;
+type EventsSnapshot = {
   events: RelationshipEvent[];
   repairStates: RepairCardState[];
-  userId: string | null;
-  coupleId: string | null;
-  error: string | null;
+  userId: string;
+  coupleId: string;
 };
 
-const EMPTY_STATE: EventsState = {
-  loading: true,
-  events: [],
-  repairStates: [],
-  userId: null,
-  coupleId: null,
-  error: null,
-};
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+// Treat identifiers as opaque nonblank strings; database UUID/FK/RLS checks
+// remain authoritative. Never coerce a missing ownership field into a string.
+const isIdentifier = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0 && value === value.trim();
+const isTimestamp = (value: unknown): value is string =>
+  typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value));
+
+function isRelationshipEvent(value: unknown): value is RelationshipEvent {
+  return isRecord(value) && isIdentifier(value.id) && isIdentifier(value.couple_id) &&
+    isIdentifier(value.creator_id) && ["positive", "friction"].includes(value.event_type as string) &&
+    ["mine", "ours"].includes(value.visibility as string) && typeof value.category === "string" &&
+    (value.intensity === null || (Number.isInteger(value.intensity) &&
+      (value.intensity as number) >= 1 && (value.intensity as number) <= 5)) && isTimestamp(value.created_at);
+}
+
+function isRepairCardState(value: unknown): value is RepairCardState {
+  return isRecord(value) && isIdentifier(value.event_id) && isIdentifier(value.user_id) &&
+    ["open", "partially_repaired", "reconnected"].includes(value.repair_status as string) &&
+    (value.what_helped === null || ["talking", "space", "apology", "affection", "humour",
+      "practical_action", "time", "other"].includes(value.what_helped as string)) &&
+    ["private", "shared"].includes(value.sharing_status as string) &&
+    ["explicit", "legacy_creator_report", "legacy_default_unconfirmed"].includes(value.status_origin as string) &&
+    (value.sharing_status !== "shared" || value.status_origin === "explicit") &&
+    Number.isSafeInteger(value.report_version) && (value.report_version as number) > 0;
+}
+
+// Compare only the selected projection, independently of database row order.
+const eventSignature = (rows: RelationshipEvent[]) => JSON.stringify(rows.map((row) => JSON.stringify([
+  row.id, row.couple_id, row.creator_id, row.event_type, row.category, row.intensity, row.visibility, row.created_at,
+])).sort());
+const repairSignature = (rows: RepairCardState[]) => JSON.stringify(rows.map((row) => JSON.stringify([
+  row.event_id, row.user_id, row.repair_status, row.what_helped, row.sharing_status, row.status_origin, row.report_version,
+])).sort());
 
 const FILTERS: { value: MomentFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -62,218 +90,137 @@ const FILTERS: { value: MomentFilter; label: string }[] = [
 ];
 
 export default function EventsScreen() {
-  const router = useRouter();
   const params = useLocalSearchParams<{ scope?: string | string[] }>();
   const scope = Array.isArray(params.scope) ? params.scope[0] : params.scope;
-  const isOursSpace = scope === "ours";
-  const isMineSpace = scope === "mine";
 
   const [filter, setFilter] = useState<MomentFilter>("all");
   const [filterScope, setFilterScope] = useState(scope);
-  const [state, setState] = useState<EventsState>(EMPTY_STATE);
-  const [authEpoch, setAuthEpoch] = useState(0);
-  const [reloadEpoch, setReloadEpoch] = useState(0);
-
   // Switching between Our Space and Moments starts with the right filter.
   if (filterScope !== scope) {
     setFilterScope(scope);
     setFilter("all");
   }
 
-  // Both epochs restart the focused loader, including its subscriptions.
-  const focusContext = useMemo(
-    () => ({ router, authEpoch, reloadEpoch }),
-    [router, authEpoch, reloadEpoch],
-  );
+  return <AccountSessionBoundary routeKey="moments">
+    <EventsContent routeScope={scope} filter={filter} setFilter={setFilter} />
+  </AccountSessionBoundary>;
+}
 
-  // Reload on focus, and discard results belonging to an older request/session.
-  useFocusEffect(
-    useCallback(() => {
-      const { router } = focusContext;
-      let active = true;
-      let requestNumber = 0;
-      let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
-      let channelFor: string | null = null;
+function EventsContent({ routeScope, filter, setFilter }: {
+  routeScope: string | undefined; filter: MomentFilter; setFilter: (filter: MomentFilter) => void;
+}) {
+  const scope = useAccountSessionScope();
+  const router = useRouter();
+  const isOursSpace = routeScope === "ours";
+  const isMineSpace = routeScope === "mine";
+  const [snapshot, setSnapshot] = useState<EventsSnapshot | null>(null);
+  const [channelEpoch, setChannelEpoch] = useState(0);
+  const [liveFailed, setLiveFailed] = useState(false);
+  const liveFailure = useRef(false);
 
-      function removeRealtimeChannel() {
-        const oldChannel = realtimeChannel;
-        realtimeChannel = null;
-        channelFor = null;
-        if (oldChannel) {
-          void supabase.removeChannel(oldChannel);
+  const verify = useCallback(async (currentRead: () => boolean): Promise<AccessResult<EventsSnapshot>> => {
+    const valid = () => currentRead() && scope.isCurrent();
+    const auth = await scope.authorize();
+    if (!auth || !valid()) return { kind: "failed" };
+    const bearer = `Bearer ${auth.token}`;
+    const membership = async () => {
+      const result = await supabase.from("couple_members").select("couple_id")
+        .eq("user_id", scope.userId).maybeSingle().setHeader("Authorization", bearer);
+      if (result.error) throw new Error("Membership verification failed");
+      return result.data?.couple_id as string | undefined;
+    };
+    const coupleId = await membership();
+    if (!valid()) return { kind: "failed" };
+    if (!coupleId) { setSnapshot(null); return { kind: "unavailable" }; }
+    const readEvents = async () => {
+      const result = await supabase.from("relationship_events")
+        .select("id, couple_id, creator_id, event_type, category, intensity, visibility, created_at")
+        .eq("couple_id", coupleId).order("created_at", { ascending: false }).setHeader("Authorization", bearer);
+      if (result.error || !Array.isArray(result.data) || !result.data.every(isRelationshipEvent)) throw new Error("Moments verification failed");
+      return result.data.filter((row) => row.couple_id === coupleId &&
+        (row.visibility === "ours" || row.creator_id === scope.userId));
+    };
+    const events = await readEvents();
+    if (!valid()) return { kind: "failed" };
+    const parents = new Map(events.map((event) => [event.id, event]));
+    const frictionIds = events.filter((row) => row.event_type === "friction").map((row) => row.id);
+    const readRepairs = async (): Promise<RepairCardState[]> => {
+      if (!frictionIds.length) return [];
+      const result = await supabase.from("event_repair_states")
+        .select("event_id, user_id, repair_status, what_helped, sharing_status, status_origin, report_version")
+        .in("event_id", frictionIds).setHeader("Authorization", bearer);
+      if (result.error || !Array.isArray(result.data) || !result.data.every(isRepairCardState)) throw new Error("Repair verification failed");
+      return result.data.filter((row) => {
+        const parent = parents.get(row.event_id);
+        return parent && (row.user_id === scope.userId || (parent.visibility === "ours" &&
+          row.sharing_status === "shared" && row.status_origin === "explicit"));
+      });
+    };
+    const repairs = await readRepairs();
+    if (!valid()) return { kind: "failed" };
+    // A withdrawal/version change during assembly must not publish an old summary.
+    const latestRepairs = await readRepairs();
+    if (!valid()) return { kind: "failed" };
+    const latestEvents = await readEvents();
+    if (!valid()) return { kind: "failed" };
+    const latestCouple = await membership();
+    if (!valid()) return { kind: "failed" };
+    if (latestCouple !== coupleId) { setSnapshot(null); return { kind: "unavailable" }; }
+    if (eventSignature(events) !== eventSignature(latestEvents) ||
+        repairSignature(repairs) !== repairSignature(latestRepairs)) return { kind: "failed" };
+    if (!(await scope.authorize()) || !valid()) return { kind: "failed" };
+    return { kind: "ready", data: { events: latestEvents, repairStates: latestRepairs, userId: scope.userId, coupleId } };
+  }, [scope]);
+  const publish = useCallback((next: EventsSnapshot) => { if (scope.isCurrent()) setSnapshot(next); }, [scope]);
+  const access = useAccessRevalidation({ verify, publish });
+  const controller = access.controller;
+  useFocusEffect(useCallback(() => {
+    controller.start();
+    return () => controller.stop();
+  }, [controller]));
+
+  // One relationship-event subscription per focused account/couple, not per read.
+  // Notifications never carry authorization; missed notifications use the lease timer.
+  const channelCouple = access.state.phase === "unavailable" ? null : snapshot?.coupleId;
+  useFocusEffect(useCallback(() => {
+    if (!channelCouple || !scope.isCurrent()) return;
+    liveFailure.current = false;
+    setLiveFailed(false);
+    let active = true;
+    let failed = false;
+    const channel = supabase.channel(`moments-list-${scope.userId}-${channelCouple}-${channelEpoch}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "relationship_events", filter: `couple_id=eq.${channelCouple}` }, () => {
+        if (active && scope.isCurrent()) void controller.refresh(true);
+      })
+      .subscribe((status) => {
+        if (!active || !scope.isCurrent()) return;
+        if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+          failed = true; liveFailure.current = true; setLiveFailed(true); controller.invalidate();
+        } else if (status === "SUBSCRIBED" && failed) {
+          failed = false; liveFailure.current = false; setLiveFailed(false); void controller.refresh(true);
         }
-      }
-
-      async function refresh() {
-        const thisRequest = ++requestNumber;
-        // Hide previous-user records while authorization is checked again.
-        setState({ ...EMPTY_STATE });
-
-        const { data: authData, error: authError } =
-          await supabase.auth.getUser();
-        if (!active || thisRequest !== requestNumber) return;
-
-        const user = authData.user;
-        if (authError || !user) {
-          removeRealtimeChannel();
-          setState({ ...EMPTY_STATE, loading: false });
-          router.replace("/");
-          return;
-        }
-
-        const { data: membership, error: membershipError } = await supabase
-          .from("couple_members")
-          .select("couple_id")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        if (!active || thisRequest !== requestNumber) return;
-
-        if (membershipError || !membership) {
-          removeRealtimeChannel();
-          setState({
-            loading: false,
-            events: [],
-            repairStates: [],
-            userId: user.id,
-            coupleId: null,
-            error: membershipError
-              ? "Could not load your relationship space. Please try again."
-              : "Create or join a relationship space in Settings to record moments.",
-          });
-          return;
-        }
-
-        // Event RLS is the first boundary. Do not read legacy repair columns.
-        const { data, error } = await supabase
-          .from("relationship_events")
-          .select(
-            "id, creator_id, event_type, category, intensity, visibility, created_at",
-          )
-          .eq("couple_id", membership.couple_id)
-          .order("created_at", { ascending: false });
-        if (!active || thisRequest !== requestNumber) return;
-
-        if (error) {
-          removeRealtimeChannel();
-          setState({
-            loading: false,
-            events: [],
-            repairStates: [],
-            userId: user.id,
-            coupleId: membership.couple_id,
-            error: "Could not load moments. Please return to this screen to retry.",
-          });
-          return;
-        }
-
-        // Client-side authorization is defense-in-depth; Supabase RLS is mandatory.
-        const events = ((data ?? []) as RelationshipEvent[]).filter(
-          (event) => event.visibility === "ours" || event.creator_id === user.id,
-        );
-        const frictionIds = events
-          .filter((event) => event.event_type === "friction")
-          .map((event) => event.id);
-
-        let repairStates: RepairCardState[] = [];
-        if (frictionIds.length > 0) {
-          // One batched read, not one query per card. RLS exposes own records
-          // and deliberately shared partner records only.
-          const { data: repairData, error: repairError } = await supabase
-            .from("event_repair_states")
-            .select(
-              "event_id, user_id, repair_status, what_helped, sharing_status, status_origin",
-            )
-            .in("event_id", frictionIds);
-          if (!active || thisRequest !== requestNumber) return;
-
-          // Fail closed: never display half-loaded or stale repair details.
-          if (repairError) {
-            removeRealtimeChannel();
-            setState({
-              loading: false,
-              events: [],
-              repairStates: [],
-              userId: user.id,
-              coupleId: membership.couple_id,
-              error: "Could not load repair updates. Please refresh to retry.",
-            });
-            return;
-          }
-          repairStates = (repairData ?? []) as RepairCardState[];
-        }
-
-        // Recheck the account AFTER both requests, before rendering anything.
-        const { data: latestAuth, error: latestAuthError } =
-          await supabase.auth.getUser();
-        if (!active || thisRequest !== requestNumber) return;
-        if (latestAuthError || latestAuth.user?.id !== user.id) {
-          requestNumber++;
-          removeRealtimeChannel();
-          setState({ ...EMPTY_STATE });
-          if (latestAuth.user) void refresh();
-          else router.replace("/");
-          return;
-        }
-
-        setState({
-          loading: false,
-          events,
-          repairStates,
-          userId: user.id,
-          coupleId: membership.couple_id,
-          error: null,
-        });
-
-        const desiredChannel = `${user.id}:${membership.couple_id}`;
-        if (channelFor !== desiredChannel) {
-          removeRealtimeChannel();
-          realtimeChannel = supabase
-            .channel(`moments-list-${user.id}-${membership.couple_id}`)
-            .on(
-              "postgres_changes",
-              {
-                event: "*",
-                schema: "public",
-                table: "relationship_events",
-                filter: `couple_id=eq.${membership.couple_id}`,
-              },
-              () => {
-                // Re-validate membership and visibility before redisplaying data.
-                void refresh();
-              },
-            )
-            .subscribe();
-          channelFor = desiredChannel;
-        }
-      }
-
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        (event) => {
-          if (!active) return;
-          if (event === "SIGNED_OUT") {
-            requestNumber++;
-            removeRealtimeChannel();
-            setState({ ...EMPTY_STATE, loading: false });
-            router.replace("/");
-          } else if (event === "SIGNED_IN") {
-            requestNumber++;
-            removeRealtimeChannel();
-            setState({ ...EMPTY_STATE });
-            // Restart the focused effect outside the auth callback.
-            setAuthEpoch((previous) => previous + 1);
-          }
-        },
-      );
-
-      void refresh();
-      return () => {
-        active = false;
-        requestNumber++;
-        authListener.subscription.unsubscribe();
-        removeRealtimeChannel();
-      };
-    }, [focusContext]),
-  );
+      });
+    return () => { active = false; void supabase.removeChannel(channel); };
+  }, [channelCouple, channelEpoch, controller, scope]));
+  const refresh = () => {
+    if (!scope.isCurrent()) return;
+    if (liveFailure.current) {
+      liveFailure.current = false; setLiveFailed(false); setChannelEpoch((value) => value + 1);
+    }
+    void controller.refresh(true);
+  };
+  const verified = access.state.phase === "ready" && controller.hasFreshAccess() && scope.isCurrent();
+  const unavailable = access.state.phase === "unavailable";
+  const state = {
+    loading: access.state.phase === "checking",
+    events: verified ? snapshot?.events ?? [] : [],
+    repairStates: verified ? snapshot?.repairStates ?? [] : [],
+    userId: scope.userId,
+    error: verified ? null : unavailable
+      ? "Your relationship space is unavailable. Check Settings or refresh to verify access."
+      : liveFailed ? "Live access checks are unavailable. Refresh to verify your moments again."
+        : "Could not verify access to your moments. Refresh to check again.",
+  };
 
   // UI filtering is not a substitute for Supabase Row Level Security.
   const authorizedEvents = state.events.filter(
@@ -325,7 +272,7 @@ export default function EventsScreen() {
               accessibilityLabel="Refresh moments and repair updates"
               disabled={state.loading}
               loading={state.loading}
-              onPress={() => setReloadEpoch((value) => value + 1)}
+              onPress={refresh}
             />
             <CouplyQuietButton
               label="My contributions"
@@ -363,7 +310,7 @@ export default function EventsScreen() {
             <CouplySectionCard style={styles.notice}>
               <Text accessibilityRole="header" style={styles.noticeTitle}>Moments aren&apos;t available</Text>
               <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.body}>{state.error}</Text>
-              {!state.coupleId && (
+              {unavailable && (
                 <CouplyQuietButton label="Go to Settings" onPress={() => router.push("/profile")} />
               )}
             </CouplySectionCard>
@@ -403,12 +350,13 @@ export default function EventsScreen() {
                     style={({ pressed }) => pressed && styles.pressed}
                     accessibilityRole="button"
                     accessibilityLabel={`Open ${event.visibility} ${formatCategory(event.category)} moment`}
-                    onPress={() =>
+                    onPress={() => {
+                      if (!scope.isCurrent() || !controller.hasFreshAccess()) return;
                       router.push({
                         pathname: "/event/[id]",
                         params: { id: event.id },
-                      })
-                    }
+                      });
+                    }}
                   >
                     <CouplySectionCard style={[styles.card, isPositive && styles.positiveCard]}>
                       <View style={styles.cardTop}>
@@ -440,7 +388,7 @@ export default function EventsScreen() {
                                 : myRepair.status_origin !== "explicit"
                                   ? `Your earlier update: ${formatRepairStatus(myRepair.repair_status)} (review before sharing)`
                                   : `Your update: ${formatRepairStatus(myRepair.repair_status)} · ${myRepair.sharing_status === "shared" ? "Shared" : "Private"}`
-                              : "Your update: Not recorded yet"}
+                              : "Your update: No current report available"}
                           </Text>
                           {partnerRepair && (
                             <Text style={styles.repairStatus}>

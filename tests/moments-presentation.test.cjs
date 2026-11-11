@@ -6,89 +6,7 @@ const { deferred, harness, loadSource } = require("./helpers/account-screen-harn
 
 // Actual Moments, shared UI and navigation; synthetic auth/transport/native hosts.
 // Fixture filtering is not a database/RLS test or native rendering evidence.
-function event(id, values = {}) {
-  return { id, creator_id: "a", couple_id: "couple-1", event_type: "friction",
-    category: "communication", intensity: 3, visibility: "ours",
-    created_at: "2026-11-08T12:00:00Z", ...values };
-}
-function repair(values = {}) {
-  return { event_id: "a-ours", user_id: "a", repair_status: "open", what_helped: null,
-    sharing_status: "private", status_origin: "explicit", ...values };
-}
-function client() {
-  const db = { userId: "a", authError: null, authChecks: 0, listeners: new Set(), reads: [], channels: [],
-    memberships: new Map([["a", "couple-1"], ["b", "couple-1"], ["solo", "solo-space"]]),
-    events: [event("a-mine", { visibility: "mine", category: "household" }), event("a-ours"),
-      event("b-mine", { creator_id: "b", visibility: "mine", category: "money" }),
-      event("b-ours", { creator_id: "b", category: "plans" }),
-      event("good", { event_type: "positive", category: "care", intensity: null }),
-      event("unrelated", { couple_id: "other-space", creator_id: "other" })],
-    repairs: [],
-  };
-  db.getUser = async () => ({ data: { user: db.userId ? { id: db.userId } : null }, error: db.authError });
-  db.emit = (id, name = id ? "SIGNED_IN" : "SIGNED_OUT") => {
-    db.userId = id;
-    for (const listener of db.listeners) listener(name, id ? { user: { id } } : null);
-  };
-  db.defaultRead = (call) => {
-    const ownCouple = db.memberships.get(call.userId);
-    if (call.table === "couple_members") {
-      const requestedUser = call.filters.find(([key]) => key === "user_id")?.[1];
-      return { data: requestedUser === call.userId && ownCouple ? { couple_id: ownCouple } : null, error: null };
-    }
-    let rows;
-    if (call.table === "relationship_events") {
-      rows = db.events.filter((row) => row.couple_id === ownCouple &&
-        (row.visibility === "ours" || row.creator_id === call.userId));
-    } else {
-      rows = db.repairs.filter((row) => {
-        const parent = db.events.find((item) => item.id === row.event_id);
-        return parent?.couple_id === ownCouple && (row.user_id === call.userId || (
-          parent.visibility === "ours" && row.sharing_status === "shared" && row.status_origin === "explicit"
-        ));
-      });
-    }
-    rows = rows.filter((row) => call.filters.every(([key, value]) => row[key] === value));
-    if (call.ids) rows = rows.filter((row) => call.ids.includes(row.event_id));
-    // Return only the actual selected fields, as the production query requests.
-    return { data: rows.map((row) => Object.fromEntries(call.columns.split(",").map((key) => [key.trim(), row[key.trim()]]))), error: null };
-  };
-  db.read = async (call) => db.defaultRead(call);
-  db.supabase = {
-    auth: {
-      getUser: () => { db.authChecks++; return db.getUser(); },
-      onAuthStateChange(listener) {
-        db.listeners.add(listener);
-        return { data: { subscription: { unsubscribe: () => db.listeners.delete(listener) } } };
-      },
-    },
-    from(table) {
-      assert.ok(["couple_members", "relationship_events", "event_repair_states"].includes(table), `Unexpected table ${table}`);
-      const call = { table, filters: [] };
-      return {
-        select(columns) { call.columns = columns; return this; },
-        eq(key, value) { call.filters.push([key, value]); return this; },
-        in(key, values) { assert.equal(key, "event_id"); call.ids = [...values]; return this; },
-        order(key, value) { call.order = [key, value]; return this; },
-        maybeSingle() { return this; },
-        then(resolve, reject) {
-          call.userId = db.userId; db.reads.push(call);
-          return Promise.resolve().then(() => db.read(call)).then(resolve, reject);
-        },
-      };
-    },
-    rpc: () => assert.fail("Moments must not mutate data"),
-    channel(name) {
-      const channel = { name, handlers: [], removed: false,
-        on(type, filter, handler) { this.handlers.push({ type, filter, handler }); return this; },
-        subscribe() { return this; },
-      };
-      db.channels.push(channel); return channel;
-    },
-    removeChannel(channel) { channel.removed = true; },
-  };
-  return db;
-}
+const { momentsClient: client, momentEvent: event, momentRepair: repair } = require("./helpers/account-screen-client.cjs");
 async function setup(t, params = {}, configure) {
   const db = client(); configure?.(db);
   const bottomRoutes = [];
@@ -159,7 +77,7 @@ test("moment cards keep their exact Event Detail ID route", async (t) => {
 for (const scope of ["all", "mine", "ours"]) {
   test(`${scope} keeps safe-area ownership and existing bottom navigation selection/routes`, async (t) => {
     const { ui, bottomRoutes } = await setup(t, { scope });
-    const root = ui.nodes()[0];
+    const root = ui.nodes().find(node => node.type === "SafeAreaView" && node.props.edges?.includes("top"));
     assert.equal(root.type, "SafeAreaView");
     assert.deepEqual(root.props.edges, ["top", "left", "right"]);
     assert.equal(root.props.children[0].type, "ScrollView");
@@ -188,12 +106,12 @@ for (const table of ["couple_members", "relationship_events", "event_repair_stat
     assert.match(ui.text(), /Moments aren't available/);
     assert.doesNotMatch(ui.text(), emptyCopy);
     assert.doesNotMatch(ui.text(), /PRIVATE_QUERY_DETAIL/);
-    if (table === "event_repair_states") assert.match(ui.text(), /Could not load repair updates/);
+    if (table === "event_repair_states") assert.match(ui.text(), /Could not verify access to your moments/);
   });
 }
 test("missing membership offers Settings and never queries event or repair tables", async (t) => {
   const { db, ui } = await setup(t, {}, (db) => { db.memberships.delete("a"); });
-  assert.match(ui.text(), /Create or join a relationship space/);
+  assert.match(ui.text(), /Your relationship space is unavailable/);
   assert.doesNotMatch(ui.text(), emptyCopy);
   assert.deepEqual(db.reads.map((call) => call.table), ["couple_members"]);
   await ui.tap("Go to Settings"); assert.deepEqual(ui.navigations, ["/profile"]);
@@ -204,7 +122,7 @@ test("a solo member retains private moments without inventing partner participat
     db.events = [event("solo-mine", { creator_id: "solo", couple_id: "solo-space", visibility: "mine" })];
   });
   assert.deepEqual(ids(ui), ["solo-mine"]);
-  assert.match(ui.text(), /Your update: Not recorded yet/);
+  assert.match(ui.text(), /Your update: No current report available/);
   assert.doesNotMatch(ui.text(), /Partner shared:/);
   await ui.tap("Show Ours moments"); assert.match(ui.text(), /Nothing shared here yet/);
 });
@@ -228,23 +146,23 @@ test("positive and friction cards retain category, date, visibility and separate
   assert.match(text(card(ui, "b-ours")), /Shared by your partner/);
   assert.match(text(card(ui, "good")), /2026/);
 });
-test("queries remain minimal and use one repair batch for visible friction IDs", async (t) => {
+test("queries recheck boundaries and repair versions using two batches for visible friction IDs", async (t) => {
   const { db } = await setup(t);
-  assert.deepEqual(db.reads.map((call) => call.table), ["couple_members", "relationship_events", "event_repair_states"]);
+  assert.deepEqual(db.reads.map((call) => call.table), ["couple_members", "relationship_events", "event_repair_states", "event_repair_states", "relationship_events", "couple_members"]);
   const events = db.reads[1], repairs = db.reads[2];
-  assert.equal(events.columns, "id, creator_id, event_type, category, intensity, visibility, created_at");
-  assert.equal(repairs.columns, "event_id, user_id, repair_status, what_helped, sharing_status, status_origin");
+  assert.equal(events.columns, "id, couple_id, creator_id, event_type, category, intensity, visibility, created_at");
+  assert.equal(repairs.columns, "event_id, user_id, repair_status, what_helped, sharing_status, status_origin, report_version");
   assert.deepEqual(repairs.ids.sort(), ["a-mine", "a-ours", "b-ours"]);
   assert.deepEqual(events.filters, [["couple_id", "couple-1"]]);
 });
 test("a positive-only list does not query repair states", async (t) => {
   const { db, ui } = await setup(t, {}, (db) => { db.events = [event("good", { event_type: "positive" })]; });
-  assert.deepEqual(db.reads.map((call) => call.table), ["couple_members", "relationship_events"]);
+  assert.deepEqual(db.reads.map((call) => call.table), ["couple_members", "relationship_events", "relationship_events", "couple_members"]);
   assert.doesNotMatch(ui.text(), /Your update:|Partner shared:/);
 });
 
 for (const [name, rows, expected] of [
-  ["missing", [], "Your update: Not recorded yet"],
+  ["missing", [], "Your update: No current report available"],
   ["own private", [repair()], "Your update: Still unresolved · Private"],
   ["own shared", [repair({ sharing_status: "shared", repair_status: "reconnected" })], "Your update: I feel reconnected · Shared"],
   ["unconfirmed import", [repair({ status_origin: "legacy_default_unconfirmed" })], "Your update: Imported Open (not confirmed)"],
@@ -290,18 +208,18 @@ test("two reconnected reports stay individually attributed without a mutual outc
   assert.doesNotMatch(value, /mutual|both reconnected|agreement|repaired together|score/i);
 });
 
-test("manual refresh clears old cards while rechecking and replaces its subscription", async (t) => {
+test("manual refresh clears old cards while rechecking and preserves its subscription", async (t) => {
   const { db, ui } = await setup(t);
   const oldChannel = db.channels[0], pending = deferred();
   db.read = async (call) => call.table === "relationship_events" ? pending.promise : db.defaultRead(call);
   await ui.tap("Refresh moments and repair updates");
   assert.equal(cards(ui).length, 0); assert.match(ui.text(), /Loading your moments/);
-  assert.equal(oldChannel.removed, true);
+  assert.equal(oldChannel.removed, false);
   db.events = db.events.filter((row) => row.id !== "a-mine");
   pending.resolve(db.defaultRead(db.reads.filter((call) => call.table === "relationship_events").at(-1)));
   await ui.flush();
   assert.deepEqual(ids(ui), ["a-ours", "b-ours", "good"]);
-  assert.equal(db.channels.length, 2);
+  assert.equal(db.channels.length, 1);
 });
 test("Realtime event notifications revalidate rather than rendering notification payloads", async (t) => {
   const { db, ui } = await setup(t);
@@ -317,7 +235,7 @@ test("Realtime event notifications revalidate rather than rendering notification
 test("blur removes subscriptions/listeners and focus reloads current visibility", async (t) => {
   const { db, ui } = await setup(t);
   const channel = db.channels[0]; await ui.blur();
-  assert.equal(channel.removed, true); assert.equal(db.listeners.size, 0);
+  assert.equal(channel.removed, true); assert.equal(db.listeners.size, 1, "the existing account boundary keeps its auth listener while unfocused");
   db.events = [];
   await ui.focus(); assert.equal(cards(ui).length, 0);
   assert.match(ui.text(), /No moments here yet/);
@@ -347,7 +265,7 @@ test("account change during repair loading is caught by the final auth recheck",
       return result;
     };
   });
-  assert.deepEqual(ids(ui), ["a-ours", "b-mine", "b-ours", "good"]);
+  assert.equal(cards(ui).length,0);assert.ok(ui.navigations.includes("/"));
 });
 test("late replies after focus cleanup cannot publish or subscribe", async (t) => {
   const pending = deferred(); let snapshot;
@@ -385,13 +303,15 @@ test("unexpected partner-private parent rows are removed by the existing defensi
   });
   assert.equal(card(ui, "b-mine"), undefined);
 });
-test("invalid dates remain unavailable and extra private fields are never rendered", async (t) => {
+test("invalid dates fail verification and extra private fields are never rendered", async (t) => {
   const { ui } = await setup(t, {}, (db) => {
     db.read = async (call) => call.table === "relationship_events" ? {
       data: [event("good", { event_type: "positive", created_at: "invalid", note: "PRIVATE_NOTE", shared_topic: "UNSELECTED_TOPIC" })], error: null,
     } : db.defaultRead(call);
   });
-  assert.match(ui.text(), /Date unavailable/);
+  assert.match(ui.text(), /Could not verify access to your moments/);
+  assert.equal(cards(ui).length, 0);
+  assert.doesNotMatch(ui.text(), emptyCopy);
   assert.doesNotMatch(ui.text(), /PRIVATE_NOTE|UNSELECTED_TOPIC/);
 });
 test("source has no legacy parent repair fields, preview dependencies or write paths", () => {

@@ -84,3 +84,95 @@ function client() {
 }
 
 module.exports = { client };
+
+// Moments fixtures: current account tokens are pinned on every simulated query.
+function momentEvent(id, values = {}) {
+  return { id, creator_id: "a", couple_id: "couple-1", event_type: "friction",
+    category: "communication", intensity: 3, visibility: "ours",
+    created_at: "2026-11-08T12:00:00Z", ...values };
+}
+function momentRepair(values = {}) {
+  return { event_id: "a-ours", user_id: "a", repair_status: "open", what_helped: null,
+    sharing_status: "private", status_origin: "explicit", report_version: 1, ...values };
+}
+function momentsClient() {
+  const db = { userId: "a", authError: null, authChecks: 0, listeners: new Set(), reads: [], channels: [],
+    memberships: new Map([["a", "couple-1"], ["b", "couple-1"], ["solo", "solo-space"]]),
+    events: [momentEvent("a-mine", { visibility: "mine", category: "household" }), momentEvent("a-ours"),
+      momentEvent("b-mine", { creator_id: "b", visibility: "mine", category: "money" }),
+      momentEvent("b-ours", { creator_id: "b", category: "plans" }),
+      momentEvent("good", { event_type: "positive", category: "care", intensity: null }),
+      momentEvent("unrelated", { couple_id: "other-space", creator_id: "other" })],
+    repairs: [],
+  };
+  db.getUser = async () => ({ data: { user: db.userId ? { id: db.userId } : null }, error: db.authError });
+  db.emit = (id, name = id ? "SIGNED_IN" : "SIGNED_OUT") => {
+    db.userId = id;
+    for (const listener of db.listeners) listener(name, id ? { user: { id } } : null);
+  };
+  db.defaultRead = (call) => {
+    const ownCouple = db.memberships.get(call.userId);
+    if (call.table === "couple_members") {
+      const requestedUser = call.filters.find(([key]) => key === "user_id")?.[1];
+      return { data: requestedUser === call.userId && ownCouple ? { couple_id: ownCouple } : null, error: null };
+    }
+    let rows;
+    if (call.table === "relationship_events") {
+      rows = db.events.filter((row) => row.couple_id === ownCouple &&
+        (row.visibility === "ours" || row.creator_id === call.userId));
+    } else {
+      rows = db.repairs.filter((row) => {
+        const parent = db.events.find((item) => item.id === row.event_id);
+        return parent?.couple_id === ownCouple && (row.user_id === call.userId || (
+          parent.visibility === "ours" && row.sharing_status === "shared" && row.status_origin === "explicit"
+        ));
+      });
+    }
+    rows = rows.filter((row) => call.filters.every(([key, value]) => row[key] === value));
+    if (call.ids) rows = rows.filter((row) => call.ids.includes(row.event_id));
+    // Return only the actual selected fields, as the production query requests.
+    return { data: rows.map((row) => Object.fromEntries(call.columns.split(",").map((key) => [key.trim(), row[key.trim()]]))), error: null };
+  };
+  db.read = async (call) => db.defaultRead(call);
+  db.supabase = {
+    auth: {
+      getSession: async () => ({ data: { session: db.userId ? { user: { id: db.userId }, access_token: `${db.userId}-token` } : null }, error: null }),
+      getUser: (token) => { db.authChecks++; return db.getUser(token); },
+      onAuthStateChange(listener) {
+        db.listeners.add(listener);
+        queueMicrotask(() => { if (db.listeners.has(listener)) listener("INITIAL_SESSION", db.userId ? { user: { id: db.userId } } : null); });
+        return { data: { subscription: { unsubscribe: () => db.listeners.delete(listener) } } };
+      },
+    },
+    from(table) {
+      assert.ok(["couple_members", "relationship_events", "event_repair_states"].includes(table), `Unexpected table ${table}`);
+      const call = { table, filters: [], headers: {} };
+      return {
+        select(columns) { call.columns = columns; return this; },
+        eq(key, value) { call.filters.push([key, value]); return this; },
+        in(key, values) { assert.equal(key, "event_id"); call.ids = [...values]; return this; },
+        order(key, value) { call.order = [key, value]; return this; },
+        maybeSingle() { return this; },
+        setHeader(key,value) { call.headers[key]=value; return this; },
+        then(resolve, reject) {
+          call.userId = call.headers.Authorization?.replace("Bearer ", "").replace(/-token$/, ""); db.reads.push(call);
+          return Promise.resolve().then(() => db.read(call)).then(resolve, reject);
+        },
+      };
+    },
+    rpc: () => assert.fail("Moments must not mutate data"),
+    channel(name) {
+      const channel = { name, handlers: [], removed: false,
+        on(type, filter, handler) { this.handlers.push({ type, filter, handler }); return this; },
+        subscribe(callback) { this.status=callback; return this; },
+      };
+      db.channels.push(channel); return channel;
+    },
+    removeChannel(channel) { channel.removed = true; },
+  };
+  return db;
+}
+
+module.exports.momentsClient = momentsClient;
+module.exports.momentEvent = momentEvent;
+module.exports.momentRepair = momentRepair;

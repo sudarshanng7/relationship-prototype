@@ -268,27 +268,12 @@ for (const id of [undefined, "hidden-event", "nonexistent-event"]) test(`A03: no
   assert.equal(db.writes.length, 0);
 });
 
-test("A03: actual Moments screen entry navigates to contributions without a parent ID", async () => {
-  const { useState } = { useState: (value) => [value, () => {}] };
-  const navigations = [], jsx = (type, props) => ({ type, props });
-  const imports = {
-    "@/components/AppBottomNav": { AppBottomNav: "AppBottomNav" },
-    "@/lib/supabase": { supabase: {} },
-    "expo-router": { useRouter: () => ({ push: (route) => navigations.push(route) }), useLocalSearchParams: () => ({}), useFocusEffect: () => {} },
-    react: { useState, useCallback: (fn) => fn, useMemo: (fn) => fn() },
-    "react/jsx-runtime": { jsx, jsxs: jsx },
-    "react-native": { View: "View", Text: "Text", Pressable: "Pressable", ScrollView: "ScrollView", ActivityIndicator: "ActivityIndicator", StyleSheet: { create: (value) => value } },
-    "react-native-safe-area-context": { SafeAreaView: "SafeAreaView" },
-  };
-  imports["@/components/couply-tokens"] = loadSource("src/components/couply-tokens.ts", {});
-  imports["@/components/CouplyUI"] = loadSource("src/components/CouplyUI.tsx", imports);
-  const Screen = loadSource("src/app/events.tsx", imports).default;
-  const nodes = (node) => Array.isArray(node) ? node.flatMap(nodes)
-    : node && typeof node === "object" ? typeof node.type === "function"
-      ? nodes(node.type(node.props)) : [node, ...nodes(node.props?.children)] : [];
-  const entry = nodes(Screen()).find((node) => node.props.accessibilityLabel === "My contributions");
-  assert.ok(entry); entry.props.onPress();
-  assert.deepEqual(navigations, ["/my-contributions"]);
+test("A03: actual Moments screen entry navigates to contributions without a parent ID", async (t) => {
+  const { momentsClient } = require("./helpers/account-screen-client.cjs");
+  const db = momentsClient();
+  const ui = harness(db, "src/app/events.tsx", { imports: { "@/components/AppBottomNav": { AppBottomNav: () => null } } });
+  t.after(ui.unmount);await ui.flush();await ui.tap("My contributions");
+  assert.deepEqual(ui.navigations,["/my-contributions"]);
 });
 
 test("A03 negative control: dropping author query filter is detected by the query contract", async (t) => {

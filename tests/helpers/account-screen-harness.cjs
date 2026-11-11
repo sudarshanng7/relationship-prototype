@@ -116,11 +116,15 @@ function harness(db, file, options = {}) {
   const time = options.accessClock;
   let timerId = 0;
   const timers = new Map();
-  const clockGlobals = time ? {
-    Date: { now: time.now },
-    setTimeout(fn, delay) { const id = ++timerId; timers.set(id, time.schedule(fn, delay)); return id; },
-    clearTimeout(id) { timers.get(id)?.(); timers.delete(id); },
+  const webEvents = new Map();
+  const clockGlobals = time || options.webLifecycle ? {
+    Date: time ? { now: time.now } : Date,
+    setTimeout(fn, delay) { if (!time) return setTimeout(fn,delay); const id = ++timerId; timers.set(id, time.schedule(fn, delay)); return id; },
+    clearTimeout(id) { if (!time) return clearTimeout(id); timers.get(id)?.(); timers.delete(id); },
+    window: { addEventListener: (name, fn) => webEvents.set(name,fn), removeEventListener: name => webEvents.delete(name) },
   } : undefined;
+  if (options.webLifecycle) imports["react-native"].Platform.OS = "web";
+  ui.webEvent = async (name) => { webEvents.get(name)?.(); ui.render(); await ui.flush(); };
   imports["@/hooks/useAccessRevalidation"] = loadSource("src/hooks/useAccessRevalidation.ts", imports, undefined, clockGlobals);
   imports["@/lib/repair-states"] ??= loadSource("src/lib/repair-states.ts", imports);
   if (options.realRepair) {

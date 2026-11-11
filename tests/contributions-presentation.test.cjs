@@ -227,7 +227,7 @@ test("refresh clears old content during access checks and only reads", async (t)
   ui.find("Refresh my contributions").props.onPress(); await ui.flush();
   assert.equal(cards(ui).length, 0); assert.doesNotMatch(ui.text(), /a retained perspective/);
   assert.match(ui.text(), /Checking access…/);
-  assert.equal(db.channels[0].removed, true);
+  assert.equal(db.channels[0].removed, false, "ordinary refresh retains one subscription");
   pending.resolve(); await ui.flush();
   assert.match(ui.text(), /a retained perspective/);
   assert.equal(db.writes.length, 0);
