@@ -32,6 +32,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~57.0.2",
     "supabase": "^2.120.0",
     "typescript": "~6.0.3"
   },
@@ -41,7 +43,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "check:config": "node scripts/check-pnpm-config.cjs"
   },
-  "private": true
+  "private": true,
+  "packageManager": "pnpm@12.5.1"
 }

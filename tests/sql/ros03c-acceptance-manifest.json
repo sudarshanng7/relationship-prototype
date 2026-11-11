@@ -1,0 +1,731 @@
+{
+  "schema_version": 1,
+  "mode": "static-only",
+  "database_acceptance": "NOT_EXECUTED",
+  "migrations": [
+    {
+      "file": "20261001000000_initial_schema.sql",
+      "version": "20261001000000",
+      "sha256": "d4924259a1cfa03efa4df73f4bd3a953895094c7e5eec30248dc7e47c7d1cb94"
+    },
+    {
+      "file": "20261013210000_secure_couple_invite_acceptance.sql",
+      "version": "20261013210000",
+      "sha256": "298456337c5ac7a78c18831cd19b3479839c3fbf1e5ad1c72179b9304b367f88"
+    },
+    {
+      "file": "20261014154911_separate_private_reflections.sql",
+      "version": "20261014154911",
+      "sha256": "900a26bc145957d93537ac00b1602ea0f3c4472603b09bff917e716e61c11fca"
+    },
+    {
+      "file": "20261014155951_create_moment_save_function.sql",
+      "version": "20261014155951",
+      "sha256": "7ad55ff75cb203cd5dfd631eac87befb492096906c2cafdad59a4ecda94fb1bb"
+    },
+    {
+      "file": "20261014193712_restrict_private_reflection_updates.sql",
+      "version": "20261014193712",
+      "sha256": "3d142c3e458d3aacda09633f7c2fe62b09d71dfdc1170dc88b9a164dc4c17b74"
+    },
+    {
+      "file": "20261014204124_secure_event_visibility_transitions.sql",
+      "version": "20261014204124",
+      "sha256": "496dad8e80e73ebba22defc46f0078b70fce97ca60a2978ddb7e2d19930dddc5"
+    },
+    {
+      "file": "20261016100826_create_event_perspectives.sql",
+      "version": "20261016100826",
+      "sha256": "0858016da9bc41df6b97d1df84589f441dafb89a3b6854e710e550ea8af570ad"
+    },
+    {
+      "file": "20261016101735_restrict_perspective_updates.sql",
+      "version": "20261016101735",
+      "sha256": "79e13e0ab4f7d247d88ffad2ff548c3ce4354de8a83400be9579650228270a19"
+    },
+    {
+      "file": "20261016144728_secure_perspective_resubmission.sql",
+      "version": "20261016144728",
+      "sha256": "4714e615850d2420c01d607f1aa3d52b78b5869c8d7d5a709e6bf200a62b5dbf"
+    },
+    {
+      "file": "20261016152107_secure_perspective_withdrawal.sql",
+      "version": "20261016152107",
+      "sha256": "b55d467db25ede70ce516452b74943e83a03ed339ab1875d5672c5328f1f2fbc"
+    },
+    {
+      "file": "20261016155850_preserve_suspended_perspective_author_access.sql",
+      "version": "20261016155850",
+      "sha256": "6c59cae71e44320b6a66fa7fa91fa34be6152720f235117065c30762166d8d5a"
+    },
+    {
+      "file": "20261016193312_require_event_membership_for_reads.sql",
+      "version": "20261016193312",
+      "sha256": "840f1a90f92e4f460b495f07ccf0a678595afdae630b2685b25a290d23e64806"
+    },
+    {
+      "file": "20261020120246_require_membership_for_private_reflections.sql",
+      "version": "20261020120246",
+      "sha256": "10fc30bcae690530bef1df27345c880d1f43cab324a2735979cdf9700c702b31"
+    },
+    {
+      "file": "20261020180334_restrict_private_reflection_mutations.sql",
+      "version": "20261020180334",
+      "sha256": "8880876751f528196d5568d8e7babd10439e66c4032c65571025e8db04ce3963"
+    },
+    {
+      "file": "20261023090000_ros03c_add_individual_repair_states.sql",
+      "version": "20261023090000",
+      "sha256": "5b2cf998d57d3ab9212cdd58c5df2fbb007f4602e02ecee1a6d642cd4b664f8f"
+    },
+    {
+      "file": "20261027214000_ros03c_stop_legacy_status_on_creation.sql",
+      "version": "20261027214000",
+      "sha256": "3a097e2436697f27a8e7ff2b5fa29b5a07640ea80fd1b5d86957dc0ce7e47aaf"
+    },
+    {
+      "file": "20261028184500_ros03c_revoke_legacy_repair_updates.sql",
+      "version": "20261028184500",
+      "sha256": "7f7bfe833bc145b5bfd183d79d7353fa6a09b73c6fe83a889786c959508b6dc9"
+    },
+    {
+      "file": "20261028200000_ros03c_restrict_event_insert_columns.sql",
+      "version": "20261028200000",
+      "sha256": "37caf2df1f9043c102feb03a7430ed13b78d466f42dd0b60d0ba3303e08daa04"
+    },
+    {
+      "file": "20261028220000_ros03c_legacy_repair_privacy_cutover.sql",
+      "version": "20261028220000",
+      "sha256": "0455536361df8a27d9e412af963251504ceaf28c909d09c5d8f1145dca054d34"
+    },
+    {
+      "file": "20261102180000_ros03c_harden_client_table_privileges.sql",
+      "version": "20261102180000",
+      "sha256": "6208c60a064362bb4cca6e97246d2b167bfab425b31e673be46975ff5d2bde72"
+    },
+    {
+      "file": "20261103200000_ros03c_version_checked_repair_saves.sql",
+      "version": "20261103200000",
+      "sha256": "3c919c5e6eae0e38139926b5cfd4bc422b6a63318d90c8edb4ac35b76f136ef7"
+    },
+    {
+      "file": "20261104100000_ros03c_repair_rpc_privacy.sql",
+      "version": "20261104100000",
+      "sha256": "5d7f475bc4b50b9b5b41ef550dcf57501e28b8ecc0060ed4fcb359afc3c1cf35"
+    },
+    {
+      "file": "20261104120000_ros03c_checked_repair_withdrawals.sql",
+      "version": "20261104120000",
+      "sha256": "db845bde954a1f8dda8bdd94ae1402be453b1f6a6eba2485813ebaa99824a529"
+    },
+    {
+      "file": "20261105100000_ros03c_perspective_rpc_privacy.sql",
+      "version": "20261105100000",
+      "sha256": "d2350a549c95d3411a47183aa0b100c7fe203feac9f536f368d237c689ca1f39"
+    },
+    {
+      "file": "20261106120000_ros03c_require_membership_for_event_deletion.sql",
+      "version": "20261106120000",
+      "sha256": "ed5fc7ebb7f8bc6bbe4c190cbcd1f734b098c6cbe927c70e9056a4b4f410eaad"
+    },
+    {
+      "file": "20261106160000_ros03c_guard_event_deletion.sql",
+      "version": "20261106160000",
+      "sha256": "3bbd68b4ed7dc04c5b2b9ade7ed360eea7c72d55ef19afe0960e10c09d6b5eed"
+    },
+    {
+      "file": "20261108120000_ros03c_authorize_repair_before_lock.sql",
+      "version": "20261108120000",
+      "sha256": "2ab4d2abf3b6664bf0ae4f6d3ef2656ce32d4275608550c0eb7e3c5797ff2d84"
+    },
+    {
+      "file": "20261108160000_ros03c_fence_visibility_membership.sql",
+      "version": "20261108160000",
+      "sha256": "92386ba18cba1e4ff02e1fb68703e5b70d84f110a9e5518ebd20ea63ff6d01cf"
+    },
+    {
+      "file": "20261108180000_ros03c_guard_event_and_reflection_writes.sql",
+      "version": "20261108180000",
+      "sha256": "ffbc30073ee5ec0bf4f1e3d4c797c161d39441a0e0b86478db154ea97368e511"
+    }
+  ],
+  "stages": {
+    "22": {
+      "versions": [
+        "20261001000000",
+        "20261013210000",
+        "20261014154911",
+        "20261014155951",
+        "20261014193712",
+        "20261014204124",
+        "20261016100826",
+        "20261016101735",
+        "20261016144728",
+        "20261016152107",
+        "20261016155850",
+        "20261016193312",
+        "20261020120246",
+        "20261020180334",
+        "20261023090000",
+        "20261027214000",
+        "20261028184500",
+        "20261028200000",
+        "20261028220000",
+        "20261102180000",
+        "20261103200000",
+        "20261104100000"
+      ],
+      "purpose": "Historical positive review stage"
+    },
+    "23": {
+      "versions": [
+        "20261001000000",
+        "20261013210000",
+        "20261014154911",
+        "20261014155951",
+        "20261014193712",
+        "20261014204124",
+        "20261016100826",
+        "20261016101735",
+        "20261016144728",
+        "20261016152107",
+        "20261016155850",
+        "20261016193312",
+        "20261020120246",
+        "20261020180334",
+        "20261023090000",
+        "20261027214000",
+        "20261028184500",
+        "20261028200000",
+        "20261028220000",
+        "20261102180000",
+        "20261103200000",
+        "20261104100000",
+        "20261104120000"
+      ],
+      "purpose": "Historical positive review stage"
+    },
+    "24": {
+      "versions": [
+        "20261001000000",
+        "20261013210000",
+        "20261014154911",
+        "20261014155951",
+        "20261014193712",
+        "20261014204124",
+        "20261016100826",
+        "20261016101735",
+        "20261016144728",
+        "20261016152107",
+        "20261016155850",
+        "20261016193312",
+        "20261020120246",
+        "20261020180334",
+        "20261023090000",
+        "20261027214000",
+        "20261028184500",
+        "20261028200000",
+        "20261028220000",
+        "20261102180000",
+        "20261103200000",
+        "20261104100000",
+        "20261104120000",
+        "20261105100000"
+      ],
+      "purpose": "Historical positive review stage"
+    },
+    "25": {
+      "versions": [
+        "20261001000000",
+        "20261013210000",
+        "20261014154911",
+        "20261014155951",
+        "20261014193712",
+        "20261014204124",
+        "20261016100826",
+        "20261016101735",
+        "20261016144728",
+        "20261016152107",
+        "20261016155850",
+        "20261016193312",
+        "20261020120246",
+        "20261020180334",
+        "20261023090000",
+        "20261027214000",
+        "20261028184500",
+        "20261028200000",
+        "20261028220000",
+        "20261102180000",
+        "20261103200000",
+        "20261104100000",
+        "20261104120000",
+        "20261105100000",
+        "20261106120000"
+      ],
+      "purpose": "Historical positive review stage"
+    },
+    "26": {
+      "versions": [
+        "20261001000000",
+        "20261013210000",
+        "20261014154911",
+        "20261014155951",
+        "20261014193712",
+        "20261014204124",
+        "20261016100826",
+        "20261016101735",
+        "20261016144728",
+        "20261016152107",
+        "20261016155850",
+        "20261016193312",
+        "20261020120246",
+        "20261020180334",
+        "20261023090000",
+        "20261027214000",
+        "20261028184500",
+        "20261028200000",
+        "20261028220000",
+        "20261102180000",
+        "20261103200000",
+        "20261104100000",
+        "20261104120000",
+        "20261105100000",
+        "20261106120000",
+        "20261106160000"
+      ],
+      "purpose": "Historical predecessor control"
+    },
+    "27": {
+      "versions": [
+        "20261001000000",
+        "20261013210000",
+        "20261014154911",
+        "20261014155951",
+        "20261014193712",
+        "20261014204124",
+        "20261016100826",
+        "20261016101735",
+        "20261016144728",
+        "20261016152107",
+        "20261016155850",
+        "20261016193312",
+        "20261020120246",
+        "20261020180334",
+        "20261023090000",
+        "20261027214000",
+        "20261028184500",
+        "20261028200000",
+        "20261028220000",
+        "20261102180000",
+        "20261103200000",
+        "20261104100000",
+        "20261104120000",
+        "20261105100000",
+        "20261106120000",
+        "20261106160000",
+        "20261108120000"
+      ],
+      "purpose": "Historical repair lock fix"
+    },
+    "28": {
+      "versions": [
+        "20261001000000",
+        "20261013210000",
+        "20261014154911",
+        "20261014155951",
+        "20261014193712",
+        "20261014204124",
+        "20261016100826",
+        "20261016101735",
+        "20261016144728",
+        "20261016152107",
+        "20261016155850",
+        "20261016193312",
+        "20261020120246",
+        "20261020180334",
+        "20261023090000",
+        "20261027214000",
+        "20261028184500",
+        "20261028200000",
+        "20261028220000",
+        "20261102180000",
+        "20261103200000",
+        "20261104100000",
+        "20261104120000",
+        "20261105100000",
+        "20261106120000",
+        "20261106160000",
+        "20261108120000",
+        "20261108160000"
+      ],
+      "purpose": "Historical visibility membership fix"
+    },
+    "29": {
+      "versions": [
+        "20261001000000",
+        "20261013210000",
+        "20261014154911",
+        "20261014155951",
+        "20261014193712",
+        "20261014204124",
+        "20261016100826",
+        "20261016101735",
+        "20261016144728",
+        "20261016152107",
+        "20261016155850",
+        "20261016193312",
+        "20261020120246",
+        "20261020180334",
+        "20261023090000",
+        "20261027214000",
+        "20261028184500",
+        "20261028200000",
+        "20261028220000",
+        "20261102180000",
+        "20261103200000",
+        "20261104100000",
+        "20261104120000",
+        "20261105100000",
+        "20261106120000",
+        "20261106160000",
+        "20261108120000",
+        "20261108160000",
+        "20261108180000"
+      ],
+      "purpose": "Final guarded creation/reflection stage"
+    }
+  },
+  "profiles": {
+    "f3-sequential": {
+      "path": "tests/sql/ros03c-finding3-regression.sql",
+      "stages": [
+        22
+      ],
+      "classification": "historical-positive-regression",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Repair save/share result privacy, RLS and independent reports at stage 22",
+      "preconditions": "Separately approved PostgreSQL/Supabase-compatible postgres target, required auth helpers/roles/ledger, already-provisioned psql; explicit authorization variable. Stage29 uses exact preflight and expected system ID.",
+      "fixtures_cleanup": "Synthetic fixture IDs, postgres seed setup, local role/subject assertions, transaction rollback; wrapper adds exact29 preflight. No runtime cleanup/provisioning.",
+      "reason": "Unchecked withdrawal is retired at stage 23; cannot run unchanged at 29",
+      "final_equivalent": "f4-sequential and f9-sequential, with exact stage29 preflight",
+      "oracle_limits": "Strict result/error tuples; old prerequisite checks are not an exact ledger or final privilege proof"
+    },
+    "f4-sequential": {
+      "path": "tests/sql/ros03c-finding4-regression.sql",
+      "stages": [
+        23,
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Checked repair withdrawal, save/share/version conflicts, RLS, independent and legacy content",
+      "preconditions": "Separately approved PostgreSQL/Supabase-compatible postgres target, required auth helpers/roles/ledger, already-provisioned psql; explicit authorization variable. Stage29 uses exact preflight and expected system ID.",
+      "fixtures_cleanup": "Synthetic fixture IDs, postgres seed setup, local role/subject assertions, transaction rollback; wrapper adds exact29 preflight. No runtime cleanup/provisioning.",
+      "reason": "Current checked APIs and authorized error results survive stages 27-29; owner-created fixtures do not require retired direct writes",
+      "final_equivalent": "Included unchanged by stage29-sequential after exact metadata preflight",
+      "oracle_limits": "Old suite does not pin exact ledger/function bodies itself; outer wrapper must do so"
+    },
+    "f4-concurrency": {
+      "path": "tests/sql/ros03c-finding4-concurrency.py",
+      "stages": [
+        23,
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Share versus checked withdrawal in both winning orders, partner/content preservation",
+      "preconditions": "Separately verified independent disposable runtime/storage, empty fixture tables, explicit host/port/database/system identifier, approval flag, preprovisioned psql; stage29 preflight on the same target. No default database.",
+      "fixtures_cleanup": "Random synthetic IDs; committed setup, two psql sessions, scoped cleanup/final emptiness checks. Original4/5 lose cleanup eligibility if setup acknowledgment is lost; newer runners initialize cleanup before setup.",
+      "reason": "Current signatures/version behavior unchanged; use same verified stage29 target and preflight before this old runner",
+      "final_equivalent": "Final source-compatible runner plus separate stage29 preflight; not a substitute for f9 matrix",
+      "oracle_limits": "Presence-only ledger guard; cleanup initialized only after setup acknowledgment, so lost setup response can leave scoped fixtures"
+    },
+    "f5-sequential": {
+      "path": "tests/sql/ros03c-finding5-regression.sql",
+      "stages": [
+        24,
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Perspective RPC/helper privacy, hidden own rows, membership and visibility cycles",
+      "preconditions": "Separately approved PostgreSQL/Supabase-compatible postgres target, required auth helpers/roles/ledger, already-provisioned psql; explicit authorization variable. Stage29 uses exact preflight and expected system ID.",
+      "fixtures_cleanup": "Synthetic fixture IDs, postgres seed setup, local role/subject assertions, transaction rollback; wrapper adds exact29 preflight. No runtime cleanup/provisioning.",
+      "reason": "Effective perspective definitions/RLS remain unchanged; current visible-event visibility calls remain valid",
+      "final_equivalent": "Included unchanged by stage29-sequential after exact metadata preflight",
+      "oracle_limits": "Strict SQLSTATE/message/details/hint and owner snapshots; no live JWT/transport proof"
+    },
+    "f5-concurrency": {
+      "path": "tests/sql/ros03c-finding5-concurrency.py",
+      "stages": [
+        24,
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Perspective submit/withdraw versus visibility and membership delete/user/couple-key races",
+      "preconditions": "Separately verified independent disposable runtime/storage, empty fixture tables, explicit host/port/database/system identifier, approval flag, preprovisioned psql; stage29 preflight on the same target. No default database.",
+      "fixtures_cleanup": "Random synthetic IDs; committed setup, two psql sessions, scoped cleanup/final emptiness checks. Original4/5 lose cleanup eligibility if setup acknowledgment is lost; newer runners initialize cleanup before setup.",
+      "reason": "Current perspective signatures and authorization remain; visible parent/member lock ordering remains compatible",
+      "final_equivalent": "Final source-compatible runner plus stage29 preflight; require approved final target",
+      "oracle_limits": "Presence-only guard and setup cleanup initialized after acknowledgment; historical passes do not settle final visibility integration"
+    },
+    "f8-policy-sequential": {
+      "path": "tests/sql/ros03c-finding8-regression.sql",
+      "stages": [
+        25
+      ],
+      "classification": "historical-positive-regression",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Creator DELETE membership policy with minimal/returning shapes and child cascades",
+      "preconditions": "Separately approved PostgreSQL/Supabase-compatible postgres target, required auth helpers/roles/ledger, already-provisioned psql; explicit authorization variable. Stage29 uses exact preflight and expected system ID.",
+      "fixtures_cleanup": "Synthetic fixture IDs, postgres seed setup, local role/subject assertions, transaction rollback; wrapper adds exact29 preflight. No runtime cleanup/provisioning.",
+      "reason": "Stage 26 revoked authenticated direct DELETE; stage29 must deny this historical positive path",
+      "final_equivalent": "f8-fence-sequential tests guarded deletion and direct bypass denial",
+      "oracle_limits": "Preflight requires direct DELETE grant: fails closed on final schema, not a final regression failure to bypass"
+    },
+    "f8-fence-sequential": {
+      "path": "tests/sql/ros03c-finding8-fence-regression.sql",
+      "stages": [
+        26,
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Guarded deletion, direct bypass denial, hidden IDs, membership, full-row cascades",
+      "preconditions": "Separately approved PostgreSQL/Supabase-compatible postgres target, required auth helpers/roles/ledger, already-provisioned psql; explicit authorization variable. Stage29 uses exact preflight and expected system ID.",
+      "fixtures_cleanup": "Synthetic fixture IDs, postgres seed setup, local role/subject assertions, transaction rollback; wrapper adds exact29 preflight. No runtime cleanup/provisioning.",
+      "reason": "Guarded deletion and four reviewed cascading FKs are unchanged through stage29",
+      "final_equivalent": "Included unchanged by stage29-sequential with exact metadata preflight",
+      "oracle_limits": "Strict availability/privilege errors and owner full-row state; does not settle product approval for partner-content deletion"
+    },
+    "f8-fence-concurrency": {
+      "path": "tests/sql/ros03c-finding8-fence-concurrency.py",
+      "stages": [
+        26,
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Creator deletion versus membership changes, both visibility modes and both orders; held denied parents",
+      "preconditions": "Separately verified independent disposable runtime/storage, empty fixture tables, explicit host/port/database/system identifier, approval flag, preprovisioned psql; stage29 preflight on the same target. No default database.",
+      "fixtures_cleanup": "Random synthetic IDs; committed setup, two psql sessions, scoped cleanup/final emptiness checks. Original4/5 lose cleanup eligibility if setup acknowledgment is lost; newer runners initialize cleanup before setup.",
+      "reason": "Deletion helper unchanged, fixtures use postgres direct setup and current guarded client deletion",
+      "final_equivalent": "Final source-compatible runner plus separate exact stage29 preflight",
+      "oracle_limits": "Presence-only ledger guard; actual blocker observation and owner snapshots needed, not elapsed-time inference"
+    },
+    "f9-sequential": {
+      "path": "tests/sql/ros03c-finding9-regression.sql",
+      "stages": [
+        27,
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Public/private repair authorization, own hidden withdrawal, legacy/version cycles and RLS",
+      "preconditions": "Separately approved PostgreSQL/Supabase-compatible postgres target, required auth helpers/roles/ledger, already-provisioned psql; explicit authorization variable. Stage29 uses exact preflight and expected system ID.",
+      "fixtures_cleanup": "Synthetic fixture IDs, postgres seed setup, local role/subject assertions, transaction rollback; wrapper adds exact29 preflight. No runtime cleanup/provisioning.",
+      "reason": "Stage29 changes creation/reflection privileges, not these repair helpers; fixture inserts are owner-side",
+      "final_equivalent": "Included unchanged by stage29-sequential after exact metadata preflight",
+      "oracle_limits": "Subset ledger/policy/function checks alone cannot bind whole final schema; result/error tuples and owner snapshots are behavioral oracles"
+    },
+    "f9-concurrency": {
+      "path": "tests/sql/ros03c-finding9-concurrency.py",
+      "stages": [
+        27
+      ],
+      "classification": "requires-final-stage-adaptation",
+      "execution": "NOT_EXECUTED",
+      "purpose": "48 repair/member/visibility orders over public/private paths plus locked inaccessible-ID probes",
+      "preconditions": "Separately verified independent disposable runtime/storage, empty fixture tables, explicit host/port/database/system identifier, approval flag, preprovisioned psql; stage29 preflight on the same target. No default database.",
+      "fixtures_cleanup": "Random synthetic IDs; committed setup, two psql sessions, scoped cleanup/final emptiness checks. Original4/5 lose cleanup eligibility if setup acknowledgment is lost; newer runners initialize cleanup before setup.",
+      "reason": "Positive mode explicitly requires 27 migrations; preserved unchanged and excluded from stage29 launch",
+      "final_equivalent": "stage29-f9-concurrency adds exact29 ledger, all14 body/security fingerprints and direct-write retirement guards",
+      "oracle_limits": "Original count guard fails closed at 28/29; never relax it in place or equate stage27 evidence to final acceptance"
+    },
+    "f9-predecessor-control": {
+      "path": "tests/sql/ros03c-finding9-concurrency.py",
+      "stages": [
+        26
+      ],
+      "classification": "historical-predecessor-negative-control",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Stage26 predecessor lock-disclosure negative control using --negative-control",
+      "preconditions": "Separately verified independent disposable runtime/storage, empty fixture tables, explicit host/port/database/system identifier, approval flag, preprovisioned psql; stage29 preflight on the same target. No default database.",
+      "fixtures_cleanup": "Random synthetic IDs; committed setup, two psql sessions, scoped cleanup/final emptiness checks. Original4/5 lose cleanup eligibility if setup acknowledgment is lost; newer runners initialize cleanup before setup.",
+      "reason": "Original requires exactly26, absence of stage27 repair fix and predecessor helper hashes; remains historical only",
+      "final_equivalent": "No final negative-control execution: stage29-f9-concurrency must reject hidden IDs without 55P03",
+      "oracle_limits": "Expected predecessor 55P03 is a diagnostic success only for the vulnerable predecessor; cannot be a final security pass"
+    },
+    "f11-sequential": {
+      "path": "tests/sql/ros03c-finding11-regression.sql",
+      "stages": [
+        28,
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Visibility/member authorization, topics/default errors, trigger effects, preserved child content and cascades",
+      "preconditions": "Separately approved PostgreSQL/Supabase-compatible postgres target, required auth helpers/roles/ledger, already-provisioned psql; explicit authorization variable. Stage29 uses exact preflight and expected system ID.",
+      "fixtures_cleanup": "Synthetic fixture IDs, postgres seed setup, local role/subject assertions, transaction rollback; wrapper adds exact29 preflight. No runtime cleanup/provisioning.",
+      "reason": "Stage29 does not change stage28 visibility helper; owner fixtures and guarded visibility API remain compatible",
+      "final_equivalent": "Included unchanged by stage29-sequential after exact metadata preflight",
+      "oracle_limits": "Migration-presence guard alone is insufficient; retained SQL tuples/owner snapshots test actual behavior"
+    },
+    "f11-concurrency": {
+      "path": "tests/sql/ros03c-finding11-concurrency.py",
+      "stages": [
+        28
+      ],
+      "classification": "requires-final-stage-adaptation",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Visibility/member races, child interactions, hidden IDs and authorized waits",
+      "preconditions": "Separately verified independent disposable runtime/storage, empty fixture tables, explicit host/port/database/system identifier, approval flag, preprovisioned psql; stage29 preflight on the same target. No default database.",
+      "fixtures_cleanup": "Random synthetic IDs; committed setup, two psql sessions, scoped cleanup/final emptiness checks. Original4/5 lose cleanup eligibility if setup acknowledgment is lost; newer runners initialize cleanup before setup.",
+      "reason": "Strict count28 and source fingerprints intentionally exclude29",
+      "final_equivalent": "stage29-f11-concurrency strengthens preflight to29 without changing visibility/child test body",
+      "oracle_limits": "Creator/public child matrix does not replace f9 partner/private48 matrix"
+    },
+    "a01-sequential": {
+      "path": "tests/sql/ros03c-a01-guarded-writes-regression.sql",
+      "stages": [
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Exact29 APIs/ACLs, creation/reflection ownership, privacy, direct-write retirement, atomicity and snapshot preservation",
+      "preconditions": "Separately approved PostgreSQL/Supabase-compatible postgres target, required auth helpers/roles/ledger, already-provisioned psql; explicit authorization variable. Stage29 uses exact preflight and expected system ID.",
+      "fixtures_cleanup": "Synthetic fixture IDs, postgres seed setup, local role/subject assertions, transaction rollback; wrapper adds exact29 preflight. No runtime cleanup/provisioning.",
+      "reason": "Already bound to exact29 ledger,14 function/security identities and reviewed A01 privileges",
+      "final_equivalent": "Included unchanged by stage29-sequential; other earlier suites remain required",
+      "oracle_limits": "Starting point only: does not exhaust all table/RPC privileges, historical populated migration rehearsals or prior concurrency matrices"
+    },
+    "a01-concurrency": {
+      "path": "tests/sql/ros03c-a01-guarded-writes-concurrency.py",
+      "stages": [
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Creation/reflection versus membership and existing visibility/deletion/repair/perspective calls; duplicate reflection and hidden-ID probes",
+      "preconditions": "Separately verified independent disposable runtime/storage, empty fixture tables, explicit host/port/database/system identifier, approval flag, preprovisioned psql; stage29 preflight on the same target. No default database.",
+      "fixtures_cleanup": "Random synthetic IDs; committed setup, two psql sessions, scoped cleanup/final emptiness checks. Original4/5 lose cleanup eligibility if setup acknowledgment is lost; newer runners initialize cleanup before setup.",
+      "reason": "Already binds exact29 source manifest, function ownership/security and retired direct writes",
+      "final_equivalent": "Required final29 concurrency runner, separate from earlier repair/visibility/deletion matrices",
+      "oracle_limits": "Actual blocker and owner snapshots required; no universal deadlock freedom, HTTP, runtime preservation or deployment proof"
+    },
+    "stage29-sequential": {
+      "path": "tests/sql/ros03c-stage29-regression.sql",
+      "stages": [
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Ordered final-stage wrapper for six unchanged reviewed positive SQL payloads",
+      "preconditions": "Separately approved PostgreSQL/Supabase-compatible postgres target, required auth helpers/roles/ledger, already-provisioned psql; explicit authorization variable. Stage29 uses exact preflight and expected system ID.",
+      "fixtures_cleanup": "Synthetic fixture IDs, postgres seed setup, local role/subject assertions, transaction rollback; wrapper adds exact29 preflight. No runtime cleanup/provisioning.",
+      "reason": "Explicit stage29 authorization/system-ID variables; exact29 preflight before each payload; no migrations or connection defaults",
+      "final_equivalent": "New final-stage sequential acceptance plan, PREPARED ONLY",
+      "oracle_limits": "Never executed by the static tool. Final SQL syntax/catalog assumptions still need authorized database evaluation"
+    },
+    "stage29-f9-concurrency": {
+      "path": "tests/sql/ros03c-stage29-finding9-concurrency.py",
+      "stages": [
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Final29 equivalent retaining f9 48 public/private partner orders and locked-ID assertions",
+      "preconditions": "Separately verified independent disposable runtime/storage, empty fixture tables, explicit host/port/database/system identifier, approval flag, preprovisioned psql; stage29 preflight on the same target. No default database.",
+      "fixtures_cleanup": "Random synthetic IDs; committed setup, two psql sessions, scoped cleanup/final emptiness checks. Original4/5 lose cleanup eligibility if setup acknowledgment is lost; newer runners initialize cleanup before setup.",
+      "reason": "Separate copy; explicit --stage 29 selection, explicit approval/identity; exact29 contract replaces27 preflight; predecessor branch removed",
+      "final_equivalent": "New final-only runner; original27 positive and26 negative unchanged",
+      "oracle_limits": "Test body/expected SQL outcomes derived from unchanged repair helpers; source equivalence/AST checks are not concurrent database evidence"
+    },
+    "stage29-f11-concurrency": {
+      "path": "tests/sql/ros03c-stage29-finding11-concurrency.py",
+      "stages": [
+        29
+      ],
+      "classification": "final-stage-compatible",
+      "execution": "NOT_EXECUTED",
+      "purpose": "Final29 equivalent retaining f11 visibility/member/child/held-parent matrix",
+      "preconditions": "Separately verified independent disposable runtime/storage, empty fixture tables, explicit host/port/database/system identifier, approval flag, preprovisioned psql; stage29 preflight on the same target. No default database.",
+      "fixtures_cleanup": "Random synthetic IDs; committed setup, two psql sessions, scoped cleanup/final emptiness checks. Original4/5 lose cleanup eligibility if setup acknowledgment is lost; newer runners initialize cleanup before setup.",
+      "reason": "Separate copy with required --stage 29; exact29 full contract replaces28 preflight; test body unchanged",
+      "final_equivalent": "New final-only runner; historical28 runner remains unchanged",
+      "oracle_limits": "Needs actual sessions/blocker graph/owner snapshots on approved29 target; f9 private/partner matrix remains independently required"
+    }
+  },
+  "resources": {
+    "tests/sql/ros03c-a01-guarded-writes-concurrency.py": "dba6ade42b85684328db3f01f66f0225bf2d9f902f66e1c3072db2bd9b663a0e",
+    "tests/sql/ros03c-a01-guarded-writes-manifest.json": "f0307c87be337ac61d6c822d90b365c386533e9b4f3c3e119bcce9c0c77d6d36",
+    "tests/sql/ros03c-a01-guarded-writes-regression.sql": "3ef7c2d836c95cda8e84195cc0fbecf092716c830b531ca53394895c9a91d9bf",
+    "tests/sql/ros03c-finding11-concurrency.py": "f7f71c265150f0f16b81728c5d0b520b070fde5dd53111196b34cdfb9e6236b8",
+    "tests/sql/ros03c-finding11-regression.sql": "0eaf7d859aeb6f23429db7706fee35c27ad3dfe4a63ed55c313769f38e7d39b1",
+    "tests/sql/ros03c-finding3-regression.sql": "c19ba52321d7176645e25a8b86de6ca1a569ea848bc740625e9ed8dee651d2a5",
+    "tests/sql/ros03c-finding4-concurrency.py": "d39b37fe9d841d2f71c2b653be5852576b1be9192e96fc951b552171e8edc101",
+    "tests/sql/ros03c-finding4-regression.sql": "3773bf54a7b8bc0e4dc77f26ad930aa3b8df85219cc3fa3fe40f24796e7814b1",
+    "tests/sql/ros03c-finding5-concurrency.py": "e877f39b2d4cd844f5d966ae91e7c44cf8f647565d790b819bec31f6ccb37d97",
+    "tests/sql/ros03c-finding5-regression.sql": "1875875774a1fa941f5e9e1a3799ea2700ae294deb9261d822aa83f12a4c6763",
+    "tests/sql/ros03c-finding8-fence-concurrency.py": "89b17481b0fc1716738a098ba1c943ce71453fd0e5ce89def45733b01565a207",
+    "tests/sql/ros03c-finding8-fence-regression.sql": "d8f734e8b8f6dc032d3149ccc269dacb67508402418b51e12151cb3a926ff30b",
+    "tests/sql/ros03c-finding8-regression.sql": "0b7a3cac806aec1b749f8df686f0b702f444a5ef4d854f836ac239cf5d8cc201",
+    "tests/sql/ros03c-finding9-concurrency.py": "4d2acb2d071cb780fb539f586b3a2b09416cbb1e366b98db436ed8272d44aaf3",
+    "tests/sql/ros03c-finding9-regression.sql": "d4c11e242ce44388f409397a893119d40eed602eb87019e0a42795e8548d05e1",
+    "tests/sql/ros03c-stage29-finding11-concurrency.py": "46f495313d2712db236a56b597f732f4251caf6c1894676fdd4bc867837db16f",
+    "tests/sql/ros03c-stage29-finding9-concurrency.py": "c8ba6c8bdccbcaf536dbe8c1a92a34d35b3c057e193f9a4a6d54409c1c4237a2",
+    "tests/sql/ros03c-stage29-preflight.sql": "9e9dde9cf60b14339f0d7f1761fcd404858e1586265c756ea48daffd49471550",
+    "tests/sql/ros03c-stage29-regression.sql": "0880f3e1fb51ec61ca5cc48bcbb80a390eceebebac403537d22e504f24fad06e",
+    "tests/sql/ros03c_stage29_contract.py": "7f05e6dec5a16fbbb814c637d15563af168999ecd0ece4ff590b34d77a662316"
+  },
+  "final_launch_profiles": [
+    "stage29-sequential",
+    "f4-concurrency",
+    "f5-concurrency",
+    "f8-fence-concurrency",
+    "stage29-f9-concurrency",
+    "stage29-f11-concurrency",
+    "a01-concurrency"
+  ],
+  "sequential_payloads": [
+    "a01-sequential",
+    "f4-sequential",
+    "f5-sequential",
+    "f8-fence-sequential",
+    "f9-sequential",
+    "f11-sequential"
+  ],
+  "gaps": {
+    "runtime-evidence": {
+      "classification": "missing-validation-coverage",
+      "status": "BLOCKED",
+      "required_evidence": "Execute the exact29 sequential and all seven launch profiles (one sequential wrapper and six concurrency runners) only after separate isolation/target authorization; preserve actual exits, tuples, blocker graphs and owner before/after snapshots. No SQL/concurrency result exists from this task."
+    },
+    "full-catalog-authorization": {
+      "classification": "missing-validation-coverage",
+      "status": "BLOCKED",
+      "required_evidence": "Review and test effective PUBLIC/inherited/authenticated/anonymous privileges across all eight app tables, all exposed/public/private entry points, policies, owners, RLS flags and server exposure. A01 and final helper guard only specified subsets; no complete catalog acceptance file exists."
+    },
+    "historical-data-replay": {
+      "classification": "missing-validation-coverage",
+      "status": "BLOCKED",
+      "required_evidence": "Prepare a separate populated historical migration replay with original snapshots, explicit versus automatic defaults, drift/abort/rollback and old-client cutover fixtures. Fresh final-schema seed rows do not test migration preservation; no reliable populated rehearsal is supplied."
+    },
+    "http-and-live-sessions": {
+      "classification": "missing-validation-coverage",
+      "status": "BLOCKED",
+      "required_evidence": "Authorized PostgREST/JWT/exposed-schema and same-token revocation/reassignment acceptance, cross-account mobile lifecycle/network/navigation, A02 lost replies and A03 retained access. No SQL role test substitutes for transport/device behavior."
+    },
+    "compound-transactions-and-maintenance": {
+      "classification": "missing-validation-coverage",
+      "status": "BLOCKED",
+      "required_evidence": "Review supported multi-parent/compound transaction orders and maintenance/cascade interactions, then exercise deadlocks, serialization and bounded recovery under actual isolation. Individual RPC tests do not establish universal deadlock freedom."
+    },
+    "product-policy": {
+      "classification": "missing-validation-coverage",
+      "status": "BLOCKED",
+      "required_evidence": "Explicitly accept/revise creator deletion of partner-contributed children and replacement-partner disclosure policy before release. Existing cascades/policies are preserved, not newly approved."
+    }
+  }
+}

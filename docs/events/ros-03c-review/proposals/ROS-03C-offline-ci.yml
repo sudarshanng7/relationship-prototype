@@ -1,0 +1,44 @@
+# PROPOSAL ONLY. Outside .github/workflows; not active or executed.
+# Before activation, review/pin action commit SHAs and approve a clean CI rehearsal.
+name: Offline client and configuration checks
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-validation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+      EXPO_NO_TELEMETRY: '1'
+      COREPACK_ENABLE_NETWORK: '0'
+      COREPACK_ENABLE_AUTO_PIN: '0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.5.1
+          run_install: false
+      - name: Validate pinned tools and dependency-build policy
+        run: node scripts/check-pnpm-config.cjs
+      - name: Install only the frozen dependency graph
+        run: pnpm install --frozen-lockfile
+      - name: Reject installation changes to reviewed configuration
+        run: git diff --exit-code -- package.json pnpm-lock.yaml pnpm-workspace.yaml .node-version
+      - name: Check the locked prebuilt resolver
+        run: node scripts/check-resolver-binding.cjs
+      - name: Supply the standard ignored Expo types reference
+        run: printf '%s\n' '/// <reference types="expo/types" />' > expo-env.d.ts
+      - name: Typecheck
+        run: pnpm --config.verify-deps-before-run=error --config.ignore-scripts=true --offline exec tsc --noEmit
+      - name: Expo lint
+        run: pnpm --config.verify-deps-before-run=error --config.ignore-scripts=true --offline exec expo lint --no-cache
+      - name: Offline client security regressions
+        run: node --test --experimental-test-isolation=none --test-reporter=spec tests/repair-states.test.cjs tests/event-deletion.test.cjs tests/onboarding-account-isolation.test.cjs

@@ -1,0 +1,10 @@
+# The required platform binding is supplied by locked optional dependencies.
+# Keep the fallback installer disabled; see the Finding 12 implementation report.
+allowBuilds:
+  unrs-resolver: false
+strictDepBuilds: true
+# Fail rather than implicitly repair application dependencies.
+verifyDepsBeforeRun: error
+# Corepack/packageManager and check:config enforce the pin. Avoid pnpm 12's
+# packageManagerDependencies lockfile writes during otherwise read-only commands.
+pmOnFail: ignore

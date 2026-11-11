@@ -1,56 +1,93 @@
-# Welcome to your Expo app 👋
+# Relationship OS
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+An Expo / React Native application for couples, with independent perspectives
+and private-by-default personal repair reports. Routes live in `src/app/`.
 
-## Get started
+## Toolchain and dependency policy
 
-1. Install dependencies
+Use **Node.js 22.23.2** (recorded in `.node-version`) and **pnpm 12.5.1**
+(recorded in `package.json#packageManager`). These are the validated project
+baseline, not a claim that every other Node version is incompatible. Provision
+these tools separately; validation commands must not download or repair them.
+The pinned Node baseline satisfies the current React Native and Supabase engines.
 
-   ```bash
-   npm install
-   ```
+Use only `pnpm-lock.yaml` for dependencies. Do not generate an npm or Yarn
+lockfile. The lockfile remains in its existing v9 format with its reviewed
+resolutions and integrity hashes.
 
-2. Start the app
+`pnpm-workspace.yaml` explicitly denies `unrs-resolver`'s postinstall script.
+Its platform binding is supplied by the locked optional dependencies; retain
+optional dependencies. The script is a fallback installer, not a required compile
+step on the validated Linux x64/glibc environment. Missing or broken bindings
+must fail validation and receive separate investigation, not automatic build
+approval. This policy does not prevent loading the prebuilt native binding.
+No dependency build script is approved. Unreviewed builds fail under
+`strictDepBuilds: true`.
 
-   ```bash
-   npx expo start
-   ```
+`verifyDepsBeforeRun: error` prevents implicit dependency repair on `pnpm run` or
+`pnpm exec`. `pmOnFail: ignore` disables pnpm 12's own tool-pin resolution and
+lockfile writes; Corepack still reads `packageManager`, and the configuration
+check independently requires the exact running Node/pnpm versions. Do not skip
+that check when provisioning CI or validating an unfamiliar checkout.
 
-In the output, you'll find options to open the app in a
+## Setup in a separately approved environment
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+With the exact tools already provisioned, validate configuration before any
+installation:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```sh
+node scripts/check-pnpm-config.cjs
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+A future approved installation must use the frozen lockfile and retain optional
+packages:
 
-### Other setup steps
+```sh
+pnpm install --frozen-lockfile
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Do not use approval, rebuild, force or repair commands to bypass a failure.
+Review any new build requirement explicitly. A clean frozen installation has
+not been executed as part of Finding 12. The proposed CI file is outside
+`.github/workflows/`, pending review:
+[ROS-03C-offline-ci.yml](docs/events/ros-03c-review/proposals/ROS-03C-offline-ci.yml).
 
-## Learn more
+After approved setup, start the app with `pnpm exec expo start`.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Offline validation with existing dependencies
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Run these against matching, already-installed dependencies. They perform no
+installation or dependency builds. The explicit overrides below allow a verified
+temporary validation copy to reuse installed dependencies without pnpm trying to
+reconcile workspace-specific `node_modules` metadata.
 
-## Join the community
+```sh
+node scripts/check-pnpm-config.cjs
+node --test --experimental-test-isolation=none --test-reporter=spec tests/repair-states.test.cjs tests/event-deletion.test.cjs tests/onboarding-account-isolation.test.cjs
+pnpm --config.verify-deps-before-run=false --config.ignore-scripts=true --offline exec tsc --noEmit
+EXPO_NO_TELEMETRY=1 CI=1 pnpm --config.verify-deps-before-run=false --config.ignore-scripts=true --offline exec expo lint --no-cache
+```
 
-Join our community of developers creating universal apps.
+On the proposed Linux x64/glibc CI platform, also run:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```sh
+node scripts/check-resolver-binding.cjs
+```
+
+That check loads the prebuilt binary directly and never invokes a fallback
+installer. Other platforms need their own clean-install and native-binding
+validation. If a Windows shim cannot be launched directly, set
+`PNPM_CONFIG_CHECK_BIN` to the already-installed native pnpm executable. The
+configuration check invokes only version and project-specific config reads,
+blocks Corepack network/auto-pinning and does not require application dependencies.
+
+Expo normally generates ignored `expo-env.d.ts`. A temporary offline copy may
+supply only its standard `/// <reference types="expo/types" />` reference for
+TypeScript; do not commit generated types or run package installation to get them.
+
+These checks exercise mocked frontend/privacy workflows, not PostgreSQL or native
+UI integration. Database validation requires separate authorization and verified
+runtime/storage isolation. Finding 5's runtime-preservation incident remains
+unresolved; no existing development stack should be reused or inspected as a
+shortcut. See the current [engineering handoff](docs/engineering/ROS-03C-handoff.md)
+and the [Finding 12 report](docs/events/ros-03c-review/ROS-03C-finding12-implementation.md).

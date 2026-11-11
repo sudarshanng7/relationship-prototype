@@ -28,6 +28,10 @@ export default function RootLayout() {
         }}
       />
       <Stack.Screen
+        name="my-contributions"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="record-moment"
         options={{
           headerShown: false,

@@ -1,0 +1,123 @@
+{
+  "candidate_only": true,
+  "versions": [
+    "20261001000000",
+    "20261013210000",
+    "20261014154911",
+    "20261014155951",
+    "20261014193712",
+    "20261014204124",
+    "20261016100826",
+    "20261016101735",
+    "20261016144728",
+    "20261016152107",
+    "20261016155850",
+    "20261016193312",
+    "20261020120246",
+    "20261020180334",
+    "20261023090000",
+    "20261027214000",
+    "20261028184500",
+    "20261028200000",
+    "20261028220000",
+    "20261102180000",
+    "20261103200000",
+    "20261104100000",
+    "20261104120000",
+    "20261105100000",
+    "20261106120000",
+    "20261106160000",
+    "20261108120000",
+    "20261108160000",
+    "20261108180000"
+  ],
+  "functions": {
+    "public.create_relationship_moment(uuid,text,text,smallint,text,text,text)": {
+      "body_hash": "f814f2847e988be25a7e642d18d8417f3faa4caa6e81e35c9631f7f52f79adf9",
+      "file": "20261108180000_ros03c_guard_event_and_reflection_writes.sql"
+    },
+    "private.lock_my_reflection_event_internal(uuid)": {
+      "body_hash": "4d9314928149102d9757e4de208290891118b6fe757fbcd074b155575a02a9b5",
+      "file": "20261108180000_ros03c_guard_event_and_reflection_writes.sql"
+    },
+    "public.insert_my_private_reflection(uuid,text)": {
+      "body_hash": "574e98bbad4168f346afc532262f42e08cc1f06664c118d6d0bbc48b930c4084",
+      "file": "20261108180000_ros03c_guard_event_and_reflection_writes.sql"
+    },
+    "public.update_my_private_reflection(uuid,text)": {
+      "body_hash": "39273d6ff762450ce8785f48cea86013b7dc0610c60f64f02f838674fc79400e",
+      "file": "20261108180000_ros03c_guard_event_and_reflection_writes.sql"
+    },
+    "public.delete_my_private_reflection(uuid)": {
+      "body_hash": "4f21fda26ed5a8ecf6ca90ce2eebef4ba719396f305182402581a8f20a84240f",
+      "file": "20261108180000_ros03c_guard_event_and_reflection_writes.sql"
+    },
+    "public.set_moment_visibility(uuid,text,text)": {
+      "body_hash": "a64f2c3059ece86dca84db589857c650e14e56809b55e84a7cba30b1debc2b27",
+      "file": "20261108160000_ros03c_fence_visibility_membership.sql"
+    },
+    "private.delete_relationship_event_internal(uuid)": {
+      "body_hash": "5a70382ff135a7e4c7e63441fb7edcd45d5f5c006c9015db16b97e39ef1b255d",
+      "file": "20261106160000_ros03c_guard_event_deletion.sql"
+    },
+    "private.save_my_repair_state_checked_internal(uuid,text,text,bigint)": {
+      "body_hash": "a741e0cc0304e068efd62a76890fc74b1a3c2200ddb6fcf2e491900673c99a5f",
+      "file": "20261108120000_ros03c_authorize_repair_before_lock.sql"
+    },
+    "private.share_my_repair_state_internal(uuid,bigint)": {
+      "body_hash": "a5d611a103d3a40bd6d43d0d7380628cac6545e5b9fb33f36c4595d638a718eb",
+      "file": "20261108120000_ros03c_authorize_repair_before_lock.sql"
+    },
+    "private.withdraw_my_repair_state_checked_internal(uuid,bigint)": {
+      "body_hash": "595a8d84dfa0902e7922f0abc5d18ebf92b17064ee2c9ed89e9991e9aaecdc20",
+      "file": "20261108120000_ros03c_authorize_repair_before_lock.sql"
+    },
+    "public.submit_event_perspective(uuid,text)": {
+      "body_hash": "8e6588803b2dcb027ecc0e81cbe40f3f3f0402ed0c4ea80891e8e53dab5a1a3c",
+      "file": "20261105100000_ros03c_perspective_rpc_privacy.sql"
+    },
+    "public.withdraw_event_perspective(uuid)": {
+      "body_hash": "5b5c3d51bf32d95307c32728dc3f51864e9215c2c2ec43b842ef5c5d45fb0302",
+      "file": "20261105100000_ros03c_perspective_rpc_privacy.sql"
+    },
+    "private.suspend_shared_repair_states()": {
+      "body_hash": "6df208466be91129e186055ec386df8787f0d6f80e014430b934c8d5058a445b",
+      "file": "20261104120000_ros03c_checked_repair_withdrawals.sql"
+    },
+    "public.suspend_event_perspectives()": {
+      "body_hash": "125113e2f8b4ae10d9bddf77e658fdc48fc7809676c862dcfe3a07b3a532c82c",
+      "file": "20261016100826_create_event_perspectives.sql"
+    }
+  },
+  "migration_sha256": {
+    "20261001000000_initial_schema.sql": "d4924259a1cfa03efa4df73f4bd3a953895094c7e5eec30248dc7e47c7d1cb94",
+    "20261013210000_secure_couple_invite_acceptance.sql": "298456337c5ac7a78c18831cd19b3479839c3fbf1e5ad1c72179b9304b367f88",
+    "20261014154911_separate_private_reflections.sql": "900a26bc145957d93537ac00b1602ea0f3c4472603b09bff917e716e61c11fca",
+    "20261014155951_create_moment_save_function.sql": "7ad55ff75cb203cd5dfd631eac87befb492096906c2cafdad59a4ecda94fb1bb",
+    "20261014193712_restrict_private_reflection_updates.sql": "3d142c3e458d3aacda09633f7c2fe62b09d71dfdc1170dc88b9a164dc4c17b74",
+    "20261014204124_secure_event_visibility_transitions.sql": "496dad8e80e73ebba22defc46f0078b70fce97ca60a2978ddb7e2d19930dddc5",
+    "20261016100826_create_event_perspectives.sql": "0858016da9bc41df6b97d1df84589f441dafb89a3b6854e710e550ea8af570ad",
+    "20261016101735_restrict_perspective_updates.sql": "79e13e0ab4f7d247d88ffad2ff548c3ce4354de8a83400be9579650228270a19",
+    "20261016144728_secure_perspective_resubmission.sql": "4714e615850d2420c01d607f1aa3d52b78b5869c8d7d5a709e6bf200a62b5dbf",
+    "20261016152107_secure_perspective_withdrawal.sql": "b55d467db25ede70ce516452b74943e83a03ed339ab1875d5672c5328f1f2fbc",
+    "20261016155850_preserve_suspended_perspective_author_access.sql": "6c59cae71e44320b6a66fa7fa91fa34be6152720f235117065c30762166d8d5a",
+    "20261016193312_require_event_membership_for_reads.sql": "840f1a90f92e4f460b495f07ccf0a678595afdae630b2685b25a290d23e64806",
+    "20261020120246_require_membership_for_private_reflections.sql": "10fc30bcae690530bef1df27345c880d1f43cab324a2735979cdf9700c702b31",
+    "20261020180334_restrict_private_reflection_mutations.sql": "8880876751f528196d5568d8e7babd10439e66c4032c65571025e8db04ce3963",
+    "20261023090000_ros03c_add_individual_repair_states.sql": "5b2cf998d57d3ab9212cdd58c5df2fbb007f4602e02ecee1a6d642cd4b664f8f",
+    "20261027214000_ros03c_stop_legacy_status_on_creation.sql": "3a097e2436697f27a8e7ff2b5fa29b5a07640ea80fd1b5d86957dc0ce7e47aaf",
+    "20261028184500_ros03c_revoke_legacy_repair_updates.sql": "7f7bfe833bc145b5bfd183d79d7353fa6a09b73c6fe83a889786c959508b6dc9",
+    "20261028200000_ros03c_restrict_event_insert_columns.sql": "37caf2df1f9043c102feb03a7430ed13b78d466f42dd0b60d0ba3303e08daa04",
+    "20261028220000_ros03c_legacy_repair_privacy_cutover.sql": "0455536361df8a27d9e412af963251504ceaf28c909d09c5d8f1145dca054d34",
+    "20261102180000_ros03c_harden_client_table_privileges.sql": "6208c60a064362bb4cca6e97246d2b167bfab425b31e673be46975ff5d2bde72",
+    "20261103200000_ros03c_version_checked_repair_saves.sql": "3c919c5e6eae0e38139926b5cfd4bc422b6a63318d90c8edb4ac35b76f136ef7",
+    "20261104100000_ros03c_repair_rpc_privacy.sql": "5d7f475bc4b50b9b5b41ef550dcf57501e28b8ecc0060ed4fcb359afc3c1cf35",
+    "20261104120000_ros03c_checked_repair_withdrawals.sql": "db845bde954a1f8dda8bdd94ae1402be453b1f6a6eba2485813ebaa99824a529",
+    "20261105100000_ros03c_perspective_rpc_privacy.sql": "d2350a549c95d3411a47183aa0b100c7fe203feac9f536f368d237c689ca1f39",
+    "20261106120000_ros03c_require_membership_for_event_deletion.sql": "ed5fc7ebb7f8bc6bbe4c190cbcd1f734b098c6cbe927c70e9056a4b4f410eaad",
+    "20261106160000_ros03c_guard_event_deletion.sql": "3bbd68b4ed7dc04c5b2b9ade7ed360eea7c72d55ef19afe0960e10c09d6b5eed",
+    "20261108120000_ros03c_authorize_repair_before_lock.sql": "2ab4d2abf3b6664bf0ae4f6d3ef2656ce32d4275608550c0eb7e3c5797ff2d84",
+    "20261108160000_ros03c_fence_visibility_membership.sql": "92386ba18cba1e4ff02e1fb68703e5b70d84f110a9e5518ebd20ea63ff6d01cf",
+    "20261108180000_ros03c_guard_event_and_reflection_writes.sql": "ffbc30073ee5ec0bf4f1e3d4c797c161d39441a0e0b86478db154ea97368e511"
+  }
+}
