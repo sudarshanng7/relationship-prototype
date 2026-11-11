@@ -20,6 +20,7 @@ import {
   type RepairMethod,
   type RepairStatus,
 } from "@/lib/repair-states";
+import type { AccessController } from "@/hooks/useAccessRevalidation";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -37,6 +38,12 @@ type Props = {
   visibility: "mine" | "ours";
   authorize: () => Promise<string | null>;
   isCurrent: () => boolean;
+  resource?: {
+    visible: boolean; rows: EventRepairState[]; revision: number;
+    canDispatch: () => boolean; canSend: () => boolean;
+    beginMutation: AccessController["beginMutation"];
+    refresh: AccessController["refresh"];
+  };
 };
 
 type RepairWrite = "share_my_repair_state";
@@ -133,6 +140,7 @@ type PrivateSaveAttempt = {
 
 type RepairAttempt = SharingAttempt | PrivateSaveAttempt;
 
+const ACCESS_RECHECK_REQUIRED = new Error("Access verification required");
 const SHARING_SUCCESS = "Your update was saved and shared with your partner.";
 const SHARING_UNKNOWN =
   "We couldn't confirm whether your update was shared. Please refresh to check its current sharing status.";
@@ -202,6 +210,7 @@ export function EventRepairSection({
   visibility,
   authorize,
   isCurrent,
+  resource,
 }: Props) {
   const [rows, setRows] = useState<EventRepairState[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,24 +221,135 @@ export function EventRepairSection({
   const [draftMethod, setDraftMethod] = useState<RepairMethod | null>(null);
   const [confirmShare, setConfirmShare] = useState(false);
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
+  const [withdrawalReview, setWithdrawalReview] = useState<{ version: number; generation: number } | null>(null);
+  const withdrawalConsent = useRef<typeof withdrawalReview>(null);
+  const withdrawalBlocked = useRef(false);
+  const [withdrawalAcknowledged, setWithdrawalAcknowledged] = useState(false);
   const [reloadRequired, setReloadRequired] = useState(false);
   const [sharingUnverified, setSharingUnverified] = useState(false);
+  const [operationFeedback, setOperationFeedback] = useState("");
+  const external = Boolean(resource);
+  const resourceRef = useRef(resource);
+  const initialized = useRef(false);
+  const replaceDraft = useRef(false);
+  const loadedOwn = useRef<EventRepairState | undefined>(undefined);
+  const draftRef = useRef({ status: draftStatus, method: draftMethod });
+  const confirmations = useRef(false);
+  const reloadRef = useRef(reloadRequired);
+  useLayoutEffect(() => {
+    resourceRef.current = resource;
+    draftRef.current = { status: draftStatus, method: draftStatus === "open" ? null : draftMethod };
+    confirmations.current = confirmShare || confirmWithdraw;
+    reloadRef.current = reloadRequired;
+  }, [resource, draftStatus, draftMethod, confirmShare, confirmWithdraw, reloadRequired]);
   const repairAttempt = useRef<RepairAttempt | null>(null);
   const requestId = useRef(0);
   const focusGeneration = useRef(0);
   const writeInFlight = useRef(false);
 
+  const lifecycleVisibility = external ? null : visibility;
   useLayoutEffect(
     () => () => {
+      withdrawalConsent.current = null;
       requestId.current++;
       focusGeneration.current++;
     },
-    [eventId, userId, visibility, authorize, isCurrent],
+    [eventId, userId, lifecycleVisibility, authorize, isCurrent],
   );
 
+  const applyLoaded = useCallback((loaded: EventRepairState[], preserveDraft: boolean, preserveConfirmations = false) => {
+    const records = loaded.filter((record) => record.user_id === userId ||
+      (visibility === "ours" && record.sharing_status === "shared"));
+    const mine = records.find((record) => record.user_id === userId);
+    const previous = loadedOwn.current;
+    const choices = draftRef.current;
+    const dirtyBefore = choices.status !== (previous?.status_origin === "explicit" ? previous.repair_status : null) ||
+      choices.method !== (previous?.status_origin === "explicit" ? previous.what_helped : null);
+    const changedOwn = JSON.stringify(previous) !== JSON.stringify(mine);
+    if (withdrawalConsent.current && mine?.report_version !== withdrawalConsent.current.version) {
+      withdrawalConsent.current = null;
+      setWithdrawalReview(null);
+      setConfirmWithdraw(false);
+      withdrawalBlocked.current = true;
+    }
+    if (preserveDraft && !repairAttempt.current && initialized.current &&
+        (reloadRef.current || (changedOwn && (dirtyBefore || confirmations.current)))) {
+      // A refreshed server version must not silently rebase an unsaved draft.
+      setRows(records);
+      setReloadRequired(true);
+      if (!reloadRef.current) setError(SAVE_CONFLICT_NOTICE);
+      return;
+    }
+    setError("");
+    setRows(records);
+    loadedOwn.current = mine;
+    const attempt = repairAttempt.current;
+    if (attempt) {
+      const report = mine && Number.isSafeInteger(mine.report_version) &&
+        mine.report_version >= attempt.version &&
+        (mine.sharing_status === "private" || mine.sharing_status === "shared") &&
+        (attempt.kind !== "private-save" || (
+          mine.status_origin === "explicit" &&
+          STATUSES.some((item) => item.value === mine.repair_status) &&
+          METHODS.some((item) => item.value === mine.what_helped) &&
+          (mine.report_version > attempt.version || matchesPrivateSave(mine, attempt))
+        ))
+        ? mine : undefined;
+      const feedback = attempt.kind === "private-save"
+        ? privateSaveFeedback(attempt, report) : sharingFeedback(attempt, report);
+      setNotice(feedback.notice);
+      setError(feedback.error);
+      setSharingUnverified(!report);
+      const matches = report && (attempt.kind === "private-save"
+        ? matchesPrivateSave(report, attempt) : matchesSharingAttempt(report, attempt));
+      setReloadRequired(!report || (preserveDraft && !matches));
+      // No row is not evidence of privacy: deletion, revocation or hidden
+      // membership may all leave an authenticated read without our report.
+      if (!report) {
+        if (attempt.kind === "private-save") setRows([]);
+        return;
+      }
+      repairAttempt.current = null;
+    } else {
+      setNotice("");
+      setReloadRequired(false);
+      setSharingUnverified(false);
+    }
+    if (!preserveDraft) {
+      // Only a deliberate successful reload (or initial load) clears uncertainty.
+      withdrawalBlocked.current = false;
+    }
+    if (!preserveDraft || (external && changedOwn && !dirtyBefore && !attempt)) {
+      // An untouched choice follows the current authorized report; edited choices stay a draft.
+      // Imported history is not a current choice. Even selecting Open again
+      // must be a deliberate action before a checked save confirms it.
+      setDraftStatus(mine?.status_origin === "explicit" ? mine.repair_status : null);
+      setDraftMethod(mine?.status_origin === "explicit" ? mine.what_helped : null);
+    }
+    if (!preserveConfirmations) {
+      withdrawalConsent.current = null;
+      setWithdrawalReview(null);
+      setConfirmShare(false);
+      setConfirmWithdraw(false);
+    }
+  }, [userId, visibility, external]);
+
   const refresh = useCallback(async ({ preserveDraft = false, afterWrite = false } = {}) => {
-    // A retained button handler must not start a competing load during a write.
+    // Retained reload callbacks must not count as deliberate recovery of an
+    // outcome that has not arrived yet, in either controller mode.
     if (writeInFlight.current && !afterWrite) return;
+    if (!afterWrite && !writeInFlight.current && !preserveDraft) {
+      withdrawalConsent.current = null;
+      setWithdrawalReview(null);
+      setConfirmWithdraw(false);
+    }
+    if (resourceRef.current) {
+      if (afterWrite) return; // The parent publishes the full post-write snapshot.
+      setOperationFeedback("");
+      replaceDraft.current = !preserveDraft;
+      await resourceRef.current.refresh(true);
+      return;
+    }
     const id = ++requestId.current;
     const valid = () => id === requestId.current && isCurrent();
     if (!valid()) return;
@@ -248,50 +368,7 @@ export function EventRepairSection({
         loaded.filter((record) => record.user_id === userId).length > 1) {
         throw new Error("Unexpected repair report identity");
       }
-      const records = loaded.filter((record) => record.user_id === userId ||
-        (visibility === "ours" && record.sharing_status === "shared"));
-      const mine = records.find((record) => record.user_id === userId);
-      setRows(records);
-      const attempt = repairAttempt.current;
-      if (attempt) {
-        const report = mine && Number.isSafeInteger(mine.report_version) &&
-          mine.report_version >= attempt.version &&
-          (mine.sharing_status === "private" || mine.sharing_status === "shared") &&
-          (attempt.kind !== "private-save" || (
-            mine.status_origin === "explicit" &&
-            STATUSES.some((item) => item.value === mine.repair_status) &&
-            METHODS.some((item) => item.value === mine.what_helped) &&
-            (mine.report_version > attempt.version || matchesPrivateSave(mine, attempt))
-          ))
-          ? mine : undefined;
-        const feedback = attempt.kind === "private-save"
-          ? privateSaveFeedback(attempt, report) : sharingFeedback(attempt, report);
-        setNotice(feedback.notice);
-        setError(feedback.error);
-        setSharingUnverified(!report);
-        const matches = report && (attempt.kind === "private-save"
-          ? matchesPrivateSave(report, attempt) : matchesSharingAttempt(report, attempt));
-        setReloadRequired(!report || (preserveDraft && !matches));
-        // No row is not evidence of privacy: deletion, revocation or hidden
-        // membership may all leave an authenticated read without our report.
-        if (!report) {
-          if (attempt.kind === "private-save") setRows([]);
-          return;
-        }
-        repairAttempt.current = null;
-      } else {
-        setNotice("");
-        setReloadRequired(false);
-        setSharingUnverified(false);
-      }
-      if (!preserveDraft) {
-        // Imported history is not a current choice. Even selecting Open again
-        // must be a deliberate action before a checked save confirms it.
-        setDraftStatus(mine?.status_origin === "explicit" ? mine.repair_status : null);
-        setDraftMethod(mine?.status_origin === "explicit" ? mine.what_helped : null);
-      }
-      setConfirmShare(false);
-      setConfirmWithdraw(false);
+      applyLoaded(loaded, preserveDraft);
     } catch (e) {
       if (valid()) {
         setRows([]);
@@ -314,19 +391,24 @@ export function EventRepairSection({
     } finally {
       if (valid()) setLoading(false);
     }
-  }, [eventId, userId, visibility, authorize, isCurrent]);
+  }, [eventId, userId, authorize, isCurrent, applyLoaded]);
 
   // Visibility changes restart the focused lifecycle even when refresh is stable.
   const focusContext = useMemo(
-    () => ({ refresh, visibility }),
-    [refresh, visibility],
+    () => external ? null : ({ refresh, visibility }),
+    [external, refresh, visibility],
   );
 
   // Always recheck membership, RLS and account identity when returning here.
   useFocusEffect(
     useCallback(() => {
+      if (!focusContext) return;
       const { refresh } = focusContext;
       focusGeneration.current++;
+      withdrawalConsent.current = null;
+      withdrawalBlocked.current = false;
+      setWithdrawalReview(null);
+      setWithdrawalAcknowledged(false);
       writeInFlight.current = false;
       setRows([]);
       setDraftStatus(null);
@@ -346,6 +428,17 @@ export function EventRepairSection({
       };
     }, [focusContext]),
   );
+
+  const verifiedRows = resource?.rows;
+  const revision = resource?.revision;
+  const visible = resource?.visible;
+  useLayoutEffect(() => {
+    if (!verifiedRows || !visible || writeInFlight.current || !isCurrent()) return;
+    applyLoaded(verifiedRows, initialized.current && !replaceDraft.current, initialized.current && !replaceDraft.current);
+    initialized.current = true;
+    replaceDraft.current = false;
+    setLoading(false);
+  }, [revision, visible, verifiedRows, applyLoaded, isCurrent]);
 
   const mine = rows.find((row) => row.user_id === userId);
   const partner =
@@ -396,6 +489,7 @@ export function EventRepairSection({
     const token = await authorize();
     if (!valid()) return false;
     if (!token) throw new Error("Authentication required");
+    if (resourceRef.current && !resourceRef.current.canSend()) throw ACCESS_RECHECK_REQUIRED;
     const { data, error } = await supabase
       .rpc(name, args)
       .setHeader("Authorization", `Bearer ${token}`);
@@ -412,6 +506,7 @@ export function EventRepairSection({
   ): Promise<number | null> {
     const token = await authorize();
     if (!token || !valid()) return null;
+    if (resourceRef.current && !resourceRef.current.canSend()) throw ACCESS_RECHECK_REQUIRED;
     const version = await saveMyRepairState(
       eventId,
       status,
@@ -442,6 +537,9 @@ export function EventRepairSection({
       draftStatus === null
     )
       return;
+    const finishAccess = resourceRef.current?.beginMutation();
+    if (resourceRef.current && !finishAccess) return;
+    setOperationFeedback("Your repair request is in progress. No request will be retried automatically.");
     const generation = focusGeneration.current;
     const valid = () => isCurrent() && generation === focusGeneration.current;
     writeInFlight.current = true;
@@ -456,6 +554,7 @@ export function EventRepairSection({
         valid,
       );
       if (version === null) return;
+      setOperationFeedback("Your private save was acknowledged.");
       repairAttempt.current = {
         kind: "private-save", version, status: draftStatus, method: currentMethod,
       };
@@ -466,12 +565,20 @@ export function EventRepairSection({
     } catch (e) {
       // Keep both the draft and its loaded version; never retry against a newer
       // version without the user deliberately loading and reviewing that report.
-      if (valid()) showSaveError(e);
+      if (valid()) {
+        setOperationFeedback(e === ACCESS_RECHECK_REQUIRED
+          ? "Your repair save was not sent because access needs checking."
+          : isRepairSaveConflict(e)
+            ? "This repair save was rejected because your report changed. No request was retried."
+            : "Your repair save could not be confirmed. No request was retried.");
+        showSaveError(e);
+      }
     } finally {
       if (valid()) {
         writeInFlight.current = false;
         setBusy(false);
       }
+      void finishAccess?.();
     }
   }
 
@@ -485,6 +592,9 @@ export function EventRepairSection({
       draftStatus === null
     )
       return;
+    const finishAccess = resourceRef.current?.beginMutation();
+    if (resourceRef.current && !finishAccess) return;
+    setOperationFeedback("Your repair request is in progress. No request will be retried automatically.");
     const generation = focusGeneration.current;
     const valid = () => isCurrent() && generation === focusGeneration.current;
     writeInFlight.current = true;
@@ -539,10 +649,22 @@ export function EventRepairSection({
       )
         return;
       attempt.outcome = "confirmed";
+      setOperationFeedback(SHARING_SUCCESS);
       setNotice(SHARING_SUCCESS);
       await refresh({ preserveDraft: true, afterWrite: true });
     } catch (e) {
       if (!valid()) return;
+      if (e === ACCESS_RECHECK_REQUIRED) {
+        repairAttempt.current = savedPrivately && expectedVersion !== null
+          ? { kind: "private-save", version: expectedVersion, status: reviewedStatus, method: reviewedMethod }
+          : null;
+        setOperationFeedback(savedPrivately
+          ? "Your private save was acknowledged. Sharing was not sent because access needs checking."
+          : "Sharing was not sent because access needs checking.");
+        setConfirmShare(false);
+        return;
+      }
+      setOperationFeedback(savedPrivately ? "Your private save was acknowledged; sharing could not be confirmed. No request was retried." : SHARING_UNKNOWN);
       if (needsSave && !savedPrivately) {
         showSaveError(e);
         return;
@@ -550,6 +672,7 @@ export function EventRepairSection({
       const attempt = repairAttempt.current;
       if (!attempt || attempt.kind !== "share") return;
       if (isRepairSharingRejection(e)) {
+        setOperationFeedback("This sharing request was rejected. No request was retried.");
         attempt.outcome = "rejected";
         attempt.rejection = errorText(e);
       }
@@ -561,7 +684,23 @@ export function EventRepairSection({
         writeInFlight.current = false;
         setBusy(false);
       }
+      void finishAccess?.();
     }
+  }
+
+  function openWithdrawalConfirmation() {
+    if (!isCurrent() || writeInFlight.current || withdrawalBlocked.current || reloadRef.current ||
+        !mine || loadedOwn.current?.report_version !== mine.report_version) return;
+    const review = { version: mine.report_version, generation: focusGeneration.current };
+    withdrawalConsent.current = review;
+    setWithdrawalReview(review);
+    setConfirmWithdraw(true);
+  }
+
+  function cancelWithdrawalConfirmation() {
+    withdrawalConsent.current = null;
+    setWithdrawalReview(null);
+    setConfirmWithdraw(false);
   }
 
   async function withdraw() {
@@ -570,14 +709,30 @@ export function EventRepairSection({
       writeInFlight.current ||
       busy ||
       loading ||
-      reloadRequired ||
+      reloadRef.current ||
+      withdrawalBlocked.current ||
       !mine ||
+      !withdrawalReview ||
+      withdrawalConsent.current !== withdrawalReview ||
+      withdrawalReview.generation !== focusGeneration.current ||
+      withdrawalReview.version !== mine.report_version ||
+      loadedOwn.current?.report_version !== withdrawalReview.version ||
       !confirmWithdraw
     )
       return;
+    const finishAccess = resourceRef.current?.beginMutation();
+    if (resourceRef.current && !finishAccess) return;
+    setOperationFeedback("Your repair request is in progress. No request will be retried automatically.");
     const generation = focusGeneration.current;
     const valid = () => isCurrent() && generation === focusGeneration.current;
-    const expectedVersion = mine.report_version;
+    const expectedVersion = withdrawalReview.version;
+    // Consume consent synchronously, before authorization yields. Old closures
+    // cannot authorize this request again, including after a later recovery.
+    withdrawalConsent.current = null;
+    withdrawalBlocked.current = true;
+    setWithdrawalReview(null);
+    setConfirmWithdraw(false);
+    setWithdrawalAcknowledged(false);
     writeInFlight.current = true;
     setBusy(true);
     setError("");
@@ -585,13 +740,23 @@ export function EventRepairSection({
     try {
       const token = await authorize();
       if (!token || !valid()) return;
+      if (reloadRef.current || loadedOwn.current?.report_version !== expectedVersion) return;
+      if (resourceRef.current && !resourceRef.current.canSend()) throw ACCESS_RECHECK_REQUIRED;
       await withdrawMyRepairState(eventId, expectedVersion, token);
       if (!valid()) return;
+      withdrawalBlocked.current = false;
+      setWithdrawalAcknowledged(true);
       setConfirmWithdraw(false);
+      setOperationFeedback("Withdrawal acknowledged; your personal record remains.");
       await refresh({ afterWrite: true });
       if (valid()) setNotice("Withdrawal recorded; your personal record remains.");
     } catch (e) {
       if (!valid()) return;
+      setOperationFeedback(e === ACCESS_RECHECK_REQUIRED
+        ? "Withdrawal was not sent because access needs checking."
+        : isRepairWithdrawalConflict(e)
+          ? "Withdrawal was rejected because your report changed. No request was retried."
+          : "Withdrawal could not be confirmed. No request was retried.");
       setConfirmWithdraw(false);
       setConfirmShare(false);
       if (isRepairWithdrawalConflict(e)) {
@@ -616,11 +781,21 @@ export function EventRepairSection({
         writeInFlight.current = false;
         setBusy(false);
       }
+      void finishAccess?.();
     }
+  }
+
+  if (resource && !resource.visible) {
+    // Receipts remain in state; the parent renders only generic access feedback.
+    return null;
   }
 
   return (
     <CouplySectionCard style={styles.section}>
+      {resource && withdrawalAcknowledged && (
+        <Text accessibilityLiveRegion="polite" style={styles.helper}>Your withdrawal request was acknowledged.</Text>
+      )}
+      {resource && (operationFeedback.startsWith("Your repair save could") || operationFeedback.startsWith("Withdrawal could") || operationFeedback.includes("not sent")) && <Text accessibilityLiveRegion="polite" style={styles.helper}>{operationFeedback}</Text>}
       <Text accessibilityRole="header" style={styles.title}>Your repair update</Text>
       <Text style={styles.helper}>
         Your experience belongs to you. Choose to save privately or explicitly
@@ -821,7 +996,7 @@ export function EventRepairSection({
                   accessibilityLabel="Withdraw shared update"
                   accessibilityState={{ disabled: busy }}
                   disabled={busy}
-                  onPress={() => setConfirmWithdraw(true)}
+                  onPress={openWithdrawalConfirmation}
                 >
                   <Text style={styles.buttonLabel}>Withdraw shared update</Text>
                 </Pressable>
@@ -847,7 +1022,7 @@ export function EventRepairSection({
                     accessibilityLabel="Cancel withdrawal"
                     accessibilityState={{ disabled: busy }}
                     disabled={busy}
-                    onPress={() => setConfirmWithdraw(false)}
+                    onPress={cancelWithdrawalConfirmation}
                   >
                     <Text style={styles.buttonLabel}>Cancel</Text>
                   </Pressable>
@@ -878,7 +1053,7 @@ export function EventRepairSection({
             </CouplySectionCard>
           ) : (
             <Text style={styles.helper}>
-              No repair update has been shared with you.
+              No partner repair update is currently shared with you.
             </Text>
           )}
         </CouplySectionCard>

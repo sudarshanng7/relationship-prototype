@@ -206,7 +206,7 @@ for (const visibility of ["mine", "ours"]) {
 
 test("private partner reports stay hidden and cannot preselect the caller's repair choices", async (t) => {
   const { ui } = await setup(t, [row({ user_id: "partner", sharing_status: "private", repair_status: "reconnected", what_helped: "humour" })]);
-  assert.match(ui.text(), /No repair update has been shared with you/);
+  assert.match(ui.text(), /No partner repair update is currently shared with you/);
   assert.match(ui.text(), /haven't recorded a personal repair update/);
   assert.doesNotMatch(ui.text(), /What helped them: Humour|Saved for you:/);
   assert.ok(radios(ui).every((node) => !node.props.accessibilityState.checked));
@@ -333,4 +333,25 @@ test("initial loading and refresh remain author-pinned reads with no automatic m
   await ui.press("Refresh updates");
   assert.equal(db.reads, 2); assert.equal(db.calls.length, 0);
   assert.ok(db.readCalls.every((call) => call.eventId === "event-a" && call.headers.Authorization === "Bearer author-token"));
+});
+
+async function retainedWithdrawal(t, source) {
+  const db=client([row({sharing_status:'shared'})]);db.respond=async()=>{throw new Error('Synthetic lost reply')};
+  const ui=harness(db,'ours',source);t.after(ui.unmount);await ui.flush();await choose(ui);await ui.press('Withdraw shared update');const old=ui.button('Confirm withdrawal').props.onPress;
+  old();await ui.flush();assert.equal(ui.button('Confirm withdrawal'),undefined);old();await ui.flush();return{db,ui,old};
+}
+test('7B.1R standalone pre-existing retained withdrawal reproduction dispatches exactly once',async t=>{
+  const {db,ui,old}=await retainedWithdrawal(t);assert.equal(db.calls.length,1);assert.equal(ui.selected('Talking'),true);
+  await ui.press('Load newer update (replaces your choices)');old();await ui.flush();assert.equal(db.calls.length,1);
+  await ui.press('Withdraw shared update');const canceled=ui.button('Confirm withdrawal').props.onPress;await ui.press('Cancel');canceled();await ui.flush();assert.equal(db.calls.length,1);
+  await ui.press('Withdraw shared update');old();canceled();await ui.flush();assert.equal(db.calls.length,1);await ui.press('Confirm withdrawal');assert.equal(db.calls.length,2);
+});
+test('7B.1R negative control restoring captured-state withdrawal guards reproduces the old second dispatch',async t=>{
+  const fs=require('node:fs'),path=require('node:path');let source=fs.readFileSync(path.join(__dirname,'../src/components/EventRepairSection.tsx'),'utf8');
+  const start=source.indexOf('  async function withdraw() {'),end=source.indexOf('    const finishAccess',start);
+  source=source.slice(0,start)+`  async function withdraw() {
+    if (!isCurrent() || writeInFlight.current || busy || loading || reloadRequired || !mine || !confirmWithdraw) return;
+`+source.slice(end);
+  source=source.replace('      if (reloadRef.current || loadedOwn.current?.report_version !== expectedVersion) return;','');
+  const {db}=await retainedWithdrawal(t,source);assert.equal(db.calls.length,2,'the original captured-state guard permits the second dispatch');
 });

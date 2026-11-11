@@ -1,6 +1,8 @@
 import { CouplyHeader, CouplyPage, CouplySectionCard, CouplyStatusPill } from "@/components/CouplyUI";
 import { EventRepairSection } from "@/components/EventRepairSection";
 import { tokens } from "@/components/couply-tokens";
+import { useAccessRevalidation, type AccessResult } from "@/hooks/useAccessRevalidation";
+import { loadEventRepairStates, type EventRepairState } from "@/lib/repair-states";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -15,6 +17,7 @@ import {
 
 type RelationshipEvent = {
   id: string;
+  couple_id: string;
   creator_id: string;
   event_type: "positive" | "friction";
   category: string;
@@ -33,6 +36,7 @@ type EventPerspective = {
 
 type PerspectiveLoadPhase = "loading" | "ready" | "failed";
 const PERSPECTIVE_LOAD_FAILURE = "We couldn't load perspectives. Reopen this moment to check again.";
+type ResourceSnapshot = { event: RelationshipEvent; note: string | null; perspectives: EventPerspective[]; repairs: EventRepairState[] };
 
 type AccountBoundary = { userId: string | null; generation: number };
 
@@ -135,6 +139,7 @@ function EventDetailContent({
   const focused = useRef(false);
   const focusGeneration = useRef(0);
   const requestId = useRef(0);
+  const [repairSnapshot, setRepairSnapshot] = useState<{ rows: EventRepairState[]; revision: number } | null>(null);
   const writeInFlight = useRef(false);
   const deletionPhase = useRef<"idle" | "pending" | "uncertain" | "deleted">("idle");
   const deleteConsent = useRef(false);
@@ -177,17 +182,82 @@ function EventDetailContent({
     return session.access_token;
   }, [currentUserId, invalidateAccount, isCurrent]);
 
-  const loadEvent = useCallback(async () => {
-    const id = ++requestId.current;
-    const valid = () => isCurrent() && id === requestId.current;
-    if (!valid()) return false;
-    // Clear the entire view before revalidation, including unsaved text and
-    // confirmations. No previous load is allowed to repopulate this boundary.
+  const verifyResource = useCallback(async (currentRead: () => boolean): Promise<AccessResult<ResourceSnapshot>> => {
+    const valid = () => isCurrent() && currentRead();
+    const token = await authorize();
+    if (!token || !valid()) return { kind: "failed" };
+    const bearer = `Bearer ${token}`;
+    const membership = async () => {
+      const result = await supabase.from("couple_members").select("couple_id")
+        .eq("user_id", currentUserId).maybeSingle().setHeader("Authorization", bearer);
+      if (result.error) throw new Error("Membership verification failed");
+      return result.data?.couple_id as string | undefined;
+    };
+    const parent = () => supabase.from("relationship_events")
+      .select("id, couple_id, creator_id, event_type, category, intensity, shared_topic, visibility, created_at")
+      .eq("id", eventId).maybeSingle().setHeader("Authorization", bearer);
+    const coupleId = await membership();
+    if (!valid()) return { kind: "failed" };
+    if (!coupleId) return { kind: "unavailable" };
+    const initial = await parent();
+    if (!valid()) return { kind: "failed" };
+    if (initial.error) return { kind: "failed" };
+    if (!initial.data || initial.data.couple_id !== coupleId) return { kind: "unavailable" };
+    const reflection = await supabase.from("event_private_reflections").select("note")
+      .eq("event_id", eventId).eq("author_id", currentUserId).maybeSingle().setHeader("Authorization", bearer);
+    if (!valid()) return { kind: "failed" };
+    if (reflection.error) return { kind: "failed" };
+    const perspectiveResult = await supabase.from("event_perspectives")
+      .select("id, author_id, perspective_text, sharing_status").eq("event_id", eventId).setHeader("Authorization", bearer);
+    if (!valid()) return { kind: "failed" };
+    if (perspectiveResult.error || !Array.isArray(perspectiveResult.data)) return { kind: "failed" };
+    const repairs = initial.data.event_type === "friction" ? await loadEventRepairStates(eventId, token) : [];
+    if (!valid()) return { kind: "failed" };
+    if (!Array.isArray(repairs) || repairs.some((row) => row.event_id !== eventId) ||
+      repairs.filter((row) => row.user_id === currentUserId).length > 1) return { kind: "failed" };
+    const latestMembership = await membership();
+    if (!valid()) return { kind: "failed" };
+    if (latestMembership !== coupleId) return { kind: "unavailable" };
+    const latest = await parent();
+    if (!valid()) return { kind: "failed" };
+    if (latest.error) return { kind: "failed" };
+    if (!latest.data) return { kind: "unavailable" };
+    // A parent change between child reads cannot authorize a mixed snapshot.
+    if (JSON.stringify(latest.data) !== JSON.stringify(initial.data)) return { kind: "failed" };
+    if (!(await authorize()) || !valid()) return { kind: "failed" };
+    return { kind: "ready", data: {
+      event: latest.data as RelationshipEvent, note: reflection.data?.note ?? null,
+      perspectives: perspectiveResult.data as EventPerspective[], repairs,
+    } };
+  }, [authorize, currentUserId, eventId, isCurrent]);
+
+  const publishResource = useCallback((snapshot: ResourceSnapshot, revision: number) => {
+    if (!isCurrent()) return;
+    setEvent(snapshot.event);
+    setPrivateNote(snapshot.note);
+    setPerspectives(snapshot.perspectives);
+    setPerspectiveLoadPhase("ready");
+    setRepairSnapshot({ rows: snapshot.repairs, revision });
+    if (deletionPhase.current === "idle") {
+      setDeletionScope({ generation: focusGeneration.current, request: requestId.current });
+    }
+    // Read freshness is independent of drafts, confirmations and write outcomes.
+  }, [isCurrent]);
+  const access = useAccessRevalidation({ verify: verifyResource, publish: publishResource });
+
+  useFocusEffect(useCallback(() => {
+    focused.current = true;
+    focusGeneration.current++;
+    requestId.current++;
+    writeInFlight.current = false;
+    deletionPhase.current = "idle";
+    setDeletionBlocked(false);
+    setWriting(false);
     setEvent(null);
-    setDeletionScope(null);
     setPrivateNote(null);
     setPerspectives([]);
     setPerspectiveLoadPhase("loading");
+    setRepairSnapshot(null);
     setPerspectiveInput("");
     setEditingPerspective(false);
     setSharedTopicInput("");
@@ -195,106 +265,23 @@ function EventDetailContent({
     setConfirmWithdraw(false);
     setConfirmDelete(false);
     deleteConsent.current = false;
-    setStatusMessage("Loading...");
-    try {
-      const token = await authorize();
-      if (!token || !valid()) return false;
-      const { data, error } = await supabase
-        .from("relationship_events")
-        .select(
-          `
-          id,
-          creator_id,
-          event_type,
-          category,
-          intensity,
-          shared_topic,
-          visibility,
-          created_at
-        `,
-        )
-        .eq("id", eventId)
-        .maybeSingle()
-        .setHeader("Authorization", `Bearer ${token}`);
-      if (!valid()) return false;
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (!data) {
-        setStatusMessage(
-          "Event not found or you do not have permission to view it.",
-        );
-        return false;
-      }
-
-      const { data: reflection, error: reflectionError } = await supabase
-        .from("event_private_reflections")
-        .select("note")
-        .eq("event_id", eventId)
-        .eq("author_id", currentUserId)
-        .maybeSingle()
-        .setHeader("Authorization", `Bearer ${token}`);
-      if (!valid()) return false;
-
-      if (reflectionError) {
-        throw new Error(reflectionError.message);
-      }
-
-      // RLS exposes only the author's own perspective and submitted partner
-      // perspectives. A suspended record is not visible to the partner.
-      const perspectiveResult = await supabase
-        .from("event_perspectives")
-        .select("id, author_id, perspective_text, sharing_status")
-        .eq("event_id", eventId)
-        .setHeader("Authorization", `Bearer ${token}`);
-      if (!valid() || !(await authorize()) || !valid()) return false;
-      const perspectiveRows = perspectiveResult?.data;
-      const perspectiveError = perspectiveResult?.error;
-
-      // Publish only after ALL reads and the final identity check complete.
-      setEvent(data);
-      setDeletionScope({ generation: focusGeneration.current, request: id });
-      setPrivateNote(reflection?.note ?? null);
-
-      if (perspectiveError || !Array.isArray(perspectiveRows)) {
-        setPerspectives([]);
-        setPerspectiveLoadPhase("failed");
-      } else {
-        setPerspectives(perspectiveRows as EventPerspective[]);
-        setPerspectiveLoadPhase("ready");
-      }
-      setStatusMessage("");
-      return true;
-    } catch {
-      if (valid()) {
-        setStatusMessage("We couldn't load this moment. Reopen it to check again.");
-      }
-      return false;
-    }
-  }, [authorize, currentUserId, eventId, isCurrent]);
-
-  useFocusEffect(useCallback(() => {
-    focused.current = true;
-    focusGeneration.current++;
-    writeInFlight.current = false;
-    deletionPhase.current = "idle";
-    setDeletionBlocked(false);
-    setWriting(false);
-    void loadEvent();
+    setStatusMessage("");
+    access.controller.start();
     return () => {
       focused.current = false;
       focusGeneration.current++;
       requestId.current++;
+      access.controller.stop();
     };
-  }, [loadEvent]));
+  }, [access.controller]));
 
   async function performWrite(
     pending: string,
     action: (token: string) => Promise<string | null>,
   ) {
     if (!isCurrent() || writeInFlight.current) return;
+    const finishAccess = access.controller.beginMutation();
+    if (!finishAccess) return;
     const generation = focusGeneration.current;
     const valid = () => isCurrent() && generation === focusGeneration.current;
     writeInFlight.current = true;
@@ -302,18 +289,23 @@ function EventDetailContent({
     setStatusMessage(pending);
     try {
       const token = await authorize();
-      if (!token || !valid()) return;
+      if (!token || !valid() || !access.controller.hasFreshAccess()) return;
       // Pin the validated identity on each request: the global client's session
       // may change between validation and its asynchronous fetch dispatch.
       const message = await action(token);
       if (!valid() || !(await authorize()) || !valid()) return;
       if (message === null) router.back();
-      else if (await loadEvent() && valid()) setStatusMessage(message);
+      else {
+        // Acknowledgment is historical fact even if subsequent access fails.
+        setStatusMessage(message);
+        await finishAccess();
+      }
     } catch {
       if (valid()) {
         setStatusMessage("We couldn't confirm this update. Reopen the moment to check its current state before trying again.");
       }
     } finally {
+      void finishAccess(false);
       if (valid()) {
         writeInFlight.current = false;
         setWriting(false);
@@ -335,6 +327,8 @@ function EventDetailContent({
         p_shared_topic: topic,
       }).setHeader("Authorization", `Bearer ${token}`);
       if (error) throw new Error(error.message);
+      setShowSharingControls(false);
+      setSharedTopicInput("");
       return newVisibility === "ours"
         ? "Moment shared with your partner."
         : "Moment moved to Mine. Shared topic cleared.";
@@ -354,6 +348,8 @@ function EventDetailContent({
         p_perspective_text: text,
       }).setHeader("Authorization", `Bearer ${token}`);
       if (error) throw new Error(error.message);
+      setPerspectiveInput("");
+      setEditingPerspective(false);
       return "Your perspective was shared.";
     });
   }
@@ -365,6 +361,7 @@ function EventDetailContent({
         p_event_id: eventId,
       }).setHeader("Authorization", `Bearer ${token}`);
       if (error) throw new Error(error.message);
+      setConfirmWithdraw(false);
       return data === true
         ? "Your perspective was withdrawn."
         : "No perspective was available to withdraw.";
@@ -376,6 +373,8 @@ function EventDetailContent({
       deletionScope.generation === focusGeneration.current && deletionScope.request === requestId.current;
     if (!valid() || !event || event.creator_id !== currentUserId || !confirmDelete || !deleteConsent.current ||
         writeInFlight.current || deletionPhase.current !== "idle") return;
+    const finishAccess = access.controller.beginMutation();
+    if (!finishAccess) return;
     deleteConsent.current = false;
     deletionPhase.current = "pending";
     writeInFlight.current = true;
@@ -385,6 +384,13 @@ function EventDetailContent({
     try {
       const token = await authorize();
       if (!token || !valid()) return;
+      if (!access.controller.hasFreshAccess()) {
+        deletionPhase.current = "uncertain";
+        setDeletionBlocked(true);
+        setConfirmDelete(false);
+        setStatusMessage("Deletion was not sent because access needs checking. Reopen the moment before trying again.");
+        return;
+      }
       dispatched = true;
       const { data, error } = await supabase.rpc("delete_relationship_event", {
         p_event_id: eventId,
@@ -425,6 +431,7 @@ function EventDetailContent({
       setConfirmDelete(false);
       setStatusMessage("We couldn't confirm whether this moment was deleted. Reopen it to check its current availability. No deletion was retried.");
     } finally {
+      void finishAccess(false);
       if (valid()) {
         writeInFlight.current = false;
         setWriting(false);
@@ -432,16 +439,25 @@ function EventDetailContent({
     }
   }
 
+  const visible = access.state.phase === "ready" && access.controller.hasFreshAccess();
+  const accessNotice = access.state.phase === "checking"
+    ? "Checking access to this moment…"
+    : access.state.phase === "unavailable"
+      ? "This moment is unavailable."
+      : "We couldn't verify access to this moment. Try again when you're connected.";
+  const verificationNotice = (
+    <CouplySectionCard style={styles.centerNotice}>
+      <Text accessibilityRole="alert" style={styles.helperText}>{accessNotice}</Text>
+      {access.state.phase !== "checking" && (
+        <Pressable accessibilityRole="button" accessibilityLabel="Check moment access again"
+          onPress={() => void access.controller.refresh(true)} style={styles.secondaryButton}>
+          <Text style={styles.secondaryButtonText}>Try again</Text>
+        </Pressable>
+      )}
+    </CouplySectionCard>
+  );
   if (!event) {
-    return (
-      <CouplyPage edges={["left", "right", "bottom"]}>
-        <View style={styles.center}>
-          <CouplySectionCard style={styles.centerNotice}>
-            <Text accessibilityLiveRegion="polite" style={styles.helperText}>{statusMessage}</Text>
-          </CouplySectionCard>
-        </View>
-      </CouplyPage>
-    );
+    return <CouplyPage edges={["left", "right", "bottom"]}><View style={styles.center}>{verificationNotice}</View></CouplyPage>;
   }
 
   const isCreator = event.creator_id === currentUserId;
@@ -453,6 +469,8 @@ function EventDetailContent({
   return (
     <CouplyPage edges={["left", "right", "bottom"]}>
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      {!visible && verificationNotice}
+      {visible && <>
       {/* Moment summary */}
       <CouplySectionCard style={[styles.summaryCard, event.event_type === "positive" && styles.positiveSummary]}>
         <View style={styles.summaryTop}>
@@ -512,6 +530,7 @@ function EventDetailContent({
         </CouplySectionCard>
       )}
 
+      </>}
       {event.event_type === "friction" && currentUserId && (
         <EventRepairSection
           key={`${event.id}:${currentUserId}`}
@@ -520,9 +539,15 @@ function EventDetailContent({
           visibility={event.visibility}
           authorize={authorize}
           isCurrent={isCurrent}
+          resource={{
+            visible, rows: repairSnapshot?.rows ?? [], revision: repairSnapshot?.revision ?? 0,
+            canDispatch: access.controller.canDispatch, canSend: access.controller.hasFreshAccess,
+            beginMutation: access.controller.beginMutation, refresh: access.controller.refresh,
+          }}
         />
       )}
 
+      {visible && <>
       {/* Our Perspectives */}
       {event.visibility === "ours" && (
         <CouplySectionCard style={styles.sectionCard}>
@@ -705,7 +730,7 @@ function EventDetailContent({
                   </>
                 ) : (
                   <Text style={styles.helperText}>
-                    Your partner hasn&apos;t shared a perspective.
+                    No partner perspective is currently shared with you.
                   </Text>
                 )}
               </CouplySectionCard>
@@ -886,7 +911,8 @@ function EventDetailContent({
         </CouplySectionCard>
       )}
 
-      {statusMessage !== "" && (
+      </>}
+      {visible && statusMessage !== "" && (
         <CouplySectionCard variant="muted" style={styles.statusPanel}>
           <Text accessibilityLiveRegion="polite" style={styles.status}>{statusMessage}</Text>
         </CouplySectionCard>

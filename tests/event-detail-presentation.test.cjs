@@ -8,6 +8,7 @@ const { deferred, harness, loadSource } = require("./helpers/account-screen-harn
 // Actual route/account controller and shared UI. Transport, hooks and native
 // hosts are synthetic, and the unchanged repair component is a mount sentinel.
 // These checks do not establish browser rendering, database RLS or repair RPC behavior.
+// Stage 7B.1 intentionally gates the whole resource when any required child read fails.
 const file = "src/app/event/[id].tsx";
 const { tokens } = loadSource("src/components/couply-tokens.ts", {});
 const moment = (extra = {}) => ({
@@ -37,13 +38,15 @@ function transport() {
     else if (call.table === "event_private_reflections") {
       const row = db.reflections.find((row) => row.author_id === user && matches(row));
       data = row ? project(row) : null;
-    } else data = db.perspectives.filter((row) => visible && matches(row) &&
+    } else if (call.table === "couple_members") data = db.memberships.has(user) ? { couple_id: db.memberships.get(user) } : null;
+    else if (call.table === "event_repair_states") data = db.repairs.filter(row => visible && matches(row) && (row.user_id === user || row.sharing_status === "shared")).map(project);
+    else data = db.perspectives.filter((row) => visible && matches(row) &&
       (row.author_id === user || row.sharing_status === "submitted")).map(project);
     return { data, error: null };
   };
   db.read = (call) => db.defaultRead(call);
   db.supabase.from = (table) => {
-    assert.ok(["relationship_events", "event_private_reflections", "event_perspectives"].includes(table), `Unexpected read: ${table}`);
+    assert.ok(["relationship_events", "event_private_reflections", "event_perspectives", "couple_members", "event_repair_states"].includes(table), `Unexpected read: ${table}`);
     const call = { table, filters: [], headers: {} };
     return {
       select(columns) { assert.doesNotMatch(columns, /\*|\(/); call.columns = columns; return this; },
@@ -83,9 +86,9 @@ function transport() {
   };
   return db;
 }
-async function setup(t, configure, params = { id: "event-1" }) {
+async function setup(t, configure, params = { id: "event-1" }, realRepair = false, accessClock) {
   const db = transport(); configure?.(db);
-  const ui = harness(db, file, { params, imports: {
+  const ui = harness(db, file, { params, realRepair, accessClock, imports: {
     "@/components/EventRepairSection": { EventRepairSection: function EventRepairSection() { return null; } },
   } });
   t.after(ui.unmount); await ui.flush();
@@ -98,8 +101,9 @@ const components = (ui, name) => ui.components().filter((node) => node.type.name
 const repairs = (ui) => components(ui, "EventRepairSection");
 const heading = (ui, label) => ui.nodes().find((node) => node.type === "Text" && node.props.accessibilityRole === "header" && text(node) === label);
 const change = async (ui, label, value) => { ui.find(label).props.onChangeText(value); await ui.flush(); };
-const LOAD_FAILURE = "We couldn't load this moment. Reopen it to check again.";
-const PERSPECTIVE_FAILURE = "We couldn't load perspectives. Reopen this moment to check again.";
+const ACCESS_FAILURE = "We couldn't verify access to this moment. Try again when you're connected.";
+const LOAD_FAILURE = ACCESS_FAILURE + "Try again";
+const PERSPECTIVE_FAILURE = ACCESS_FAILURE;
 const UPDATE_FAILURE = "We couldn't confirm this update. Reopen the moment to check its current state before trying again.";
 const backendError = () => ({
   message: "PRIVATE_BACKEND_MESSAGE SELECT private_column FROM private_relation at secret-host.invalid",
@@ -154,8 +158,8 @@ for (const event_type of ["positive", "friction"]) {
           db.reflections = [{ event_id: "event-1", author_id: creator_id, note: `${creator_id.toUpperCase()} PRIVATE NOTE` }];
         });
         if (visibility === "mine" && creator_id === "b") {
-          assert.match(ui.text(), /Event not found or you do not have permission/);
-          assert.equal(db.reads.length, 1); assert.equal(repairs(ui).length, 0);
+          assert.match(ui.text(), /This moment is unavailable/g);
+          assert.equal(db.reads.length, 2); assert.equal(repairs(ui).length, 0);
           assert.doesNotMatch(ui.text(), /A PRIVATE NOTE|Our chosen topic|Communication/);
           return;
         }
@@ -334,7 +338,7 @@ for (const visibility of ["mine", "ours"]) {
     const { ui } = await setup(t, (db) => { db.event.visibility = visibility; });
     const repair = repairs(ui)[0];
     assert.equal(repair.key, "event-1:a");
-    assert.deepEqual(Object.keys(repair.props).sort(), ["authorize", "eventId", "isCurrent", "userId", "visibility"]);
+    assert.deepEqual(Object.keys(repair.props).sort(), ["authorize", "eventId", "isCurrent", "resource", "userId", "visibility"]);
     assert.equal(repair.props.eventId, "event-1"); assert.equal(repair.props.userId, "a");
     assert.equal(repair.props.visibility, visibility);
     assert.equal(repair.props.isCurrent(), true); assert.equal(await repair.props.authorize(), "a-token");
@@ -345,10 +349,10 @@ for (const visibility of ["mine", "ours"]) {
 test("pending parent loading never renders protected sections or new recovery actions", async (t) => {
   const pending = deferred();
   const { ui } = await setup(t, (db) => { db.read = () => pending.promise; });
-  assert.match(ui.text(), /Loading/);
+  assert.match(ui.text(), /Checking access/);
   assert.equal(repairs(ui).length, 0); assert.equal(ui.nodes().filter((node) => node.type === "Pressable").length, 0);
   pending.resolve({ data: null, error: null }); await ui.flush();
-  assert.match(ui.text(), /Event not found or you do not have permission/);
+  assert.match(ui.text(), /This moment is unavailable/g);
 });
 
 test("missing event IDs and signed-out accounts cannot trigger data reads", async (t) => {
@@ -365,26 +369,20 @@ for (const table of ["relationship_events", "event_private_reflections", "event_
       db.read = (call) => call.table === table ? Promise.resolve({ data: null, error: backendError() }) : original(call);
     });
     noBackendDetails(ui);
-    if (table === "event_perspectives") {
-      assert.ok(heading(ui, "Communication"));
-      unavailablePerspectives(ui);
-      assert.ok(ui.find("Change moment visibility")); assert.ok(ui.find("Delete moment"));
-      assert.equal(repairs(ui).length, 1);
-    } else {
-      assert.equal(heading(ui, "Communication"), undefined);
-      assert.equal(ui.text(), LOAD_FAILURE);
-      assert.equal(repairs(ui).length, 0);
-    }
+    assert.equal(heading(ui, "Communication"), undefined);
+    assert.equal(ui.text(), LOAD_FAILURE);
+    assert.equal(repairs(ui).length, 0);
+    if (table === "event_perspectives") unavailablePerspectives(ui);
     assert.equal(db.writes.length, 0);
   });
 }
 
-test("the initial read inventory and every request's bearer remain unchanged", async (t) => {
+test("the full resource read inventory pins every request to the verified bearer", async (t) => {
   const { db } = await setup(t);
-  assert.deepEqual(db.reads.map((call) => call.table), ["relationship_events", "event_private_reflections", "event_perspectives"]);
-  assert.deepEqual(db.reads[0].columns.split(",").map((part) => part.trim()), ["id", "creator_id", "event_type", "category", "intensity", "shared_topic", "visibility", "created_at"]);
-  assert.equal(db.reads[1].columns, "note");
-  assert.equal(db.reads[2].columns, "id, author_id, perspective_text, sharing_status");
+  assert.deepEqual(db.reads.map((call) => call.table), ["couple_members", "relationship_events", "event_private_reflections", "event_perspectives", "event_repair_states", "couple_members", "relationship_events"]);
+  assert.deepEqual(db.reads[1].columns.split(",").map((part) => part.trim()), ["id", "couple_id", "creator_id", "event_type", "category", "intensity", "shared_topic", "visibility", "created_at"]);
+  assert.equal(db.reads[2].columns, "note");
+  assert.equal(db.reads[3].columns, "id, author_id, perspective_text, sharing_status");
   assert.ok(db.reads.every((call) => call.headers.Authorization === "Bearer a-token"));
   assert.equal(db.writes.length, 0); assert.equal(db.channels.length, 0);
 });
@@ -423,11 +421,6 @@ test("page styles support narrow widths, inherited text scaling and the existing
 
 test("section order keeps repair between private reflection and actual perspectives", async (t) => {
   const { ui } = await setup(t);
-  const scroll = ui.nodes().find((node) => node.type === "ScrollView");
-  const children = scroll.props.children.filter(Boolean);
-  assert.ok(text(children[0]).includes("Communication"));
-  assert.ok(text(children[1]).startsWith("Shared topic"));
-  assert.ok(text(children[2]).startsWith("My private reflection"));
   // The sentinel resolves to null; component order still captures the exact mount position.
   const order = ui.components().filter((node) => ["EventRepairSection", "CouplySectionCard"].includes(node.type.name));
   const repairIndex = order.findIndex((node) => node.type.name === "EventRepairSection");
@@ -448,12 +441,12 @@ for (const [name, data] of [["empty", []], ["nonempty", [perspective("a"), persp
       db.read = (call) => call.table === "event_perspectives" ? Promise.resolve({ data, error: backendError() }) : original(call);
     });
     unavailablePerspectives(ui);
-    assert.ok(heading(ui, "Communication")); assert.match(ui.text(), /A PRIVATE NOTE/);
-    assert.ok(ui.find("Change moment visibility")); assert.ok(ui.find("Delete moment"));
-    assert.equal(repairs(ui).length, 1);
-    assert.equal(db.reads.length, 3); assert.equal(db.writes.length, 0);
-    await ui.flush(); assert.equal(db.reads.length, 3, "no new automatic retry");
-    assert.equal(ui.find("Retry"), undefined);
+    assert.equal(heading(ui, "Communication"), undefined); assert.doesNotMatch(ui.text(), /A PRIVATE NOTE/);
+    assert.equal(ui.find("Change moment visibility"), undefined); assert.equal(ui.find("Delete moment"), undefined);
+    assert.equal(repairs(ui).length, 0);
+    assert.equal(db.reads.length, 4); assert.equal(db.writes.length, 0);
+    await ui.flush(); assert.equal(db.reads.length, 4, "no immediate automatic retry");
+    assert.ok(ui.find("Check moment access again"));
   });
 }
 
@@ -464,7 +457,7 @@ for (const [name, data] of [["null", null], ["undefined", undefined], ["object",
       db.read = (call) => call.table === "event_perspectives" ? Promise.resolve({ data, error: null }) : original(call);
     });
     unavailablePerspectives(ui);
-    assert.ok(heading(ui, "Communication")); assert.equal(db.writes.length, 0);
+    assert.equal(heading(ui, "Communication"), undefined); assert.equal(db.writes.length, 0);
   });
 }
 
@@ -474,14 +467,14 @@ for (const response of [null, undefined]) {
       const original = db.read;
       db.read = (call) => call.table === "event_perspectives" ? Promise.resolve(response) : original(call);
     });
-    assert.ok(heading(ui, "Communication")); unavailablePerspectives(ui);
+    assert.equal(heading(ui, "Communication"), undefined); unavailablePerspectives(ui);
   });
 }
 
 test("only a successful empty perspective array renders the existing absence messages and write entry", async (t) => {
   const { db, ui } = await setup(t, (db) => { db.perspectives = []; });
   assert.match(ui.text(), /haven't shared your perspective yet/);
-  assert.match(ui.text(), /hasn't shared a perspective/);
+  assert.match(ui.text(), /No partner perspective is currently shared with you/);
   assert.ok(ui.find("Write and share my perspective"));
   assert.equal(ui.find("Withdraw my perspective"), undefined);
   assert.equal(ui.text().includes(PERSPECTIVE_FAILURE), false);
@@ -497,7 +490,7 @@ for (const table of ["relationship_events", "event_private_reflections", "event_
       });
       assert.equal(ui.text(), LOAD_FAILURE);
       assert.equal(heading(ui, "Communication"), undefined);
-      assert.equal(ui.text().includes(PERSPECTIVE_FAILURE), false, "a rejected request keeps the existing whole-load failure path");
+      assert.ok(ui.text().includes(PERSPECTIVE_FAILURE), "every required read failure closes the resource gate");
       assert.equal(repairs(ui).length, 0); noBackendDetails(ui);
       assert.equal(db.writes.length, 0);
     });
@@ -538,7 +531,7 @@ const operationResults = {
   withdraw: "Your perspective was withdrawn.",
 };
 for (const operation of Object.keys(operationResults)) {
-  test(`acknowledged ${operation} remains visible alongside a separate perspective failure`, async (t) => {
+  test(`acknowledged ${operation} is hidden during failure and restored after authorized recovery`, async (t) => {
     const { db, ui } = await setup(t, (db) => {
       if (operation === "sharing") { db.event.visibility = "mine"; db.event.shared_topic = null; }
       const original = db.read;
@@ -546,12 +539,14 @@ for (const operation of Object.keys(operationResults)) {
         ? Promise.resolve({ data: [], error: backendError() }) : original(call);
     });
     await ui.tap(await prepareUpdate(ui, operation));
-    assert.ok(ui.text().includes(operationResults[operation]));
+    assert.equal(ui.text().includes(operationResults[operation]), false);
     unavailablePerspectives(ui);
-    assert.ok(heading(ui, "Communication")); assert.equal(db.writes.length, 1);
-    assert.equal(db.reads.length, 6, "one existing reload, with unchanged query order");
+    assert.equal(heading(ui, "Communication"), undefined); assert.equal(db.writes.length, 1);
+    assert.equal(db.reads.length, 11, "one full resource validation followed by a child read failure");
     assert.equal(ui.text().includes(UPDATE_FAILURE), false);
-    assert.ok(ui.find("Delete moment")); assert.equal(repairs(ui).length, 1);
+    assert.equal(ui.find("Delete moment"), undefined); assert.equal(repairs(ui)[0].props.resource.visible, false);
+    db.read=db.defaultRead;await resource(ui).refresh(true);await ui.flush();
+    assert.ok(ui.text().includes(operationResults[operation]));assert.equal(db.writes.length,1);
   });
 }
 
@@ -562,7 +557,8 @@ test("an acknowledged submission followed by null perspective data still retains
       ? Promise.resolve({ data: null, error: null }) : original(call);
   });
   await ui.tap(await prepareUpdate(ui, "submit"));
-  assert.ok(ui.text().includes(operationResults.submit)); unavailablePerspectives(ui);
+  assert.equal(ui.text().includes(operationResults.submit),false); unavailablePerspectives(ui);
+  db.read=db.defaultRead;await resource(ui).refresh(true);await ui.flush();assert.ok(ui.text().includes(operationResults.submit));
   assert.equal(db.writes.length, 1);
 });
 
@@ -573,7 +569,7 @@ test("a rejected perspective reload after submission retains the old full-load f
       ? Promise.reject(new Error(backendError().message)) : original(call);
   });
   await ui.tap(await prepareUpdate(ui, "submit"));
-  assert.equal(ui.text(), LOAD_FAILURE); noBackendDetails(ui);
+  assert.ok(ui.text().startsWith(LOAD_FAILURE)); assert.equal(ui.text().includes(operationResults.submit),false); noBackendDetails(ui);
   assert.equal(db.writes.length, 1);
   assert.equal(heading(ui, "Communication"), undefined);
 });
@@ -590,7 +586,7 @@ for (const operation of ["visibility", "submit", "withdraw"]) {
           return { data: null, error: backendError() };
         };
         await ui.tap(action);
-        assert.ok(ui.text().includes(UPDATE_FAILURE)); noBackendDetails(ui);
+        assert.equal(ui.text().includes(UPDATE_FAILURE),false); noBackendDetails(ui);
         assert.equal(db.writes.length, 1); assert.equal(db.reads.length, reads, "no automatic mutation retry or new reconciliation read");
         assert.equal(db.writes[0].headers.Authorization, "Bearer a-token");
         assert.deepEqual(db.writes[0].args, operation === "visibility"
@@ -601,6 +597,7 @@ for (const operation of ["visibility", "submit", "withdraw"]) {
         assert.doesNotMatch(ui.text(), /Nothing was saved|Nothing was shared|update failed|not saved/i);
         assert.deepEqual(ui.navigations, []);
         await ui.flush(); assert.equal(db.writes.length, 1);
+        await resource(ui).refresh(true);await ui.flush();assert.ok(ui.text().includes(UPDATE_FAILURE));assert.equal(db.writes.length,1);
       });
     }
   }
@@ -610,9 +607,10 @@ for (const api of ["getSession", "getUser"]) {
   test(`thrown pre-update ${api} verification sends no mutation and hides its details`, async (t) => {
     const { db, ui } = await setup(t);
     const action = await prepareUpdate(ui, "submit");
-    db[api] = async () => { throw new Error(backendError().message); };
+    const original=db[api];db[api] = async () => { throw new Error(backendError().message); };
     await ui.tap(action);
-    assert.ok(ui.text().includes(UPDATE_FAILURE)); noBackendDetails(ui);
+    assert.equal(ui.text().includes(UPDATE_FAILURE),false); noBackendDetails(ui);
+    db[api]=original;await resource(ui).refresh(true);await ui.flush();assert.ok(ui.text().includes(UPDATE_FAILURE));
     assert.equal(db.writes.length, 0);
   });
 }
@@ -620,14 +618,15 @@ for (const api of ["getSession", "getUser"]) {
 for (const operation of ["visibility", "submit", "withdraw"]) {
   test(`${operation} acknowledgment followed by thrown auth recheck does not invent a verified outcome`, async (t) => {
     const { db, ui } = await setup(t);
-    const action = await prepareUpdate(ui, operation), original = db.respond;
+    const action = await prepareUpdate(ui, operation), original = db.respond, originalUser=db.getUser;
     db.respond = async (call) => {
       const result = await original(call);
       db.getUser = async () => { throw new Error(backendError().message); };
       return result;
     };
     await ui.tap(action);
-    assert.ok(ui.text().includes(UPDATE_FAILURE)); noBackendDetails(ui);
+    assert.equal(ui.text().includes(UPDATE_FAILURE),false); noBackendDetails(ui);
+    db.getUser=originalUser;await resource(ui).refresh(true);await ui.flush();assert.ok(ui.text().includes(UPDATE_FAILURE));
     assert.equal(ui.text().includes(operationResults[operation]), false);
     assert.equal(db.writes.length, 1);
   });
@@ -654,7 +653,7 @@ test("reopening through the existing focus lifecycle clears failure and revalida
   assert.match(ui.text(), /a perspective/); assert.match(ui.text(), /b perspective/);
   assert.ok(ui.find("Edit my perspective"));
   assert.equal(ui.text().includes(PERSPECTIVE_FAILURE), false);
-  assert.equal(db.reads.length, 6); assert.equal(db.writes.length, 0);
+  assert.equal(db.reads.length, 11); assert.equal(db.writes.length, 0);
 });
 
 for (const oldFailed of [false, true]) {
@@ -709,4 +708,212 @@ test("sign-out suppresses a late perspective error and clears protected content"
   assert.ok(ui.navigations.includes("/"));
   assert.doesNotMatch(ui.text(), /A PRIVATE NOTE|a perspective|b perspective/); noBackendDetails(ui);
   assert.equal(ui.text().includes(PERSPECTIVE_FAILURE), false); assert.equal(repairs(ui).length, 0);
+});
+
+const resource = (ui) => repairs(ui)[0].props.resource;
+test('resource refresh preserves perspective draft, repair controller mount and pending confirmations', async t => {
+  const { db, ui } = await setup(t);
+  await ui.tap('Edit my perspective'); await change(ui,'Your perspective','Unsaved personal words');
+  await ui.tap('Delete moment');
+  const mounts=ui.mounts.get('EventRepairSection');
+  await resource(ui).refresh(); await ui.flush();
+  assert.equal(ui.find('Your perspective').props.value,'Unsaved personal words');
+  assert.ok(ui.find('Yes, delete permanently'));
+  assert.equal(ui.mounts.get('EventRepairSection'),mounts); assert.equal(db.writes.length,0);
+});
+for (const mode of ['hidden-parent','membership','deleted-parent']) test(`revalidation hides protected DOM for ${mode}`, async t => {
+  const { db, ui } = await setup(t); const access=resource(ui); const old=ui.find('Delete moment').props.onPress;
+  if(mode==='membership') db.memberships.delete('a');
+  else if(mode==='deleted-parent') db.event=null;
+  else { db.event.creator_id='b'; db.event.visibility='mine'; }
+  assert.equal(await access.refresh(),false); await ui.flush();
+  assert.match(ui.text(),/This moment is unavailable/);
+  assert.doesNotMatch(ui.text(),/A PRIVATE NOTE|Our chosen topic|a perspective|b perspective|Communication/);
+  assert.equal(resource(ui).visible,false); assert.equal(access.canDispatch(),false);
+  old(); await ui.flush(); assert.equal(db.writes.length,0);
+});
+test('a parent visibility change between child reads rejects the whole mixed snapshot', async t => {
+  const { db, ui }=await setup(t); const original=db.read;
+  db.read=async call=> { const result=await original(call); if(call.table==='event_perspectives'){db.event.visibility='mine';db.event.shared_topic=null;} return result; };
+  await resource(ui).refresh(); await ui.flush();
+  assert.match(ui.text(),/couldn't verify access/); assert.doesNotMatch(ui.text(),/A PRIVATE NOTE|a perspective|b perspective/); assert.equal(resource(ui).visible,false); assert.equal(db.writes.length,0);
+});
+test('peer withdrawal is refreshed even when the parent event is unchanged', async t => {
+  const { db, ui }=await setup(t); const parent=structuredClone(db.event); db.perspectives=db.perspectives.filter(row=>row.author_id==='a');
+  await resource(ui).refresh(); await ui.flush(); assert.deepEqual(db.event,parent);
+  assert.doesNotMatch(ui.text(),/b perspective/); assert.match(ui.text(),/No partner perspective is currently shared with you/); assert.equal(db.writes.length,0);
+});
+test('failed revalidation removes all private hosts but keeps the repair controller mounted', async t => {
+  const { db, ui }=await setup(t); const mounts=ui.mounts.get('EventRepairSection');
+  const original=db.read; db.read=call=>call.table==='event_repair_states'?Promise.reject(backendError()):original(call);
+  await resource(ui).refresh(); await ui.flush();
+  assert.equal(ui.mounts.get('EventRepairSection'),mounts); assert.equal(resource(ui).visible,false);
+  assert.equal(heading(ui,'Communication'),undefined); unavailablePerspectives(ui); assert.equal(db.writes.length,0);
+});
+test('a consumed deletion confirmation stays consumed through later read-only recovery', async t => {
+  const { db, ui }=await setup(t); await ui.tap('Delete moment'); const confirm=ui.find('Yes, delete permanently').props.onPress;
+  db.respond=async()=>({data:null,error:backendError()}); await ui.tap('Yes, delete permanently');
+  assert.equal(db.writes.length,1); await resource(ui).refresh(true); await ui.flush();
+  assert.ok(ui.find('Delete moment').props.disabled); confirm(); await ui.flush(); assert.equal(db.writes.length,1); assert.deepEqual(ui.navigations,[]);
+});
+test('pending perspective acknowledgment survives a foreground-style invalidation', async t => {
+  const { db, ui }=await setup(t); const pending=deferred(), original=db.respond;
+  db.respond=call=>pending.promise.then(()=>original(call)); await ui.tap('Edit my perspective'); await change(ui,'Your perspective','Reviewed draft');
+  const save=ui.find('Share my perspective').props.onPress; void save(); await ui.flush();
+  const refresh=resource(ui).refresh(true); await ui.flush(); assert.equal(resource(ui).visible,false);
+  pending.resolve(); await refresh; await ui.flush();
+  assert.match(ui.text(),/Your perspective was shared/); assert.equal(db.writes.length,1); assert.match(ui.text(),/Reviewed draft/);
+});
+
+const report = (extra={})=>({event_id:'event-1',user_id:'a',repair_status:'open',what_helped:null,sharing_status:'private',status_origin:'explicit',report_version:7,...extra});
+const nativeRadio = (ui,label)=>ui.nodes().find(n=>n.props.accessibilityRole==='radio' && n.props.accessibilityLabel===label);
+async function choose(ui,label) { const node=nativeRadio(ui,label); assert.ok(node,`Radio ${label}`); node.props.onPress(); await ui.flush(); }
+test('actual repair controller preserves drafts and share confirmation during unchanged resource refresh', async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report()];},undefined,true);
+  await choose(ui,'I feel reconnected'); await choose(ui,'Talking'); await ui.tap('Save & share with partner');
+  assert.ok(ui.find('Confirm save & share')); const mounts=ui.mounts.get('EventRepairSection');
+  await resource(ui).refresh(); await ui.flush();
+  assert.equal(nativeRadio(ui,'I feel reconnected').props.accessibilityState.checked,true);
+  assert.equal(nativeRadio(ui,'Talking').props.accessibilityState.checked,true);
+  assert.ok(ui.find('Confirm save & share')); assert.equal(ui.mounts.get('EventRepairSection'),mounts); assert.equal(db.writes.length,0);
+});
+test('actual peer repair and perspective disappear on child withdrawal with unchanged parent', async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report(),report({user_id:'b',repair_status:'reconnected',what_helped:'humour',sharing_status:'shared'})];},undefined,true);
+  assert.match(ui.text(),/Humour/); db.repairs=db.repairs.filter(r=>r.user_id==='a'); db.perspectives=db.perspectives.filter(r=>r.author_id==='a');
+  await resource(ui).refresh(); await ui.flush(); assert.doesNotMatch(ui.text(),/Humour|b perspective/); assert.equal(db.writes.length,0);
+});
+test('actual repair controls and protected accessibility names leave the tree after failure; retained save cannot dispatch', async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report()];},undefined,true);
+  await choose(ui,'A little better'); const save=ui.find('Save privately').props.onPress;
+  const original=db.read; db.read=call=>call.table==='event_repair_states'?Promise.reject(backendError()):original(call);
+  await resource(ui).refresh(); await ui.flush();
+  assert.equal(ui.find('Save privately'),undefined); assert.equal(nativeRadio(ui,'A little better'),undefined);
+  assert.doesNotMatch(ui.text(),/Saved for you|A PRIVATE NOTE|a perspective|b perspective/);
+  void save(); await ui.flush(); assert.equal(db.writes.length,0);
+});
+test('actual unsaved repair choices cannot be silently rebased onto a newer own report', async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report()];},undefined,true); await choose(ui,'I feel reconnected'); await choose(ui,'Talking');
+  db.repairs=[report({report_version:8,repair_status:'partially_repaired'})]; await resource(ui).refresh(); await ui.flush();
+  assert.match(ui.text(),/newer repair report exists/); assert.equal(nativeRadio(ui,'Talking').props.accessibilityState.checked,true);
+  assert.ok(!ui.find('Save privately') || ui.find('Save privately').props.disabled); assert.equal(db.writes.length,0);
+});
+for(const acknowledged of [true,false]) test(`actual pending repair ${acknowledged?'acknowledgment':'unknown outcome'} survives hidden resource`, async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report()];},undefined,true);
+  const pending=deferred(); db.respond=async call=>{assert.equal(call.name,'save_my_repair_state_checked');await pending.promise;
+    if(!acknowledged) throw backendError(); db.repairs=[report({repair_status:call.args.p_repair_status,report_version:8})];return {data:8,error:null};};
+  await choose(ui,'A little better'); void ui.find('Save privately').props.onPress(); await ui.flush();
+  const refresh=resource(ui).refresh(true); await ui.flush(); assert.equal(ui.find('Save privately'),undefined);
+  pending.resolve(); await refresh; await ui.flush();
+  if(acknowledged) assert.match(ui.text(),/Saved privately/); else assert.match(ui.text(),/could not be confirmed/);
+  assert.equal(db.writes.length,1); assert.equal(db.writes[0].args.p_expected_report_version,7);
+});
+test('combined repair save never dispatches sharing after access becomes unverified', async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report()];},undefined,true); const pending=deferred();
+  db.respond=async call=>{assert.equal(call.name,'save_my_repair_state_checked');await pending.promise;db.repairs=[report({repair_status:'reconnected',what_helped:'talking',report_version:8})];return {data:8,error:null};};
+  await choose(ui,'I feel reconnected'); await choose(ui,'Talking'); await ui.tap('Save & share with partner');
+  void ui.find('Confirm save & share').props.onPress(); await ui.flush(); const refresh=resource(ui).refresh(true); await ui.flush(); pending.resolve(); await refresh; await ui.flush();
+  assert.equal(db.writes.length,1); assert.equal(db.writes[0].name,'save_my_repair_state_checked'); assert.doesNotMatch(ui.text(),/was saved and shared/);
+});
+
+test('AppState inactive removes protected hosts; active waits for a fresh full verification', async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report()];},undefined,true);await choose(ui,'I feel reconnected');await choose(ui,'Talking');
+  const reads=db.reads.length;await ui.appState('background');assert.equal(nativeRadio(ui,'Talking'),undefined);assert.doesNotMatch(ui.text(),/A PRIVATE NOTE|a perspective|b perspective/);assert.equal(db.reads.length,reads);
+  const pending=deferred(),original=db.read;db.read=call=>call.table==='event_perspectives'?pending.promise:original(call);
+  await ui.appState('active');assert.equal(nativeRadio(ui,'Talking'),undefined);assert.match(ui.text(),/Checking access/);
+  pending.resolve({data:db.perspectives,error:null});await ui.flush();assert.equal(nativeRadio(ui,'Talking').props.accessibilityState.checked,true);assert.equal(db.writes.length,0);
+});
+test('actual withdrawal confirmation survives unchanged refresh, then remains consumed after unknown withdrawal', async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report({sharing_status:'shared'})];},undefined,true);
+  await ui.tap('Withdraw shared update');assert.ok(ui.find('Confirm withdrawal'));await resource(ui).refresh();await ui.flush();assert.ok(ui.find('Confirm withdrawal'));
+  db.respond=async()=>{throw backendError();};await ui.tap('Confirm withdrawal');assert.equal(db.writes.length,1);
+  await resource(ui).refresh();await ui.flush();assert.equal(ui.find('Confirm withdrawal'),undefined);assert.equal(ui.find('Withdraw shared update'),undefined);assert.equal(db.writes.length,1);
+});
+test('access invalidated during deletion preauthorization consumes consent without dispatch or false uncertainty', async t=>{
+  const {db,ui}=await setup(t);await ui.tap('Delete moment');const confirm=ui.find('Yes, delete permanently').props.onPress;
+  const pending=deferred(),original=db.getUser;let once=true;db.getUser=token=>once?(once=false,pending.promise):original(token);
+  void confirm();await ui.flush();const read=resource(ui).refresh(true);await ui.flush();pending.resolve(await original('a-token'));await ui.flush();await read;
+  assert.equal(db.writes.length,0);assert.match(ui.text(),/Deletion was not sent because access needs checking/);
+  await resource(ui).refresh(true);await ui.flush();confirm();await ui.flush();assert.equal(db.writes.length,0);assert.equal(ui.find('Delete moment').props.disabled,true);
+});
+test('a checked withdrawal conflict retains its reviewed rejection during background recovery', async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report({sharing_status:'shared'})];},undefined,true);
+  db.respond=async()=>({data:null,error:{code:'P0001',message:'Repair update changed; reload before withdrawing'}});
+  await ui.tap('Withdraw shared update');await ui.tap('Confirm withdrawal');
+  assert.match(ui.text(),/Sharing was not withdrawn by this request/);assert.equal(db.writes.length,1);
+  await resource(ui).refresh();await ui.flush();assert.match(ui.text(),/Sharing was not withdrawn by this request/);assert.equal(db.writes.length,1);
+});
+test('an untouched repair choice follows the latest authorized own report without inventing an edit', async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report()];},undefined,true);
+  db.repairs=[report({report_version:8,repair_status:'reconnected',what_helped:'space'})];
+  await resource(ui).refresh();await ui.flush();assert.equal(nativeRadio(ui,'I feel reconnected').props.accessibilityState.checked,true);assert.equal(nativeRadio(ui,'Space').props.accessibilityState.checked,true);
+  assert.equal(ui.find('Save privately'),undefined);assert.equal(db.writes.length,0);
+});
+
+// Stage 7B.1R — hidden receipts are retained, but never rendered before recovery.
+for (const kind of ['private', 'share', 'withdraw', 'perspective', 'delete-unknown']) test(`7B.1R ${kind} feedback stays outside the hidden host/accessibility tree`, async t => {
+  const {db,ui} = await setup(t, db => {db.repairs=[report({sharing_status:kind==='withdraw'?'shared':'private'})]}, undefined, true);
+  let fail=false;const original=db.read;
+  db.read=call=>fail&&call.table==='event_repair_states'?Promise.reject(backendError()):original(call);
+  const originalWrite=db.respond;
+  db.respond=async call=>{
+    if(call.name==='save_my_repair_state_checked'){db.repairs=[report({repair_status:'reconnected',what_helped:'talking',report_version:8})];if(kind==='private')fail=true;return{data:8,error:null}}
+    if(call.name==='share_my_repair_state'){db.repairs=[report({repair_status:'reconnected',what_helped:'talking',report_version:9,sharing_status:'shared'})];fail=true;return{data:true,error:null}}
+    if(call.name==='withdraw_my_repair_state_checked'){db.repairs=[report({report_version:8})];fail=true;return{data:8,error:null}}
+    if(call.name==='delete_relationship_event'){return{data:null,error:backendError()}}
+    const result=await originalWrite(call);fail=true;return result;
+  };
+  if(kind==='perspective'){await ui.tap('Edit my perspective');await change(ui,'Your perspective','Deliberate words');await ui.tap('Share my perspective')}
+  else if(kind==='delete-unknown'){await ui.tap('Delete moment');await ui.tap('Yes, delete permanently')}
+  else if(kind==='withdraw'){await ui.tap('Withdraw shared update');await ui.tap('Confirm withdrawal')}
+  else {await choose(ui,'I feel reconnected');await choose(ui,'Talking');if(kind==='share'){await ui.tap('Save & share with partner');await ui.tap('Confirm save & share')}else await ui.tap('Save privately')}
+  assert.equal(resource(ui).visible,false);
+  assert.doesNotMatch(ui.text(),/acknowledged|Saved privately|saved and shared|perspective was shared|couldn't confirm whether.*deleted|No deletion was retried|personal record remains/);
+  assert.equal(ui.nodes().filter(n=>n.props.accessibilityRole==='radio').length,0);
+  const count=db.writes.length;fail=false;await resource(ui).refresh(true);await ui.flush();assert.equal(db.writes.length,count);
+  if(kind==='private')assert.match(ui.text(),/Saved privately/);
+  if(kind==='share')assert.match(ui.text(),/saved and shared with your partner/);
+  if(kind==='perspective')assert.match(ui.text(),/Your perspective was shared/);
+  if(kind==='withdraw'){
+    assert.match(ui.text(),/Your withdrawal request was acknowledged/);
+    db.repairs=[report({report_version:9,sharing_status:'shared'})];await resource(ui).refresh();await ui.flush();
+    assert.match(ui.text(),/Your withdrawal request was acknowledged/);assert.match(ui.text(),/Shared with your partner/);
+    assert.doesNotMatch(ui.text(),/personal record remains|latest refresh found your update private/);assert.equal(db.writes.length,1);
+  }
+  if(kind==='delete-unknown'){assert.match(ui.text(),/couldn't confirm whether.*deleted/);assert.equal(ui.find('Delete moment').props.disabled,true)}
+});
+function accessClock(){let now=0,next=0;const tasks=new Map();return{now:()=>now,schedule(fn,delay){const id=++next;tasks.set(id,{at:now+Math.max(0,delay),fn});return()=>tasks.delete(id)},advance(ms){const end=now+ms;for(;;){const due=[...tasks].filter(([,v])=>v.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!due)break;now=due[1].at;tasks.delete(due[0]);due[1].fn()}now=end}}}
+test('7B.1R expired lease hides a pending save until the full post-write snapshot is verified', async t=>{
+  const time=accessClock();const {db,ui}=await setup(t,db=>{db.repairs=[report()]},undefined,true,time);const pending=deferred(),read=deferred();let holdReads=false;
+  const original=db.read;db.read=call=>holdReads&&call.table==='event_perspectives'?read.promise:original(call);
+  db.respond=async call=>{assert.equal(call.name,'save_my_repair_state_checked');await pending.promise;db.repairs=[report({repair_status:'reconnected',what_helped:'talking',report_version:8})];holdReads=true;return{data:8,error:null}};
+  await choose(ui,'I feel reconnected');await choose(ui,'Talking');await ui.tap('Save & share with partner');void ui.find('Confirm save & share').props.onPress();await ui.flush();
+  time.advance(30000);await ui.flush();assert.equal(resource(ui).visible,false);assert.doesNotMatch(ui.text(),/A PRIVATE NOTE|repair request|acknowledged|Our chosen topic/);
+  pending.resolve();await ui.flush();assert.equal(resource(ui).visible,false);assert.doesNotMatch(ui.text(),/acknowledged|Saved privately|Sharing was not sent/);assert.equal(db.writes.length,1);
+  holdReads=false;read.resolve({data:db.perspectives,error:null});await ui.flush();assert.equal(resource(ui).visible,true);assert.match(ui.text(),/Saved privately/);assert.match(ui.text(),/Sharing was not sent/);assert.equal(nativeRadio(ui,'Talking').props.accessibilityState.checked,true);assert.equal(db.writes.length,1);
+});
+test('7B.1R retained withdrawal consent cannot dispatch after uncertainty, cancellation or deliberate recovery', async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report({sharing_status:'shared'})]},undefined,true);await choose(ui,'I feel reconnected');await choose(ui,'Talking');
+  await ui.tap('Withdraw shared update');const retained=ui.find('Confirm withdrawal').props.onPress;db.respond=async()=>{throw backendError()};retained();await ui.flush();await ui.appState('background');await ui.appState('active');
+  retained();await ui.flush();assert.equal(db.writes.length,1);assert.equal(nativeRadio(ui,'Talking').props.accessibilityState.checked,true);
+  ui.nodes().find(n=>n.type==='Pressable'&&text(n)==='Load newer update (replaces your choices)').props.onPress();await ui.flush();retained();await ui.flush();assert.equal(db.writes.length,1);
+  await ui.tap('Withdraw shared update');const next=ui.find('Confirm withdrawal').props.onPress;await ui.tap('Cancel withdrawal');next();await ui.flush();assert.equal(db.writes.length,1);
+  await ui.tap('Withdraw shared update');retained();next();await ui.flush();assert.equal(db.writes.length,1);await ui.tap('Confirm withdrawal');assert.equal(db.writes.length,2);
+});
+
+test('7B.1R withdrawal acknowledgment survives failed verification and recovery independently of hidden copy',async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report({sharing_status:'shared'})]},undefined,true);let fail=false;const original=db.read;
+  db.read=call=>fail&&call.table==='event_repair_states'?Promise.reject(backendError()):original(call);
+  db.respond=async call=>{assert.equal(call.name,'withdraw_my_repair_state_checked');db.repairs=[report({report_version:8})];fail=true;return{data:8,error:null}};
+  await ui.tap('Withdraw shared update');const retained=ui.find('Confirm withdrawal').props.onPress;await ui.tap('Confirm withdrawal');
+  fail=false;await resource(ui).refresh(true);await ui.flush();assert.match(ui.text(),/Your withdrawal request was acknowledged/);
+  retained();await ui.flush();assert.equal(db.writes.length,1);assert.equal(ui.find('Confirm withdrawal'),undefined);
+});
+
+test('7B.1R a retained reload during pending withdrawal cannot clear uncertainty or replace choices',async t=>{
+  const {db,ui}=await setup(t,db=>{db.repairs=[report({sharing_status:'shared'})]},undefined,true);
+  const reload=ui.nodes().find(n=>n.type==='Pressable'&&text(n)==='Refresh updates').props.onPress;
+  await choose(ui,'I feel reconnected');await choose(ui,'Talking');const pending=deferred();db.respond=async()=>{await pending.promise;throw backendError()};
+  await ui.tap('Withdraw shared update');void ui.find('Confirm withdrawal').props.onPress();await ui.flush();reload();await ui.flush();pending.resolve();await ui.flush();
+  assert.equal(db.writes.length,1);assert.equal(nativeRadio(ui,'Talking').props.accessibilityState.checked,true);
+  assert.equal(ui.find('Withdraw shared update'),undefined);assert.match(ui.text(),/Withdrawal could not be confirmed/);
 });

@@ -5,7 +5,7 @@ const vm = require("node:vm");
 const ts = require("typescript");
 
 const root = path.join(__dirname, "../..");
-function loadSource(file, imports, source = readFileSync(path.join(root, file), "utf8")) {
+function loadSource(file, imports, source = readFileSync(path.join(root, file), "utf8"), globals) {
   const { outputText } = ts.transpileModule(source, {
     fileName: file,
     compilerOptions: {
@@ -14,7 +14,8 @@ function loadSource(file, imports, source = readFileSync(path.join(root, file), 
     },
   });
   const module = { exports: {} };
-  vm.runInThisContext(`(function(require, module, exports) { ${outputText}\n})`, { filename: file })(
+  const wrapper = `(function(require, module, exports) { ${outputText}\n})`;
+  (globals ? vm.runInNewContext(wrapper, globals, { filename: file }) : vm.runInThisContext(wrapper, { filename: file }))(
     (name) => {
       assert.ok(Object.hasOwn(imports, name), `Unexpected import: ${name}`);
       return imports[name];
@@ -37,6 +38,7 @@ function harness(db, file, options = {}) {
   let current, cursor, tree, mounted = true, focused = true;
   let layout = [], passive = [];
   let componentNodes = [];
+  const appListeners = new Set();
   const ui = { navigations: [], mounts: new Map() };
   const depsEqual = (a, b) => a && b && a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
   const memo = (factory, deps) => {
@@ -92,6 +94,7 @@ function harness(db, file, options = {}) {
     "@/lib/supabase": { supabase: db.supabase }, react,
     "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "Fragment" },
     "react-native": {
+      AppState: { currentState: "active", addEventListener: (_type, callback) => { appListeners.add(callback); return { remove: () => appListeners.delete(callback) }; } }, Platform: { OS: "test" },
       SafeAreaView: "SafeAreaView", Pressable: "Pressable", ActivityIndicator: "ActivityIndicator", Button: "Button", ScrollView: "ScrollView",
       Text: "Text", TextInput: "TextInput", View: "View", StyleSheet: { create: (v) => v },
     },
@@ -110,6 +113,20 @@ function harness(db, file, options = {}) {
     props.data.length ? props.data.map((item, index) => jsx("View", { children: props.renderItem({ item, index }) }, props.keyExtractor(item))) : props.ListEmptyComponent,
   ] });
   Object.assign(imports, options.imports ?? {});
+  const time = options.accessClock;
+  let timerId = 0;
+  const timers = new Map();
+  const clockGlobals = time ? {
+    Date: { now: time.now },
+    setTimeout(fn, delay) { const id = ++timerId; timers.set(id, time.schedule(fn, delay)); return id; },
+    clearTimeout(id) { timers.get(id)?.(); timers.delete(id); },
+  } : undefined;
+  imports["@/hooks/useAccessRevalidation"] = loadSource("src/hooks/useAccessRevalidation.ts", imports, undefined, clockGlobals);
+  imports["@/lib/repair-states"] ??= loadSource("src/lib/repair-states.ts", imports);
+  if (options.realRepair) {
+    imports["@/components/RepairRadioGroup"] = loadSource("src/components/RepairRadioGroup.tsx", imports);
+    imports["@/components/EventRepairSection"] = loadSource("src/components/EventRepairSection.tsx", imports);
+  }
   const Screen = loadSource(file, imports, options.source).default;
   const cleanup = (instance) => {
     instance.active = false;
@@ -188,6 +205,7 @@ function harness(db, file, options = {}) {
   ui.inputs = () => nodes(tree).filter((node) => node.type === "TextInput");
   ui.change = (index, value) => { ui.inputs()[index].props.onChangeText(value); ui.render(); };
   ui.switchAccount = async (id, event, token) => { db.emit(id, event, token); await ui.flush(); };
+  ui.appState = async (value) => { imports["react-native"].AppState.currentState = value; for (const fn of appListeners) fn(value); ui.render(); await ui.flush(); };
   ui.blur = async () => { focused = false; ui.render(); await ui.flush(); };
   ui.focus = async () => { focused = true; ui.render(); await ui.flush(); };
   ui.unmount = () => { mounted = false; instances.forEach(cleanup); instances.clear(); tree = null; };

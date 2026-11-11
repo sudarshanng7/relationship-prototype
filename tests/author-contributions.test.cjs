@@ -249,21 +249,21 @@ for (const id of [undefined, "hidden-event", "nonexistent-event"]) test(`A03: no
   const db = client(); db.emit("b");
   const calls = [];
   db.supabase.from = (table) => {
-    assert.equal(table, "relationship_events", "hidden parent must stop all child/reflection reads");
+    assert.ok(["couple_members", "relationship_events"].includes(table), "hidden parent must stop all child/reflection reads");
     const call = { table, headers: {} }; calls.push(call);
     return {
       select() { return this; }, eq() { return this; }, maybeSingle() { return this; },
       setHeader(key, value) { call.headers[key] = value; return this; },
-      then(resolve, reject) { return Promise.resolve({ data: null, error: null }).then(resolve, reject); },
+      then(resolve, reject) { return Promise.resolve({ data: table === "couple_members" ? { couple_id: "couple-1" } : null, error: null }).then(resolve, reject); },
     };
   };
   const ui = harness(db, "src/app/event/[id].tsx", {
     params: { id }, imports: { "@/components/EventRepairSection": { EventRepairSection: "EventRepairSection" } },
   });
   t.after(ui.unmount); await ui.flush();
-  assert.match(ui.text(), id ? /Event not found or you do not have permission/ : /Invalid event/);
+  assert.match(ui.text(), id ? /This moment is unavailable/ : /Invalid event/);
   assert.doesNotMatch(ui.text(), /own perspective|My report:|Hidden topic/);
-  assert.equal(calls.length, id ? 1 : 0);
+  assert.equal(calls.length, id ? 2 : 0);
   if (id) assert.equal(calls[0].headers.Authorization, "Bearer b-token");
   assert.equal(db.writes.length, 0);
 });

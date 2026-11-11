@@ -18,7 +18,7 @@ function deferred() {
 function client() {
   const db = { calls: [], reads: [], checks: [], tokens: new Map(), userId: "user-a" };
   db.event = {
-    id: "event-a", creator_id: "user-a", event_type: "friction", category: "communication",
+    id: "event-a", couple_id: "couple-1", creator_id: "user-a", event_type: "friction", category: "communication",
     intensity: 3, shared_topic: "Synthetic shared topic", visibility: "ours", created_at: "2026-11-06T00:00:00Z",
   };
   db.setSession = (userId, token = `${userId}-token`) => {
@@ -45,7 +45,8 @@ function client() {
         then(resolve, reject) {
           db.reads.push(call);
           const data = table === "relationship_events" ? structuredClone(db.event)
-            : table === "event_perspectives" ? [] : null;
+            : table === "couple_members" ? { couple_id: "couple-1" }
+            : ["event_perspectives", "event_repair_states"].includes(table) ? [] : null;
           return Promise.resolve({ data, error: null }).then(resolve, reject);
         },
       };
@@ -92,6 +93,8 @@ function harness(db, currentUserId = "user-a") {
       memo(() => effects.push(() => { cleanups[index]?.(); cleanups[index] = effect(); }), deps);
     },
   };
+  react.useMemo = memo;
+  react.useEffect = react.useLayoutEffect;
   const jsx = (type, props) => ({ type, props });
   const imports = {
     react, "react/jsx-runtime": { jsx, jsxs: jsx },
@@ -100,7 +103,7 @@ function harness(db, currentUserId = "user-a") {
     "react-native-safe-area-context": { SafeAreaView: "SafeAreaView" },
     "react-native": Object.assign(Object.fromEntries(
       ["Pressable", "ScrollView", "Text", "TextInput", "View"].map((name) => [name, name]),
-    ), { StyleSheet: { create: (value) => value } }),
+    ), { StyleSheet: { create: (value) => value }, AppState: { currentState: "active", addEventListener: () => ({ remove() {} }) }, Platform: { OS: "test" } }),
     "expo-router": {
       useRouter: () => ({ back: () => ui.navigations.push("back") }),
       useFocusEffect(effect) {
@@ -111,6 +114,8 @@ function harness(db, currentUserId = "user-a") {
   };
   imports["@/components/couply-tokens"] = loadSource("src/components/couply-tokens.ts", {});
   imports["@/components/CouplyUI"] = loadSource("src/components/CouplyUI.tsx", imports);
+  imports["@/hooks/useAccessRevalidation"] = loadSource("src/hooks/useAccessRevalidation.ts", imports);
+  imports["@/lib/repair-states"] = loadSource("src/lib/repair-states.ts", imports);
   // Router identity must be stable, as in the installed SDK; a fresh router
   // object each render would invent focus reload loops absent from the product.
   const router = { back: () => ui.navigations.push("back") };
@@ -205,8 +210,9 @@ for (const response of [null, undefined, false, "true", 1, {}, []]) {
       db.respond = async () => ({ data: response, error: null });
     });
     await ui.press("Yes, delete permanently");
-    assert.match(ui.text(), /couldn't confirm whether this moment was deleted/);
-    assert.equal(ui.button("Delete moment").props.disabled, true);
+    assert.match(ui.text(), /couldn't verify access/);
+    assert.doesNotMatch(ui.text(), /couldn't confirm whether this moment was deleted/);
+    assert.equal(ui.button("Delete moment"), undefined, "Unverified actions leave the rendered tree");
     confirm.props.onPress(); await ui.flush();
     assert.equal(db.calls.length, 1);
     assert.deepEqual(ui.navigations, []);
@@ -225,7 +231,8 @@ for (const committed of [true, false]) {
       });
       const reads = db.reads.length;
       await ui.press("Yes, delete permanently");
-      assert.match(ui.text(), /couldn't confirm whether this moment was deleted/);
+      assert.match(ui.text(), /couldn't verify access/);
+    assert.doesNotMatch(ui.text(), /couldn't confirm whether this moment was deleted/);
       assert.doesNotMatch(ui.text(), /PRIVATE_|deletion failed|was not deleted|successfully deleted/i);
       confirm.props.onPress(); await ui.flush();
       assert.equal(db.calls.length, 1);
@@ -240,7 +247,8 @@ test("reviewed SQL rejection stays generic, hides backend details and never navi
     db.respond = async () => ({ error: { code: "P0001", message: "Event unavailable", details: "PRIVATE", hint: "PRIVATE" } });
   });
   await ui.press("Yes, delete permanently");
-  assert.match(ui.text(), /This deletion request was rejected/);
+  assert.match(ui.text(), /couldn't verify access/);
+  assert.doesNotMatch(ui.text(), /This deletion request was rejected/);
   assert.doesNotMatch(ui.text(), /PRIVATE|successfully deleted/);
   confirm.props.onPress(); await ui.flush();
   assert.equal(db.calls.length, 1);
