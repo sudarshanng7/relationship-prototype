@@ -9,11 +9,26 @@ import {
 import { useChallengePreview } from "@/context/ChallengePreviewContext";
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
+import {
+  deriveWhatMattersNowActivity,
+  markHomeActivitySeen,
+  type HomeActivityCandidate,
+  type HomeActivityReceipt,
+  type HomeRelationshipEvent,
+  type HomeRepairResponse,
+  type HomeRepairOutcome,
+  type HomeCoupleTask,
+  type HomeImportantDate,
+  type HomeAttentionState,
+  TWENTY_FOUR_HOURS_MS,
+} from "@/lib/home-activity";
 import { supabase } from "@/lib/supabase";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
+  AppState,
   Image,
   Pressable,
   SafeAreaView,
@@ -286,14 +301,7 @@ function getDeviceGreeting(): string {
   return "Welcome back";
 }
 
-type IncomingFrictionMoment = {
-  id: string;
-  creator_id: string;
-  event_type: "friction";
-  visibility: "ours";
-  status: "open" | "partially_repaired";
-  created_at: string;
-};
+export type { HomeRelationshipEvent, HomeActivityCandidate };
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -305,12 +313,34 @@ export default function HomeScreen() {
   const [personalCoverUri, setPersonalCoverUri] = useState<string | null>(null);
   const identity = useUserIdentity();
   const { activeInvitation } = useChallengePreview();
-  const [incomingMoment, setIncomingMoment] =
-    useState<IncomingFrictionMoment | null>(null);
   const [partnerName, setPartnerName] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [partnerConnected, setPartnerConnected] = useState(false);
   const [isIdentityLoading, setIsIdentityLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(
+    identity.userId,
+  );
+  const [coupleId, setCoupleId] = useState<string | null>(identity.coupleId);
+  const [relationshipEvents, setRelationshipEvents] = useState<
+    HomeRelationshipEvent[]
+  >([]);
+  const [repairResponses, setRepairResponses] = useState<
+    HomeRepairResponse[]
+  >([]);
+  const [repairOutcomes, setRepairOutcomes] = useState<HomeRepairOutcome[]>([]);
+  const [coupleTasks, setCoupleTasks] = useState<HomeCoupleTask[]>([]);
+  const [importantDates, setImportantDates] = useState<HomeImportantDate[]>([]);
+  const [attentionStates, setAttentionStates] = useState<HomeAttentionState[]>(
+    [],
+  );
+  const [activityReceipts, setActivityReceipts] = useState<
+    HomeActivityReceipt[]
+  >([]);
+  const [optimisticSeenKeys, setOptimisticSeenKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const isNavigatingActivityRef = useRef<boolean>(false);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   const cleanDisplayName =
     (identity.displayName || displayName)?.trim() || null;
@@ -347,130 +377,415 @@ export default function HomeScreen() {
     return `${creator} shared a tiny invitation`;
   }, [activeInvitation, effectiveDisplayName]);
 
-  useFocusEffect(
-    useCallback(() => {
-      let isCancelled = false;
+  const screenInstanceIdRef = useRef<string>(
+    `home_${Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}`,
+  );
+  const subscriptionSeqRef = useRef<number>(0);
+  const requestSeqRef = useRef<number>(0);
+  const isRefreshingRef = useRef<boolean>(false);
+  const refreshPendingRef = useRef<boolean>(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const mountedRef = useRef<boolean>(true);
+  const hasLoadedOnceRef = useRef<boolean>(false);
+  const lastRecordedResurfacedKeyRef = useRef<string | null>(null);
+  const isScreenFocusedRef = useRef<boolean>(true);
 
-      async function fetchHomeData() {
-        try {
-          void identity.refreshIdentity();
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
-          const {
-            data: { user },
-            error: userError,
-          } = await supabase.auth.getUser();
+  const refreshHomeData = useCallback(
+    async (options: { silent?: boolean } = {}) => {
+      const silent = options.silent ?? false;
+      if (!mountedRef.current) return false;
 
-          if (userError || !user || isCancelled) {
-            if (!isCancelled) {
-              setIsIdentityLoading(false);
-            }
-            return;
-          }
+      // Prevent overlapping concurrent refreshes; queue exactly one follow-up if busy
+      if (isRefreshingRef.current) {
+        refreshPendingRef.current = true;
+        return false;
+      }
 
-          // 1. Fetch current user's profile display_name
-          const { data: profile } = await supabase
+      isRefreshingRef.current = true;
+      const currentRequestSeq = ++requestSeqRef.current;
+
+      try {
+        void identity.refreshIdentity();
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (!mountedRef.current) return false;
+
+        if (userError || !user) {
+          setIsIdentityLoading(false);
+          return false;
+        }
+
+        setCurrentUserId(user.id);
+
+        // 1. Fetch current user display_name and membership in parallel
+        const [profileRes, memberRes] = await Promise.all([
+          supabase
             .from("profiles")
             .select("display_name")
             .eq("id", user.id)
-            .maybeSingle();
-
-          if (!isCancelled) {
-            setDisplayName(profile?.display_name?.trim() || null);
-          }
-
-          // 2. Fetch couple membership
-          const { data: membership, error: membershipError } = await supabase
+            .maybeSingle(),
+          supabase
             .from("couple_members")
             .select("couple_id")
             .eq("user_id", user.id)
-            .maybeSingle();
+            .maybeSingle(),
+        ]);
 
-          if (membershipError || !membership || isCancelled) {
-            if (!isCancelled) {
-              setPartnerConnected(false);
-              setPartnerName(null);
-              setIncomingMoment(null);
-              setIsIdentityLoading(false);
-            }
-            return;
-          }
+        if (!mountedRef.current) return false;
 
-          const currentCoupleId = membership.couple_id;
+        if (profileRes.data?.display_name?.trim()) {
+          setDisplayName(profileRes.data.display_name.trim());
+        }
 
-          // 3. Check if partner is connected in couple
-          const { data: members } = await supabase
+        const activeCoupleId = memberRes.data?.couple_id;
+        if (!activeCoupleId) {
+          setPartnerConnected(false);
+          setPartnerName(null);
+          setCoupleId(null);
+          setRelationshipEvents([]);
+          setRepairResponses([]);
+          setRepairOutcomes([]);
+          setCoupleTasks([]);
+          setImportantDates([]);
+          setAttentionStates([]);
+          setActivityReceipts([]);
+          setOptimisticSeenKeys(new Set());
+          setIsIdentityLoading(false);
+          return false;
+        }
+
+        setCoupleId(activeCoupleId);
+
+        // 2. Fetch partner details, 6 activity sources and private receipts in parallel
+        const [
+          partnerNameRes,
+          membersRes,
+          eventsRes,
+          responsesRes,
+          outcomesRes,
+          tasksRes,
+          datesRes,
+          attRes,
+          receiptsRes,
+        ] = await Promise.all([
+          supabase.rpc("get_partner_display_name"),
+          supabase
             .from("couple_members")
             .select("user_id")
-            .eq("couple_id", currentCoupleId);
-
-          const partnerMember = members?.find(
-            (member) => member.user_id !== user.id,
-          );
-
-          if (!isCancelled) {
-            setPartnerConnected(Boolean(partnerMember));
-          }
-
-          if (partnerMember) {
-            const { data: name } = await supabase.rpc(
-              "get_partner_display_name",
-            );
-            if (
-              !isCancelled &&
-              typeof name === "string" &&
-              name.trim().length > 0
-            ) {
-              setPartnerName(name.trim());
-            } else if (!isCancelled) {
-              setPartnerName(null);
-            }
-          } else if (!isCancelled) {
-            setPartnerName(null);
-          }
-
-          // 4. Fetch incoming friction moment
-          const { data, error } = await supabase
+            .eq("couple_id", activeCoupleId),
+          supabase
             .from("relationship_events")
             .select(
-              "id, creator_id, event_type, visibility, status, created_at",
+              "id, creator_id, event_type, category, intensity, visibility, status, created_at, reconnected_at",
             )
-            .eq("couple_id", currentCoupleId)
+            .eq("couple_id", activeCoupleId)
             .eq("visibility", "ours")
-            .eq("event_type", "friction")
-            .neq("creator_id", user.id)
-            .in("status", ["open", "partially_repaired"])
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("relationship_event_repair_responses")
+            .select(
+              "id, event_id, couple_id, user_id, phase, response_code, suggested_step_code, shared_at, updated_at",
+            )
+            .eq("couple_id", activeCoupleId)
+            .order("updated_at", { ascending: false }),
+          supabase
+            .from("relationship_event_repair_outcomes")
+            .select(
+              "event_id, couple_id, completed_by, takeaway_tag, takeaway_note, completed_at, updated_at",
+            )
+            .eq("couple_id", activeCoupleId),
+          supabase
+            .from("couple_tasks")
+            .select(
+              "id, couple_id, created_by, title, category, status, completed_at, created_at, updated_at",
+            )
+            .eq("couple_id", activeCoupleId)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("couple_important_dates")
+            .select(
+              "id, couple_id, label, event_date, created_by, created_at, updated_at",
+            )
+            .eq("couple_id", activeCoupleId)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("relationship_event_attention_states")
+            .select(
+              "event_id, couple_id, user_id, last_presented_at, snoozed_until, presentation_count, last_opened_at, created_at, updated_at",
+            )
+            .eq("couple_id", activeCoupleId),
+          supabase
+            .from("home_activity_receipts")
+            .select(
+              "id, couple_id, user_id, activity_key, activity_kind, source_id, attention_mode, seen_at, created_at, updated_at",
+            )
+            .eq("couple_id", activeCoupleId)
+            .eq("user_id", user.id),
+        ]);
 
-          if (isCancelled) {
-            return;
-          }
+        if (!mountedRef.current) return false;
 
-          if (error || !data) {
-            setIncomingMoment(null);
-            return;
-          }
+        // Discard result if an even newer request already completed
+        if (currentRequestSeq < requestSeqRef.current) {
+          return false;
+        }
 
-          setIncomingMoment(data as IncomingFrictionMoment);
-        } catch {
-          if (!isCancelled) {
-            setIncomingMoment(null);
+        const partnerMember = membersRes.data?.find(
+          (m) => m.user_id !== user.id,
+        );
+        setPartnerConnected(Boolean(partnerMember));
+        if (
+          typeof partnerNameRes.data === "string" &&
+          partnerNameRes.data.trim().length > 0
+        ) {
+          setPartnerName(partnerNameRes.data.trim());
+        }
+
+        if (eventsRes.error && __DEV__) {
+          console.warn(
+            "Home relationship_events query failed:",
+            eventsRes.error.message,
+          );
+        }
+
+        if (!eventsRes.error && eventsRes.data) {
+          const reconciledMap = new Map<string, HomeRelationshipEvent>();
+          for (const row of eventsRes.data) {
+            reconciledMap.set(row.id, row as HomeRelationshipEvent);
           }
-        } finally {
-          if (!isCancelled) {
-            setIsIdentityLoading(false);
-          }
+          setRelationshipEvents(Array.from(reconciledMap.values()));
+        }
+
+        if (!responsesRes.error && responsesRes.data) {
+          setRepairResponses(responsesRes.data as HomeRepairResponse[]);
+        }
+
+        if (!outcomesRes.error && outcomesRes.data) {
+          setRepairOutcomes(outcomesRes.data as HomeRepairOutcome[]);
+        }
+
+        if (!tasksRes.error && tasksRes.data) {
+          setCoupleTasks(tasksRes.data as HomeCoupleTask[]);
+        }
+
+        if (!datesRes.error && datesRes.data) {
+          setImportantDates(datesRes.data as HomeImportantDate[]);
+        }
+
+        if (!attRes.error && attRes.data) {
+          setAttentionStates(attRes.data as HomeAttentionState[]);
+        }
+
+        if (!receiptsRes.error && receiptsRes.data) {
+          setActivityReceipts(receiptsRes.data as HomeActivityReceipt[]);
+        }
+
+        setNowMs(Date.now());
+        return true;
+      } catch (err) {
+        if (__DEV__) {
+          console.warn("refreshHomeData failed:", err);
+        }
+        return false;
+      } finally {
+        isRefreshingRef.current = false;
+        if (mountedRef.current) {
+          setIsIdentityLoading(false);
+          hasLoadedOnceRef.current = true;
+        }
+
+        // If another update arrived while this refresh was running, queue follow-up
+        if (refreshPendingRef.current && mountedRef.current) {
+          refreshPendingRef.current = false;
+          void refreshHomeDataRef.current({ silent: true });
         }
       }
+    },
+    [identity],
+  );
 
-      void fetchHomeData();
+  const refreshHomeDataRef = useRef(refreshHomeData);
+  useEffect(() => {
+    refreshHomeDataRef.current = refreshHomeData;
+  }, [refreshHomeData]);
 
+  // Focus fallback (silent refresh after initial load, no spinner flicker)
+  useFocusEffect(
+    useCallback(() => {
+      isScreenFocusedRef.current = true;
+      setNowMs(Date.now());
+      void refreshHomeDataRef.current({ silent: hasLoadedOnceRef.current });
       return () => {
-        isCancelled = true;
+        isScreenFocusedRef.current = false;
+        lastRecordedResurfacedKeyRef.current = null;
       };
     }, []),
   );
+
+  // AppState active fallback (silent refresh when foregrounded)
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active" && mountedRef.current) {
+        setNowMs(Date.now());
+        void refreshHomeDataRef.current({ silent: true });
+      }
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  const effectiveUserId = identity.userId ?? currentUserId;
+  const effectiveCoupleId = identity.coupleId ?? coupleId;
+
+  // Single stable screen-owned Realtime subscription scoped to active couple & authenticated user
+  useEffect(() => {
+    if (!effectiveCoupleId || !effectiveUserId) {
+      return;
+    }
+
+    const subscriptionSeq = ++subscriptionSeqRef.current;
+    const channelName = `home-activity-${effectiveCoupleId}-${screenInstanceIdRef.current}-${subscriptionSeq}`;
+    const channel = supabase.channel(channelName);
+    channelRef.current = channel;
+
+    const scheduleSilentRefresh = () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        debounceTimerRef.current = null;
+        if (mountedRef.current) {
+          void refreshHomeDataRef.current({ silent: true });
+        }
+      }, 200);
+    };
+
+    // Synchronously register all listeners before subscribe()
+    channel
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "relationship_events",
+          filter: `couple_id=eq.${effectiveCoupleId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "relationship_event_repair_responses",
+          filter: `couple_id=eq.${effectiveCoupleId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "relationship_event_repair_outcomes",
+          filter: `couple_id=eq.${effectiveCoupleId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "couple_tasks",
+          filter: `couple_id=eq.${effectiveCoupleId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "couple_important_dates",
+          filter: `couple_id=eq.${effectiveCoupleId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "relationship_event_attention_states",
+          filter: `user_id=eq.${effectiveUserId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "home_activity_receipts",
+          filter: `user_id=eq.${effectiveUserId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
+      );
+
+    channel.subscribe((subStatus, err) => {
+      if (__DEV__) {
+        if (subStatus === "SUBSCRIBED") {
+          console.log(`[Home Realtime] Subscribed to ${channelName}`);
+        } else if (
+          subStatus === "CHANNEL_ERROR" ||
+          subStatus === "TIMED_OUT" ||
+          subStatus === "CLOSED"
+        ) {
+          console.warn(
+            `[Home Realtime] Status: ${subStatus}`,
+            err?.message || "",
+          );
+        }
+      }
+    });
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      channelRef.current = null;
+      void supabase.removeChannel(channel);
+    };
+  }, [effectiveCoupleId, effectiveUserId]);
 
   const [previewState, setPreviewState] =
     useState<PreviewState>("calm_day");
@@ -515,6 +830,189 @@ export default function HomeScreen() {
     : require("@/assets/images/shared-horizon.png");
 
   const isReflectionActive = previewState === "evening_reflection";
+
+  const whatMattersNow = useMemo(
+    () =>
+      deriveWhatMattersNowActivity({
+        events: relationshipEvents,
+        repairResponses,
+        outcomes: repairOutcomes,
+        tasks: coupleTasks,
+        importantDates,
+        attentionStates,
+        receipts: activityReceipts,
+        seenKeys: optimisticSeenKeys,
+        nowMs,
+        currentUserId: effectiveUserId,
+        coupleId: effectiveCoupleId,
+        partnerName: effectivePartnerName,
+        isReflectionActive,
+      }),
+    [
+      relationshipEvents,
+      repairResponses,
+      repairOutcomes,
+      coupleTasks,
+      importantDates,
+      attentionStates,
+      activityReceipts,
+      optimisticSeenKeys,
+      nowMs,
+      effectiveUserId,
+      effectiveCoupleId,
+      effectivePartnerName,
+      isReflectionActive,
+    ],
+  );
+
+  // Record gentle presentation when a resurfaced moment is rendered
+  useEffect(() => {
+    const targetEventId =
+      whatMattersNow.targetEventId || whatMattersNow.sourceId;
+    if (
+      whatMattersNow.kind === "resurfaced_moment" &&
+      whatMattersNow.isResurfaced &&
+      targetEventId &&
+      isScreenFocusedRef.current
+    ) {
+      if (lastRecordedResurfacedKeyRef.current !== whatMattersNow.key) {
+        lastRecordedResurfacedKeyRef.current = whatMattersNow.key;
+        void supabase
+          .rpc("mark_relationship_event_attention_presented", {
+            p_event_id: targetEventId,
+          })
+          .then(({ error }) => {
+            if (error && __DEV__) {
+              console.warn(
+                "mark_relationship_event_attention_presented failed:",
+                error.message,
+              );
+            }
+          });
+      }
+    }
+  }, [whatMattersNow]);
+
+  const handleOpenResurfacedMoment = useCallback(
+    async (
+      eventId: string,
+      targetRoute: string,
+      candidate?: HomeActivityCandidate,
+    ) => {
+      const targetEventId = candidate?.targetEventId || eventId;
+      if (candidate) {
+        setOptimisticSeenKeys((prev) => new Set(prev).add(candidate.key));
+        void markHomeActivitySeen({
+          supabase,
+          candidate,
+          coupleId: effectiveCoupleId,
+          userId: effectiveUserId,
+        });
+      }
+      if (targetEventId) {
+        try {
+          void supabase.rpc("mark_relationship_event_attention_opened", {
+            p_event_id: targetEventId,
+          });
+        } catch {}
+      }
+      router.push(targetRoute as any);
+    },
+    [effectiveCoupleId, effectiveUserId, router],
+  );
+
+  const handleOpenActivityCard = useCallback(
+    async (candidate: HomeActivityCandidate) => {
+      if (isNavigatingActivityRef.current) return;
+      isNavigatingActivityRef.current = true;
+
+      const keyToMark = candidate.key;
+      const targetRoute = candidate.route;
+
+      // Optimistic immediate suppression for smooth UI transition
+      setOptimisticSeenKeys((prev) => new Set(prev).add(keyToMark));
+
+      // Persist receipt asynchronously without blocking navigation
+      void markHomeActivitySeen({
+        supabase,
+        candidate,
+        coupleId: effectiveCoupleId,
+        userId: effectiveUserId,
+      });
+
+      // If actionable event with an explicit targetEventId, update relationship_event_attention_states.last_opened_at
+      if (candidate.actionable && candidate.targetEventId) {
+        void supabase.rpc("mark_relationship_event_attention_opened", {
+          p_event_id: candidate.targetEventId,
+        });
+      }
+
+      try {
+        router.push(targetRoute as any);
+      } finally {
+        setTimeout(() => {
+          isNavigatingActivityRef.current = false;
+        }, 800);
+      }
+    },
+    [effectiveCoupleId, effectiveUserId, router],
+  );
+
+  const handleSnoozeResurfacedMoment = useCallback(
+    async (eventId: string, duration: "day" | "week") => {
+      try {
+        const { error } = await supabase.rpc(
+          "snooze_relationship_event_attention",
+          {
+            p_event_id: eventId,
+            p_duration: duration,
+          },
+        );
+        if (error && __DEV__) {
+          console.warn("snooze_relationship_event_attention:", error.message);
+        }
+      } catch (err) {
+        if (__DEV__) console.warn("snooze exception:", err);
+      } finally {
+        void refreshHomeDataRef.current({ silent: true });
+      }
+    },
+    [],
+  );
+
+  // Lightweight timer to re-evaluate eligibility when the currently displayed event reaches 24h
+  useEffect(() => {
+    if (
+      !whatMattersNow.occurredAt ||
+      whatMattersNow.kind === "empty" ||
+      whatMattersNow.kind === "reflection" ||
+      whatMattersNow.kind === "resurfaced_moment"
+    ) {
+      return;
+    }
+
+    const itemTime = new Date(whatMattersNow.occurredAt).getTime();
+    if (isNaN(itemTime)) return;
+
+    const expiryTime = itemTime + TWENTY_FOUR_HOURS_MS;
+    const remainingMs = expiryTime - nowMs;
+
+    if (remainingMs <= 0) {
+      setNowMs(Date.now());
+      return;
+    }
+
+    const delay = Math.min(Math.max(remainingMs + 500, 1000), 3600000);
+    const timer = setTimeout(() => {
+      if (mountedRef.current) {
+        setNowMs(Date.now());
+      }
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [whatMattersNow.occurredAt, whatMattersNow.kind, nowMs]);
 
   const handleOpenReflectionFromHome = () => {
     setPreviewState("evening_reflection");
@@ -733,7 +1231,7 @@ export default function HomeScreen() {
             </View>
 
             {/* Priority 1: Explicit personal reflection in progress */}
-            {isReflectionActive ? (
+            {whatMattersNow.kind === "reflection" ? (
               <View style={styles.reflectionContent}>
                 {eveningClosureState !== null ? (
                   <View style={styles.reflectionClosureCard}>
@@ -1014,155 +1512,131 @@ export default function HomeScreen() {
                   </>
                 )}
               </View>
-            ) : incomingMoment ? (
-              /* Priority 2: Incoming real shared moment */
+            ) : whatMattersNow.kind === "resurfaced_moment" ? (
+              /* Priority 9: Resurfaced gentle moment */
+              <View style={styles.resurfacedMomentCard}>
+                <View style={styles.incomingMomentHeader}>
+                  <Text style={styles.resurfacedMomentOverline}>
+                    {whatMattersNow.overline || "A MOMENT RESTING IN OUR SPACE"}
+                  </Text>
+                </View>
+                <Text style={styles.incomingMomentHeading}>
+                  {whatMattersNow.title}
+                </Text>
+                <Text style={styles.incomingMomentBody}>
+                  {whatMattersNow.body}
+                </Text>
+                <View style={styles.resurfacedActionContainer}>
+                  <CouplyPrimaryButton
+                    label={whatMattersNow.actionLabel}
+                    onPress={() =>
+                      handleOpenResurfacedMoment(
+                        whatMattersNow.sourceId,
+                        whatMattersNow.route,
+                        whatMattersNow,
+                      )
+                    }
+                    accessibilityLabel={whatMattersNow.actionLabel}
+                    style={styles.resurfacedPrimaryBtn}
+                  />
+                  <View style={styles.resurfacedQuietRow}>
+                    <Pressable
+                      style={styles.resurfacedQuietBtn}
+                      onPress={() =>
+                        handleSnoozeResurfacedMoment(
+                          whatMattersNow.sourceId,
+                          "day",
+                        )
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel="Not today"
+                      accessibilityHint="Snooze this reminder for 24 hours"
+                    >
+                      <Text style={styles.resurfacedQuietText}>Not today</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.resurfacedQuietBtn}
+                      onPress={() =>
+                        handleSnoozeResurfacedMoment(
+                          whatMattersNow.sourceId,
+                          "week",
+                        )
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel="Give it a week"
+                      accessibilityHint="Snooze this reminder for seven days"
+                    >
+                      <Text style={styles.resurfacedQuietText}>Give it a week</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            ) : whatMattersNow.kind !== "empty" ? (
+              /* Priority 1-8: Recent partner / shared activity */
               <Pressable
                 style={({ pressed }) => [
                   styles.incomingMomentCard,
                   pressed && styles.incomingMomentCardPressed,
                 ]}
-                onPress={() =>
-                  router.push({
-                    pathname: "/event/[id]",
-                    params: {
-                      id: incomingMoment.id,
-                      scope: "ours",
-                    },
-                  })
-                }
+                onPress={() => handleOpenActivityCard(whatMattersNow)}
                 accessibilityRole="button"
-                accessibilityLabel={
-                  effectivePartnerName
-                    ? `Open the shared moment from ${effectivePartnerName} when ready`
-                    : "Open the shared moment from your partner when ready"
-                }
+                accessibilityLabel={`${whatMattersNow.title}. ${whatMattersNow.body}`}
               >
                 <View style={styles.incomingMomentHeader}>
+                  {whatMattersNow.icon ? (
+                    <Text style={styles.incomingMomentIcon}>
+                      {whatMattersNow.icon}
+                    </Text>
+                  ) : null}
                   <Text style={styles.incomingMomentOverline}>
-                    A SHARED MOMENT
+                    {whatMattersNow.overline || "A SHARED MOMENT"}
                   </Text>
                 </View>
                 <Text style={styles.incomingMomentHeading}>
-                  {effectivePartnerName
-                    ? `${effectivePartnerName} shared a moment`
-                    : "Your partner shared a moment"}
+                  {whatMattersNow.title}
                 </Text>
                 <Text style={styles.incomingMomentBody}>
-                  There is no rush. Take a look whenever you feel ready.
+                  {whatMattersNow.body}
                 </Text>
                 <View style={styles.incomingMomentActionRow}>
                   <View style={styles.incomingMomentActionBtn}>
                     <Text style={styles.incomingMomentActionText}>
-                      Open when ready
+                      {whatMattersNow.actionLabel}
                     </Text>
                   </View>
                 </View>
               </Pressable>
-            ) : previewState === "open_repair" ? (
-              <View style={styles.partnerResponseContent}>
-                <View style={styles.partnerTextGroup}>
-                  <View style={styles.partnerBubble}>
-                    <Text style={styles.partnerIconMini}>🤝</Text>
-                  </View>
-                  <Text style={styles.partnerResponseText}>
-                    One shared moment is waiting when you feel ready.
-                  </Text>
-                </View>
-                <Pressable
-                  style={styles.primaryActionButton}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/events",
-                      params: { scope: "ours" },
-                    })
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel="Continue when ready"
-                >
-                  <Text style={styles.primaryActionText}>
-                    Continue when ready
-                  </Text>
-                </Pressable>
-              </View>
-            ) : previewState === "positive_moment" ? (
-              <View style={styles.partnerResponseContent}>
-                <View style={styles.partnerTextGroup}>
-                  <View style={styles.partnerBubble}>
-                    <Text style={styles.partnerIconMini}>🌷</Text>
-                  </View>
-                  <Text style={styles.partnerResponseText}>
-                    {effectivePartnerName
-                      ? `${effectivePartnerName} shared something good with you.`
-                      : "Your partner shared something good with you."}
-                  </Text>
-                </View>
-                <Pressable
-                  style={styles.primaryActionButton}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/events",
-                      params: { scope: "ours" },
-                    })
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel="See it"
-                >
-                  <Text style={styles.primaryActionText}>See it</Text>
-                </Pressable>
-              </View>
-            ) : previewState === "recently_resolved" ? (
-              <View style={styles.partnerResponseContent}>
-                <View style={styles.partnerTextGroup}>
-                  <View style={styles.partnerBubble}>
-                    <Text style={styles.partnerIconMini}>🌱</Text>
-                  </View>
-                  <View style={styles.resolvedTextCol}>
-                    <Text style={styles.partnerResponseText}>
-                      A recent moment was marked reconnected.
-                    </Text>
-                    <Text style={styles.resolvedSupportingText}>
-                      Taking time to notice repair helps it stick.
-                    </Text>
-                  </View>
-                </View>
-                <Pressable
-                  style={styles.primaryActionButton}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/events",
-                      params: { scope: "ours" },
-                    })
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel="View in Our Space"
-                >
-                  <Text style={styles.primaryActionText}>
-                    View in Our Space
-                  </Text>
-                </Pressable>
-              </View>
             ) : (
-              /* Priority 3: Calm/default state */
+              /* Priority 11: Calm empty state */
               <View style={styles.calmCheckInContent}>
-                <Text style={styles.calmCheckInOverline}>YOUR RHYTHM</Text>
+                <Text style={styles.calmCheckInOverline}>WHAT MATTERS NOW</Text>
                 <Text style={styles.calmCheckInHeading}>
-                  How did today feel between you two?
+                  {whatMattersNow.title}
                 </Text>
                 <Text style={styles.calmCheckInBody}>
-                  There is no need to check in every day. If it feels useful, take a quiet moment.
+                  {whatMattersNow.body}
                 </Text>
                 <View style={styles.calmCheckInActionRow}>
                   <CouplyQuietButton
-                    label="Reflect on today"
-                    onPress={handleOpenReflectionFromHome}
-                    accessibilityLabel="Reflect on today"
+                    label={whatMattersNow.actionLabel}
+                    onPress={() =>
+                      router.push(whatMattersNow.route as any)
+                    }
+                    accessibilityLabel={whatMattersNow.actionLabel}
                     variant="soft"
                     style={styles.calmCheckInPrimaryBtn}
                   />
                 </View>
-                <Text style={styles.calmCheckInSecondaryNote}>
-                  Or simply leave this here for now.
-                </Text>
+                <Pressable
+                  style={styles.calmReflectSecondaryBtn}
+                  onPress={handleOpenReflectionFromHome}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reflect on today"
+                >
+                  <Text style={styles.calmReflectSecondaryText}>
+                    Reflect on today
+                  </Text>
+                </Pressable>
               </View>
             )}
           </CouplySectionCard>
@@ -1690,6 +2164,17 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       lineHeight: 18,
       fontStyle: "italic",
     },
+    calmReflectSecondaryBtn: {
+      alignSelf: "flex-start",
+      paddingVertical: 4,
+      marginTop: 2,
+    },
+    calmReflectSecondaryText: {
+      fontSize: 13,
+      color: theme.accent,
+      fontWeight: "600",
+      textDecorationLine: "underline",
+    },
 
     /* Evening Reflection */
     reflectionContent: {
@@ -2009,6 +2494,9 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       alignItems: "center",
       gap: 6,
     },
+    incomingMomentIcon: {
+      fontSize: 14,
+    },
     incomingMomentOverline: {
       fontSize: 11.5,
       fontWeight: "700",
@@ -2042,6 +2530,53 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
     },
     incomingMomentActionText: {
       color: theme.accentText,
+      fontSize: 13.5,
+      fontWeight: "600",
+    },
+
+    /* Resurfaced Gentle Moment Card */
+    resurfacedMomentCard: {
+      backgroundColor: theme.sharedSurface,
+      borderColor: theme.sharedBorder,
+      borderWidth: 1.2,
+      borderRadius: 16,
+      padding: 16,
+      gap: 10,
+      marginTop: 4,
+    },
+    resurfacedMomentOverline: {
+      fontSize: 11.5,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+      color: theme.accent,
+      textTransform: "uppercase",
+    },
+    resurfacedActionContainer: {
+      marginTop: 6,
+      gap: 10,
+    },
+    resurfacedPrimaryBtn: {
+      minHeight: 44,
+    },
+    resurfacedQuietRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 10,
+      alignItems: "center",
+    },
+    resurfacedQuietBtn: {
+      minHeight: 44,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      backgroundColor: theme.buttonSecondaryBg,
+      borderWidth: 1,
+      borderColor: theme.buttonSecondaryBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    resurfacedQuietText: {
+      color: theme.secondaryText,
       fontSize: 13.5,
       fontWeight: "600",
     },
