@@ -1,0 +1,576 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "SecondPartnerActivationStateMachine",
+  "version": "2.3.0",
+  "description": "Formal state machine definition for Purple Garden's second-partner invitation, onboarding, and activation journey with hardened acceptance idempotency, couple row locking, non-persisted fallback display names, and controlled target statuses.",
+  "initialState": "idle_uninvited",
+  "context": {
+    "inviteToken": null,
+    "targetEventId": null,
+    "targetStatus": null,
+    "coupleId": null,
+    "invitingPartnerName": null,
+    "authenticatedUserId": null,
+    "displayName": null,
+    "isCoupleMember": false,
+    "onboardingCompleted": false,
+    "activeSnoozeUntil": null,
+    "privateReflectionSaved": false,
+    "arrivalResponseSubmitted": false,
+    "positiveHandoffCompleted": false
+  },
+  "states": {
+    "idle_uninvited": {
+      "type": "initial",
+      "description": "User has not clicked an invitation link. Standard application entry point.",
+      "route": "/",
+      "privacyClassification": "public",
+      "isMVP": true,
+      "transitions": {
+        "OPEN_INVITE_LINK": {
+          "target": "validating_invite_token",
+          "guard": "hasValidTokenParam"
+        }
+      }
+    },
+    "validating_invite_token": {
+      "type": "transient",
+      "description": "Client captures opaque URL token string and checks session status. Token string is cached in memory/intent storage without partner names or event details.",
+      "route": "/invite/[token]",
+      "privacyClassification": "opaque_token_verification",
+      "isMVP": true,
+      "transitions": {
+        "TOKEN_FORMAT_VALID": {
+          "target": "checking_auth_session",
+          "action": "cacheOpaqueTokenIntent"
+        },
+        "TOKEN_NOT_FOUND": {
+          "target": "invite_invalid",
+          "action": "clearCachedInviteIntent"
+        },
+        "NETWORK_ERROR": {
+          "target": "network_recovery_invite"
+        }
+      }
+    },
+    "checking_auth_session": {
+      "type": "transient",
+      "description": "Evaluates Supabase session state to determine whether user must authenticate before resolving token state.",
+      "route": "/invite/[token]",
+      "privacyClassification": "authenticated_session_check",
+      "isMVP": true,
+      "transitions": {
+        "SESSION_ACTIVE": {
+          "target": "evaluating_user_couple_status",
+          "guard": "isAuthenticated"
+        },
+        "SESSION_ABSENT": {
+          "target": "prompting_auth_with_intent",
+          "guard": "isNotAuthenticated"
+        }
+      }
+    },
+    "prompting_auth_with_intent": {
+      "type": "interactive",
+      "description": "Displays welcoming login/signup card with return intent preserved strictly to allowlisted internal route: /invite/[token].",
+      "route": "/?mode=sign_up&intent=invite",
+      "privacyClassification": "public",
+      "isMVP": true,
+      "transitions": {
+        "AUTH_SUCCESS": {
+          "target": "evaluating_user_couple_status",
+          "action": "bindUserIdToContext"
+        },
+        "AUTH_CANCEL": {
+          "target": "invite_deferred",
+          "action": "clearCachedInviteIntent"
+        },
+        "EMAIL_VERIFICATION_REQUIRED": {
+          "target": "awaiting_email_confirmation"
+        },
+        "WRONG_ACCOUNT_SELECTED": {
+          "target": "wrong_account"
+        }
+      }
+    },
+    "awaiting_email_confirmation": {
+      "type": "interactive",
+      "description": "User created an account and must confirm their email before continuing.",
+      "route": "/?status=email_pending",
+      "privacyClassification": "public",
+      "isMVP": true,
+      "transitions": {
+        "MAGIC_LINK_OPENED": {
+          "target": "evaluating_user_couple_status",
+          "action": "restoreCachedOpaqueTokenIntent"
+        },
+        "RESEND_CONFIRMATION": {
+          "target": "awaiting_email_confirmation",
+          "action": "resendVerificationEmail"
+        }
+      }
+    },
+    "evaluating_user_couple_status": {
+      "type": "transient",
+      "description": "Server RPC validates token hash and checks acceptance idempotency first, followed by consumption, revocation, expiration, and active couple membership.",
+      "route": "/invite/[token]",
+      "privacyClassification": "private_user_membership",
+      "isMVP": true,
+      "transitions": {
+        "ALREADY_SAME_COUPLE": {
+          "target": "already_same_couple",
+          "guard": "isAlreadyAcceptedByCallerAndActiveMember"
+        },
+        "INVITE_ALREADY_USED": {
+          "target": "invite_already_used",
+          "guard": "isAlreadyAcceptedByOtherUser"
+        },
+        "INVITE_REVOKED": {
+          "target": "invite_revoked",
+          "guard": "isUnconsumedAndRevoked"
+        },
+        "INVITE_EXPIRED": {
+          "target": "invite_expired",
+          "guard": "isUnconsumedAndExpired"
+        },
+        "INVITATION_REGENERATED": {
+          "target": "invitation_regenerated",
+          "guard": "isSupersededByRegeneration"
+        },
+        "ALREADY_DIFFERENT_COUPLE": {
+          "target": "different_active_couple",
+          "guard": "hasDifferentActiveCoupleMembership"
+        },
+        "READY_TO_JOIN": {
+          "target": "confirming_explicit_join",
+          "guard": "isEligibleToJoin"
+        }
+      }
+    },
+    "already_same_couple": {
+      "type": "handled_info",
+      "description": "Idempotent repeat acceptance: user previously accepted this invitation and remains an active member of this couple. Continues directly to shared space even if 7-day expiry has passed.",
+      "route": "/invite/[token]?status=already_connected",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {
+        "CONTINUE_TO_SPACE": {
+          "target": "verifying_target_moment"
+        },
+        "SWITCH_ACCOUNT": {
+          "target": "wrong_account"
+        }
+      }
+    },
+    "different_active_couple": {
+      "type": "failure_handled",
+      "description": "User already belongs to another relationship space. Acceptance is blocked; user must switch accounts or return to their own space.",
+      "route": "/invite/[token]?error=different_active_couple",
+      "privacyClassification": "private_user_membership",
+      "isMVP": true,
+      "recoveryAction": "Offer clear choice to sign out and switch accounts, or return safely to their existing relationship space."
+    },
+    "wrong_account": {
+      "type": "interactive",
+      "description": "User is signed into an account not intended for this invitation. Offers explicit sign-out/sign-in (never automatic membership transfer).",
+      "route": "/invite/[token]?status=wrong_account",
+      "privacyClassification": "private_user_membership",
+      "isMVP": true,
+      "transitions": {
+        "SIGN_OUT_AND_SWITCH": {
+          "target": "prompting_auth_with_intent",
+          "action": "signOutUser"
+        },
+        "KEEP_CURRENT_SESSION": {
+          "target": "active_equal_partner_space"
+        }
+      }
+    },
+    "confirming_explicit_join": {
+      "type": "interactive",
+      "description": "Presents clear, unhurried choice to join Partner A's space with privacy guarantees. Never joins silently.",
+      "route": "/invite/[token]",
+      "privacyClassification": "private_user_membership",
+      "isMVP": true,
+      "transitions": {
+        "ACCEPT_JOIN": {
+          "target": "completing_minimal_onboarding",
+          "action": "proceedToInvitedOnboarding"
+        },
+        "DECLINE_JOIN": {
+          "target": "invite_deferred",
+          "action": "clearCachedInviteIntent"
+        }
+      }
+    },
+    "completing_minimal_onboarding": {
+      "type": "interactive",
+      "description": "Fast-path onboarding gate: presents privacy/sharing explanation, optional preferred display name, and explicit confirmation action. If preferred name is omitted/blank, profiles.display_name is left NULL (never persists 'Partner' to DB). On successful completion, atomic RPC inserts couple membership, sets profiles.onboarding_completed = true, syncs UserIdentityContext, and transitions to verifying_target_moment. All deferred profile fields remain available later via Settings -> Profile. Normal signup retains 3-step onboarding.",
+      "route": "/onboarding?mode=invited",
+      "privacyClassification": "user_profile_data",
+      "isMVP": true,
+      "transitions": {
+        "SUBMIT_FAST_PATH": {
+          "target": "verifying_target_moment",
+          "action": "acceptMembershipAndUpdateDisplayNameAndMarkOnboardingComplete"
+        },
+        "SKIP_NAME_FAST_PATH": {
+          "target": "verifying_target_moment",
+          "action": "acceptMembershipWithNullDisplayNameAndMarkOnboardingComplete"
+        },
+        "DECLINE_ONBOARDING": {
+          "target": "invite_deferred",
+          "action": "clearCachedInviteIntent"
+        }
+      }
+    },
+    "verifying_target_moment": {
+      "type": "transient",
+      "description": "Server-authorized verification of optional target_event_id returning controlled status: 'available', 'reconnected', or 'unavailable'. Even if unavailable, couple join remains successful.",
+      "route": "/event/[id]",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {
+        "TARGET_AVAILABLE": {
+          "target": "target_available",
+          "guard": "isTargetAvailable"
+        },
+        "TARGET_RECONNECTED": {
+          "target": "target_reconnected",
+          "guard": "isTargetReconnected"
+        },
+        "TARGET_UNAVAILABLE": {
+          "target": "target_unavailable",
+          "guard": "isTargetUnavailable"
+        }
+      }
+    },
+    "target_available": {
+      "type": "handled_info",
+      "description": "Authoritative server status: target friction moment is open, shared with this couple, and accessible. Informs user and routes to the three-choice first-moment arrival layer.",
+      "route": "/event/[id]",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {
+        "PROCEED_TO_MOMENT_CHOICE": {
+          "target": "first_moment_choice_layer"
+        },
+        "EXPLORE_SHARED_SPACE": {
+          "target": "positive_discovery"
+        }
+      }
+    },
+    "target_reconnected": {
+      "type": "handled_info",
+      "description": "Authoritative server status: target friction moment has already been completed, repaired, or settled. Informs user gently that the moment was completed and routes to positive discovery.",
+      "route": "/event/[id]?status=completed",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {
+        "EXPLORE_SHARED_SPACE": {
+          "target": "positive_discovery"
+        }
+      }
+    },
+    "target_unavailable": {
+      "type": "handled_info",
+      "description": "Authoritative server status for deleted, private, foreign, or missing target events. Target event ID is returned as null. Informs user calmly without speculating on reasons; couple space join succeeded. Routes to positive discovery.",
+      "route": "/home?notice=moment_unavailable",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {
+        "EXPLORE_SHARED_SPACE": {
+          "target": "positive_discovery"
+        }
+      }
+    },
+    "positive_discovery": {
+      "type": "interactive",
+      "description": "Welcoming, positive post-join discovery state when target moment is unavailable or reconnected. Introduces Our Space, Shared Garden, and Good Moments.",
+      "route": "/home?view=positive_discovery",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {
+        "SEE_SHARED_GARDEN": {
+          "target": "viewing_shared_garden"
+        },
+        "SHARE_SOMETHING_GOOD": {
+          "target": "recording_good_moment"
+        },
+        "VISIT_OUR_SPACE": {
+          "target": "visiting_our_space"
+        }
+      }
+    },
+    "first_moment_choice_layer": {
+      "type": "interactive",
+      "description": "Triage layer on first visit: Give me some time, Reflect privately, or Ready to respond.",
+      "route": "/event/[id]",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {
+        "SELECT_GIVE_TIME": {
+          "target": "configuring_private_snooze"
+        },
+        "SELECT_REFLECT_PRIVATELY": {
+          "target": "authoring_private_reflection"
+        },
+        "SELECT_READY_TO_RESPOND": {
+          "target": "drafting_arrival_response"
+        }
+      }
+    },
+    "configuring_private_snooze": {
+      "type": "interactive",
+      "description": "Modal offering 'Until tomorrow' (24h) or 'Give me a week' (7d) private snooze. Tracked per-user in relationship_event_attention_states.",
+      "route": "/event/[id]",
+      "privacyClassification": "per_user_private_attention",
+      "isMVP": true,
+      "transitions": {
+        "CONFIRM_SNOOZE": {
+          "target": "positive_handoff",
+          "action": "persistEventAttentionSnooze"
+        },
+        "CANCEL_SNOOZE": {
+          "target": "first_moment_choice_layer"
+        }
+      }
+    },
+    "authoring_private_reflection": {
+      "type": "interactive",
+      "description": "Dedicated editor for private personal reflection. Isolated via RLS from partner.",
+      "route": "/event/[id]?view=private_reflection",
+      "privacyClassification": "strictly_confidential_personal",
+      "isMVP": true,
+      "transitions": {
+        "SAVE_REFLECTION": {
+          "target": "post_reflection_choices",
+          "action": "persistEventPrivateReflection"
+        },
+        "DISCARD_REFLECTION": {
+          "target": "first_moment_choice_layer"
+        }
+      }
+    },
+    "post_reflection_choices": {
+      "type": "interactive",
+      "description": "After saving note: choose between keeping it private or transitioning to a shared response.",
+      "route": "/event/[id]",
+      "privacyClassification": "strictly_confidential_personal",
+      "isMVP": true,
+      "transitions": {
+        "KEEP_PRIVATE_EXIT": {
+          "target": "positive_handoff"
+        },
+        "CHOOSE_SHARED_RESPONSE": {
+          "target": "drafting_arrival_response"
+        }
+      }
+    },
+    "drafting_arrival_response": {
+      "type": "interactive",
+      "description": "Selection of structured arrival response: heard, need_time, or suggest_next_step.",
+      "route": "/event/[id]?view=respond",
+      "privacyClassification": "couple_shared_workflow",
+      "isMVP": true,
+      "transitions": {
+        "SUBMIT_SHARED_RESPONSE": {
+          "target": "positive_handoff",
+          "action": "submitArrivalRepairResponse"
+        },
+        "BACK_TO_CHOICES": {
+          "target": "first_moment_choice_layer"
+        }
+      }
+    },
+    "positive_handoff": {
+      "type": "interactive",
+      "description": "One-time welcoming handoff introducing Shared Garden, Our Space, and Good Moments. Completed ONLY through explicit destination selection or 'Maybe later'. Render-only leaves handoff uncompleted.",
+      "route": "/home?celebrate=welcome",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {
+        "EXPLORE_GARDEN": {
+          "target": "viewing_shared_garden",
+          "action": "markPositiveHandoffCompletedForCouple"
+        },
+        "CREATE_GOOD_MOMENT": {
+          "target": "recording_good_moment",
+          "action": "markPositiveHandoffCompletedForCouple"
+        },
+        "VISIT_OUR_SPACE": {
+          "target": "visiting_our_space",
+          "action": "markPositiveHandoffCompletedForCouple"
+        },
+        "MAYBE_LATER": {
+          "target": "positive_handoff_deferred",
+          "action": "markPositiveHandoffCompletedForCouple"
+        },
+        "NAVIGATE_AWAY_UNCOMPLETED": {
+          "target": "active_equal_partner_space"
+        }
+      }
+    },
+    "positive_handoff_deferred": {
+      "type": "handled_info",
+      "description": "User clicked 'Maybe later' on positive handoff. Handoff marked completed for this couple in couple_user_experience_states without forcing immediate navigation.",
+      "route": "/home",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {
+        "NAVIGATE_HOME": {
+          "target": "active_equal_partner_space"
+        }
+      }
+    },
+    "viewing_shared_garden": {
+      "type": "view",
+      "description": "Partner B inspects the shared procedural garden flora derived deterministically.",
+      "route": "/garden",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {
+        "NAVIGATE_HOME": {
+          "target": "active_equal_partner_space"
+        }
+      }
+    },
+    "recording_good_moment": {
+      "type": "interactive",
+      "description": "Partner B initiates a positive shared moment for the couple.",
+      "route": "/record-moment?type=positive&visibility=ours",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {
+        "MOMENT_SAVED": {
+          "target": "active_equal_partner_space"
+        },
+        "CANCEL_MOMENT": {
+          "target": "active_equal_partner_space"
+        }
+      }
+    },
+    "visiting_our_space": {
+      "type": "view",
+      "description": "Partner B browses shared event timeline in Our Space.",
+      "route": "/events?scope=ours",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {
+        "NAVIGATE_HOME": {
+          "target": "active_equal_partner_space"
+        }
+      }
+    },
+    "active_equal_partner_space": {
+      "type": "terminal_active",
+      "description": "Fully active, equal co-ownership state. Standard Home and Our Space navigation.",
+      "route": "/home",
+      "privacyClassification": "couple_shared_space",
+      "isMVP": true,
+      "transitions": {}
+    },
+    "invite_expired": {
+      "type": "failure_handled",
+      "description": "Unconsumed invitation token exceeded 7-day TTL (expires_at <= now()). No countdown or urgency language.",
+      "route": "/invite/[token]?error=expired",
+      "privacyClassification": "public",
+      "isMVP": true,
+      "recoveryAction": "Prompt Partner B to ask Partner A for a new invitation whenever they are ready."
+    },
+    "invite_revoked": {
+      "type": "failure_handled",
+      "description": "Unconsumed invitation was revoked by creator (revoked_at IS NOT NULL) before acceptance.",
+      "route": "/invite/[token]?error=revoked",
+      "privacyClassification": "public",
+      "isMVP": true,
+      "recoveryAction": "Return user safely to main landing screen without leaking creator details."
+    },
+    "invite_already_used": {
+      "type": "failure_handled",
+      "description": "Single-use invitation token was already accepted by another user account (accepted_by != auth.uid()).",
+      "route": "/invite/[token]?error=already_used",
+      "privacyClassification": "public",
+      "isMVP": true,
+      "recoveryAction": "Fail closed and offer general sign-in or account switch."
+    },
+    "invitation_regenerated": {
+      "type": "handled_info",
+      "description": "Inviter generated a fresh replacement invitation, which revoked this unconsumed token.",
+      "route": "/invite/[token]?error=regenerated",
+      "privacyClassification": "public",
+      "isMVP": true,
+      "recoveryAction": "Inform Partner B that a newer invitation code is available and prompt them to use the latest link from their partner."
+    },
+    "invite_invalid": {
+      "type": "failure_handled",
+      "description": "Token digest hash does not exist in couple_invites.",
+      "route": "/invite/[token]?error=not_found",
+      "privacyClassification": "public",
+      "isMVP": true,
+      "recoveryAction": "Offer general signup or sign-in link without leaking database state."
+    },
+    "invite_deferred": {
+      "type": "handled_exit",
+      "description": "User clicked 'Maybe later' or 'Not now'.",
+      "route": "/home",
+      "privacyClassification": "public",
+      "isMVP": true,
+      "recoveryAction": "Retain clean solo home state. Invitation can be re-opened later within the 7-day validity window."
+    },
+    "network_recovery_invite": {
+      "type": "failure_handled",
+      "description": "Network connection dropped during invite verification.",
+      "route": "/invite/[token]?error=network",
+      "privacyClassification": "public",
+      "isMVP": true,
+      "recoveryAction": "Provide idempotent 'Retry connection' button."
+    }
+  },
+  "guards": {
+    "hasValidTokenParam": "params.token != null && /^[0-9a-f]{64}$/.test(params.token.trim())",
+    "isAuthenticated": "session != null && session.user != null",
+    "isNotAuthenticated": "session == null || session.user == null",
+    "isAlreadyAcceptedByCallerAndActiveMember": "inviteRow.accepted_at != null && inviteRow.accepted_by === auth.uid() && userActiveCoupleId === inviteRow.couple_id",
+    "isAlreadyAcceptedByOtherUser": "inviteRow.accepted_at != null && inviteRow.accepted_by !== auth.uid()",
+    "isUnconsumedAndRevoked": "inviteRow.accepted_at == null && inviteRow.revoked_at != null",
+    "isUnconsumedAndExpired": "inviteRow.accepted_at == null && inviteRow.expires_at <= now()",
+    "isSupersededByRegeneration": "inviteRow.accepted_at == null && inviteRow.revoked_at != null && inviteRow.superseded == true",
+    "hasDifferentActiveCoupleMembership": "userActiveCoupleId != null && userActiveCoupleId !== inviteRow.couple_id",
+    "isEligibleToJoin": "inviteRow.accepted_at == null && inviteRow.revoked_at == null && inviteRow.expires_at > now() && userActiveCoupleId == null",
+    "isTargetAvailable": "targetStatus === 'available'",
+    "isTargetReconnected": "targetStatus === 'reconnected'",
+    "isTargetUnavailable": "targetStatus === 'unavailable'"
+  },
+  "privacyInvariants": [
+    "Raw invitation tokens are 32 cryptographically random bytes encoded as lowercase hexadecimal (exactly 64 characters, regex ^[0-9a-f]{64}$, 256 bits of entropy) and returned to inviter exactly once.",
+    "Raw invitation tokens are never stored in the database; only token_hash (SHA-256 digest of the 64-character raw string) is persisted.",
+    "Acceptance strictly requires exactly 64 lowercase hexadecimal characters matching ^[0-9a-f]{64}$; computes SHA-256 digest on server using extensions.digest with empty search_path before comparing to token_hash; raw token is never logged or stored.",
+    "A stolen token_hash cannot be used as the bearer credential.",
+    "Token comparison must avoid unnecessary information disclosure (calm generic exceptions).",
+    "Client intent storage contains ONLY the opaque 64-character invitation token string.",
+    "Partner names and event content must never be persisted in localStorage or AsyncStorage.",
+    "Authentication return routes must be strictly allowlisted internal routes (/invite/[token] only).",
+    "Server-authorized token resolution determines the final route destination.",
+    "Display name fallback is strictly 'your partner' in prose and 'Partner' in labels; never derived from an email address and NEVER persisted to profiles.display_name when omitted.",
+    "Invited-user onboarding fast-path sets profiles.onboarding_completed = true ONLY upon explicit authenticated confirmation with optional preferred name and 'Continue to the shared moment'; never on render, 'Not now', auth drop, or failure; deferred profile fields remain editable in Settings -> Profile; normal signup retains standard 3-step onboarding.",
+    "Recommended MVP executes membership acceptance, optional preferred-name update, and onboarding completion atomically in one RPC; fallback two-step model requires individual idempotency without duplicate memberships.",
+    "Moment-specific invitations for this repair journey target strictly relationship_events.event_type = 'friction' with visibility = 'ours' belonging to the invitation couple; Good moments do not enter repair triage; general invitations have target_event_id = null and route to positive discovery.",
+    "Controlled target statuses are strictly available, reconnected, or unavailable; deleted, private, foreign, or missing targets map uniformly to unavailable with target_event_id = null; client never claims to know reason for unavailability.",
+    "Target event integrity requires invite.couple_id = target_event.couple_id enforced via create RPC validation, trigger, or supported composite foreign key.",
+    "Positive handoff completion is tracked per user per couple in couple_user_experience_states, never as a global profile flag.",
+    "Positive handoff is marked complete ONLY upon explicit destination selection or tapping 'Maybe later'; render-only leaves handoff uncompleted.",
+    "Same-couple invitation acceptance is idempotent (already_same_couple); continues even if 7-day expiry has passed.",
+    "Different active-couple membership blocks acceptance (different_active_couple).",
+    "Wrong-account recovery offers sign-out and sign-in; never automatic membership transfer.",
+    "Invitation lifetime is 7 days with zero countdown or false urgency language.",
+    "Invitation replacement revokes ONLY unconsumed invitations where accepted_at IS NULL.",
+    "Acceptance locks both the couple_invites row and public.couples row FOR UPDATE to eliminate concurrent membership overcapacity races.",
+    "Both creation and acceptance enforce the database's authoritative active-membership definition, rejecting users with multiple or zero active couples.",
+    "Token parameter is stripped from visible browser URL after safe client ingestion.",
+    "No third-party trackers or scripts on token landing pages; tokens are never logged or sent to analytics.",
+    "Developer reconciliation: General invitations have invite_purpose = 'general' with target_status as null or 'no_target' (does not pretend a target became unavailable); moment invitations have invite_purpose = 'moment' returning 'available', 'reconnected', or 'unavailable'.",
+    "Developer reconciliation: token_hash storage type is recommended as bytea NOT NULL UNIQUE compared directly against digest(raw_token, 'sha256'); if text is used instead, both creation and acceptance must use encoded hexadecimal consistently.",
+    "Database event type contract: Established positive event value in database is event_type = 'positive' (not 'good'); customer-facing copy refers to 'Good moments' but data model strictly enforces 'positive'."
+  ]
+}
