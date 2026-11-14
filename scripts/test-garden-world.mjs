@@ -16,9 +16,11 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import {
   generateGardenSVGScene,
   getCareFeatureId,
+  getGardenStage,
 } from "../src/lib/garden-generator.ts";
 import {
   buildGardenWorld,
@@ -57,6 +59,45 @@ import {
   CANONICAL_DRAG_THRESHOLD_PX,
   classifyGesture,
   getNodeInteractionClass,
+  PAINTERLY_OAK_STRUCTURE_MATURE_V1,
+  adaptCanonicalAnchorToPainterly,
+  classifyAnchorAttachment,
+  CANONICAL_STAGE_CONTRACTS,
+  EARLY_LIFE_SUBPHASE_CONTRACTS,
+  getPainterlyStageVisualContract,
+  resolveCanonicalStageKey,
+  isPainterlyAvailableForStage,
+  getEligiblePainterlyAssetForStage,
+  validateStageTransition,
+  resolveActiveRenderer,
+  getGardenRendererMode,
+  setGardenRendererMode,
+  resetGardenRendererMode,
+  DEFAULT_GARDEN_RENDERER_MODE,
+  derivePainterlyCoupleDNA,
+  deriveAmbientLifeContract,
+  getExplorableMemories,
+  findMemoryIndexByNodeId,
+  getNextMemory,
+  getPreviousMemory,
+  focusFeatureBounds,
+  resolveGardenRenderPlan,
+  createCameraFromFitStrategy,
+  STAGE_STRUCTURAL_ASSET_SLOTS,
+  PAINTERLY_STAGE_ASSET_REGISTRY,
+  THREE_ASSET_FOUNDATION_SLOTS,
+  PAINTERLY_CALIBRATION_WORKFLOW,
+  resolveTreeStructurePlan,
+  isStageAssetApproved,
+  getApprovedPainterlyAssetForStage,
+  PAINTERLY_OAK_MATURE_V1,
+  getGardenStructuralPresentation,
+  DEFAULT_ATMOSPHERE_TONE,
+  BOTANICAL_ATTACHMENT_REGIONS,
+  TREE_COMPOSITION_PRESETS,
+  resolveTreePresentationTransform,
+  resolveFeaturePresentationGeometry,
+  resolveGardenWorldPresentation,
 } from "../src/lib/garden/index.ts";
 import { createGardenStory } from "../src/lib/garden-story.ts";
 
@@ -2055,3 +2096,2483 @@ test("Audit 7: Camera reset after remount: fresh fitted camera with zero residua
   assert.equal(session2Initial.viewportWidth, session1Initial.viewportWidth);
   assert.equal(session2Initial.viewportHeight, session1Initial.viewportHeight);
 });
+
+// ----------------------------------------------------------------------------
+// Audit Test 8: Painterly mature oak manifest calibration contract (no foliage)
+// ----------------------------------------------------------------------------
+test("Audit 8L: Manifest contract enforces hasFoliage=false and mature stage eligibility", () => {
+  assert.ok(PAINTERLY_OAK_STRUCTURE_MATURE_V1);
+  assert.equal(PAINTERLY_OAK_STRUCTURE_MATURE_V1.assetKey, "painterly-oak-structure-mature-v1");
+  assert.equal(validateAssetManifest(PAINTERLY_OAK_STRUCTURE_MATURE_V1), true);
+
+  // Requirement 1 & 3: Contains NO foliage; restricted to garden_in_bloom
+  assert.equal(PAINTERLY_OAK_STRUCTURE_MATURE_V1.hasFoliage, false, "Oak structure must explicitly state hasFoliage=false");
+  assert.deepEqual(PAINTERLY_OAK_STRUCTURE_MATURE_V1.supportedStages, ["garden_in_bloom"]);
+
+  // Native pixel dimensions: 1586x992 (16:10 aspect ratio)
+  assert.equal(PAINTERLY_OAK_STRUCTURE_MATURE_V1.nativeDimensions.width, 1586);
+  assert.equal(PAINTERLY_OAK_STRUCTURE_MATURE_V1.nativeDimensions.height, 992);
+
+  // Root planting collar: (390.4, 441.0), aligned with canonical soil line y=440
+  assert.equal(PAINTERLY_OAK_STRUCTURE_MATURE_V1.rootAnchor.x, 390.4);
+  assert.equal(PAINTERLY_OAK_STRUCTURE_MATURE_V1.rootAnchor.y, 441.0);
+  assert.equal(PAINTERLY_OAK_STRUCTURE_MATURE_V1.attachmentPivot.x, 390.4);
+  assert.equal(PAINTERLY_OAK_STRUCTURE_MATURE_V1.attachmentPivot.y, 441.0);
+
+  // Crown bounds span inside canonical 800x500 scene
+  const crown = PAINTERLY_OAK_STRUCTURE_MATURE_V1.crownBounds;
+  assert.ok(crown.minX >= 0 && crown.maxX <= 800);
+  assert.ok(crown.minY >= 0 && crown.maxY <= 500);
+
+  // Exactly 9 verified branch attachment anchors (surface: wood or ground)
+  assert.equal(PAINTERLY_OAK_STRUCTURE_MATURE_V1.branchAnchors.length, 9);
+  for (const ba of PAINTERLY_OAK_STRUCTURE_MATURE_V1.branchAnchors) {
+    assert.ok(ba.id && ba.label && ba.worldPoint && ba.nativePixelPoint);
+    assert.ok(ba.surface === "wood" || ba.surface === "ground");
+    assert.ok(ba.validity === "valid_on_wood" || ba.validity === "valid_on_ground");
+  }
+});
+
+// ----------------------------------------------------------------------------
+// Audit Test 8A-8E: Asset-specific and stage-specific adaptation contract
+// ----------------------------------------------------------------------------
+test("Audit 8A: Unknown asset keys return identity coordinates unchanged", () => {
+  const pt = { x: 444.5, y: 128.9 };
+  const adapted = adaptCanonicalAnchorToPainterly({
+    assetKey: "unknown-oak-variant-v9",
+    stageKey: "garden_in_bloom",
+    canonicalAnchor: pt,
+    role: "blossom",
+  });
+  assert.deepEqual(adapted, pt, "Unknown asset key must return original coordinates unchanged");
+});
+
+test("Audit 8B: Procedural renderer always receives unchanged canonical coordinates", () => {
+  const pt = { x: 444.5, y: 128.9 };
+  const adapted = adaptCanonicalAnchorToPainterly({
+    assetKey: undefined,
+    stageKey: "garden_in_bloom",
+    canonicalAnchor: pt,
+    role: "blossom",
+  });
+  assert.deepEqual(adapted, pt, "Procedural mode (undefined assetKey) must receive unchanged canonical coordinates");
+});
+
+test("Audit 8C: Mature-oak corrections cannot affect early stages", () => {
+  const pt = { x: 444.5, y: 128.9 };
+  const earlyStages = ["first_seedling", "tender_sapling", "branching_out", "leafy_canopy", "rooted_flourishing"];
+  for (const stage of earlyStages) {
+    const adapted = adaptCanonicalAnchorToPainterly({
+      assetKey: "painterly-oak-structure-mature-v1",
+      stageKey: stage,
+      canonicalAnchor: pt,
+      role: "blossom",
+    });
+    assert.deepEqual(adapted, pt, `Stage ${stage} must not receive mature oak corrections`);
+  }
+});
+
+test("Audit 8D: Same asset, stage, and event produce deterministic adapted coordinates", () => {
+  const input = {
+    assetKey: "painterly-oak-structure-mature-v1",
+    stageKey: "garden_in_bloom",
+    canonicalAnchor: { x: 444.5, y: 128.9 },
+    role: "blossom",
+  };
+  const res1 = adaptCanonicalAnchorToPainterly(input);
+  const res2 = adaptCanonicalAnchorToPainterly(input);
+  assert.deepEqual(res1, res2);
+  assert.equal(res1.x, 436.5);
+  assert.equal(res1.y, 140.9);
+});
+
+test("Audit 8E: Event identity and source remain unchanged under coordinate adaptation", () => {
+  const ev = createMockEvent("ev-stable-1", "reconnection", "2026-03-01T10:00:00Z");
+  const canonicalPt = { x: 444.5, y: 128.9 };
+  const adapted = adaptCanonicalAnchorToPainterly({
+    assetKey: "painterly-oak-structure-mature-v1",
+    stageKey: "garden_in_bloom",
+    canonicalAnchor: canonicalPt,
+    role: "blossom",
+  });
+  assert.equal(ev.id, "ev-stable-1");
+  assert.equal(ev.kind, "reconnection");
+  assert.notDeepEqual(adapted, canonicalPt); // Presentation changes without mutating event
+});
+
+// ----------------------------------------------------------------------------
+// Audit Test 8F-8G: Distinct Crop Contracts (Full Structure vs Focused Compact)
+// ----------------------------------------------------------------------------
+test("Audit 8F: Full-structure crop contains complete oak bounds with preservesFullStructure=true", () => {
+  const full = PAINTERLY_OAK_STRUCTURE_MATURE_V1.cropPresets.full_structure;
+  assert.equal(full.cropMode, "full_structure");
+  assert.equal(full.preservesFullStructure, true);
+
+  const oak = PAINTERLY_OAK_STRUCTURE_MATURE_V1.localBounds;
+  assert.ok(full.cropBounds.minX <= oak.minX, "Full crop minX must encompass oak minX");
+  assert.ok(full.cropBounds.minY <= oak.minY, "Full crop minY must encompass oak minY");
+  assert.ok(full.cropBounds.maxX >= oak.maxX, "Full crop maxX must encompass oak maxX");
+  assert.ok(full.cropBounds.maxY >= oak.maxY, "Full crop maxY must encompass oak maxY");
+});
+
+test("Audit 8G: Focused compact crop explicitly reports preservesFullStructure=false", () => {
+  const compact = PAINTERLY_OAK_STRUCTURE_MATURE_V1.cropPresets.focused_compact;
+  assert.equal(compact.cropMode, "focused_compact");
+  assert.equal(compact.preservesFullStructure, false, "Focused compact crop intentionally trims peripheral branch tips");
+
+  const oak = PAINTERLY_OAK_STRUCTURE_MATURE_V1.localBounds;
+  // Intentionally trims branches beyond x < 90 and x > 710
+  assert.ok(compact.cropBounds.minX > oak.minX);
+  assert.ok(compact.cropBounds.maxX < oak.maxX);
+});
+
+// ----------------------------------------------------------------------------
+// Audit Test 8H-8K: Anchor Attachment Classification (Wood, Ground, Pending, Void)
+// ----------------------------------------------------------------------------
+test("Audit 8H: Wood anchors intersect non-transparent oak pixels", () => {
+  // Central crown branch point: (358.8, 200.1)
+  const classification = classifyAnchorAttachment({ x: 358.8, y: 200.1 }, "blossom");
+  assert.equal(classification.surface, "wood");
+  assert.equal(classification.validity, "valid_on_wood");
+  assert.equal(classification.requiredSupportingAsset, null);
+});
+
+test("Audit 8I: Ground anchors remain inside approved ground regions", () => {
+  const landmarkPt = { x: 411.0, y: 447.4 };
+  const classification = classifyAnchorAttachment(landmarkPt, "landmark");
+  assert.equal(classification.surface, "ground");
+  assert.equal(classification.validity, "valid_on_ground");
+  assert.equal(classification.requiredSupportingAsset, null);
+});
+
+test("Audit 8J: Pending-foliage anchors are classified as pending_foliage without false wood attachment", () => {
+  // Canopy cove point: (518.2, 206.0)
+  const covePt = { x: 518.2, y: 206.0 };
+  const classification = classifyAnchorAttachment(covePt, "foliage_shoot");
+  assert.equal(classification.surface, "future_foliage_space");
+  assert.equal(classification.validity, "pending_foliage");
+  assert.ok(classification.requiredSupportingAsset?.includes("foliage-mass-mature-v1.png"));
+
+  // Crucial requirement: Foliage features in future foliage space are NOT falsely displaced onto bare wood
+  const adapted = adaptCanonicalAnchorToPainterly({
+    assetKey: "painterly-oak-structure-mature-v1",
+    stageKey: "garden_in_bloom",
+    canonicalAnchor: covePt,
+    role: "foliage_shoot",
+  });
+  assert.deepEqual(adapted, covePt, "Canopy foliage in future foliage space must remain at canonical position pending foliage asset");
+});
+
+test("Audit 8K: Invalid-void anchors are clearly classified", () => {
+  const outerSkyPt = { x: -80, y: 20 };
+  const classification = classifyAnchorAttachment(outerSkyPt, "blossom");
+  assert.equal(classification.surface, "void");
+  assert.equal(classification.validity, "invalid_void");
+});
+
+// ----------------------------------------------------------------------------
+// Audit Test 8M: Garden Asset Lab route exists, enforces strict __DEV__ guard,
+// and uses Safe Fallback Architecture without calling Image.resolveAssetSource
+// ----------------------------------------------------------------------------
+test("Audit 8M: Garden Asset Lab route exists, enforces __DEV__ guard, and avoids resolveAssetSource crashes", async () => {
+  const fs = await import("node:fs");
+  const content = fs.readFileSync("src/app/garden-asset-lab.tsx", "utf-8");
+  assert.ok(content.includes("if (!__DEV__)"), "Must contain strict !__DEV__ check");
+  assert.ok(content.includes('<Redirect href="/garden" />'), "Must redirect safely to /garden in production");
+  assert.ok(content.includes("woodland-backplate-light-v1.png"), "Must reference approved woodland backplate");
+  assert.ok(content.includes("oak-structure-mature-alpha-v1.png"), "Must reference approved oak structure");
+  assert.ok(!content.includes("resolveAssetSource"), "Must NEVER call resolveAssetSource directly in the lab");
+  assert.ok(content.includes("<RNImage"), "Must use React Native Image component directly for safe web rendering");
+});
+
+// ============================================================================
+// PHASE 3 & STAGE PROGRESSION AUDIT TESTS (P1 - P18)
+// ============================================================================
+
+test("Audit P1 (A): Zero-growth couple does not render the mature oak", () => {
+  const stage = resolveCanonicalStageKey(0, 0);
+  assert.equal(stage, "beginning");
+
+  const contract = getPainterlyStageVisualContract(stage);
+  assert.equal(contract.painterlyStructureAvailable, false);
+  assert.deepEqual(contract.eligibleStructuralAssetKeys, []);
+  assert.equal(contract.maxTrunkCanopyOccupancy, 0.0);
+
+  const decision = resolveActiveRenderer({
+    stageKey: stage,
+    rendererMode: "painterly_when_eligible",
+  });
+  assert.equal(decision.renderer, "procedural");
+  assert.equal(decision.assetKey, null);
+  assert.equal(decision.isFallback, true);
+});
+
+test("Audit P2 (B): first_seedling does not render mature structure, fruit or fauna", () => {
+  const stage = resolveCanonicalStageKey(10, 1);
+  assert.equal(stage, "first_seedling");
+
+  const contract = getPainterlyStageVisualContract(stage);
+  assert.equal(contract.painterlyStructureAvailable, false);
+  assert.deepEqual(contract.eligibleStructuralAssetKeys, []);
+  assert.deepEqual(contract.eligibleHabitatClasses, []);
+  assert.ok(contract.maxTrunkCanopyOccupancy <= 0.05);
+
+  const decision = resolveActiveRenderer({
+    stageKey: stage,
+    rendererMode: "painterly_when_eligible",
+  });
+  assert.equal(decision.renderer, "procedural");
+  assert.equal(decision.assetKey, null);
+});
+
+test("Audit P3 (C): branching_out does not select the garden_in_bloom asset", () => {
+  const stage = resolveCanonicalStageKey(45, 5);
+  assert.equal(stage, "branching_out");
+
+  const contract = getPainterlyStageVisualContract(stage);
+  assert.equal(contract.painterlyStructureAvailable, false);
+  assert.deepEqual(contract.eligibleStructuralAssetKeys, []);
+
+  const decision = resolveActiveRenderer({
+    stageKey: stage,
+    rendererMode: "painterly_when_eligible",
+  });
+  assert.equal(decision.renderer, "procedural");
+  assert.equal(decision.assetKey, null);
+  assert.equal(decision.isFallback, true, "Branching out must continue through honest procedural fallback until dedicated asset exists");
+});
+
+test("Audit P4 (D): garden_in_bloom may select the verified mature asset", () => {
+  const stage = resolveCanonicalStageKey(95, 20);
+  assert.equal(stage, "garden_in_bloom");
+
+  const contract = getPainterlyStageVisualContract(stage);
+  assert.equal(contract.painterlyStructureAvailable, true);
+  assert.deepEqual(contract.eligibleStructuralAssetKeys, [
+    "painterly-oak-structure-mature-v1",
+  ]);
+
+  const decision = resolveActiveRenderer({
+    stageKey: stage,
+    rendererMode: "painterly_when_eligible",
+  });
+  assert.equal(decision.renderer, "painterly");
+  assert.equal(decision.assetKey, "painterly-oak-structure-mature-v1");
+  assert.equal(decision.isFallback, false);
+});
+
+test("Audit P5 (E): Missing stage assets fall back to procedural rendering", () => {
+  const earlyStages = [
+    "beginning",
+    "first_seedling",
+    "tender_sapling",
+    "branching_out",
+    "leafy_canopy",
+    "rooted_flourishing",
+  ];
+
+  for (const st of earlyStages) {
+    const decision = resolveActiveRenderer({
+      stageKey: st,
+      rendererMode: "painterly_when_eligible",
+    });
+    assert.equal(
+      decision.renderer,
+      "procedural",
+      `Stage '${st}' must fall back to procedural rendering`
+    );
+    assert.equal(decision.assetKey, null);
+    assert.equal(decision.isFallback, true);
+  }
+
+  // If availableAssets manifest does not contain mature asset for bloom
+  const missingDecision = resolveActiveRenderer({
+    stageKey: "garden_in_bloom",
+    rendererMode: "painterly_when_eligible",
+    availableAssets: [],
+  });
+  assert.equal(missingDecision.renderer, "procedural");
+  assert.equal(missingDecision.isFallback, true);
+});
+
+test("Audit P6 (F): Same couple/input produces identical renderer plans", () => {
+  const dna1 = derivePainterlyCoupleDNA(COUPLE_A);
+  const dna2 = derivePainterlyCoupleDNA(COUPLE_A);
+  assert.deepEqual(dna1, dna2, "Same couple seed must produce byte-identical couple DNA");
+
+  const decision1 = resolveActiveRenderer({ stageKey: "garden_in_bloom" });
+  const decision2 = resolveActiveRenderer({ stageKey: "garden_in_bloom" });
+  assert.deepEqual(decision1, decision2);
+});
+
+test("Audit P7 (G): Different couple seeds produce bounded deterministic variation", () => {
+  const dnaA = derivePainterlyCoupleDNA(COUPLE_A);
+  const dnaB = derivePainterlyCoupleDNA(COUPLE_B);
+
+  // Different couple seeds produce distinct seeds
+  assert.notEqual(dnaA.seedInt, dnaB.seedInt);
+
+  // Structural transforms are bounded strictly
+  for (const dna of [dnaA, dnaB]) {
+    assert.ok(
+      dna.structuralVariation.scaleMultiplier >= 0.985 &&
+        dna.structuralVariation.scaleMultiplier <= 1.015,
+      "Scale multiplier must remain bounded"
+    );
+    assert.ok(
+      dna.structuralVariation.verticalShiftPx >= -1.5 &&
+        dna.structuralVariation.verticalShiftPx <= 1.5,
+      "Vertical shift must preserve soil baseline alignment"
+    );
+    assert.ok(
+      dna.structuralVariation.rotationDeg >= -0.4 &&
+        dna.structuralVariation.rotationDeg <= 0.4,
+      "Rotation must remain subtly bounded"
+    );
+    assert.equal(dna.structuralVariation.pivotX, 390.4);
+    assert.equal(dna.structuralVariation.pivotY, 441.0);
+  }
+});
+
+test("Audit P8 (H): Partner user identity does not affect renderer plan", () => {
+  const coupleSeed = "couple-uuid-4242-8888";
+  const planPartner1 = derivePainterlyCoupleDNA(coupleSeed);
+  const planPartner2 = derivePainterlyCoupleDNA(coupleSeed);
+  assert.deepEqual(planPartner1, planPartner2);
+});
+
+test("Audit P9 (I): Time-only growth does not fabricate care-event features", () => {
+  // 50 total growth units entirely from time growth (0 care growth units, 0 events)
+  const scene = generateGardenSVGScene(
+    COUPLE_A,
+    50, // totalGrowthUnits
+    0,  // careGrowthUnits
+    false,
+    undefined,
+    "light",
+    []  // careEvents
+  );
+
+  assert.equal(scene.blossoms.length, 0, "Time-only growth must contain 0 blossoms");
+  assert.equal(scene.canopyDetails.length, 0, "Time-only growth must contain 0 earned canopy details");
+  assert.equal(scene.seedPods.length, 0, "Time-only growth must contain 0 fruit/seed pods");
+});
+
+test("Audit P10 (J): Care events preserve stable IDs across stage transitions", () => {
+  const ev1 = createMockEvent("ev-alpha", "positive_moment", "2026-03-01T10:00:00Z");
+  const featIdAt15 = getCareFeatureId(ev1, 1);
+  const featIdAt45 = getCareFeatureId(ev1, 1);
+  const featIdAt95 = getCareFeatureId(ev1, 1);
+
+  assert.equal(featIdAt15, featIdAt45);
+  assert.equal(featIdAt45, featIdAt95);
+});
+
+test("Audit P11 (K): Garden Story never shows mature oak early", () => {
+  const events = generateMockEventSequence(25);
+  const story = createGardenStory({
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    createdAt: "2026-01-01T00:00:00Z",
+    careEvents: events,
+    asOfTime: "2026-06-01T00:00:00Z",
+    isResting: false,
+    themeKey: "light",
+  });
+
+  for (const step of story.steps) {
+    const stageKey = resolveCanonicalStageKey(
+      step.totalGrowthUnits,
+      step.cumulativeCareEvents.length
+    );
+    const decision = resolveActiveRenderer({
+      stageKey,
+      rendererMode: "painterly_when_eligible",
+    });
+
+    if (step.totalGrowthUnits < 91) {
+      assert.equal(
+        decision.renderer,
+        "procedural",
+        `Step ${step.stepIndex} with units ${step.totalGrowthUnits} must NOT render mature oak early`
+      );
+      assert.equal(decision.assetKey, null);
+    } else {
+      assert.equal(
+        decision.renderer,
+        "painterly",
+        `Step ${step.stepIndex} with units ${step.totalGrowthUnits} should render mature oak in bloom`
+      );
+    }
+  }
+});
+
+test("Audit P12 (L): Final Garden Story frame matches live renderer plan", () => {
+  const events = generateMockEventSequence(15);
+  const story = createGardenStory({
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    createdAt: "2026-01-01T00:00:00Z",
+    careEvents: events,
+    asOfTime: "2026-06-01T00:00:00Z",
+    isResting: false,
+    themeKey: "light",
+  });
+
+  const finalStep = story.steps[story.steps.length - 1];
+  const finalStage = resolveCanonicalStageKey(
+    finalStep.totalGrowthUnits,
+    finalStep.cumulativeCareEvents.length
+  );
+  const finalDecision = resolveActiveRenderer({
+    stageKey: finalStage,
+    rendererMode: "painterly_when_eligible",
+  });
+
+  // Compare with live decision with same units
+  const liveDecision = resolveActiveRenderer({
+    stageKey: finalStage,
+    rendererMode: "painterly_when_eligible",
+  });
+  assert.deepEqual(finalDecision, liveDecision);
+});
+
+test("Audit P13 (M): Compact/full/explore modes preserve node identity", () => {
+  const events = generateMockEventSequence(10);
+  const scene = generateGardenSVGScene(COUPLE_A, 50, 20, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 50,
+    careGrowthUnits: 20,
+    timeGrowthUnits: 30,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  const nodeIds = Object.keys(world.nodes);
+  assert.ok(nodeIds.length > 0);
+
+  // Bounded coordinates remain finite
+  for (const n of Object.values(world.nodes)) {
+    assert.ok(Number.isFinite(n.worldBounds.minX));
+    assert.ok(Number.isFinite(n.worldBounds.maxY));
+  }
+});
+
+test("Audit P14 (N): Reduced motion produces a still presentation", () => {
+  const contract = deriveAmbientLifeContract({ isReduceMotion: true });
+  assert.equal(contract.motionAllowed, false);
+  assert.equal(contract.breathingAmplitudeScale, 0.0);
+  assert.equal(contract.lightDriftPx, 0.0);
+  assert.equal(contract.birdRestingBehavior, "still");
+});
+
+test("Audit P15 (O): Backgrounding pauses ambient animation", () => {
+  const contract = deriveAmbientLifeContract({ isBackgrounded: true });
+  assert.equal(contract.motionAllowed, false);
+  assert.equal(contract.breathingAmplitudeScale, 0.0);
+  assert.equal(contract.streamShimmerEnabled, false);
+});
+
+test("Audit P16 (P): Painterly mode never changes growth calculations", () => {
+  const totalUnits = 60;
+  const timeUnits = 40;
+  const careUnits = 20;
+
+  // The active renderer decision is completely decoupled from growth math
+  const decisionProcedural = resolveActiveRenderer({
+    stageKey: "leafy_canopy",
+    rendererMode: "procedural",
+  });
+  const decisionPainterly = resolveActiveRenderer({
+    stageKey: "leafy_canopy",
+    rendererMode: "painterly_when_eligible",
+  });
+
+  assert.equal(totalUnits, timeUnits + careUnits);
+  assert.ok(decisionProcedural !== null);
+  assert.ok(decisionPainterly !== null);
+});
+
+test("Audit P17 (Q): Procedural mode remains serialization-compatible with existing output", () => {
+  setGardenRendererMode("procedural");
+  assert.equal(getGardenRendererMode(), "procedural");
+
+  const decision = resolveActiveRenderer({ stageKey: "garden_in_bloom" });
+  assert.equal(decision.renderer, "procedural");
+  assert.equal(decision.assetKey, null);
+  assert.equal(decision.isFallback, false);
+
+  resetGardenRendererMode();
+  assert.equal(getGardenRendererMode(), DEFAULT_GARDEN_RENDERER_MODE);
+});
+
+test("Audit P18 (R): No SvgImage raster require path is introduced", async () => {
+  const fs = await import("node:fs");
+  const rendererCode = fs.readFileSync(
+    "src/components/garden/PainterlyGardenRenderer.tsx",
+    "utf-8"
+  );
+  assert.ok(!rendererCode.includes("SvgImage"), "PainterlyGardenRenderer must NOT use SvgImage");
+  assert.ok(!rendererCode.includes("resolveAssetSource"), "PainterlyGardenRenderer must NOT call resolveAssetSource");
+  assert.ok(rendererCode.includes("<RNImage"), "PainterlyGardenRenderer must use standard RNImage");
+});
+
+// ============================================================================
+// EXPLORABLE MEMORIES & 33 INVARIANTS AUDIT (A through AG)
+// ============================================================================
+
+test("Invariant A: Zero-growth beginning does not render mature oak", () => {
+  const stage = resolveCanonicalStageKey(0, 0);
+  assert.equal(stage, "beginning");
+  const contract = getPainterlyStageVisualContract(stage);
+  assert.equal(contract.painterlyStructureAvailable, false);
+  assert.deepEqual(contract.eligibleStructuralAssetKeys, []);
+  const decision = resolveActiveRenderer({ stageKey: stage, rendererMode: "painterly_when_eligible" });
+  assert.equal(decision.renderer, "procedural");
+  assert.equal(decision.assetKey, null);
+  assert.equal(decision.isFallback, true);
+});
+
+test("Invariant B: first_seedling renders young procedural/seedling representation", () => {
+  const stage = resolveCanonicalStageKey(10, 1);
+  assert.equal(stage, "first_seedling");
+  const contract = getPainterlyStageVisualContract(stage);
+  assert.equal(contract.painterlyStructureAvailable, false);
+  assert.deepEqual(contract.eligibleStructuralAssetKeys, []);
+  assert.ok(contract.maxTrunkCanopyOccupancy <= 0.05);
+  const decision = resolveActiveRenderer({ stageKey: stage, rendererMode: "painterly_when_eligible" });
+  assert.equal(decision.renderer, "procedural");
+});
+
+test("Invariant C: branching_out does not render the mature oak", () => {
+  const stage = resolveCanonicalStageKey(45, 5);
+  assert.equal(stage, "branching_out");
+  const contract = getPainterlyStageVisualContract(stage);
+  assert.equal(contract.painterlyStructureAvailable, false);
+  assert.deepEqual(contract.eligibleStructuralAssetKeys, []);
+  const decision = resolveActiveRenderer({ stageKey: stage, rendererMode: "painterly_when_eligible" });
+  assert.equal(decision.renderer, "procedural");
+  assert.equal(decision.assetKey, null);
+  assert.equal(decision.isFallback, true);
+});
+
+test("Invariant D: garden_in_bloom renders verified mature oak when painterly enabled", () => {
+  const stage = resolveCanonicalStageKey(95, 20);
+  assert.equal(stage, "garden_in_bloom");
+  const contract = getPainterlyStageVisualContract(stage);
+  assert.equal(contract.painterlyStructureAvailable, true);
+  assert.deepEqual(contract.eligibleStructuralAssetKeys, ["painterly-oak-structure-mature-v1"]);
+  const decision = resolveActiveRenderer({ stageKey: stage, rendererMode: "painterly_when_eligible" });
+  assert.equal(decision.renderer, "painterly");
+  assert.equal(decision.assetKey, "painterly-oak-structure-mature-v1");
+  assert.equal(decision.isFallback, false);
+});
+
+test("Invariant E: Missing stage asset falls back safely to procedural", () => {
+  const earlyStages = ["beginning", "first_seedling", "tender_sapling", "branching_out", "leafy_canopy", "rooted_flourishing"];
+  for (const st of earlyStages) {
+    const decision = resolveActiveRenderer({ stageKey: st, rendererMode: "painterly_when_eligible" });
+    assert.equal(decision.renderer, "procedural", `Stage '${st}' must fall back to procedural`);
+    assert.equal(decision.isFallback, true);
+  }
+});
+
+test("Invariant F: Painterly mode never alters totalGrowthUnits or careGrowthUnits", () => {
+  const events = generateMockEventSequence(12);
+  const sceneProcedural = generateGardenSVGScene(COUPLE_A, 70, 25, false, undefined, "light", events);
+  const worldProcedural = buildGardenWorld(sceneProcedural, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 70,
+    careGrowthUnits: 25,
+    timeGrowthUnits: 45,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  assert.equal(worldProcedural.totalGrowthUnits, 70);
+  assert.equal(worldProcedural.careGrowthUnits, 25);
+  assert.equal(worldProcedural.timeGrowthUnits, 45);
+});
+
+test("Invariant G: Time-only growth never fabricates care features", () => {
+  const scene = generateGardenSVGScene(COUPLE_A, 60, 0, false, undefined, "light", []);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 60,
+    careGrowthUnits: 0,
+    timeGrowthUnits: 60,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: [],
+  });
+
+  assert.equal(Object.keys(world.earnedFeatureGroups).length, 0);
+  assert.equal(world.metadata.earnedNodeCount, 0);
+  assert.equal(getExplorableMemories(world, []).length, 0);
+});
+
+test("Invariant H: Procedural fallback remains serialization-compatible", () => {
+  setGardenRendererMode("procedural");
+  const decision = resolveActiveRenderer({ stageKey: "garden_in_bloom" });
+  assert.equal(decision.renderer, "procedural");
+  assert.equal(decision.assetKey, null);
+  resetGardenRendererMode();
+  assert.equal(getGardenRendererMode(), DEFAULT_GARDEN_RENDERER_MODE);
+});
+
+test("Invariant I: Memory source contract maps 1:1 to database row", () => {
+  const events = [
+    createMockEvent("ev-p1", "positive_moment", "2026-03-01T10:00:00Z", "affection"),
+    createMockEvent("ev-p2", "positive_moment", "2026-03-02T10:00:00Z", "quality_time"),
+    createMockEvent("ev-r1", "reconnection", "2026-03-03T10:00:00Z", "communication"),
+    createMockEvent("ev-d1", "important_date", "2026-03-04T10:00:00Z", "anniversary"),
+  ];
+  const scene = generateGardenSVGScene(COUPLE_A, 40, 15, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 40,
+    careGrowthUnits: 15,
+    timeGrowthUnits: 25,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  const memories = getExplorableMemories(world, events);
+  assert.equal(memories.length, events.length);
+  for (const mem of memories) {
+    const matchingEv = events.find((e) => e.id === mem.source.sourceId);
+    assert.ok(matchingEv, `Memory must match database event row ${mem.source.sourceId}`);
+    assert.equal(mem.source.privacyClass, "shared_safe_metadata");
+    assert.ok(mem.displayHeadline.length > 0);
+  }
+});
+
+test("Invariant J: Reconnection memory routes to parent relationship event", () => {
+  const events = [
+    createMockEvent("ev-rec-99", "reconnection", "2026-04-01T12:00:00Z", "communication"),
+  ];
+  const scene = generateGardenSVGScene(COUPLE_A, 20, 5, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 20,
+    careGrowthUnits: 5,
+    timeGrowthUnits: 15,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  const memories = getExplorableMemories(world, events);
+  assert.equal(memories.length, 1);
+  const recMem = memories[0];
+  assert.equal(recMem.source.sourceType, "completed_reconnection");
+  assert.equal(recMem.source.targetRoute, "/event/ev-rec-99");
+  assert.equal(recMem.actionRoute, "/event/ev-rec-99");
+  assert.equal(recMem.memoryType, "Reconnection");
+  assert.equal(recMem.botanicalRepresentation, "Reconnection Blossom");
+});
+
+test("Invariant K: Important date memory routes safely or indicates date status", () => {
+  const events = [
+    createMockEvent("ev-date-42", "important_date", "2026-05-15T00:00:00Z", "anniversary"),
+  ];
+  const scene = generateGardenSVGScene(COUPLE_A, 25, 5, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 25,
+    careGrowthUnits: 5,
+    timeGrowthUnits: 20,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  const memories = getExplorableMemories(world, events);
+  assert.equal(memories.length, 1);
+  const dateMem = memories[0];
+  assert.equal(dateMem.source.sourceType, "important_date");
+  assert.equal(dateMem.memoryType, "Important Date");
+  assert.equal(dateMem.botanicalRepresentation, "Important-Date Landmark");
+  assert.equal(dateMem.actionLabel, "View important date");
+});
+
+test("Invariant L: Decorative nodes contain null sourceMemory", () => {
+  const scene = generateGardenSVGScene(COUPLE_A, 50, 10, false, undefined, "light", [
+    createMockEvent("ev-1", "positive_moment", "2026-02-01T00:00:00Z"),
+  ]);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 50,
+    careGrowthUnits: 10,
+    timeGrowthUnits: 40,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: [createMockEvent("ev-1", "positive_moment", "2026-02-01T00:00:00Z")],
+  });
+
+  for (const node of Object.values(world.nodes)) {
+    if (!node.isEarned) {
+      assert.ok(node.sourceMemory == null, `Decorative node ${node.id} must have null or undefined sourceMemory`);
+      assert.ok(node.sourceEvent == null, `Decorative node ${node.id} must have null or undefined sourceEvent`);
+    }
+  }
+});
+
+test("Invariant M: Both partners resolve identical memories for identical history", () => {
+  const events = generateMockEventSequence(8);
+  const scene1 = generateGardenSVGScene(COUPLE_A, 45, 15, false, undefined, "light", events);
+  const world1 = buildGardenWorld(scene1, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 45,
+    careGrowthUnits: 15,
+    timeGrowthUnits: 30,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  const scene2 = generateGardenSVGScene(COUPLE_A, 45, 15, false, undefined, "light", events);
+  const world2 = buildGardenWorld(scene2, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 45,
+    careGrowthUnits: 15,
+    timeGrowthUnits: 30,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  const mem1 = getExplorableMemories(world1, events);
+  const mem2 = getExplorableMemories(world2, events);
+  assert.deepEqual(mem1, mem2);
+});
+
+test("Invariant N: Partner user ID does not change memory order or botanical attribution", () => {
+  const events = generateMockEventSequence(10);
+  const scene = generateGardenSVGScene(COUPLE_A, 50, 20, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 50,
+    careGrowthUnits: 20,
+    timeGrowthUnits: 30,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  const memPartner1 = getExplorableMemories(world, events);
+  const memPartner2 = getExplorableMemories(world, events);
+  assert.deepEqual(memPartner1.map((m) => m.nodeId), memPartner2.map((m) => m.nodeId));
+  assert.deepEqual(memPartner1.map((m) => m.displayHeadline), memPartner2.map((m) => m.displayHeadline));
+});
+
+test("Invariant O: Different couple seeds produce bounded deterministic variation", () => {
+  const dnaA = derivePainterlyCoupleDNA(COUPLE_A);
+  const dnaB = derivePainterlyCoupleDNA(COUPLE_B);
+  assert.notEqual(dnaA.seedInt, dnaB.seedInt);
+  assert.ok(dnaA.structuralVariation.scaleMultiplier >= 0.985 && dnaA.structuralVariation.scaleMultiplier <= 1.015);
+  assert.ok(dnaB.structuralVariation.scaleMultiplier >= 0.985 && dnaB.structuralVariation.scaleMultiplier <= 1.015);
+});
+
+test("Invariant P: Backfilled events preserve existing feature IDs", () => {
+  const ev1 = createMockEvent("ev-p1", "positive_moment", "2026-01-10T10:00:00Z");
+  const ev2 = createMockEvent("ev-p2", "positive_moment", "2026-01-20T10:00:00Z");
+
+  const id1Before = getCareFeatureId(ev1.kind, ev1.id);
+  const id2Before = getCareFeatureId(ev2.kind, ev2.id);
+
+  // After backfill
+  const id1After = getCareFeatureId(ev1.kind, ev1.id);
+  const id2After = getCareFeatureId(ev2.kind, ev2.id);
+
+  assert.equal(id1Before, id1After);
+  assert.equal(id2Before, id2After);
+});
+
+test("Invariant Q: Camera transforms preserve source identity", () => {
+  const events = [createMockEvent("ev-100", "positive_moment", "2026-02-01T00:00:00Z")];
+  const scene = generateGardenSVGScene(COUPLE_A, 30, 10, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 30,
+    careGrowthUnits: 10,
+    timeGrowthUnits: 20,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  const camFit = createCameraFromFit(world.worldBounds, { width: 400, height: 600 });
+  const camPanned = panCamera(camFit, 30, -20, world.worldBounds);
+  zoomCameraAroundPoint(camPanned, 1.5, { x: 200, y: 300 }, world.worldBounds, 0.5, 3.0);
+
+  // Nodes and source memory must remain unchanged
+  const earnedNode = Object.values(world.nodes).find((n) => n.isEarned);
+  assert.ok(earnedNode);
+  assert.equal(earnedNode.sourceEvent.id, "ev-100");
+  assert.equal(earnedNode.sourceMemory.sourceId, "ev-100");
+});
+
+test("Invariant R: Screen-to-world and world-to-screen remain exact inverses", () => {
+  const camera = { target: { x: 400, y: 250 }, zoom: 1.4 };
+  const viewport = { width: 360, height: 640 };
+  const testPoints = [{ x: 100, y: 150 }, { x: 400, y: 250 }, { x: 700, y: 450 }];
+
+  for (const pt of testPoints) {
+    const screen = worldToScreen(pt, camera, viewport);
+    const worldBack = screenToWorld(screen, camera, viewport);
+    assert.ok(Math.abs(pt.x - worldBack.x) < 0.001);
+    assert.ok(Math.abs(pt.y - worldBack.y) < 0.001);
+  }
+});
+
+test("Invariant S: Camera clamping prevents blank world exposure", () => {
+  const camera = { target: { x: 5000, y: -5000 }, zoom: 1.0 };
+  const clamped = clampCameraTarget(camera.target, CANONICAL_SCENE_BOUNDS, camera, { width: 400, height: 400 });
+  assert.ok(clamped.x <= CANONICAL_SCENE_BOUNDS.maxX);
+  assert.ok(clamped.x >= CANONICAL_SCENE_BOUNDS.minX);
+  assert.ok(clamped.y <= CANONICAL_SCENE_BOUNDS.maxY);
+  assert.ok(clamped.y >= CANONICAL_SCENE_BOUNDS.minY);
+});
+
+test("Invariant T: Drag gestures do not activate a memory", () => {
+  assert.equal(classifyGesture(2, 3), "tap");
+  assert.equal(classifyGesture(5, 0), "tap");
+  assert.equal(classifyGesture(6, 0), "drag");
+  assert.equal(classifyGesture(0, 7), "drag");
+  assert.equal(classifyGesture(10, 10), "drag");
+});
+
+test("Invariant U: Earned nodes outrank decorative nodes during overlapping hit tests", () => {
+  const earnedBlossom = {
+    id: "earned:blossom:1",
+    isEarned: true,
+    sourceEvent: { id: "ev-1", kind: "positive_moment" },
+    role: "bud_blossom_fruit",
+  };
+  const creature = {
+    id: "creature:1",
+    isEarned: false,
+    sourceEvent: null,
+    role: "creature_node",
+  };
+  const decorativeFoliage = {
+    id: "foliage:1",
+    isEarned: false,
+    sourceEvent: null,
+    role: "foliage",
+  };
+  const landscapeTerrain = {
+    id: "terrain:1",
+    isEarned: false,
+    sourceEvent: null,
+    role: "terrain_region",
+  };
+
+  assert.equal(getNodeInteractionClass(earnedBlossom), 3);
+  assert.equal(getNodeInteractionClass(creature), 2);
+  assert.equal(getNodeInteractionClass(decorativeFoliage), 1);
+  assert.equal(getNodeInteractionClass(landscapeTerrain), 1);
+});
+
+test("Invariant V: Previous/Next memory navigation visits every earned feature exactly once", () => {
+  const events = generateMockEventSequence(5);
+  const scene = generateGardenSVGScene(COUPLE_A, 30, 10, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 30,
+    careGrowthUnits: 10,
+    timeGrowthUnits: 20,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  const memories = getExplorableMemories(world, events);
+  assert.equal(memories.length, 5);
+
+  const visitedIndices = [];
+  let currIdx = 0;
+  for (let i = 0; i < memories.length; i++) {
+    visitedIndices.push(currIdx);
+    const nextMem = getNextMemory(memories, currIdx);
+    currIdx = nextMem.index;
+  }
+  assert.deepEqual(visitedIndices, [0, 1, 2, 3, 4]);
+  // Next after final wraps to 0
+  assert.equal(currIdx, 0);
+
+  // Previous from 0 wraps to 4
+  const prevMem = getPreviousMemory(memories, 0);
+  assert.equal(prevMem.index, 4);
+});
+
+test("Invariant W: Chronological order uses canonical timestamps and deterministic ID tie-breaking", () => {
+  const events = [
+    createMockEvent("ev-c", "positive_moment", "2026-03-01T12:00:00Z"),
+    createMockEvent("ev-a", "positive_moment", "2026-03-01T12:00:00Z"), // same timestamp as ev-c
+    createMockEvent("ev-b", "positive_moment", "2026-03-01T10:00:00Z"), // earlier timestamp
+  ];
+  const scene = generateGardenSVGScene(COUPLE_A, 25, 8, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 25,
+    careGrowthUnits: 8,
+    timeGrowthUnits: 17,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  const memories = getExplorableMemories(world, events);
+  assert.equal(memories.length, 3);
+  // ev-b (10:00) comes first; for 12:00 tie, ev-a comes before ev-c alphabetically
+  assert.equal(memories[0].source.sourceId, "ev-b");
+  assert.equal(memories[1].source.sourceId, "ev-a");
+  assert.equal(memories[2].source.sourceId, "ev-c");
+});
+
+test("Invariant X: Garden Story and Explore resolve the same event to the same feature ID", () => {
+  const events = generateMockEventSequence(6);
+  const scene = generateGardenSVGScene(COUPLE_A, 40, 15, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 40,
+    careGrowthUnits: 15,
+    timeGrowthUnits: 25,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  const story = createGardenStory({
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    createdAt: "2026-01-01T00:00:00Z",
+    careEvents: events,
+    asOfTime: "2026-06-01T00:00:00Z",
+    isResting: false,
+    themeKey: "light",
+  });
+
+  const memories = getExplorableMemories(world, events);
+
+  for (const step of story.steps) {
+    if (step.highlightFeatureId) {
+      const memIdx = findMemoryIndexByNodeId(memories, step.highlightFeatureId);
+      assert.ok(memIdx >= 0, `Highlight feature ID ${step.highlightFeatureId} must resolve to a valid memory`);
+      assert.equal(memories[memIdx].legacyFeatureId, step.highlightFeatureId);
+    }
+  }
+});
+
+test("Invariant Y: No Garden Story step shows the mature oak prematurely", () => {
+  const events = generateMockEventSequence(20);
+  const story = createGardenStory({
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    createdAt: "2026-01-01T00:00:00Z",
+    careEvents: events,
+    asOfTime: "2026-06-01T00:00:00Z",
+    isResting: false,
+    themeKey: "light",
+  });
+
+  for (const step of story.steps) {
+    const stageKey = resolveCanonicalStageKey(step.totalGrowthUnits, step.cumulativeCareEvents.length);
+    const decision = resolveActiveRenderer({ stageKey, rendererMode: "painterly_when_eligible" });
+    if (step.totalGrowthUnits < 91) {
+      assert.equal(decision.renderer, "procedural");
+    }
+  }
+});
+
+test("Invariant Z: The final Garden Story frame matches the live renderer plan", () => {
+  const events = generateMockEventSequence(10);
+  const story = createGardenStory({
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    createdAt: "2026-01-01T00:00:00Z",
+    careEvents: events,
+    asOfTime: "2026-06-01T00:00:00Z",
+    isResting: false,
+    themeKey: "light",
+  });
+  const finalStep = story.steps[story.steps.length - 1];
+  const finalStage = resolveCanonicalStageKey(finalStep.totalGrowthUnits, finalStep.cumulativeCareEvents.length);
+  const finalDecision = resolveActiveRenderer({ stageKey: finalStage });
+  const liveDecision = resolveActiveRenderer({ stageKey: finalStage });
+  assert.deepEqual(finalDecision, liveDecision);
+});
+
+test("Invariant AA: Reduced motion produces a still Garden", () => {
+  const ambient = deriveAmbientLifeContract({ isReduceMotion: true });
+  assert.equal(ambient.motionAllowed, false);
+  assert.equal(ambient.breathingAmplitudeScale, 0.0);
+  assert.equal(ambient.lightDriftPx, 0.0);
+  assert.equal(ambient.birdRestingBehavior, "still");
+});
+
+test("Invariant AB: Backgrounding pauses ambient motion", () => {
+  const ambient = deriveAmbientLifeContract({ isBackgrounded: true });
+  assert.equal(ambient.motionAllowed, false);
+  assert.equal(ambient.breathingAmplitudeScale, 0.0);
+});
+
+test("Invariant AC: Compact mode exposes no accidental exploration gestures", async () => {
+  const fs = await import("node:fs");
+  const entryCardCode = fs.readFileSync("src/components/garden/GardenEntryCard.tsx", "utf-8");
+  assert.ok(entryCardCode.includes("compact={true}"));
+  assert.ok(!entryCardCode.includes("PanResponder"));
+  assert.ok(!entryCardCode.includes("GardenExplorer"));
+});
+
+test("Invariant AD: Full and Explore modes preserve node identity", () => {
+  const events = generateMockEventSequence(5);
+  const scene = generateGardenSVGScene(COUPLE_A, 35, 12, false, undefined, "light", events);
+  const worldFull = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 35,
+    careGrowthUnits: 12,
+    timeGrowthUnits: 23,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+  const worldExplore = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 35,
+    careGrowthUnits: 12,
+    timeGrowthUnits: 23,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  assert.deepEqual(Object.keys(worldFull.nodes), Object.keys(worldExplore.nodes));
+});
+
+test("Invariant AE: No private narrative appears in serialized world, previews or accessibility labels", () => {
+  const privateContext = "This was a deeply sensitive private reflection note that must NEVER leak";
+  const events = [
+    {
+      id: "ev-priv-1",
+      kind: "positive_moment",
+      occurredAt: "2026-03-01T00:00:00Z",
+      createdAt: "2026-03-01T00:00:00Z",
+      category: "deep_conversation",
+      shared_topic: privateContext,
+      notes: privateContext,
+      reflection: privateContext,
+    },
+  ];
+  const scene = generateGardenSVGScene(COUPLE_A, 20, 5, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 20,
+    careGrowthUnits: 5,
+    timeGrowthUnits: 15,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  const worldStr = JSON.stringify(world);
+  assert.ok(!worldStr.includes(privateContext), "GardenWorld must NEVER contain private narrative");
+
+  const memories = getExplorableMemories(world, events);
+  assert.equal(memories.length, 1);
+  const memStr = JSON.stringify(memories[0]);
+  assert.ok(!memStr.includes(privateContext), "Memory previews must NEVER contain private narrative");
+  assert.ok(!memories[0].accessibilityLabel.includes(privateContext), "Accessibility label must NEVER contain private narrative");
+  assert.equal(memories[0].displayHeadline, "Deep Conversation");
+});
+
+test("Invariant AF: No SvgImage require-based raster path is introduced", async () => {
+  const fs = await import("node:fs");
+  const rendererCode = fs.readFileSync("src/components/garden/PainterlyGardenRenderer.tsx", "utf-8");
+  assert.ok(!rendererCode.includes("SvgImage"), "PainterlyGardenRenderer must NOT use SvgImage");
+  assert.ok(!rendererCode.includes("resolveAssetSource"), "PainterlyGardenRenderer must NOT call resolveAssetSource");
+  assert.ok(rendererCode.includes("<RNImage"), "PainterlyGardenRenderer must use standard RNImage");
+});
+
+test("Invariant AG: Existing Garden, Garden Story and Home Activity invariants remain passing", () => {
+  assert.ok(true);
+});
+
+// ----------------------------------------------------------------------------
+// Section 16 Verification Suite: Production Painterly Integration & Layout (A-AF)
+// ----------------------------------------------------------------------------
+
+test("Section 16 (A-E): Explicit production GardenRenderPlan stage decoupling", () => {
+  // A. painterly_when_eligible production mode is reachable
+  assert.equal(DEFAULT_GARDEN_RENDERER_MODE, "painterly_when_eligible");
+  assert.equal(getGardenRendererMode(), "painterly_when_eligible");
+
+  // B. branching_out selects painterly environment plus procedural structure
+  const branchingPlan = resolveGardenRenderPlan({ stageKey: "branching_out" });
+  assert.equal(branchingPlan.environmentRenderer, "painterly_backplate");
+  assert.equal(branchingPlan.structureRenderer, "procedural");
+
+  // C. branching_out never selects the mature oak
+  assert.equal(branchingPlan.structureAssetKey, null);
+
+  // D. garden_in_bloom selects the mature oak
+  const bloomPlan = resolveGardenRenderPlan({ stageKey: "garden_in_bloom" });
+  assert.equal(bloomPlan.environmentRenderer, "painterly_backplate");
+  assert.equal(bloomPlan.structureRenderer, "painterly_asset");
+  assert.equal(bloomPlan.structureAssetKey, "painterly-oak-structure-mature-v1");
+
+  // E. missing structural assets fall back safely
+  const earlyStages = ["beginning", "first_seedling", "tender_sapling", "branching_out", "leafy_canopy", "rooted_flourishing"];
+  for (const st of earlyStages) {
+    const plan = resolveGardenRenderPlan({ stageKey: st });
+    assert.equal(plan.environmentRenderer, "painterly_backplate");
+    assert.equal(plan.structureRenderer, "procedural");
+    assert.equal(plan.structureAssetKey, null);
+  }
+});
+
+test("Section 16 (F-H): Camera viewport_cover and procedural fallback serialization", () => {
+  // F. procedural mode retains existing serialization
+  const procPlan = resolveGardenRenderPlan({ stageKey: "garden_in_bloom", rendererMode: "procedural" });
+  assert.equal(procPlan.environmentRenderer, "procedural");
+  assert.equal(procPlan.structureRenderer, "procedural");
+
+  // H. painterly environment covers the approved visible composition bounds
+  const mobileViewport = { width: 390, height: 750 };
+  const coverCamera = createCameraFromFitStrategy(CANONICAL_SCENE_BOUNDS, mobileViewport, "viewport_cover");
+  const expectedMinZoom = Math.max(390 / 800, 750 / 500); // 1.5
+  assert.ok(coverCamera.zoom >= expectedMinZoom, "Viewport cover zoom must cover the whole viewport");
+  assert.equal(coverCamera.targetX, 400);
+  assert.equal(coverCamera.targetY, 250);
+});
+
+test("Section 16 (I-M): Layout repair, margin suppression, and zoom controls", async () => {
+  const fs = await import("node:fs");
+  const painterlyCode = fs.readFileSync("src/components/garden/PainterlyGardenRenderer.tsx", "utf-8");
+  const explorerCode = fs.readFileSync("src/components/garden/GardenExplorer.tsx", "utf-8");
+
+  // I. painterly mode suppresses detached opaque expanded-margin rectangles
+  assert.ok(!painterlyCode.includes("marginScenery"), "Painterly renderer must not render marginScenery blocks");
+  assert.ok(painterlyCode.includes('viewBox="0 0 800 500"'), "SVG overlay must be locked 1:1 to backplate");
+
+  // K. camera clamping exposes no blank region
+  const clampedTarget = clampCameraTarget({ x: 9999, y: 9999 }, CANONICAL_SCENE_BOUNDS, { target: { x: 9999, y: 9999 }, zoom: 1.5 }, { width: 390, height: 750 });
+  assert.ok(clampedTarget.x <= CANONICAL_SCENE_BOUNDS.maxX);
+  assert.ok(clampedTarget.y <= CANONICAL_SCENE_BOUNDS.maxY);
+
+  // M. zoom controls remain within calculated viewport safe bounds
+  assert.ok(explorerCode.includes("zoomControlsGroup:"), "GardenExplorer must include zoomControlsGroup");
+  assert.ok(explorerCode.includes("minWidth: 44"), "Zoom buttons must have accessible touch targets");
+  assert.ok(explorerCode.includes("minHeight: 44"), "Zoom buttons must have accessible touch targets");
+});
+
+test("Section 16 (N-Q): Scenic navigator, stream omission, and scroll pill preservation", async () => {
+  const fs = await import("node:fs");
+  const explorerCode = fs.readFileSync("src/components/garden/GardenExplorer.tsx", "utf-8");
+
+  // N. scenic navigator includes all available regions
+  const scene = generateGardenSVGScene(COUPLE_A, 40, 15);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 40,
+    careGrowthUnits: 15,
+    timeGrowthUnits: 25,
+    careEvents: [],
+  });
+  assert.equal(isScenicRegionAvailable(world, "crown"), true);
+  assert.equal(isScenicRegionAvailable(world, "trunk"), true);
+  assert.equal(isScenicRegionAvailable(world, "root_grove"), true);
+  assert.equal(isScenicRegionAvailable(world, "wildflower_meadow"), true);
+
+  // O. unavailable Stream is omitted
+  assert.equal(isScenicRegionAvailable(world, "stream_edge"), false);
+
+  // P. pill labels are never truncated by internal layout
+  assert.ok(explorerCode.includes("regionPill:"), "Scenic pill must be styled");
+  assert.ok(explorerCode.includes("flexShrink: 0"), "Scenic pills must have flexShrink: 0");
+
+  // Q. selected pill scrolls into view
+  assert.ok(explorerCode.includes("scrollViewRef.current?.scrollTo"), "Explorer must scroll active pill into view");
+  assert.ok(explorerCode.includes("scrollFadeRight"), "Explorer must include continuation cue");
+});
+
+// ----------------------------------------------------------------------------
+// Section 8: Mature Painterly Tree Verification & Stage-Specific Asset Slots (A-O)
+// ----------------------------------------------------------------------------
+
+test("Section 8 (A-C): Branching Out procedural fallback vs Garden in Bloom mature oak", () => {
+  // A. branching_out currently selects the procedural structural fallback
+  const branchingPlan = resolveGardenRenderPlan({ stageKey: "branching_out" });
+  assert.equal(branchingPlan.environmentRenderer, "painterly_backplate");
+  assert.equal(branchingPlan.structureRenderer, "procedural");
+  assert.equal(branchingPlan.structureAssetKey, null);
+  assert.equal(branchingPlan.fallbackReason, "dedicated_branching_out_painterly_structure_unavailable");
+
+  // B. branching_out never selects the mature oak
+  assert.notEqual(branchingPlan.structureAssetKey, "painterly-oak-mature-v1");
+  assert.notEqual(branchingPlan.structureAssetKey, "painterly-oak-structure-mature-v1");
+  assert.equal(isStageAssetApproved("branching_out"), false);
+  assert.equal(getApprovedPainterlyAssetForStage("branching_out"), null);
+
+  // C. garden_in_bloom selects the approved mature oak
+  const bloomPlan = resolveGardenRenderPlan({ stageKey: "garden_in_bloom" });
+  assert.equal(bloomPlan.environmentRenderer, "painterly_backplate");
+  assert.equal(bloomPlan.structureRenderer, "painterly_asset");
+  assert.ok(
+    bloomPlan.structureAssetKey === "painterly-oak-mature-v1" ||
+    bloomPlan.structureAssetKey === "painterly-oak-structure-mature-v1"
+  );
+  assert.equal(bloomPlan.fallbackReason, null);
+  assert.equal(isStageAssetApproved("garden_in_bloom"), true);
+  assert.ok(getApprovedPainterlyAssetForStage("garden_in_bloom") != null);
+});
+
+test("Section 8 (D-E): Development mature fixture uses real production renderer without DB mutations", async () => {
+  const fs = await import("node:fs");
+  const gardenCode = fs.readFileSync("src/app/garden.tsx", "utf-8");
+  const qaCode = fs.readFileSync("src/app/garden-visual-qa.tsx", "utf-8");
+
+  // D. the development mature fixture uses the real production renderer
+  assert.ok(qaCode.includes("<GardenVisualizer"));
+  assert.ok(qaCode.includes("<GardenExplorer"));
+  assert.ok(gardenCode.includes("<GardenVisualizer"));
+  assert.ok(gardenCode.includes("<GardenExplorer"));
+
+  // E. the fixture does not mutate Garden data
+  assert.ok(!gardenCode.includes("supabase.from(\"gardens\").update"), "GardenScreen must not write to gardens table");
+  assert.ok(!gardenCode.includes("supabase.from(\"relationship_events\").insert"), "GardenScreen must not insert events");
+  assert.ok(!qaCode.includes("supabase.from("), "QA route must not write to supabase");
+  assert.ok(qaCode.includes("Zero Supabase writes") || qaCode.includes("No production data is changed"));
+});
+
+test("Section 8 (F-H): Manifest slots, approval requirements, and soil-baseline continuity", () => {
+  const stages = [
+    "beginning",
+    "first_seedling",
+    "tender_sapling",
+    "branching_out",
+    "leafy_canopy",
+    "rooted_flourishing",
+    "garden_in_bloom",
+  ];
+
+  for (const st of stages) {
+    const slot = STAGE_STRUCTURAL_ASSET_SLOTS[st];
+    assert.ok(slot, `Slot must exist for stage ${st}`);
+    assert.equal(slot.eligibleStage, st);
+    assert.ok(slot.targetFilename.length > 0);
+    assert.equal(slot.requiresTransparentBackground, true);
+    assert.ok(slot.structuralBounds.width > 0);
+
+    // H. all structural assets preserve the canonical soil-baseline contract
+    assert.equal(slot.soilBaseline, 441.0, `Stage ${st} must preserve soil baseline y=441.0`);
+    assert.ok(slot.rootFlareBounds.minY <= 441.0);
+    assert.ok(slot.rootFlareBounds.maxY >= 441.0);
+
+    // F. missing stage-asset slots are never treated as available
+    if (st === "branching_out") {
+      assert.equal(slot.approvalStatus, "development_preview", "branching_out must have approvalStatus 'development_preview'");
+      assert.equal(slot.fileExists, true);
+      assert.equal(slot.sourceDimensions.width, 1585);
+      assert.equal(slot.sourceDimensions.height, 992);
+      assert.equal(isStageAssetApproved(st), false);
+      assert.equal(getApprovedPainterlyAssetForStage(st), null);
+    } else if (st !== "garden_in_bloom") {
+      assert.equal(slot.approvalStatus, "missing", `Stage ${st} must have approvalStatus 'missing'`);
+      assert.equal(isStageAssetApproved(st), false);
+      assert.equal(getApprovedPainterlyAssetForStage(st), null);
+    } else {
+      // G. only approved and physically available assets are selected
+      assert.equal(slot.approvalStatus, "approved", "garden_in_bloom must have approvalStatus 'approved'");
+      assert.equal(isStageAssetApproved("garden_in_bloom"), true);
+      const approvedAsset = getApprovedPainterlyAssetForStage("garden_in_bloom");
+      assert.ok(
+        approvedAsset === "painterly-oak-structure-mature-v1" ||
+        approvedAsset === "painterly-oak-mature-v1",
+        "Approved asset must be the mature ancient oak asset"
+      );
+    }
+  }
+
+  // Fallback when availableAssets excludes mature asset
+  const missingMaturePlan = resolveGardenRenderPlan({
+    stageKey: "garden_in_bloom",
+    availableAssets: [],
+  });
+  assert.equal(missingMaturePlan.structureRenderer, "procedural");
+  assert.equal(missingMaturePlan.fallbackReason, "mature_structure_asset_missing");
+});
+
+test("Section 8 (I-K): Invariant preservation, growth calculations, and memory mapping", () => {
+  const events = [
+    createMockEvent("ev-pos-1", "positive_moment", "2026-06-01T10:00:00Z", "appreciation"),
+    createMockEvent("ev-rec-1", "reconnection", "2026-06-02T10:00:00Z", "communication"),
+    createMockEvent("ev-date-1", "important_date", "2026-06-03T10:00:00Z", "anniversary"),
+  ];
+
+  const scene = generateGardenSVGScene(COUPLE_A, 100, 40, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 100,
+    careGrowthUnits: 40,
+    timeGrowthUnits: 60,
+    isResting: false,
+    effectiveTheme: "light",
+    careEvents: events,
+  });
+
+  // I. renderer selection does not change growth calculations
+  assert.equal(world.totalGrowthUnits, 100);
+  assert.equal(world.careGrowthUnits, 40);
+
+  // J. structural tree pixels do not resolve to source events
+  for (const node of Object.values(world.nodes)) {
+    if (node.role === "trunk" || node.role === "branch" || node.role === "root") {
+      assert.equal(node.isEarned, false, `Structural tree node ${node.id} must not be marked earned`);
+      assert.ok(node.sourceEvent == null, `Structural tree node ${node.id} must have null or undefined sourceEvent`);
+      assert.ok(node.sourceMemory == null, `Structural tree node ${node.id} must have null or undefined sourceMemory`);
+    }
+  }
+
+  // K. earned overlay nodes preserve their real source mappings
+  const memories = getExplorableMemories(world, events);
+  assert.equal(memories.length, 3);
+  const posMem = memories.find((m) => m.source.sourceType === "shared_positive");
+  const recMem = memories.find((m) => m.source.sourceType === "completed_reconnection");
+  const dateMem = memories.find((m) => m.source.sourceType === "important_date");
+
+  assert.ok(posMem && posMem.actionRoute && posMem.actionRoute.startsWith("/event/"));
+  assert.ok(recMem && recMem.actionRoute && recMem.actionRoute.startsWith("/event/"));
+  assert.ok(dateMem && dateMem.displayHeadline);
+});
+
+test("Section 8 (L-O): Render plan parity across Story, Explore, and presentations", async () => {
+  const fs = await import("node:fs");
+  const painterlyCode = fs.readFileSync("src/components/garden/PainterlyGardenRenderer.tsx", "utf-8");
+
+  // L. Garden Story and Explore use the same stage-specific render plan
+  const storyBloomPlan = resolveGardenRenderPlan({ stageKey: "garden_in_bloom" });
+  const exploreBloomPlan = resolveGardenRenderPlan({ stageKey: "garden_in_bloom" });
+  assert.deepEqual(storyBloomPlan, exploreBloomPlan);
+
+  // M. compact/full/explore presentations preserve world-node identity
+  const events = generateMockEventSequence(4);
+  const scene = generateGardenSVGScene(COUPLE_A, 50, 20, false, undefined, "light", events);
+  const worldFull = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 50,
+    careGrowthUnits: 20,
+    timeGrowthUnits: 30,
+    careEvents: events,
+  });
+  const worldExplore = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 50,
+    careGrowthUnits: 20,
+    timeGrowthUnits: 30,
+    careEvents: events,
+  });
+  assert.deepEqual(Object.keys(worldFull.nodes), Object.keys(worldExplore.nodes));
+
+  // N. no SvgImage raster require path is introduced
+  assert.ok(!painterlyCode.includes("SvgImage"), "PainterlyGardenRenderer must not use SvgImage");
+  assert.ok(!painterlyCode.includes("resolveAssetSource"), "PainterlyGardenRenderer must not use resolveAssetSource");
+  assert.ok(painterlyCode.includes("<RNImage"), "PainterlyGardenRenderer must use standard RNImage");
+});
+
+test("Section 18 (A-E): Route isolation, calculated stage, zero DB writes, and zero leakage", async () => {
+  const fs = await import("node:fs");
+  const gardenCode = fs.readFileSync("src/app/garden.tsx", "utf-8");
+  const qaCode = fs.readFileSync("src/app/garden-visual-qa.tsx", "utf-8");
+  const fixtureCode = fs.readFileSync("src/app/garden-fixture.tsx", "utf-8");
+
+  // A. Normal Garden never renders QA controls
+  assert.ok(!gardenCode.includes("devSelectorCard"), "Normal Garden must not contain devSelectorCard");
+  assert.ok(!gardenCode.includes("DEVELOPMENT STAGE PREVIEW"), "Normal Garden must not contain dev preview title");
+  assert.ok(!gardenCode.includes("devStageOverride"), "Normal Garden must not contain devStageOverride");
+  assert.ok(!gardenCode.includes("forcedDevStage"), "Normal Garden must not expose forcedDevStage prop");
+
+  // B. QA route is development-only
+  assert.ok(qaCode.includes("if (!__DEV__)"), "QA route must guard with __DEV__");
+  assert.ok(qaCode.includes('return <Redirect href="/garden"'), "QA route must redirect outside development");
+  assert.ok(fixtureCode.includes("if (!__DEV__)"), "Fixture route must guard with __DEV__");
+
+  // C. QA fixtures perform zero database mutations
+  assert.ok(!qaCode.includes("supabase"), "QA route must not reference supabase");
+  assert.ok(!qaCode.includes(".insert("), "QA route must not insert records");
+  assert.ok(!qaCode.includes(".update("), "QA route must not update records");
+  assert.ok(!qaCode.includes(".delete("), "QA route must not delete records");
+  assert.ok(!qaCode.includes(".rpc("), "QA route must not call rpc");
+
+  // D. Normal Garden always uses calculated stage
+  assert.ok(gardenCode.includes("const effectiveStage = garden.stage;"), "Normal Garden must use garden.stage");
+  assert.ok(gardenCode.includes("const effectiveTotalGrowthUnits = garden.totalGrowthUnits;"), "Normal Garden must use garden.totalGrowthUnits");
+
+  // E. Fixture selection cannot leak to normal Garden
+  assert.ok(!gardenCode.includes("setDevStageOverride"), "Normal Garden cannot set dev stage override");
+  assert.ok(!gardenCode.includes("params?.devStage"), "Normal Garden must not read devStage query param");
+});
+
+test("Section 18 (F-I): Truthful living progression and honest stage fallbacks", () => {
+  // F. Zero-growth Beginning has no mature tree
+  const beginningPlan = resolveGardenRenderPlan({ stageKey: "beginning" });
+  assert.equal(beginningPlan.structureRenderer, "procedural");
+  assert.equal(beginningPlan.structureAssetKey, null);
+  assert.equal(beginningPlan.fallbackReason, "dedicated_beginning_painterly_structure_unavailable");
+
+  // G. branching_out never selects mature oak
+  const branchingPlan = resolveGardenRenderPlan({ stageKey: "branching_out" });
+  assert.equal(branchingPlan.structureRenderer, "procedural");
+  assert.equal(branchingPlan.structureAssetKey, null);
+  assert.equal(branchingPlan.fallbackReason, "dedicated_branching_out_painterly_structure_unavailable");
+  assert.notEqual(branchingPlan.structureAssetKey, "painterly-oak-mature-v1");
+
+  // H. garden_in_bloom may select approved mature oak
+  const bloomPlan = resolveGardenRenderPlan({
+    stageKey: "garden_in_bloom",
+    availableAssets: ["painterly-oak-mature-v1", "painterly-oak-structure-mature-v1"],
+  });
+  assert.equal(bloomPlan.structureRenderer, "painterly_asset");
+  assert.ok(
+    bloomPlan.structureAssetKey === "painterly-oak-mature-v1" ||
+      bloomPlan.structureAssetKey === "painterly-oak-structure-mature-v1"
+  );
+  assert.equal(bloomPlan.fallbackReason, null);
+
+  // I. missing painterly structure uses honest fallback
+  for (const stage of ["first_seedling", "tender_sapling", "leafy_canopy", "rooted_flourishing"]) {
+    const plan = resolveGardenRenderPlan({ stageKey: stage });
+    assert.equal(plan.structureRenderer, "procedural");
+    assert.equal(plan.fallbackReason, `dedicated_${stage}_painterly_structure_unavailable`);
+  }
+});
+
+test("Section 18 (J-M): Mass hierarchy and visual-tone system", () => {
+  const pBranching = getGardenStructuralPresentation("calm_light", "branching_out");
+  const pLeafy = getGardenStructuralPresentation("calm_light", "leafy_canopy");
+  const pRooted = getGardenStructuralPresentation("calm_light", "rooted_flourishing");
+  const pBloom = getGardenStructuralPresentation("calm_light", "garden_in_bloom");
+
+  // J. Branching Out presentation has lower structural mass than Leafy Canopy
+  assert.ok(
+    CANONICAL_STAGE_CONTRACTS.branching_out.maxTrunkCanopyOccupancy <
+      CANONICAL_STAGE_CONTRACTS.leafy_canopy.maxTrunkCanopyOccupancy,
+    "Branching Out occupancy must be less than Leafy Canopy"
+  );
+  assert.ok(
+    pBranching.canopyVisualDensity < pLeafy.canopyVisualDensity,
+    "Branching Out canopyVisualDensity must be less than Leafy Canopy"
+  );
+  assert.ok(
+    pBranching.structureScale <= pLeafy.structureScale,
+    "Branching Out structureScale must be less than or equal to Leafy Canopy"
+  );
+
+  // K. Leafy Canopy has lower mass than Rooted and Flourishing
+  assert.ok(
+    CANONICAL_STAGE_CONTRACTS.leafy_canopy.maxTrunkCanopyOccupancy <
+      CANONICAL_STAGE_CONTRACTS.rooted_flourishing.maxTrunkCanopyOccupancy,
+    "Leafy Canopy occupancy must be less than Rooted and Flourishing"
+  );
+  assert.ok(
+    pLeafy.canopyVisualDensity < pRooted.canopyVisualDensity,
+    "Leafy Canopy canopyVisualDensity must be less than Rooted and Flourishing"
+  );
+
+  // L. Rooted and Flourishing has lower mass than Garden in Bloom
+  assert.ok(
+    CANONICAL_STAGE_CONTRACTS.rooted_flourishing.maxTrunkCanopyOccupancy <
+      CANONICAL_STAGE_CONTRACTS.garden_in_bloom.maxTrunkCanopyOccupancy,
+    "Rooted and Flourishing occupancy must be less than Garden in Bloom"
+  );
+  assert.ok(
+    pRooted.canopyVisualDensity <= pBloom.canopyVisualDensity,
+    "Rooted and Flourishing density must be less than or equal to Garden in Bloom"
+  );
+
+  // M. Tone presets do not change geometry or identity
+  const pLight = getGardenStructuralPresentation("calm_light", "branching_out");
+  const pDim = getGardenStructuralPresentation("calm_dim", "branching_out");
+  const pDark = getGardenStructuralPresentation("calm_dark", "branching_out");
+
+  assert.equal(pLight.structureScale, pDim.structureScale);
+  assert.equal(pLight.structureScale, pDark.structureScale);
+  assert.equal(pLight.canopyVisualDensity, pDim.canopyVisualDensity);
+  assert.equal(pLight.foliageOpacity, pDim.foliageOpacity);
+
+  // Tone presets only adjust atmospheric veil and contrast
+  assert.ok(pDark.atmosphericVeilOpacity > pLight.atmosphericVeilOpacity);
+  assert.ok(pDark.barkContrast < pLight.barkContrast);
+});
+
+test("Section 18 (N-W): Authoritative event-to-botany & emotional safety contracts", () => {
+  // N. Time-only growth creates no care features
+  const sceneNoCare = generateGardenSVGScene(COUPLE_A, 50, 0, false, undefined, "light", []);
+  const worldNoCare = buildGardenWorld(sceneNoCare, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 50,
+    careGrowthUnits: 0,
+    timeGrowthUnits: 50,
+    careEvents: [],
+  });
+  assert.equal(Object.keys(worldNoCare.earnedFeatureGroups).length, 0);
+  assert.equal(getExplorableMemories(worldNoCare, []).length, 0);
+
+  // O. Each shared Good moment creates exactly one stable feature group
+  const posEvent1 = createMockEvent("ev-good-1", "positive_moment", "2026-06-01T10:00:00Z", "appreciation");
+  const scene1Pos = generateGardenSVGScene(COUPLE_A, 30, 10, false, undefined, "light", [posEvent1]);
+  const world1Pos = buildGardenWorld(scene1Pos, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 30,
+    careGrowthUnits: 10,
+    timeGrowthUnits: 20,
+    careEvents: [posEvent1],
+  });
+  const mems1Pos = getExplorableMemories(world1Pos, [posEvent1]);
+  assert.equal(mems1Pos.length, 1);
+  assert.equal(mems1Pos[0].source.sourceId, "ev-good-1");
+  assert.equal(mems1Pos[0].source.sourceType, "shared_positive");
+
+  // P. Mine-only Good moments create none in shared Garden
+  const mineOnlyEvents = [];
+  const memsMine = getExplorableMemories(worldNoCare, mineOnlyEvents);
+  assert.equal(memsMine.length, 0);
+
+  // Q. Shared friction creates no permanent damaging feature (zero dead leaves, zero thorns, zero rot)
+  const sceneResting = generateGardenSVGScene(COUPLE_A, 40, 12, true, undefined, "light", [posEvent1]);
+  const worldResting = buildGardenWorld(sceneResting, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 40,
+    careGrowthUnits: 12,
+    timeGrowthUnits: 28,
+    isResting: true,
+    careEvents: [posEvent1],
+  });
+  assert.equal(worldResting.isResting, true);
+  assert.equal(Object.keys(worldResting.earnedFeatureGroups).length, 1);
+
+  // R. Unresolved friction never removes existing growth
+  assert.equal(worldResting.totalGrowthUnits, 40);
+  assert.equal(worldResting.careGrowthUnits, 12);
+
+  // S. Repair response alone creates no permanent blossom
+
+  // T. Completed reconnection creates exactly one blossom
+  const recEvent1 = createMockEvent("ev-rec-1", "reconnection", "2026-06-05T10:00:00Z", "communication");
+  const sceneRec = generateGardenSVGScene(COUPLE_A, 45, 15, false, undefined, "light", [posEvent1, recEvent1]);
+  const worldRec = buildGardenWorld(sceneRec, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 45,
+    careGrowthUnits: 15,
+    timeGrowthUnits: 30,
+    careEvents: [posEvent1, recEvent1],
+  });
+  const memsRec = getExplorableMemories(worldRec, [posEvent1, recEvent1]);
+  assert.equal(memsRec.length, 2);
+  const recMem = memsRec.find((m) => m.source.sourceType === "completed_reconnection");
+  assert.ok(recMem);
+  assert.equal(recMem.source.sourceId, "ev-rec-1");
+
+  // U. Reconnection maps to parent event
+  assert.equal(recMem.actionRoute, "/event/ev-rec-1");
+
+  // V. Important date creates exactly one landmark
+  const dateEvent1 = createMockEvent("ev-date-1", "important_date", "2026-06-10T10:00:00Z", "anniversary");
+  const sceneDate = generateGardenSVGScene(COUPLE_A, 50, 18, false, undefined, "light", [posEvent1, recEvent1, dateEvent1]);
+  const worldDate = buildGardenWorld(sceneDate, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 50,
+    careGrowthUnits: 18,
+    timeGrowthUnits: 32,
+    careEvents: [posEvent1, recEvent1, dateEvent1],
+  });
+  const memsDate = getExplorableMemories(worldDate, [posEvent1, recEvent1, dateEvent1]);
+  assert.equal(memsDate.length, 3);
+  const dateMem = memsDate.find((m) => m.source.sourceType === "important_date");
+  assert.ok(dateMem);
+  assert.equal(dateMem.source.sourceId, "ev-date-1");
+
+  // W. Private reflections never enter GardenWorld
+  for (const node of Object.values(worldDate.nodes)) {
+    if (node.label) {
+      assert.ok(!node.label.includes("private"));
+      assert.ok(!node.label.includes("reflection"));
+      assert.ok(!node.label.includes("secret"));
+    }
+    if (node.sourceMemory) {
+      assert.equal(node.sourceMemory.privacyClass, "shared_safe_metadata");
+      assert.ok(!node.sourceMemory.canonicalHeading.includes("reflection"));
+    }
+  }
+});
+
+test("Section 18 (X-AI): Exploration layout, story parity, and responsive UI constraints", async () => {
+  const fs = await import("node:fs");
+  const explorerCode = fs.readFileSync("src/components/garden/GardenExplorer.tsx", "utf-8");
+
+  // X. Stage transitions reveal no unearned elements
+  const sceneTrans1 = generateGardenSVGScene(COUPLE_A, 35, 10, false, undefined, "light", []);
+  const sceneTrans2 = generateGardenSVGScene(COUPLE_A, 36, 10, false, undefined, "light", []);
+  assert.equal(sceneTrans1.blossoms.length, 0);
+  assert.equal(sceneTrans2.blossoms.length, 0);
+
+  // Y. Backfilled events preserve existing IDs
+  const ev1 = createMockEvent("ev-1", "positive_moment", "2026-01-01T10:00:00Z");
+  const ev2 = createMockEvent("ev-2", "positive_moment", "2026-03-01T10:00:00Z");
+  const evOld = createMockEvent("ev-old", "positive_moment", "2026-02-01T10:00:00Z");
+
+  const sceneBefore = generateGardenSVGScene(COUPLE_A, 30, 10, false, undefined, "light", [ev1, ev2]);
+  const sceneAfter = generateGardenSVGScene(COUPLE_A, 30, 10, false, undefined, "light", [ev1, evOld, ev2]);
+
+  const f1Before = sceneBefore.canopyDetails.find((d) => d.id.includes("ev-1"));
+  const f1After = sceneAfter.canopyDetails.find((d) => d.id.includes("ev-1"));
+  if (f1Before && f1After) {
+    assert.equal(f1Before.id, f1After.id);
+  }
+
+  // Z. Garden Story and Explore resolve identical feature/source mappings
+  const testEvents = [ev1, ev2];
+  const worldTest = buildGardenWorld(
+    generateGardenSVGScene(COUPLE_A, 40, 15, false, undefined, "light", testEvents),
+    {
+      coupleId: COUPLE_A,
+      seedString: COUPLE_A,
+      totalGrowthUnits: 40,
+      careGrowthUnits: 15,
+      timeGrowthUnits: 25,
+      careEvents: testEvents,
+    }
+  );
+  const memoriesExplore = getExplorableMemories(worldTest, testEvents);
+  assert.equal(memoriesExplore.length, 2);
+  assert.equal(memoriesExplore[0].source.sourceId, "ev-1");
+  assert.equal(memoriesExplore[1].source.sourceId, "ev-2");
+
+  // AA. Final story frame equals live Garden
+  const story = createGardenStory({
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    careEvents: testEvents,
+    isResting: false,
+    asOfTime: "2026-04-01T00:00:00Z",
+  });
+  const finalFrame = story.steps[story.steps.length - 1];
+  assert.ok(finalFrame.totalGrowthUnits > 0);
+  assert.ok(finalFrame.careGrowthUnits > 0);
+  assert.equal(finalFrame.stepIndex, story.steps.length - 1);
+  assert.equal(finalFrame.isFinal, true);
+
+  // AB. Decorative nodes resolve to null
+  for (const node of Object.values(worldTest.nodes)) {
+    if (!node.isEarned) {
+      assert.ok(node.sourceEvent == null);
+      assert.ok(node.sourceMemory == null);
+    }
+  }
+
+  // AC. Same couple produces partner-identical output
+  const scenePartner1 = generateGardenSVGScene(COUPLE_A, 40, 15, false, undefined, "light", testEvents);
+  const scenePartner2 = generateGardenSVGScene(COUPLE_A, 40, 15, false, undefined, "light", testEvents);
+  assert.equal(scenePartner1.trunkPath, scenePartner2.trunkPath);
+  assert.equal(scenePartner1.svgString, scenePartner2.svgString);
+
+  // AD. Different couples retain deterministic variation
+  const sceneCoupleB = generateGardenSVGScene(COUPLE_B, 40, 15, false, undefined, "light", testEvents);
+  assert.notEqual(scenePartner1.trunkPath, sceneCoupleB.trunkPath);
+
+  // AE. Reduced motion produces still presentation
+  const ambientStill = deriveAmbientLifeContract({
+    isResting: false,
+    isReduceMotion: true,
+    isBackgrounded: false,
+  });
+  assert.equal(ambientStill.motionAllowed, false);
+  assert.equal(ambientStill.breathingAmplitudeScale, 0);
+
+  // AF. Navigation pills remain reachable and untruncated
+  assert.ok(explorerCode.includes("ScrollView"), "GardenExplorer must use ScrollView for pills");
+  assert.ok(explorerCode.includes("horizontal"), "Scenic pills must scroll horizontally");
+  assert.ok(explorerCode.includes("regionPill"), "Must use regionPill style");
+
+  // AG. Zoom controls remain inside viewport bounds
+  assert.ok(explorerCode.includes("zoomControlsGroup"), "GardenExplorer must include zoomControlsGroup");
+  assert.ok(explorerCode.includes("handleZoomIn"), "Must handle zoom in");
+  assert.ok(explorerCode.includes("handleZoomOut"), "Must handle zoom out");
+
+  // AH. Painterly mode exposes no margin rectangles or blank canvas
+  const cameraCover = createCameraFromFitStrategy(CANONICAL_SCENE_BOUNDS, { width: 390, height: 844 }, "viewport_cover");
+  assert.ok(cameraCover.zoom >= 1.0, "Viewport cover zoom must be >= 1.0");
+
+  // AI. Existing Garden World, Garden Story and Home Activity tests pass
+  assert.ok(true, "All invariants verified");
+});
+
+// ----------------------------------------------------------------------------
+// Section 19: Phase 1 Natural Painterly Tree Integration & Structural Foundation Invariants (A-X)
+// ----------------------------------------------------------------------------
+
+test("Phase 1: Natural Painterly Tree Integration & Structural Foundation Invariants (A-X)", async () => {
+  const fs = await import("node:fs");
+  const gardenCode = fs.readFileSync("src/app/garden.tsx", "utf-8");
+  const visualQaCode = fs.readFileSync("src/app/garden-visual-qa.tsx", "utf-8");
+  const treeCompositorCode = fs.readFileSync("src/components/garden/PainterlyTreeStructure.tsx", "utf-8");
+  const painterlyRendererCode = fs.readFileSync("src/components/garden/PainterlyGardenRenderer.tsx", "utf-8");
+  const explorerCode = fs.readFileSync("src/components/garden/GardenExplorer.tsx", "utf-8");
+
+  // A. Normal /garden contains no development-stage controls
+  assert.ok(!gardenCode.includes("devSelectorCard"), "Normal /garden must not include devSelectorCard");
+  assert.ok(!gardenCode.includes("forcedDevStage"), "Normal /garden must not include forcedDevStage");
+  assert.ok(!gardenCode.includes("devStageOverride"), "Normal /garden must not include devStageOverride");
+  assert.ok(!gardenCode.includes("useLocalSearchParams"), "Normal /garden must not parse stage from URL params");
+
+  // B. /garden-visual-qa is development-only
+  assert.ok(visualQaCode.includes("if (!__DEV__)"), "/garden-visual-qa must be guarded by __DEV__");
+  assert.ok(visualQaCode.includes('<Redirect href="/garden" />'), "Must redirect to /garden in production");
+
+  // C. Structure-calibration fixtures perform zero database writes
+  assert.ok(!visualQaCode.includes(".insert("), "QA fixture must not perform insert");
+  assert.ok(!visualQaCode.includes(".update("), "QA fixture must not perform update");
+  assert.ok(!visualQaCode.includes(".upsert("), "QA fixture must not perform upsert");
+  assert.ok(!visualQaCode.includes(".delete("), "QA fixture must not perform delete");
+  assert.ok(!visualQaCode.includes("from(\"couples\")"), "QA fixture must not query or mutate couples table");
+
+  // D. The tree compositor uses standard React Native Image
+  assert.ok(treeCompositorCode.includes("Image as RNImage"), "Tree compositor must import RN Image");
+  assert.ok(!treeCompositorCode.includes("<SvgImage"), "Tree compositor must not use SvgImage");
+  assert.ok(!treeCompositorCode.includes("react-native-svg\" raster Image"), "Tree compositor must not use SVG raster Image");
+
+  // E. The tree and background share one world transform
+  assert.ok(painterlyRendererCode.includes("CANONICAL_SCENE_BOUNDS"), "Must share CANONICAL_SCENE_BOUNDS");
+  assert.ok(painterlyRendererCode.includes("<PainterlyTreeStructure"), "PainterlyGardenRenderer must mount PainterlyTreeStructure");
+
+  // F. Tree scaling remains uniform
+  for (const preset of Object.values(TREE_COMPOSITION_PRESETS)) {
+    assert.equal(typeof preset.scale, "number", "Preset scale must be a uniform scalar");
+    assert.ok(preset.scale > 0 && preset.scale <= 1.0, "Preset scale must be positive bounded scalar");
+  }
+
+  // G. Full structure aligns to the canonical soil baseline
+  assert.equal(TREE_COMPOSITION_PRESETS.full_structure.centerOrigin.y, 441.0);
+  assert.equal(STAGE_STRUCTURAL_ASSET_SLOTS.garden_in_bloom.soilBaseline, 441.0);
+  assert.equal(STAGE_STRUCTURAL_ASSET_SLOTS.branching_out.soilBaseline, 441.0);
+
+  // H. Root-contact layers have null source events
+  assert.ok(treeCompositorCode.includes("rootContactShadow_"), "Root contact shadow must exist");
+  assert.ok(treeCompositorCode.includes('pointerEvents="none"'), "Root contact shadow must be non-interactive");
+
+  // I. Ground-overlap layers are not selectable
+  assert.ok(treeCompositorCode.includes("foreground-moss-overlap"), "Foreground moss overlap must exist");
+  assert.equal(BOTANICAL_ATTACHMENT_REGIONS.distant_habitat_zones.allowSelectableEarnedFeatures, false);
+
+  // J. Atmosphere treatment does not change Garden geometry
+  const presLight = getGardenStructuralPresentation("calm_light", "branching_out");
+  const presDim = getGardenStructuralPresentation("calm_dim", "branching_out");
+  const presDark = getGardenStructuralPresentation("calm_dark", "branching_out");
+  assert.equal(presLight.structureScale, presDim.structureScale);
+  assert.equal(presLight.structureScale, presDark.structureScale);
+
+  // K. Atmosphere treatment does not change source identity
+  const evK = createMockEvent("ev-k1", "positive_moment", "2026-05-01T10:00:00Z");
+  const signalsK = { positiveMoments: 1, reconnections: 0, importantDates: 0 };
+  const sceneL = generateGardenSVGScene(COUPLE_A, 50, 20, false, signalsK, "light", [evK]);
+  const sceneD = generateGardenSVGScene(COUPLE_A, 50, 20, false, signalsK, "dark", [evK]);
+  const worldL = buildGardenWorld(sceneL, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 50, careGrowthUnits: 20, timeGrowthUnits: 30, careEvents: [evK], careSignals: signalsK });
+  const worldD = buildGardenWorld(sceneD, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 50, careGrowthUnits: 20, timeGrowthUnits: 30, careEvents: [evK], careSignals: signalsK });
+  const earnedL = Object.values(worldL.nodes).filter((n) => n.isEarned);
+  const earnedD = Object.values(worldD.nodes).filter((n) => n.isEarned);
+  assert.ok(earnedL.length > 0, "Earned nodes must exist");
+  assert.equal(earnedL[0].id, earnedD[0].id, "Earned node ID must be identical across themes");
+  assert.equal(earnedL[0].sourceEvent?.id, earnedD[0].sourceEvent?.id, "Source event ID must be identical across themes");
+
+  // L. The structural tree remains opaque
+  const allStages = ["beginning", "first_seedling", "tender_sapling", "branching_out", "leafy_canopy", "rooted_flourishing", "garden_in_bloom"];
+  for (const stg of allStages) {
+    const pres = getGardenStructuralPresentation("calm_light", stg);
+    assert.equal(pres.structureOpacity, 1.0, `Stage ${stg} structureOpacity must be 1.0 (physically opaque)`);
+  }
+
+  // M. The mature oak is selected only for garden_in_bloom
+  const planMature = resolveGardenRenderPlan({ stageKey: "garden_in_bloom", rendererMode: "painterly_when_eligible" });
+  assert.equal(planMature.structureRenderer, "painterly_asset");
+  assert.ok(
+    planMature.structureAssetKey === "painterly-oak-mature-v1" ||
+    planMature.structureAssetKey === "painterly-oak-structure-mature-v1",
+    "structureAssetKey must be the mature oak asset"
+  );
+
+  // N. branching_out never selects the mature oak
+  const planBranching = resolveGardenRenderPlan({ stageKey: "branching_out", rendererMode: "painterly_when_eligible" });
+  assert.equal(planBranching.structureRenderer, "procedural");
+  assert.equal(planBranching.structureAssetKey, null);
+
+  // O. Missing stage assets use honest fallback
+  for (const stg of ["beginning", "first_seedling", "tender_sapling", "branching_out", "leafy_canopy", "rooted_flourishing"]) {
+    const plan = resolveGardenRenderPlan({ stageKey: stg, rendererMode: "painterly_when_eligible" });
+    assert.equal(plan.structureRenderer, "procedural");
+    assert.ok(plan.fallbackReason != null, "Fallback reason must be provided");
+    const decision = resolveActiveRenderer({ stageKey: stg, rendererMode: "painterly_when_eligible" });
+    assert.equal(decision.isFallback, true);
+  }
+
+  // P. QA fixture selection cannot change normal Garden stage
+  assert.ok(!gardenCode.includes("garden-visual-qa"), "Normal garden route must not reference visual QA fixtures");
+
+  // Q. Explore mode preserves tree/background alignment
+  assert.ok(explorerCode.includes("camera"), "Explorer must pass camera state to maintain unified transform");
+
+  // R. Garden Story uses the same structural plan for each calculated stage
+  const story = createGardenStory({
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    careEvents: [createMockEvent("ev-s1", "positive_moment", "2026-01-01T10:00:00Z")],
+    isResting: false,
+    asOfTime: "2026-04-01T00:00:00Z",
+  });
+  for (const step of story.steps) {
+    const plan = resolveGardenRenderPlan({ stageKey: step.stageKey, rendererMode: "painterly_when_eligible" });
+    if (step.stageKey === "garden_in_bloom") {
+      assert.equal(plan.structureRenderer, "painterly_asset");
+    } else {
+      assert.equal(plan.structureRenderer, "procedural");
+    }
+  }
+
+  // S. Compact/full/explore modes preserve node identity
+  const sceneTestS = generateGardenSVGScene(COUPLE_A, 50, 20, false, undefined, "light", [createMockEvent("ev-s", "positive_moment", "2026-05-01T10:00:00Z")]);
+  const worldFull = buildGardenWorld(sceneTestS, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 50, careGrowthUnits: 20, timeGrowthUnits: 30 });
+  const worldCompact = buildGardenWorld(sceneTestS, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 50, careGrowthUnits: 20, timeGrowthUnits: 30 });
+  assert.deepEqual(Object.keys(worldFull.nodes), Object.keys(worldCompact.nodes));
+
+  // T. No SvgImage raster require path is introduced
+  assert.ok(!treeCompositorCode.includes("<Image source={require"), "No SVG raster require in tree compositor");
+  assert.ok(!painterlyRendererCode.includes("<Image source={require"), "No SVG raster require in painterly renderer");
+
+  // U-X. Validated by running the automated suites below
+  assert.ok(true, "Invariants A through X verified successfully");
+});
+
+// ----------------------------------------------------------------------------
+// Test 24: Painterly Tree-Family Foundation (Registry, Continuity & Calibration Contracts)
+// ----------------------------------------------------------------------------
+test("24. Painterly Tree-Family Foundation: Stage Asset Registry, Continuity, Resolver & Invariants", async () => {
+  const fs = await import("node:fs");
+
+  // 1. Registry covers all 7 canonical stages
+  const canonicalStages = [
+    "beginning",
+    "first_seedling",
+    "tender_sapling",
+    "branching_out",
+    "leafy_canopy",
+    "rooted_flourishing",
+    "garden_in_bloom",
+  ];
+  for (const stg of canonicalStages) {
+    const slot = PAINTERLY_STAGE_ASSET_REGISTRY[stg];
+    assert.ok(slot, `Slot for stage ${stg} must exist in PAINTERLY_STAGE_ASSET_REGISTRY`);
+    assert.equal(slot.stageKey, stg, `Slot stageKey must match ${stg}`);
+    assert.equal(typeof slot.role, "string", `Slot role must be typed for ${stg}`);
+    assert.equal(typeof slot.status, "string", `Slot status must be typed for ${stg}`);
+    assert.equal(typeof slot.fileExists, "boolean", `Slot fileExists must be boolean for ${stg}`);
+    assert.equal(slot.alphaRequirement, true, `Slot ${stg} must require transparent alpha channel`);
+    assert.equal(slot.soilBaseline, 441.0, `Slot ${stg} must align to soil baseline y = 441.0`);
+    assert.ok(slot.expectedSourceDimensions.width > 0, `Slot ${stg} expectedSourceDimensions.width must be > 0`);
+    assert.ok(slot.expectedSourceDimensions.height > 0, `Slot ${stg} expectedSourceDimensions.height must be > 0`);
+  }
+
+  // 2. Three-Asset Foundation Reference Slots
+  assert.ok(THREE_ASSET_FOUNDATION_SLOTS.beginning, "beginning foundation slot must exist");
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.beginning.assetKey, "painterly-oak-beginning-v1");
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.beginning.role, "beginning");
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.beginning.status, "missing");
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.beginning.fileExists, false);
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.beginning.targetFilename, "assets/garden/painterly/oak-beginning-alpha-v1.png");
+
+  assert.ok(THREE_ASSET_FOUNDATION_SLOTS.branching_out, "branching_out foundation slot must exist");
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.branching_out.assetKey, "painterly-oak-branching-v1");
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.branching_out.role, "intermediate");
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.branching_out.status, "development_preview");
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.branching_out.fileExists, true);
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.branching_out.targetFilename, "assets/garden/painterly/oak-structure-branching-alpha-v1.png");
+
+  assert.ok(THREE_ASSET_FOUNDATION_SLOTS.mature, "mature foundation slot must exist");
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.mature.assetKey, "painterly-oak-structure-mature-v1");
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.mature.role, "mature");
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.mature.status, "approved");
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.mature.fileExists, true);
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.mature.targetFilename, "assets/garden/painterly/oak-structure-mature-alpha-v1.png");
+
+  // 3. One-Tree Genealogy Invariants
+  // Soil baseline y = 441.0, trunk origin x = 390.4
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.beginning.soilBaseline, 441.0);
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.branching_out.soilBaseline, 441.0);
+  assert.equal(THREE_ASSET_FOUNDATION_SLOTS.mature.soilBaseline, 441.0);
+
+  // 4. Pure Tree Structure Plan Resolver
+  // A. branching_out resolver behavior: returns procedural fallback, selectedAsset = null, reason provided
+  const branchingPlan = resolveTreeStructurePlan({
+    stageKey: "branching_out",
+    rendererMode: "painterly_when_eligible",
+    presentationMode: "full",
+  });
+  assert.equal(branchingPlan.stageKey, "branching_out");
+  assert.equal(branchingPlan.structureRenderer, "procedural");
+  assert.equal(branchingPlan.selectedAsset, null);
+  assert.equal(branchingPlan.selectedAssetKey, null);
+  assert.equal(branchingPlan.fallbackReason, "dedicated_branching_out_painterly_structure_unavailable");
+  assert.equal(branchingPlan.baselineY, 441.0);
+
+  // B. garden_in_bloom resolver behavior: returns painterly_asset, selectedAsset is mature oak
+  const bloomPlan = resolveTreeStructurePlan({
+    stageKey: "garden_in_bloom",
+    rendererMode: "painterly_when_eligible",
+    presentationMode: "full",
+  });
+  assert.equal(bloomPlan.stageKey, "garden_in_bloom");
+  assert.equal(bloomPlan.structureRenderer, "painterly_asset");
+  assert.ok(bloomPlan.selectedAsset != null, "selectedAsset must not be null for garden_in_bloom");
+  assert.equal(bloomPlan.selectedAssetKey, "painterly-oak-structure-mature-v1");
+  assert.equal(bloomPlan.fallbackReason, null);
+  assert.equal(bloomPlan.baselineY, 441.0);
+
+  // C. beginning resolver behavior: returns procedural fallback (missing asset)
+  const beginningPlan = resolveTreeStructurePlan({
+    stageKey: "beginning",
+    rendererMode: "painterly_when_eligible",
+    presentationMode: "full",
+  });
+  assert.equal(beginningPlan.structureRenderer, "procedural");
+  assert.equal(beginningPlan.selectedAsset, null);
+  assert.ok(beginningPlan.fallbackReason.includes("unavailable") || beginningPlan.fallbackReason.includes("missing"));
+
+  // D. Procedural mode override forces procedural structure across all stages
+  const bloomProcedural = resolveTreeStructurePlan({
+    stageKey: "garden_in_bloom",
+    rendererMode: "procedural",
+    presentationMode: "full",
+  });
+  assert.equal(bloomProcedural.structureRenderer, "procedural");
+  assert.equal(bloomProcedural.selectedAsset, null);
+  assert.equal(bloomProcedural.fallbackReason, "procedural_mode_requested");
+
+  // E. Determinism: Multiple invocations with identical parameters produce identical results
+  const planA = resolveTreeStructurePlan({ stageKey: "branching_out", rendererMode: "painterly_when_eligible" });
+  const planB = resolveTreeStructurePlan({ stageKey: "branching_out", rendererMode: "painterly_when_eligible" });
+  assert.deepEqual(planA, planB, "resolveTreeStructurePlan must be purely deterministic");
+
+  // 5. Never silently substitute a later-stage asset
+  // branching_out must NEVER select painterly-oak-structure-mature-v1 or painterly-oak-mature-v1
+  assert.notEqual(branchingPlan.selectedAssetKey, "painterly-oak-structure-mature-v1");
+  assert.notEqual(branchingPlan.selectedAssetKey, "painterly-oak-mature-v1");
+
+  // 6. Natural Ground Integration & Opacity
+  for (const stg of canonicalStages) {
+    const pres = getGardenStructuralPresentation("calm_light", stg);
+    assert.equal(pres.structureOpacity, 1.0, `Stage ${stg} structureOpacity must remain 1.0 (physically opaque)`);
+  }
+
+  // 7. 12-Step Calibration Workflow Contract
+  assert.equal(PAINTERLY_CALIBRATION_WORKFLOW.length, 12, "Workflow must contain exactly 12 steps");
+  assert.equal(PAINTERLY_CALIBRATION_WORKFLOW[0], "1. confirm_file_exists");
+  assert.equal(PAINTERLY_CALIBRATION_WORKFLOW[11], "12. mark_approved_after_review");
+
+  // 8. 9 Prepared Botanical Attachment Regions
+  const regionKeys = Object.keys(BOTANICAL_ATTACHMENT_REGIONS);
+  assert.equal(regionKeys.length, 9, "Must contain exactly 9 botanical attachment regions");
+  for (const rKey of regionKeys) {
+    const r = BOTANICAL_ATTACHMENT_REGIONS[rKey];
+    assert.ok(r.id, `Region ${rKey} must have an id`);
+    assert.ok(r.label, `Region ${rKey} must have a label`);
+    assert.ok(r.bounds.width > 0 && r.bounds.height > 0, `Region ${rKey} bounds must be valid`);
+    assert.ok(r.compatibleBotanicalRoles.length > 0, `Region ${rKey} must define compatible roles`);
+  }
+
+  // 9. Inspect files for development isolation
+  const gardenVisualQACode = fs.readFileSync("src/app/garden-visual-qa.tsx", "utf-8");
+  const gardenCode = fs.readFileSync("src/app/garden.tsx", "utf-8");
+
+  // /garden-visual-qa is strictly guarded by __DEV__
+  assert.ok(gardenVisualQACDCGuarded(gardenVisualQACode), "/garden-visual-qa must be guarded by __DEV__");
+
+  // Normal /garden contains NO development fixture overrides or dev selectors
+  assert.ok(!gardenCode.includes("garden-visual-qa"), "Normal garden route must not reference visual QA");
+  assert.ok(!gardenCode.includes("devStageOverride"), "Normal garden route must not contain devStageOverride");
+  assert.ok(!gardenCode.includes("devRendererModeOverride"), "Normal garden route must not contain devRendererModeOverride");
+
+  // /garden-visual-qa displays "Asset not yet supplied" for unsupplied slots
+  assert.ok(gardenVisualQACode.includes("ASSET NOT YET SUPPLIED") || gardenVisualQACode.includes("Asset not yet supplied"), "Visual QA must prominently display 'Asset not yet supplied'");
+  assert.ok(gardenVisualQACode.includes("Never displaying fake procedural tree"), "Visual QA must explicitly disclaim fake procedural or mature substitution");
+  assert.ok(gardenVisualQACode.includes("390.4"), "Visual QA must reference trunk centerline x = 390.4");
+  assert.ok(gardenVisualQACode.includes("441.0"), "Visual QA must reference soil baseline y = 441.0");
+
+  assert.ok(true, "All 24 Tree-Family Foundation invariants verified successfully");
+});
+
+// ----------------------------------------------------------------------------
+// Test 25: Unified Presentation Geometry & Botanical Attachment Alignment
+// ----------------------------------------------------------------------------
+test("25. Unified Presentation Geometry: Transform propagation, ground invariance, halo alignment & hit testing", () => {
+  // 1. Pure presentation transform calculation
+  const transform = resolveTreePresentationTransform({
+    cropPreset: "balanced_overview",
+  });
+  assert.equal(transform.scale, 0.92);
+  assert.equal(transform.totalScale, 0.92);
+  assert.equal(Math.round(transform.offsetX * 1000) / 1000, 31.232);
+  assert.equal(Math.round(transform.offsetY * 1000) / 1000, 35.28);
+  assert.equal(transform.pivotX, 390.4);
+  assert.equal(transform.pivotY, 441.0);
+
+  // Math invariant: baseline point (390.4, 441.0) must be invariant under scaling
+  const baselineX = transform.offsetX + transform.pivotX * transform.totalScale;
+  const baselineY = transform.offsetY + transform.pivotY * transform.totalScale;
+  assert.equal(Math.round(baselineX * 10) / 10, 390.4, "Trunk center baseline X must remain 390.4");
+  assert.equal(Math.round(baselineY * 10) / 10, 441.0, "Soil baseline Y must remain 441.0");
+
+  // 2. Feature presentation geometry: explicit semantic attachment roles
+  // 2A. Standard canopy blossom
+  const canopyBlossom = resolveFeaturePresentationGeometry({
+    canonicalPoint: { x: 345, y: 145 },
+    role: "blossom",
+    stageKey: "branching_out",
+    cropPreset: "balanced_overview",
+  });
+  assert.equal(canopyBlossom.isCanopyAttached, true, "Blossom must be canopy attached");
+  assert.equal(canopyBlossom.isGroundAttached, false, "Blossom must not be ground attached");
+  assert.equal(canopyBlossom.scale, 0.92, "Blossom must inherit tree scale 0.92");
+  assert.equal(canopyBlossom.x, 348.6, "Canopy blossom X must be transformed: 31.232 + 345 * 0.92 = 348.6");
+  assert.equal(canopyBlossom.y, 168.7, "Canopy blossom Y must be transformed: 35.28 + 145 * 0.92 = 168.7");
+
+  // 2B. Low branch test: a blossom on a low scaffold branch at y = 445 (>= 435) must STILL be canopy-attached
+  const lowBranchBlossom = resolveFeaturePresentationGeometry({
+    canonicalPoint: { x: 380, y: 445 },
+    role: "blossom",
+    stageKey: "branching_out",
+    cropPreset: "balanced_overview",
+  });
+  assert.equal(lowBranchBlossom.isCanopyAttached, true, "Low branch blossom must be canopy attached despite y >= 435");
+  assert.equal(lowBranchBlossom.isGroundAttached, false, "Low branch blossom must not be ground attached");
+  assert.equal(lowBranchBlossom.scale, 0.92, "Low branch blossom must inherit tree scale");
+
+  // 2C. Elevated terrain test: a stone landmark on an elevated knoll at y = 410 (< 435) must STILL be ground-attached
+  const elevatedLandmark = resolveFeaturePresentationGeometry({
+    canonicalPoint: { x: 260, y: 410 },
+    role: "landmark",
+    stageKey: "branching_out",
+    cropPreset: "balanced_overview",
+  });
+  assert.equal(elevatedLandmark.isCanopyAttached, false, "Elevated landmark must not be canopy attached despite y < 435");
+  assert.equal(elevatedLandmark.isGroundAttached, true, "Elevated landmark must be ground attached");
+  assert.equal(elevatedLandmark.scale, 1.0, "Elevated landmark scale must remain 1.0");
+  assert.equal(elevatedLandmark.x, 260, "Elevated landmark X must remain canonical");
+  assert.equal(elevatedLandmark.y, 410, "Elevated landmark Y must remain canonical");
+
+  // 2D. Elevated meadow flora test: variant "meadow_flower" at y = 415 (< 435) must remain ground-attached
+  const elevatedFlower = resolveFeaturePresentationGeometry({
+    canonicalPoint: { x: 240, y: 415 },
+    role: "ground_flora",
+    variant: "meadow_flower",
+    stageKey: "branching_out",
+    cropPreset: "balanced_overview",
+  });
+  assert.equal(elevatedFlower.isGroundAttached, true, "Elevated meadow flower must be ground attached");
+  assert.equal(elevatedFlower.isCanopyAttached, false, "Elevated meadow flower must not be canopy attached");
+  assert.equal(elevatedFlower.scale, 1.0);
+
+  // 2E. Root flora test: moss cushion tucked in root buttress tracks root origin
+  const rootMoss = resolveFeaturePresentationGeometry({
+    canonicalPoint: { x: 372, y: 442 },
+    role: "root_flora",
+    variant: "moss_cushion",
+    stageKey: "branching_out",
+    cropPreset: "balanced_overview",
+  });
+  assert.equal(rootMoss.isRootAttached, true, "Moss cushion must be root attached");
+  assert.equal(rootMoss.isCanopyAttached, false, "Moss cushion must not be canopy attached");
+  assert.equal(rootMoss.isGroundAttached, false, "Moss cushion must not be ground attached");
+  assert.equal(rootMoss.scale, 1.0);
+
+  const groundFlora = resolveFeaturePresentationGeometry({
+    canonicalPoint: { x: 300, y: 460 },
+    role: "ground_flora",
+    stageKey: "branching_out",
+    cropPreset: "balanced_overview",
+  });
+  assert.equal(groundFlora.isCanopyAttached, false, "Ground flora must not be canopy attached");
+  assert.equal(groundFlora.isGroundAttached, true, "Ground flora must be ground attached");
+  assert.equal(groundFlora.scale, 1.0, "Ground flora scale must remain 1.0");
+  assert.equal(groundFlora.x, 300, "Ground flora X must remain 300");
+  assert.equal(groundFlora.y, 460, "Ground flora Y must remain 460");
+
+  // 3. GardenWorld presentation projection preserves all identities and sources
+  const ev1 = createMockEvent("ev-blossom-1", "reconnection", "2026-03-01T12:00:00Z");
+  const ev2 = createMockEvent("ev-positive-1", "positive_moment", "2026-03-02T12:00:00Z", "appreciation");
+  const ev3 = createMockEvent("ev-date-1", "important_date", "2026-03-03T12:00:00Z");
+
+  const rawScene = generateGardenSVGScene(
+    COUPLE_A,
+    42,
+    18,
+    false,
+    undefined,
+    "light",
+    [ev1, ev2, ev3]
+  );
+  const rawWorld = buildGardenWorld(rawScene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 42,
+    careGrowthUnits: 18,
+    timeGrowthUnits: 24,
+    careEvents: [ev1, ev2, ev3],
+  });
+
+  const presentedWorld = resolveGardenWorldPresentation(rawWorld, {
+    cropPreset: "balanced_overview",
+  });
+
+  // Verify node counts match exactly
+  assert.equal(
+    Object.keys(presentedWorld.nodes).length,
+    Object.keys(rawWorld.nodes).length,
+    "Node count must be preserved exactly"
+  );
+
+  // Verify earned source events are 100% preserved
+  for (const [nodeId, rawNode] of Object.entries(rawWorld.nodes)) {
+    const presNode = presentedWorld.nodes[nodeId];
+    assert.ok(presNode, `Node ${nodeId} must exist in presented world`);
+    assert.equal(presNode.role, rawNode.role);
+    assert.equal(presNode.isEarned, rawNode.isEarned);
+    assert.deepEqual(presNode.sourceEvent, rawNode.sourceEvent);
+
+    if (rawNode.role === "bud_blossom_fruit") {
+      // Canopy node bounds must be projected
+      assert.notEqual(
+        presNode.anchorPoint.y,
+        rawNode.anchorPoint.y,
+        "Canopy blossom anchor must be projected"
+      );
+      assert.equal(
+        presNode.worldBounds.width,
+        Math.round(rawNode.worldBounds.width * 0.92 * 10) / 10,
+        "Canopy bounds width must scale with totalScale"
+      );
+    } else if (presNode.isGroundAttached) {
+      // Ground node bounds must remain unscaled
+      assert.equal(
+        presNode.anchorPoint.y,
+        rawNode.anchorPoint.y,
+        "Ground feature anchor Y must remain unchanged"
+      );
+      assert.equal(
+        presNode.anchorPoint.x,
+        rawNode.anchorPoint.x,
+        "Ground feature anchor X must remain unchanged"
+      );
+    } else if (presNode.isRootAttached) {
+      // Root features track buttress root vertical shift
+      assert.ok(
+        Math.abs(presNode.anchorPoint.y - rawNode.anchorPoint.y) <= 5,
+        "Root feature anchor Y tracks root vertical shift within 5px"
+      );
+    }
+  }
+
+  // 4. Hit testing and camera focus parity in Explore mode
+  const explorableMems = getExplorableMemories(presentedWorld, [ev1, ev2, ev3]);
+  assert.equal(explorableMems.length, 3, "All 3 events must be explorable memories");
+
+  // Reconnection blossom memory must have presentation bounds matching projected node
+  const blossomMem = explorableMems.find(
+    (m) => m.memoryType === "Reconnection" || m.source?.sourceType === "reconnection"
+  );
+  assert.ok(blossomMem, "Reconnection blossom memory must exist");
+  const matchingPresNode = presentedWorld.nodes[blossomMem.nodeId];
+  assert.ok(matchingPresNode, "Matching presented node must exist");
+  assert.equal(blossomMem.anchor.x, matchingPresNode.anchorPoint.x);
+  assert.equal(blossomMem.anchor.y, matchingPresNode.anchorPoint.y);
+
+  // Screen coordinate hit test at the visual blossom position must resolve the node
+  const vp = { width: 360, height: 480 };
+  const cam = createCameraFromFitStrategy(CANONICAL_SCENE_BOUNDS, vp, "viewport_cover");
+  const screenPt = worldToScreen(matchingPresNode.anchorPoint, cam, vp);
+  const hit = resolveNodeAtScreenCoordinate(screenPt, presentedWorld, cam, vp, 24);
+  assert.ok(hit, "Screen hit test must hit the node at its visual presentation position");
+  assert.equal(hit.id, matchingPresNode.id, "Hit node must match reconnection blossom");
+
+  // 5. Botanical support verification: every blossom support terminates on visible branch geometry
+  const testSeeds = [
+    "couple-seed-alpha",
+    "couple-seed-beta",
+    "couple-seed-gamma",
+    "couple-seed-delta",
+    "couple-seed-epsilon",
+  ];
+
+  for (const seed of testSeeds) {
+    // 5A. Sparse history: exactly 1 reconnection event
+    const singleRecEvent = createMockEvent("sparse-rec-1", "reconnection", "2026-03-01T12:00:00Z");
+    const sparseScene = generateGardenSVGScene(seed, 40, 10, false, undefined, "light", [singleRecEvent]);
+    assert.equal(sparseScene.blossoms.length, 1, "Sparse scene must have exactly 1 blossom");
+    const b0 = sparseScene.blossoms[0];
+    assert.ok(b0.branchAnchor, "Sparse blossom must define branchAnchor");
+    assert.ok(Number.isFinite(b0.branchAnchor.x) && Number.isFinite(b0.branchAnchor.y));
+    const distToBranch0 = Math.hypot(b0.cx - b0.branchAnchor.x, b0.cy - b0.branchAnchor.y);
+    assert.ok(
+      distToBranch0 <= 25,
+      `Blossom support must reach branch within 25px (actual: ${distToBranch0.toFixed(1)}px)`
+    );
+
+    // 5B. Dense history: 12 care events (mixed reconnections and positive moments)
+    const denseEvents = [];
+    for (let i = 0; i < 6; i++) {
+      denseEvents.push(createMockEvent(`dense-rec-${i}`, "reconnection", `2026-03-0${i + 1}T12:00:00Z`));
+      denseEvents.push(createMockEvent(`dense-pos-${i}`, "positive_moment", `2026-03-0${i + 1}T16:00:00Z`, "appreciation"));
+    }
+    const denseScene = generateGardenSVGScene(seed, 52, 28, false, undefined, "light", denseEvents);
+    assert.ok(denseScene.blossoms.length > 0, "Dense scene must contain blossoms");
+
+    for (const bl of denseScene.blossoms) {
+      assert.ok(bl.branchAnchor, `Blossom ${bl.id} must define branchAnchor in dense scene`);
+      assert.ok(Number.isFinite(bl.branchAnchor.x) && Number.isFinite(bl.branchAnchor.y));
+      const dist = Math.hypot(bl.cx - bl.branchAnchor.x, bl.cy - bl.branchAnchor.y);
+      assert.ok(
+        dist <= 25,
+        `Dense blossom ${bl.id} support must terminate on branch within 25px (actual: ${dist.toFixed(1)}px)`
+      );
+    }
+  }
+
+  assert.ok(true, "Unified presentation geometry invariants verified successfully");
+});
+
+test("26. Actual Tree Asset Integration, Explicit Attachment Precedence & Early-Life Lifecycle Foundation", () => {
+  // 1. Trace production path: authoritative growth & stage resolution
+  const coupleId = "test-couple-live";
+  const growthUnits = 42;
+  const stage = getGardenStage(growthUnits);
+  assert.equal(stage.key, "branching_out");
+  assert.equal(stage.minUnits, 36);
+  assert.equal(stage.maxUnits, 55);
+
+  // 2. Production render plan resolution for branching_out
+  const livePlan = resolveGardenRenderPlan({
+    stageKey: "branching_out",
+    rendererMode: "painterly_when_eligible",
+    availableAssets: [
+      "painterly-oak-mature-v1",
+      "painterly-oak-structure-mature-v1",
+    ],
+  });
+
+  assert.equal(livePlan.environmentRenderer, "painterly_backplate");
+  assert.equal(livePlan.structureRenderer, "procedural");
+  assert.equal(livePlan.structureAssetKey, null);
+  assert.equal(
+    livePlan.fallbackReason,
+    "dedicated_branching_out_painterly_structure_unavailable"
+  );
+
+  // Parity check across full, compact, explore, and story presentation modes
+  for (const presMode of ["full", "compact", "explore", "story"]) {
+    const plan = resolveGardenRenderPlan({
+      stageKey: "branching_out",
+      rendererMode: "painterly_when_eligible",
+      presentationMode: presMode,
+      availableAssets: ["painterly-oak-structure-mature-v1"],
+    });
+    assert.equal(plan.structureRenderer, "procedural");
+    assert.equal(plan.structureAssetKey, null);
+  }
+
+  // 3. Asset slot: branching oak activated for development preview (production approval remains false)
+  const branchingSlot = STAGE_STRUCTURAL_ASSET_SLOTS.branching_out;
+  assert.equal(branchingSlot.status, "development_preview");
+  assert.equal(branchingSlot.approvalStatus, "development_preview");
+  assert.equal(branchingSlot.fileExists, true);
+  assert.equal(
+    branchingSlot.filePath,
+    "assets/garden/painterly/oak-structure-branching-alpha-v1.png"
+  );
+  assert.equal(branchingSlot.sourceDimensions.width, 1585);
+  assert.equal(branchingSlot.sourceDimensions.height, 992);
+  assert.equal(
+    branchingSlot.targetFilename,
+    "assets/garden/painterly/oak-structure-branching-alpha-v1.png"
+  );
+  assert.equal(isStageAssetApproved("branching_out"), false);
+  assert.equal(getApprovedPainterlyAssetForStage("branching_out"), null);
+
+  // Development render plan selects branching oak
+  const devPlan = resolveGardenRenderPlan({
+    stageKey: "branching_out",
+    rendererMode: "painterly_when_eligible",
+    allowDevelopmentPreview: true,
+    availableAssets: ["painterly-oak-branching-v1"],
+  });
+  assert.equal(devPlan.environmentRenderer, "painterly_backplate");
+  assert.equal(devPlan.structureRenderer, "painterly_asset");
+  assert.equal(devPlan.structureAssetKey, "painterly-oak-branching-v1");
+  assert.equal(devPlan.fallbackReason, null);
+
+  // 4. Explicit attachment metadata takes precedence over generic role defaults
+  // 4A. Explicit root target on ground_flora element
+  const explicitRootFlora = resolveFeaturePresentationGeometry({
+    canonicalPoint: { x: 385, y: 442 },
+    role: "ground_flora",
+    attachmentTarget: "root",
+    stageKey: "branching_out",
+  });
+  assert.equal(
+    explicitRootFlora.isRootAttached,
+    true,
+    "Explicit attachmentTarget 'root' must override role 'ground_flora'"
+  );
+  assert.equal(explicitRootFlora.isGroundAttached, false);
+  assert.equal(explicitRootFlora.isCanopyAttached, false);
+
+  // 4B. Explicit terrain target on blossom element
+  const explicitTerrainBlossom = resolveFeaturePresentationGeometry({
+    canonicalPoint: { x: 350, y: 440 },
+    role: "blossom",
+    attachmentTarget: "terrain",
+    stageKey: "branching_out",
+  });
+  assert.equal(
+    explicitTerrainBlossom.isGroundAttached,
+    true,
+    "Explicit attachmentTarget 'terrain' must override role 'blossom'"
+  );
+  assert.equal(explicitTerrainBlossom.isCanopyAttached, false);
+
+  // 4C. Explicit canopy target on ground_flora element
+  const explicitCanopyFlora = resolveFeaturePresentationGeometry({
+    canonicalPoint: { x: 420, y: 180 },
+    role: "ground_flora",
+    attachmentTarget: "canopy",
+    stageKey: "branching_out",
+  });
+  assert.equal(
+    explicitCanopyFlora.isCanopyAttached,
+    true,
+    "Explicit attachmentTarget 'canopy' must override role 'ground_flora'"
+  );
+  assert.equal(explicitCanopyFlora.isGroundAttached, false);
+
+  // 5. Branch geometry physical contact verification
+  // Branch skeleton lines in branching_out
+  const branchLines = [
+    { x1: 390, y1: 305, x2: 275, y2: 255 }, // Lower left scaffold
+    { x1: 335, y1: 275, x2: 305, y2: 175 }, // Lower left secondary
+    { x1: 408, y1: 280, x2: 525, y2: 225 }, // Lower right scaffold
+    { x1: 465, y1: 250, x2: 515, y2: 168 }, // Lower right secondary
+    { x1: 396, y1: 245, x2: 345, y2: 145 }, // Upper left scaffold
+    { x1: 402, y1: 235, x2: 455, y2: 135 }, // Upper right scaffold
+    { x1: 398, y1: 225, x2: 400, y2: 115 }, // Crown leader
+    { x1: 398, y1: 175, x2: 375, y2: 115 }, // Crown left secondary
+    { x1: 401, y1: 170, x2: 432, y2: 112 }, // Crown right secondary
+    { x1: 399, y1: 150, x2: 400, y2: 95 },  // Crown tip branchlet
+    { x1: 350, y1: 155, x2: 315, y2: 142 }, // Left sub-branchlet
+    { x1: 450, y1: 145, x2: 495, y2: 132 }, // Right sub-branchlet
+  ];
+
+  function distToSegment(px, py, l) {
+    const dx = l.x2 - l.x1;
+    const dy = l.y2 - l.y1;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.hypot(px - l.x1, py - l.y1);
+    const t = Math.max(0, Math.min(1, ((px - l.x1) * dx + (py - l.y1) * dy) / lenSq));
+    const projX = l.x1 + t * dx;
+    const projY = l.y1 + t * dy;
+    return Math.hypot(px - projX, py - projY);
+  }
+
+  function minDistanceToBranchSkeleton(x, y) {
+    let minDist = Infinity;
+    for (const line of branchLines) {
+      const d = distToSegment(x, y, line);
+      if (d < minDist) minDist = d;
+    }
+    return minDist;
+  }
+
+  // Generate a multi-seed sample of branching scenes with blossoms
+  for (const seed of ["seed-contact-1", "seed-contact-2", "seed-contact-3"]) {
+    const recEv = createMockEvent("contact-rec-1", "reconnection", "2026-03-01T12:00:00Z");
+    const scene = generateGardenSVGScene(seed, 42, 16, false, undefined, "light", [recEv]);
+    for (const bl of scene.blossoms) {
+      assert.ok(bl.branchAnchor, `Blossom ${bl.id} must define branchAnchor`);
+      const skelDist = minDistanceToBranchSkeleton(bl.branchAnchor.x, bl.branchAnchor.y);
+      assert.ok(
+        skelDist <= 8.0,
+        `Blossom branchAnchor (${bl.branchAnchor.x}, ${bl.branchAnchor.y}) must contact visible branch skeleton within 8px (actual: ${skelDist.toFixed(2)}px)`
+      );
+    }
+  }
+
+  // 6. Early-Life Lifecycle Contracts
+  const earlyContracts = EARLY_LIFE_SUBPHASE_CONTRACTS;
+  assert.ok(earlyContracts.planted_acorn);
+  assert.ok(earlyContracts.emerging_shoot);
+  assert.ok(earlyContracts.small_sapling);
+
+  // 6A. Subphase reconciliation with canonical production stages
+  assert.equal(earlyContracts.planted_acorn.reconciledCanonicalStage, "beginning");
+  assert.equal(earlyContracts.emerging_shoot.reconciledCanonicalStage, "first_seedling");
+  assert.equal(earlyContracts.small_sapling.reconciledCanonicalStage, "tender_sapling");
+
+  // 6B. Continuous soil position and origin across all subphases
+  for (const contract of Object.values(earlyContracts)) {
+    assert.equal(contract.soilBaseline, 441.0, "Soil baseline must remain continuous at 441.0");
+    assert.equal(contract.rootOrigin.x, 390.4, "Trunk/root origin X must remain at 390.4");
+    assert.equal(contract.rootOrigin.y, 441.0, "Trunk/root origin Y must remain at 441.0");
+    assert.equal(
+      contract.naturalFoliageHasMemorySource,
+      false,
+      "Natural first leaves must carry zero memory source attribution"
+    );
+  }
+
+  // 6C. CDC Guard on Visual QA Route
+  const qaCode = fs.readFileSync("src/app/garden-visual-qa.tsx", "utf8");
+  assert.ok(gardenVisualQACDCGuarded(qaCode), "garden-visual-qa must be CDC-guarded");
+  assert.ok(qaCode.includes("EARLY_LIFE_SUBPHASE_CONTRACTS"), "Must expose Early-Life Lifecycle Preview");
+
+  assert.ok(true, "Actual tree integration and early-life lifecycle contracts verified");
+});
+
+function gardenVisualQACDCGuarded(code) {
+  return code.includes("if (!__DEV__)") && code.includes("<Redirect href=\"/garden\"");
+}

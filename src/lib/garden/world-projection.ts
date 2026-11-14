@@ -182,6 +182,12 @@ export function cameraStateToViewport(state: GardenCameraState): Viewport {
   };
 }
 
+export type GardenFitStrategy =
+  | "full_structure"
+  | "viewport_cover"
+  | "focused_compact"
+  | "memory_focus";
+
 /**
  * Creates a fitted camera state covering the given world bounds inside viewport.
  */
@@ -201,21 +207,67 @@ export function createCameraFromFit(
 }
 
 /**
- * Computes min and max zoom limits for a bounded viewport.
- * Minimum zoom corresponds to fit; maximum zoom allows approximately 3.5x to 4x exploration.
+ * Creates a camera state matching a deliberate fitting strategy:
+ * - "viewport_cover": scales artwork to cover 100% of viewport without blank canvas
+ * - "full_structure": contains entire bounding box with optional padding
+ * - "focused_compact": focused tree crop for compact card
+ * - "memory_focus": centered on a feature
+ */
+export function createCameraFromFitStrategy(
+  worldBounds: BoundingBox2D,
+  viewport: Viewport,
+  strategy: GardenFitStrategy = "viewport_cover",
+  padding: number = 0
+): GardenCameraState {
+  if (strategy === "viewport_cover") {
+    const zoomX = viewport.width / Math.max(1, worldBounds.width);
+    const zoomY = viewport.height / Math.max(1, worldBounds.height);
+    const zoom = Math.max(zoomX, zoomY);
+    const target = {
+      x: (worldBounds.minX + worldBounds.maxX) / 2,
+      y: (worldBounds.minY + worldBounds.maxY) / 2,
+    };
+    return {
+      targetX: Math.round(target.x * 100) / 100,
+      targetY: Math.round(target.y * 100) / 100,
+      zoom: Math.round(zoom * 1000) / 1000,
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
+    };
+  }
+
+  return createCameraFromFit(worldBounds, viewport, padding);
+}
+
+/**
+ * Computes min and max zoom limits for a bounded viewport under a fit strategy.
+ * For "viewport_cover", minZoom is the cover threshold preventing void/grey exposure.
  */
 export function calculateZoomBounds(
   worldBounds: BoundingBox2D,
   viewport: Viewport,
-  padding: number = 24
+  padding: number = 24,
+  strategy: GardenFitStrategy = "full_structure"
 ): { minZoom: number; maxZoom: number; fitZoom: number } {
-  const fit = fitCameraToViewport(worldBounds, viewport, padding);
-  const minZoom = fit.zoom;
+  let minZoom: number;
+  let fitZoom: number;
+
+  if (strategy === "viewport_cover") {
+    const zoomX = viewport.width / Math.max(1, worldBounds.width);
+    const zoomY = viewport.height / Math.max(1, worldBounds.height);
+    fitZoom = Math.max(zoomX, zoomY);
+    minZoom = fitZoom;
+  } else {
+    const fit = fitCameraToViewport(worldBounds, viewport, padding);
+    fitZoom = fit.zoom;
+    minZoom = fit.zoom;
+  }
+
   const maxZoom = Math.max(minZoom * 3.5, 2.5);
   return {
     minZoom: Math.round(minZoom * 1000) / 1000,
     maxZoom: Math.round(maxZoom * 1000) / 1000,
-    fitZoom: fit.zoom,
+    fitZoom: Math.round(fitZoom * 1000) / 1000,
   };
 }
 
@@ -308,6 +360,39 @@ export function focusScenicRegion(
 ): GardenCameraState {
   const fit = fitCameraToViewport(regionBounds, viewport, padding);
   const zoom = Math.max(minZoom, Math.min(maxZoom, fit.zoom));
+  const clamped = clampCameraTarget(
+    fit.target,
+    worldBounds,
+    { target: fit.target, zoom },
+    viewport
+  );
+
+  return {
+    targetX: Math.round(clamped.x * 100) / 100,
+    targetY: Math.round(clamped.y * 100) / 100,
+    zoom: Math.round(zoom * 1000) / 1000,
+    viewportWidth: viewport.width,
+    viewportHeight: viewport.height,
+  };
+}
+
+/**
+ * Calculates a camera state focusing directly on an earned feature's bounding box,
+ * providing generous surrounding botanical context padding.
+ */
+export function focusFeatureBounds(
+  featureBounds: BoundingBox2D,
+  viewport: Viewport,
+  worldBounds: BoundingBox2D,
+  minZoom: number,
+  maxZoom: number,
+  contextPadding: number = 56
+): GardenCameraState {
+  const fit = fitCameraToViewport(featureBounds, viewport, contextPadding);
+  const zoom = Math.max(
+    minZoom,
+    Math.min(Math.min(maxZoom, 2.2), Math.max(fit.zoom, minZoom * 1.5))
+  );
   const clamped = clampCameraTarget(
     fit.target,
     worldBounds,
@@ -512,6 +597,7 @@ export function calculateSemanticHitRegions(
       semanticKey: node.semanticKey || null,
       role: node.role,
       sourceEvent: node.sourceEvent || null,
+      sourceMemory: node.sourceMemory || null,
       isEarned: node.isEarned,
       depthLayer: node.depthLayer,
       interactionPriority: priority,

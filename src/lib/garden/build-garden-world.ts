@@ -34,11 +34,13 @@ import {
   type GardenNode,
   type EarnedFeatureGroup,
   type SourceEventRef,
+  type GardenMemorySource,
   type BoundingBox2D,
   type Transform2D,
   type Point2D,
   type ScenicRegion,
 } from "./world-types";
+import { getCanonicalEventHeading } from "../event-heading";
 import {
   computeApproximatePathBounds,
   createEmptyBounds,
@@ -185,6 +187,7 @@ export function buildGardenWorld(
     canonicalId: string;
     isEarned: boolean;
     sourceEvent: SourceEventRef | null;
+    sourceMemory: GardenMemorySource | null;
     semanticKey: string | null;
     earnedGroupKey: string | null;
     legacyFeatureId: string;
@@ -198,6 +201,32 @@ export function buildGardenWorld(
           const suffix = elemId.slice(val.featureId.length).replace(/^[-:]+/, "");
           canonicalId = `earned:${ev.kind}:${ev.id}::child::${suffix || "sub"}`;
         }
+
+        let sourceType: GardenMemorySource["sourceType"];
+        if (ev.kind === "positive_moment") {
+          sourceType = "shared_positive";
+        } else if (ev.kind === "reconnection") {
+          sourceType = "completed_reconnection";
+        } else {
+          sourceType = "important_date";
+        }
+
+        const canonicalHeading = getCanonicalEventHeading(ev);
+        const targetRoute =
+          ev.kind === "positive_moment" || ev.kind === "reconnection"
+            ? `/event/${ev.id}`
+            : null;
+
+        const sourceMemory: GardenMemorySource = {
+          sourceType,
+          sourceId: ev.id,
+          coupleId: input.coupleId,
+          occurredAt: ev.occurredAt || ev.createdAt || "",
+          canonicalHeading,
+          targetRoute,
+          privacyClass: "shared_safe_metadata",
+        };
+
         return {
           canonicalId,
           isEarned: true,
@@ -207,6 +236,7 @@ export function buildGardenWorld(
             semanticKey,
             authoritativeTimestamp: ev.createdAt || ev.occurredAt || null,
           },
+          sourceMemory,
           semanticKey,
           earnedGroupKey: semanticKey,
           legacyFeatureId: elemId,
@@ -221,6 +251,7 @@ export function buildGardenWorld(
       canonicalId,
       isEarned: false,
       sourceEvent: null,
+      sourceMemory: null,
       semanticKey: null,
       earnedGroupKey: null,
       legacyFeatureId: elemId,
@@ -235,6 +266,7 @@ export function buildGardenWorld(
       earnedFeatureGroups[key] = {
         semanticKey: key,
         sourceEvent: node.sourceEvent,
+        sourceMemory: node.sourceMemory || undefined,
         nodeIds: [node.id],
         bounds: { ...node.worldBounds },
         anchor: { ...node.anchorPoint },
@@ -243,6 +275,9 @@ export function buildGardenWorld(
       const g = earnedFeatureGroups[key];
       if (!g.nodeIds.includes(node.id)) {
         g.nodeIds.push(node.id);
+      }
+      if (node.sourceMemory && !g.sourceMemory) {
+        g.sourceMemory = node.sourceMemory;
       }
       g.bounds = mergeBounds([g.bounds, node.worldBounds]);
       g.anchor = {
@@ -725,8 +760,10 @@ export function buildGardenWorld(
       localTransform: createDefaultTransform((fb.minX + fb.maxX) / 2, (fb.minY + fb.maxY) / 2),
       worldBounds: fb,
       anchorPoint: { x: (fb.minX + fb.maxX) / 2, y: (fb.minY + fb.maxY) / 2 },
+      attachmentTarget: "canopy",
       isEarned: match.isEarned,
       sourceEvent: match.sourceEvent,
+      sourceMemory: match.sourceMemory,
       appearanceOrigin: match.isEarned ? "source_event" : "stage_structure",
       mappingType: "continuous_structural",
       pathD: fc.d,
@@ -790,8 +827,10 @@ export function buildGardenWorld(
       anchorPoint: { x: b.cx, y: b.cy },
       isEarned: match.isEarned,
       sourceEvent: match.sourceEvent,
+      sourceMemory: match.sourceMemory,
       appearanceOrigin: match.isEarned ? "source_event" : "stage_structure",
       mappingType: "continuous_structural",
+      attachmentTarget: "canopy",
       center: { x: b.cx, y: b.cy },
       radius,
       petalCount: b.petalCount || 5,
@@ -833,8 +872,10 @@ export function buildGardenWorld(
         anchorPoint: { x: p.cx, y: p.cy },
         isEarned: match.isEarned,
         sourceEvent: match.sourceEvent,
+        sourceMemory: match.sourceMemory,
         appearanceOrigin: match.isEarned ? "source_event" : "stage_structure",
         mappingType: "continuous_structural",
+        attachmentTarget: "canopy",
         center: { x: p.cx, y: p.cy },
         radius: Math.max(rx, ry),
         primaryColor: p.color,
@@ -899,6 +940,7 @@ export function buildGardenWorld(
         anchorPoint: { x: cx, y: cy },
         isEarned: match.isEarned,
         sourceEvent: match.sourceEvent,
+        sourceMemory: match.sourceMemory,
         appearanceOrigin: match.isEarned ? "source_event" : "stage_structure",
         mappingType: "continuous_structural",
         center: { x: cx, y: cy },
@@ -986,12 +1028,15 @@ export function buildGardenWorld(
         anchorPoint: { x: cx, y: cy },
         isEarned: true,
         sourceEvent: match.sourceEvent,
+        sourceMemory: match.sourceMemory,
         appearanceOrigin: "source_event",
         mappingType: "continuous_structural",
         position: { x: cx, y: cy },
         color: gd.color,
+        attachmentTarget: "terrain",
       };
     } else {
+      const isMoss = gd.type === "moss";
       node = {
         id: match.canonicalId,
         legacyFeatureId: match.legacyFeatureId,
@@ -1007,11 +1052,14 @@ export function buildGardenWorld(
         anchorPoint: { x: cx, y: cy },
         isEarned: match.isEarned,
         sourceEvent: match.sourceEvent,
+        sourceMemory: match.sourceMemory,
         appearanceOrigin: match.isEarned ? "source_event" : "stage_structure",
         mappingType: "continuous_structural",
         position: { x: cx, y: cy },
         color: gd.color,
         pathD: gd.d,
+        attachmentTarget: isMoss ? "root" : "terrain",
+        variant: isMoss ? "moss_cushion" : undefined,
       };
     }
 
@@ -1051,6 +1099,7 @@ export function buildGardenWorld(
         height: mf.radius * 2,
       },
       anchorPoint: { x: mf.cx, y: mf.cy },
+      attachmentTarget: mf.floraType === "moss" ? "root" : "terrain",
       isEarned: false,
       sourceEvent: null,
       appearanceOrigin: "stage_structure",
@@ -1113,6 +1162,7 @@ export function buildGardenWorld(
         anchorPoint: { x: hd.cx, y: hd.cy },
         isEarned: match.isEarned,
         sourceEvent: match.sourceEvent,
+        sourceMemory: match.sourceMemory,
         appearanceOrigin: match.isEarned ? "source_event" : "stage_structure",
         mappingType: "continuous_structural",
         position: { x: hd.cx, y: hd.cy },

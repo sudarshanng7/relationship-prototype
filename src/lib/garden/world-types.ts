@@ -16,6 +16,7 @@ import type {
   GardenCareEvent,
   GardenCareSignals,
   GardenStage,
+  GardenStageKey,
   PositiveBotanicalFamily,
   PositiveBotanicalVariant,
 } from "../garden-generator";
@@ -141,6 +142,35 @@ export interface SourceEventRef {
   authoritativeTimestamp?: string | null;
 }
 
+/**
+ * Formal privacy-safe canonical memory source contract.
+ * Represents the immutable authorized relationship record behind an earned botanical feature.
+ */
+export interface GardenMemorySource {
+  sourceType:
+    | "shared_positive"
+    | "completed_reconnection"
+    | "important_date";
+  sourceId: string;
+  coupleId: string;
+  occurredAt: string;
+  canonicalHeading: string;
+  targetRoute: string | null;
+  privacyClass: "shared_safe_metadata";
+}
+
+/**
+ * Explorable camera modes supporting 2.5D point-of-view spatial navigation.
+ */
+export type GardenCameraMode =
+  | "overview"
+  | "explore"
+  | "memory_focus"
+  | "scenic_focus"
+  | "future_first_person";
+
+export type BotanicalAttachmentTarget = "canopy" | "root" | "terrain";
+
 // ----------------------------------------------------
 // 4. DISCRIMINATED GARDEN WORLD NODES
 // ----------------------------------------------------
@@ -159,10 +189,15 @@ interface BaseGardenNode {
   anchorPoint: Point2D;
   isEarned: boolean;
   sourceEvent?: SourceEventRef | null;
+  sourceMemory?: GardenMemorySource | null;
   appearanceOrigin: AppearanceOrigin;
   mappingType: StructuralMappingType;
   scenicRegion?: ScenicRegion;
   isExpanded?: boolean;
+  attachmentTarget?: BotanicalAttachmentTarget;
+  isCanopyAttached?: boolean;
+  isGroundAttached?: boolean;
+  isRootAttached?: boolean;
 }
 
 export interface WorldRootNode extends BaseGardenNode {
@@ -255,6 +290,8 @@ export interface GroundFloraNode extends BaseGardenNode {
   radius?: number;
   pathD?: string;
   color?: string;
+  family?: PositiveBotanicalFamily;
+  variant?: PositiveBotanicalVariant;
 }
 
 export interface LandmarkNode extends BaseGardenNode {
@@ -376,6 +413,7 @@ export type GardenNode =
 export interface EarnedFeatureGroup {
   semanticKey: string;
   sourceEvent: SourceEventRef;
+  sourceMemory?: GardenMemorySource;
   nodeIds: string[];
   bounds: BoundingBox2D;
   anchor: Point2D;
@@ -389,6 +427,7 @@ export interface SemanticHitRegion {
   semanticKey: string | null; // e.g. "positive_moment:uuid"
   role: GardenNodeRole;
   sourceEvent: SourceEventRef | null;
+  sourceMemory?: GardenMemorySource | null;
   isEarned: boolean;
   depthLayer: number; // e.g. -100 to +100
   interactionPriority: number; // 100 for earned memory, 50 for fauna, 20 for branches, 10 for terrain
@@ -450,6 +489,72 @@ export interface GardenWorld {
 // 9. ASSET MANIFEST CONTRACT (PHASE 1 SPECIFICATION)
 // ----------------------------------------------------
 
+export type AnchorSurface = "wood" | "ground" | "future_foliage_space" | "void";
+
+export type AnchorValidity =
+  | "valid_on_wood"
+  | "valid_on_ground"
+  | "near_branch_tip"
+  | "pending_foliage"
+  | "invalid_void";
+
+export interface BranchAttachmentAnchor {
+  id: string;
+  label: string;
+  worldPoint: Point2D;
+  nativePixelPoint: Point2D;
+  scenicRegion: ScenicRegion;
+  direction: "left" | "right" | "center" | "canopy";
+  surface: AnchorSurface;
+  validity: AnchorValidity;
+  compatibleRoles: string[];
+  requiredSupportingAsset?: string | null;
+}
+
+export interface FutureFoliageRegion {
+  id: string;
+  bounds: BoundingBox2D;
+  scenicRegion: ScenicRegion;
+  supportedRoles: string[];
+  requiredSupportingAsset: string;
+  description: string;
+}
+
+export interface GroundFeatureRegion {
+  id: string;
+  bounds: BoundingBox2D;
+  scenicRegion: ScenicRegion;
+  supportedRoles: string[];
+  validity: "valid_on_ground";
+  description: string;
+}
+
+export type AssetCropMode = "full_structure" | "focused_compact";
+
+export interface AssetCropPreset {
+  cropMode: AssetCropMode;
+  preservesFullStructure: boolean;
+  cropBounds: BoundingBox2D;
+  description: string;
+}
+
+export interface SafeEarnedFeatureRegion {
+  id: string;
+  kind: "blossom" | "foliage_shoot" | "landmark" | "habitat";
+  bounds: BoundingBox2D;
+  scenicRegion: ScenicRegion;
+  description: string;
+  surface?: AnchorSurface;
+  validity?: AnchorValidity;
+  requiredSupportingAsset?: string | null;
+}
+
+export interface TrunkCenterlineDefinition {
+  top: Point2D;
+  base: Point2D;
+  flareSpread: number;
+}
+
 export interface BotanicalAssetManifest {
   assetKey: string;
   version: string;
@@ -464,9 +569,198 @@ export interface BotanicalAssetManifest {
     high?: string;
   };
   licensingProvenance: {
-    source: "procedural" | "custom_svg" | "licensed";
+    source: "procedural" | "custom_svg" | "licensed" | "raster_painterly";
     author?: string;
     notes?: string;
   };
   themeVariants?: Record<"light" | "dim" | "dark", Record<string, string>>;
+  nativeDimensions?: { width: number; height: number };
+  worldPlacementBounds?: BoundingBox2D;
+  rootAnchor?: Point2D;
+  trunkCenterline?: TrunkCenterlineDefinition;
+  branchAnchors?: BranchAttachmentAnchor[];
+  crownBounds?: BoundingBox2D;
+  canopyBoundsLeft?: BoundingBox2D;
+  canopyBoundsRight?: BoundingBox2D;
+  futureFoliageRegions?: FutureFoliageRegion[];
+  groundFeatureRegions?: GroundFeatureRegion[];
+  safeEarnedRegions?: SafeEarnedFeatureRegion[];
+  compactCropBounds?: BoundingBox2D;
+  fullCropBounds?: BoundingBox2D;
+  cropPresets?: {
+    full_structure: AssetCropPreset;
+    focused_compact: AssetCropPreset;
+  };
+  supportedStages?: string[];
+  hasFoliage?: boolean;
+  approvalStatus?: StageAssetApprovalStatus;
+  soilBaseline?: number;
+  rootFlareBounds?: BoundingBox2D;
+}
+
+export type StageAssetApprovalStatus =
+  | "missing"
+  | "calibration_required"
+  | "development_preview"
+  | "approved";
+
+export type PainterlyStructuralAssetKey =
+  | "painterly-seed-v1"
+  | "painterly-seedling-v1"
+  | "painterly-sapling-v1"
+  | "painterly-oak-beginning-v1"
+  | "painterly-oak-branching-v1"
+  | "painterly-oak-structure-branching-v1"
+  | "painterly-oak-leafy-v1"
+  | "painterly-oak-rooted-v1"
+  | "painterly-oak-mature-v1"
+  | "painterly-oak-structure-mature-v1";
+
+export type StageStructuralRole = "beginning" | "intermediate" | "mature";
+
+export interface StageStructuralAssetSlot {
+  canonicalStage: GardenStageKey | "beginning";
+  stageKey: GardenStageKey | "beginning";
+  eligibleStage: GardenStageKey | "beginning";
+  assetKey: PainterlyStructuralAssetKey;
+  filePath: string | null;
+  targetFilename: string;
+  role: StageStructuralRole;
+  status: StageAssetApprovalStatus;
+  approvalStatus: StageAssetApprovalStatus;
+  fileExists: boolean;
+  availability: boolean;
+  sourceDimensions: { width: number; height: number };
+  expectedSourceDimensions: { width: number; height: number };
+  alphaRequirement: boolean;
+  requiresTransparentBackground: boolean;
+  structuralBounds: BoundingBox2D;
+  rootBounds: BoundingBox2D;
+  rootFlareBounds: BoundingBox2D;
+  soilBaseline: number;
+  calibrationTransform?: {
+    scale: number;
+    translateX: number;
+    translateY: number;
+    rotation: number;
+  };
+  branchAttachmentZones: BranchAttachmentAnchor[];
+  branchAttachmentAnchors: BranchAttachmentAnchor[];
+  futureFoliageRegions: FutureFoliageRegion[];
+  groundFeatureRegions: GroundFeatureRegion[];
+  crops: {
+    fullCrop: BoundingBox2D;
+    compactCrop: BoundingBox2D;
+    exploreCrop: BoundingBox2D;
+  };
+  lightingDirection: string;
+  continuityWithPreviousAndNextStage: {
+    previous: string | null;
+    next: string | null;
+  };
+  relationshipToPreviousAndNextStage: {
+    previous: string | null;
+    next: string | null;
+  };
+  supportedRendererModes: readonly ("procedural" | "painterly_when_eligible")[];
+  calibrationVersion: string;
+  version: string;
+  provenance: {
+    source: "procedural" | "raster_painterly";
+    author?: string;
+    notes?: string;
+  };
+}
+
+export type GardenRendererMode = "procedural" | "painterly_when_eligible";
+
+export interface ResolveTreeStructurePlanInput {
+  stageKey: GardenStageKey | "beginning";
+  rendererMode?: GardenRendererMode;
+  availableAssets?: readonly string[];
+  presentationMode?: "full" | "compact" | "explore" | "story";
+  assetRegistry?: Record<GardenStageKey | "beginning", StageStructuralAssetSlot>;
+  allowDevelopmentPreview?: boolean;
+}
+
+export interface TreeStructurePlan {
+  stageKey: GardenStageKey | "beginning";
+  selectedAssetKey: string | null;
+  selectedAsset: StageStructuralAssetSlot | null;
+  structureRenderer: "painterly_asset" | "procedural";
+  isFallback: boolean;
+  fallbackReason: string | null;
+  cropPreset: TreeCompositionPresetName;
+  soilBaseline: number;
+  baselineY?: number;
+  calibrationTransform: {
+    scale: number;
+    translateX: number;
+    translateY: number;
+    rotation: number;
+  };
+  supportedModes: {
+    full: boolean;
+    compact: boolean;
+    explore: boolean;
+    story: boolean;
+  };
+}
+
+export interface BotanicalAttachmentRegion {
+  id: string;
+  label: string;
+  bounds: BoundingBox2D;
+  depthLayer: number;
+  compatibleBotanicalRoles: readonly string[];
+  compatibleHabitatRoles: readonly string[];
+  stageEligibility: readonly (GardenStageKey | "beginning")[];
+  maxVisualOccupancy: number;
+  allowSelectableEarnedFeatures: boolean;
+  description: string;
+}
+
+export type TreeCompositionPresetName =
+  | "full_structure"
+  | "balanced_overview"
+  | "focused_compact"
+  | "explore_world"
+  | "story_frame";
+
+export interface TreeCompositionPreset {
+  name: TreeCompositionPresetName;
+  label: string;
+  cropBounds: BoundingBox2D;
+  scale: number;
+  centerOrigin: Point2D;
+  description: string;
+  allowsExplorationGestures: boolean;
+}
+
+export interface AdaptCanonicalAnchorInput {
+  assetKey?: string;
+  stageKey?: GardenStageKey | string;
+  canonicalAnchor: Point2D;
+  role: "blossom" | "foliage_shoot" | "landmark" | "creature" | "ground_flora" | string;
+}
+
+// ----------------------------------------------------
+// 12. CALM VISUAL-TONE & STRUCTURAL PRESENTATION SYSTEM
+// ----------------------------------------------------
+
+export type GardenAtmosphereTone =
+  | "calm_light"
+  | "calm_dim"
+  | "calm_dark";
+
+export interface GardenStructuralPresentation {
+  structureOpacity: number;
+  structureScale: number;
+  canopyVisualDensity: number;
+  foliageOpacity: number;
+  barkContrast: number;
+  atmosphericVeilOpacity: number;
+  edgeVignetteOpacity: number;
+  groundSeparationOpacity: number;
+  earnedFeatureEmphasis: number;
 }

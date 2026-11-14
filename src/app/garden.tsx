@@ -24,9 +24,12 @@ import { GardenVisualizer } from "@/components/garden/GardenVisualizer";
 import {
   getAmbienceLabel,
   generateGardenSVGScene,
+  getGardenStage,
   hashStringToSeed,
+  type GardenCareEvent,
+  type GardenCareSignals,
 } from "@/lib/garden-generator";
-import { buildGardenWorld } from "@/lib/garden";
+import { buildGardenWorld, type CanonicalStageKeyOrBeginning } from "@/lib/garden";
 import {
   createGardenStory,
   type GardenStory,
@@ -131,67 +134,79 @@ export default function GardenScreen() {
 
   // Garden 2.5D Exploration Camera State (Phase 3A)
   const [isExploring, setIsExploring] = useState(false);
+  const [exploreInitialFeatureId, setExploreInitialFeatureId] = useState<string | null>(null);
 
   // If couple membership changes, reset any active story playback or exploration
   useEffect(() => {
     setIsPlayingStory(false);
     setStory(null);
     setIsExploring(false);
+    setExploreInitialFeatureId(null);
   }, [resolvedCoupleId]);
 
-  const handleStartExplore = useCallback(() => {
+  const handleStartExplore = useCallback((initialFeatureId?: string | null) => {
     setIsPlayingStory(false);
     setStory(null);
+    setExploreInitialFeatureId(initialFeatureId || null);
     setIsExploring(true);
   }, []);
 
   const handleCloseExplore = useCallback(() => {
     setIsExploring(false);
+    setExploreInitialFeatureId(null);
   }, []);
+
+  const effectiveTotalGrowthUnits = garden.totalGrowthUnits;
+  const effectiveCareGrowthUnits = garden.careGrowthUnits;
+  const effectiveTimeGrowthUnits = garden.timeGrowthUnits;
+  const effectiveStage = garden.stage;
+  const effectiveCareEvents = garden.careEvents;
+  const effectiveCareSignals = garden.careSignals;
+  const effectiveSeedString = garden.seedString || resolvedCoupleId || "couple-seed-default";
+  const effectiveCoupleId = resolvedCoupleId || "";
 
   // Dedicated GardenWorld representation for interactive exploration
   const exploreGardenWorld = useMemo(() => {
     if (!isExploring) return null;
     const scene = generateGardenSVGScene(
-      garden.seedString,
-      garden.totalGrowthUnits,
-      garden.careGrowthUnits,
+      effectiveSeedString,
+      effectiveTotalGrowthUnits,
+      effectiveCareGrowthUnits,
       garden.isResting,
-      garden.careSignals,
+      effectiveCareSignals,
       effectiveTheme,
-      garden.careEvents
+      effectiveCareEvents
     );
     return buildGardenWorld(scene, {
-      coupleId: resolvedCoupleId || garden.seedString,
-      seedString: garden.seedString,
-      totalGrowthUnits: garden.totalGrowthUnits,
-      careGrowthUnits: garden.careGrowthUnits,
-      timeGrowthUnits: garden.timeGrowthUnits,
+      coupleId: effectiveCoupleId,
+      seedString: effectiveSeedString,
+      totalGrowthUnits: effectiveTotalGrowthUnits,
+      careGrowthUnits: effectiveCareGrowthUnits,
+      timeGrowthUnits: effectiveTimeGrowthUnits,
       isResting: garden.isResting,
       effectiveTheme,
-      careEvents: garden.careEvents,
-      careSignals: garden.careSignals,
+      careEvents: effectiveCareEvents,
+      careSignals: effectiveCareSignals,
     });
   }, [
     isExploring,
-    garden.totalGrowthUnits,
-    garden.careGrowthUnits,
-    garden.timeGrowthUnits,
-    garden.seedString,
+    effectiveTotalGrowthUnits,
+    effectiveCareGrowthUnits,
+    effectiveTimeGrowthUnits,
+    effectiveSeedString,
+    effectiveCoupleId,
     garden.isResting,
-    garden.careSignals,
-    garden.careEvents,
+    effectiveCareSignals,
+    effectiveCareEvents,
     effectiveTheme,
-    resolvedCoupleId,
   ]);
 
   const handleStartStory = useCallback(() => {
-    if (!resolvedCoupleId) return;
     const snapshot: GardenStorySnapshot = {
-      coupleId: resolvedCoupleId,
-      seedString: garden.seedString,
+      coupleId: effectiveCoupleId,
+      seedString: effectiveSeedString,
       createdAt: garden.createdAt,
-      careEvents: garden.careEvents,
+      careEvents: effectiveCareEvents,
       asOfTime: new Date().toISOString(),
       isResting: garden.isResting,
       themeKey: theme.key,
@@ -200,11 +215,11 @@ export default function GardenScreen() {
     setStory(newStory);
     setIsPlayingStory(true);
   }, [
-    resolvedCoupleId,
-    garden.seedString,
+    effectiveCoupleId,
+    effectiveSeedString,
     garden.createdAt,
-    garden.careEvents,
     garden.isResting,
+    effectiveCareEvents,
     theme.key,
   ]);
 
@@ -214,12 +229,11 @@ export default function GardenScreen() {
   }, []);
 
   const handlePlayAgain = useCallback(() => {
-    if (!resolvedCoupleId) return;
     const snapshot: GardenStorySnapshot = {
-      coupleId: resolvedCoupleId,
-      seedString: garden.seedString,
+      coupleId: effectiveCoupleId,
+      seedString: effectiveSeedString,
       createdAt: garden.createdAt,
-      careEvents: garden.careEvents,
+      careEvents: effectiveCareEvents,
       asOfTime: new Date().toISOString(),
       isResting: garden.isResting,
       themeKey: theme.key,
@@ -227,11 +241,11 @@ export default function GardenScreen() {
     const newStory = createGardenStory(snapshot);
     setStory(newStory);
   }, [
-    resolvedCoupleId,
-    garden.seedString,
+    effectiveCoupleId,
+    effectiveSeedString,
     garden.createdAt,
-    garden.careEvents,
     garden.isResting,
+    effectiveCareEvents,
     theme.key,
   ]);
 
@@ -311,19 +325,12 @@ export default function GardenScreen() {
   }
 
   const {
-    totalGrowthUnits,
-    careGrowthUnits,
-    timeGrowthUnits,
-    seedString,
-    stage,
     isResting,
-    careSignals,
-    careEvents,
     newGrowthNotice,
     latestEvent,
   } = garden;
 
-  const ambienceLabel = getAmbienceLabel(stage.key, isResting);
+  const ambienceLabel = getAmbienceLabel(effectiveStage.key, isResting);
 
   // Contrast-safe botanical pill colors aligned with Purple Garden identity
   const isLight = theme.key === "light";
@@ -369,7 +376,7 @@ export default function GardenScreen() {
 
   const dynamicGrowthNote = isResting
     ? "Your garden is resting peacefully. Everything you have grown remains here."
-    : careGrowthUnits > 0
+    : effectiveCareGrowthUnits > 0
     ? "The care you share is taking shape here."
     : "Your roots are deepening quietly with time.";
 
@@ -427,7 +434,7 @@ export default function GardenScreen() {
                   },
                   pressed && styles.playStoryButtonPressed,
                 ]}
-                onPress={handleStartExplore}
+                onPress={() => handleStartExplore()}
                 focusable={true}
                 accessibilityRole="button"
                 accessibilityLabel="Explore garden"
@@ -500,10 +507,11 @@ export default function GardenScreen() {
               theme={theme}
               isLight={isLight}
               isDim={isDim}
-              coupleId={resolvedCoupleId}
-              liveCareEvents={careEvents}
+              coupleId={effectiveCoupleId}
+              liveCareEvents={effectiveCareEvents}
               isLiveLoading={garden.loading}
               liveError={garden.error}
+              onExploreMoment={handleStartExplore}
               onClose={handleCloseStory}
               onPlayAgain={handlePlayAgain}
             />
@@ -513,13 +521,14 @@ export default function GardenScreen() {
               theme={theme}
               isLight={isLight}
               isDim={isDim}
-              seedString={garden.seedString}
-              totalGrowthUnits={garden.totalGrowthUnits}
-              careGrowthUnits={garden.careGrowthUnits}
-              timeGrowthUnits={garden.timeGrowthUnits}
+              seedString={effectiveSeedString}
+              totalGrowthUnits={effectiveTotalGrowthUnits}
+              careGrowthUnits={effectiveCareGrowthUnits}
+              timeGrowthUnits={effectiveTimeGrowthUnits}
               isResting={garden.isResting}
-              careSignals={garden.careSignals}
-              careEvents={garden.careEvents}
+              careSignals={effectiveCareSignals}
+              careEvents={effectiveCareEvents}
+              initialFeatureId={exploreInitialFeatureId}
               onClose={handleCloseExplore}
             />
           ) : (
@@ -533,13 +542,13 @@ export default function GardenScreen() {
               ]}
             >
               <GardenVisualizer
-                totalGrowthUnits={totalGrowthUnits}
-                careGrowthUnits={careGrowthUnits}
-                timeGrowthUnits={timeGrowthUnits}
-                seedString={seedString}
+                totalGrowthUnits={effectiveTotalGrowthUnits}
+                careGrowthUnits={effectiveCareGrowthUnits}
+                timeGrowthUnits={effectiveTimeGrowthUnits}
+                seedString={effectiveSeedString}
                 isResting={isResting}
-                careSignals={careSignals}
-                careEvents={careEvents}
+                careSignals={effectiveCareSignals}
+                careEvents={effectiveCareEvents}
                 style={styles.heroVisualizer}
               />
               <View
@@ -559,7 +568,7 @@ export default function GardenScreen() {
                     ]}
                     numberOfLines={1}
                   >
-                    {stage.label}
+                    {effectiveStage.label}
                   </Text>
                   <View
                     style={[
@@ -581,7 +590,7 @@ export default function GardenScreen() {
                     { color: theme.primaryText },
                   ]}
                 >
-                  {stage.supportingCopy}
+                  {effectiveStage.supportingCopy}
                 </Text>
                 <Text
                   style={[
@@ -746,15 +755,6 @@ export default function GardenScreen() {
               A private sanctuary for two. Identical on both screens.
             </Text>
           </CouplySectionCard>
-
-          {/* PART D — Unobtrusive Prototype Notice in Development Only */}
-          {__DEV__ && (
-            <Text
-              style={[styles.devNotice, { color: theme.mutedText }]}
-            >
-              DEV PREVIEW · Visual state is not yet persisted
-            </Text>
-          )}
         </View>
       </ScrollView>
     </CouplyPage>
@@ -954,11 +954,5 @@ const styles = StyleSheet.create({
     fontSize: tokens.typeScale.caption,
     fontStyle: "italic",
     textAlign: "center",
-  },
-  devNotice: {
-    fontSize: tokens.typeScale.overline,
-    textAlign: "center",
-    letterSpacing: 0.6,
-    marginTop: 12,
   },
 });

@@ -971,12 +971,12 @@ export interface BotanicalPalette {
 }
 
 export const BOTANICAL_PALETTES: BotanicalPalette[] = [
-  // 1. Plum & Sage (Natural eucalyptus, dusty rose, muted plum, warm bark)
+  // 1. Plum & Sage (Natural eucalyptus, dusty rose, muted plum, warm natural bark)
   {
     name: "Plum & Sage",
-    trunk: "#463640",
-    trunkHighlight: "#64505E",
-    trunkShadow: "#32252E",
+    trunk: "#53443B",
+    trunkHighlight: "#756255",
+    trunkShadow: "#372B23",
     deepFoliage: "#2A4031",
     midFoliage: "#3E5D47",
     lightFoliage: "#5E846A",
@@ -996,12 +996,12 @@ export const BOTANICAL_PALETTES: BotanicalPalette[] = [
     restingSkyBottom: "#D7CDDC",
     sunGlow: "#F9ECE4",
   },
-  // 2. Lavender & Sage (Muted coastal eucalyptus, pale mauve, cedar bark)
+  // 2. Lavender & Sage (Muted coastal eucalyptus, pale mauve, cedar oak bark)
   {
     name: "Lavender & Sage",
-    trunk: "#3C3643",
-    trunkHighlight: "#544C5D",
-    trunkShadow: "#2B2731",
+    trunk: "#4A443E",
+    trunkHighlight: "#6C635B",
+    trunkShadow: "#322D28",
     deepFoliage: "#273D35",
     midFoliage: "#3A554A",
     lightFoliage: "#5C7E71",
@@ -1024,9 +1024,9 @@ export const BOTANICAL_PALETTES: BotanicalPalette[] = [
   // 3. Forest & Mauve (Woodland moss, dusty mauve, warm chestnut bark)
   {
     name: "Forest & Mauve",
-    trunk: "#43342B",
-    trunkHighlight: "#5C493F",
-    trunkShadow: "#2F231D",
+    trunk: "#483A31",
+    trunkHighlight: "#685547",
+    trunkShadow: "#2F231B",
     deepFoliage: "#223D26",
     midFoliage: "#345538",
     lightFoliage: "#577A5B",
@@ -1046,12 +1046,12 @@ export const BOTANICAL_PALETTES: BotanicalPalette[] = [
     restingSkyBottom: "#D9D0C4",
     sunGlow: "#FAF1DF",
   },
-  // 4. Violet & Moss (Dusk heather, wild moss, deep plum-ash bark)
+  // 4. Violet & Moss (Dusk heather, wild moss, deep umber oak bark)
   {
     name: "Violet & Moss",
-    trunk: "#3B3040",
-    trunkHighlight: "#524359",
-    trunkShadow: "#29202D",
+    trunk: "#4C3F36",
+    trunkHighlight: "#6D5C50",
+    trunkShadow: "#342921",
     deepFoliage: "#293F23",
     midFoliage: "#3B5833",
     lightFoliage: "#618258",
@@ -1311,6 +1311,7 @@ export interface BlossomSVG {
   petalScaleY?: number;
   opacity?: number;
   petals?: BlossomPetal[];
+  branchAnchor?: { x: number; y: number };
 }
 
 export interface SeedPodSVG {
@@ -1643,6 +1644,7 @@ function attachEarnedCareFeatures({
     let baseCy = 200;
     let r = 7.5;
     let rot = ((eventHash >>> 7) % 360) * (Math.PI / 180);
+    let branchAnchor: { x: number; y: number } | undefined;
     const isCluster = eventHash % 3 === 0;
 
     if (isSeedling) {
@@ -1694,25 +1696,25 @@ function attachEarnedCareFeatures({
       rot = a.rot;
     } else if (isBranching) {
       const anchors = [
-        { cx: 345, cy: 145, r: 6.2, rot: 0.3 },
-        { cx: 535, cy: 205, r: 6.2, rot: 0.8 },
-        { cx: 395, cy: 185, r: 5.8, rot: 1.1 },
-        { cx: 305, cy: 175, r: 5.5, rot: 0.5 },
-        { cx: 480, cy: 150, r: 6.0, rot: 1.4 },
-        { cx: 428, cy: 122, r: 5.6, rot: 0.1 },
-        { cx: 275, cy: 215, r: 5.5, rot: 0.7 },
-        { cx: 515, cy: 168, r: 5.8, rot: 0.2 },
-        { cx: 360, cy: 220, r: 5.2, rot: 0.9 },
-        { cx: 440, cy: 220, r: 5.2, rot: 1.3 },
-        { cx: 310, cy: 140, r: 5.0, rot: 0.4 },
-        { cx: 495, cy: 130, r: 5.0, rot: 0.8 },
-        { cx: 375, cy: 110, r: 5.2, rot: 0.4 },
-        { cx: 435, cy: 105, r: 5.2, rot: 0.7 },
-        { cx: 320, cy: 145, r: 5.0, rot: 1.1 },
-        { cx: 490, cy: 135, r: 5.0, rot: 0.2 },
-        { cx: 400, cy: 90, r: 4.8, rot: 0.9 },
-        { cx: 360, cy: 130, r: 4.8, rot: 1.3 },
-        { cx: 450, cy: 125, r: 4.8, rot: 0.5 },
+        { cx: 345, cy: 145, r: 6.2, rot: 0.3, bx: 345, by: 152 },
+        { cx: 535, cy: 205, r: 6.2, rot: 0.8, bx: 525, by: 220 },
+        { cx: 395, cy: 185, r: 5.8, rot: 1.1, bx: 396, by: 198 },
+        { cx: 305, cy: 175, r: 5.5, rot: 0.5, bx: 308, by: 182 },
+        { cx: 480, cy: 150, r: 6.0, rot: 1.4, bx: 472, by: 160 },
+        { cx: 428, cy: 122, r: 5.6, rot: 0.1, bx: 426, by: 136 },
+        { cx: 275, cy: 215, r: 5.5, rot: 0.7, bx: 285, by: 232 },
+        { cx: 515, cy: 168, r: 5.8, rot: 0.2, bx: 512, by: 175 },
+        { cx: 360, cy: 220, r: 5.2, rot: 0.9, bx: 362, by: 230 },
+        { cx: 440, cy: 220, r: 5.2, rot: 1.3, bx: 438, by: 232 },
+        { cx: 310, cy: 140, r: 5.0, rot: 0.4, bx: 325, by: 150 },
+        { cx: 495, cy: 130, r: 5.0, rot: 0.8, bx: 480, by: 142 },
+        { cx: 375, cy: 110, r: 5.2, rot: 0.4, bx: 382, by: 125 },
+        { cx: 435, cy: 105, r: 5.2, rot: 0.7, bx: 428, by: 122 },
+        { cx: 320, cy: 145, r: 5.0, rot: 1.1, bx: 335, by: 155 },
+        { cx: 490, cy: 135, r: 5.0, rot: 0.2, bx: 475, by: 148 },
+        { cx: 400, cy: 90, r: 4.8, rot: 0.9, bx: 400, by: 105 },
+        { cx: 360, cy: 130, r: 4.8, rot: 1.3, bx: 358, by: 142 },
+        { cx: 450, cy: 125, r: 4.8, rot: 0.5, bx: 452, by: 135 },
       ];
       const a = anchors[(eventHash >>> 3) % anchors.length];
       const pt = adaptCanopyPoint(a.cx, a.cy);
@@ -1720,27 +1722,34 @@ function attachEarnedCareFeatures({
       baseCy = pt.cy;
       r = a.r;
       rot = a.rot;
+      if (a.bx !== undefined && a.by !== undefined) {
+        const bpt = adaptCanopyPoint(a.bx, a.by);
+        branchAnchor = {
+          x: Math.round((bpt.cx + microX * 0.5) * 10) / 10,
+          y: Math.round((bpt.cy + microY * 0.5) * 10) / 10,
+        };
+      }
     } else {
       const anchors = [
-        { cx: 340, cy: 220, r: 6.2, rot: 0.3 },
-        { cx: 460, cy: 200, r: 6.2, rot: 0.8 },
-        { cx: 260, cy: 240, r: 6.2, rot: 1.1 },
-        { cx: 530, cy: 210, r: 6.2, rot: 0.5 },
-        { cx: 380, cy: 150, r: 6.0, rot: 1.4 },
-        { cx: 320, cy: 170, r: 5.8, rot: 0.1 },
-        { cx: 470, cy: 145, r: 5.5, rot: 0.6 },
-        { cx: 400, cy: 115, r: 5.5, rot: 1.0 },
-        { cx: 425, cy: 165, r: 5.2, rot: 0.3 },
-        { cx: 355, cy: 185, r: 5.2, rot: 0.8 },
-        { cx: 495, cy: 185, r: 5.0, rot: 1.2 },
-        { cx: 300, cy: 205, r: 5.0, rot: 0.4 },
-        { cx: 375, cy: 110, r: 5.2, rot: 0.4 },
-        { cx: 435, cy: 105, r: 5.2, rot: 0.7 },
-        { cx: 320, cy: 145, r: 5.0, rot: 1.1 },
-        { cx: 490, cy: 135, r: 5.0, rot: 0.2 },
-        { cx: 400, cy: 90, r: 4.8, rot: 0.9 },
-        { cx: 360, cy: 130, r: 4.8, rot: 1.3 },
-        { cx: 450, cy: 125, r: 4.8, rot: 0.5 },
+        { cx: 340, cy: 220, r: 6.2, rot: 0.3, bx: 340, by: 235 },
+        { cx: 460, cy: 200, r: 6.2, rot: 0.8, bx: 462, by: 215 },
+        { cx: 260, cy: 240, r: 6.2, rot: 1.1, bx: 275, by: 255 },
+        { cx: 530, cy: 210, r: 6.2, rot: 0.5, bx: 525, by: 225 },
+        { cx: 380, cy: 150, r: 6.0, rot: 1.4, bx: 375, by: 165 },
+        { cx: 320, cy: 170, r: 5.8, rot: 0.1, bx: 315, by: 185 },
+        { cx: 470, cy: 145, r: 5.5, rot: 0.6, bx: 478, by: 162 },
+        { cx: 400, cy: 115, r: 5.5, rot: 1.0, bx: 400, by: 122 },
+        { cx: 425, cy: 165, r: 5.2, rot: 0.3, bx: 420, by: 178 },
+        { cx: 355, cy: 185, r: 5.2, rot: 0.8, bx: 362, by: 200 },
+        { cx: 495, cy: 185, r: 5.0, rot: 1.2, bx: 500, by: 198 },
+        { cx: 300, cy: 205, r: 5.0, rot: 0.4, bx: 310, by: 220 },
+        { cx: 375, cy: 110, r: 5.2, rot: 0.4, bx: 375, by: 125 },
+        { cx: 435, cy: 105, r: 5.2, rot: 0.7, bx: 435, by: 120 },
+        { cx: 320, cy: 145, r: 5.0, rot: 1.1, bx: 335, by: 160 },
+        { cx: 490, cy: 135, r: 5.0, rot: 0.2, bx: 478, by: 152 },
+        { cx: 400, cy: 90, r: 4.8, rot: 0.9, bx: 400, by: 105 },
+        { cx: 360, cy: 130, r: 4.8, rot: 1.3, bx: 355, by: 145 },
+        { cx: 450, cy: 125, r: 4.8, rot: 0.5, bx: 448, by: 138 },
       ];
       const a = anchors[(eventHash >>> 3) % anchors.length];
       const pt = adaptCanopyPoint(a.cx, a.cy);
@@ -1748,6 +1757,13 @@ function attachEarnedCareFeatures({
       baseCy = pt.cy;
       r = a.r;
       rot = a.rot;
+      if (a.bx !== undefined && a.by !== undefined) {
+        const bpt = adaptCanopyPoint(a.bx, a.by);
+        branchAnchor = {
+          x: Math.round((bpt.cx + microX * 0.5) * 10) / 10,
+          y: Math.round((bpt.cy + microY * 0.5) * 10) / 10,
+        };
+      }
     }
 
     const finalCx = Math.round((baseCx + microX) * 10) / 10;
@@ -1768,6 +1784,7 @@ function attachEarnedCareFeatures({
       hasCluster: isCluster,
       petalCount,
       rotation: finalRot,
+      branchAnchor,
       petals: createOrganicBlossomPetals(
         finalCx,
         finalCy,
@@ -3544,16 +3561,18 @@ export function generateGardenSVGScene(
     const curve = dna.trunkCurvature;
     const crownX = 398 + lean;
     const midX = 395 + lean * 0.5 + curve;
-    const flareLeft = 382 - 2 * stageProgress + lean * 0.2;
-    const flareRight = 422 + 2 * stageProgress + lean * 0.2;
+    const flareLeft = 364 - 4 * stageProgress + lean * 0.3;
+    const flareRight = 428 + 4 * stageProgress + lean * 0.3;
 
-    trunkPath = `M ${flareLeft.toFixed(1)},444 Q ${(midX - 7).toFixed(1)},415 ${(midX - 4).toFixed(1)},370 Q ${(midX - 1).toFixed(1)},300 ${crownX.toFixed(1)},230 Q ${(crownX + 6).toFixed(1)},300 ${(midX + 9).toFixed(1)},370 Q ${(midX + 13).toFixed(1)},415 ${flareRight.toFixed(1)},444 Z`;
-    trunkHighlightPath = `M ${(flareLeft + 6).toFixed(1)},435 Q ${(midX - 1).toFixed(1)},370 ${(midX + 2).toFixed(1)},300 Q ${(crownX + 1).toFixed(1)},240 ${(crownX + 3).toFixed(1)},230`;
-    trunkShadowPath = `M ${(flareRight - 4).toFixed(1)},438 Q ${(midX + 13).toFixed(1)},370 ${(midX + 12).toFixed(1)},300 Q ${(crownX + 7).toFixed(1)},240 ${(crownX + 4).toFixed(1)},230`;
+    trunkPath = `M ${flareLeft.toFixed(1)},444 Q ${(midX - 10).toFixed(1)},410 ${(midX - 6).toFixed(1)},350 Q ${(midX - 2).toFixed(1)},290 ${crownX.toFixed(1)},230 Q ${(crownX + 10).toFixed(1)},290 ${(midX + 14).toFixed(1)},350 Q ${(midX + 18).toFixed(1)},410 ${flareRight.toFixed(1)},444 Z`;
+    trunkHighlightPath = `M ${(flareLeft + 8).toFixed(1)},436 Q ${(midX - 2).toFixed(1)},355 ${(midX + 1).toFixed(1)},290 Q ${(crownX + 1).toFixed(1)},240 ${(crownX + 3).toFixed(1)},230`;
+    trunkShadowPath = `M ${(flareRight - 6).toFixed(1)},438 Q ${(midX + 18).toFixed(1)},360 ${(midX + 16).toFixed(1)},295 Q ${(crownX + 10).toFixed(1)},240 ${(crownX + 6).toFixed(1)},230`;
 
     rootPaths.push(
+      "M 368,442 Q 338,448 308,454",
       "M 382,442 Q 355,448 335,452",
-      "M 422,442 Q 448,448 468,452"
+      "M 426,442 Q 450,448 472,453",
+      "M 440,442 Q 468,448 498,454"
     );
 
     barkTexturePaths.push(
@@ -3580,59 +3599,74 @@ export function generateGardenSVGScene(
       }
     );
 
-    // Spreading branch framework connecting into foliage masses
+    // Organic young oak branch framework physically supporting canopy and blossoms
     branches.push(
-      "M 393,310 Q 345,280 280,260 Q 345,292 394,324 Z",
-      "M 406,280 Q 460,250 520,230 Q 460,265 404,295 Z"
+      // Lower Left Scaffold Branch reaching to (275, 255)
+      "M 390,305 Q 340,275 275,255 Q 340,288 392,318 Z",
+      // Lower Left secondary branch curving up to (305, 175)
+      "M 335,275 Q 315,225 305,175 Q 320,230 338,280 Z",
+      // Lower Right Scaffold Branch reaching to (525, 225)
+      "M 408,280 Q 465,248 525,225 Q 465,262 406,295 Z",
+      // Lower Right secondary branch curving up to (515, 168)
+      "M 465,250 Q 495,205 515,168 Q 490,210 460,255 Z",
+      // Upper Left Scaffold Branch reaching up to (345, 145)
+      "M 396,245 Q 365,190 345,145 Q 370,198 398,252 Z",
+      // Upper Right Scaffold Branch reaching up to (455, 135)
+      "M 402,235 Q 432,180 455,135 Q 428,188 400,242 Z",
+      // Crown Leader Branch reaching up to (400, 115)
+      "M 398,225 Q 399,165 400,115 Q 401,170 398,230 Z",
+      // Crown Left secondary branchlet reaching to (375, 115)
+      "M 398,175 Q 380,140 375,115 Q 382,142 399,178 Z",
+      // Crown Right secondary branchlet reaching to (432, 112)
+      "M 401,170 Q 425,135 432,112 Q 422,140 399,175 Z",
+      // Crown Leader tip branchlet reaching to (400, 95)
+      "M 399,150 Q 400,120 400,95 Q 401,120 400,150 Z",
+      // Left sub-branchlet reaching to (315, 142)
+      "M 350,155 Q 330,148 315,142 Q 332,154 352,160 Z",
+      // Right sub-branchlet reaching to (495, 132)
+      "M 450,145 Q 475,138 495,132 Q 472,142 448,150 Z"
     );
-    if (stageProgress >= 0.2) {
-      branches.push("M 397,240 Q 370,195 345,170 Q 380,205 399,245 Z");
-    }
-    if (stageProgress >= 0.6) {
-      branches.push("M 403,215 Q 436,176 468,150 Q 434,186 401,222 Z");
-    }
 
     const foliageScale =
-      0.88 +
-      0.12 * stageProgress +
-      0.06 * careProgress +
-      0.03 * Math.min(6, posCount);
+      0.95 +
+      0.15 * stageProgress +
+      0.05 * careProgress;
 
-    // Three-toned irregular lobes with clear negative space
+    // Rich, layered young oak foliage masses providing physical support for blossoms
     foliageClusters.push(
       {
         id: "branching-deep-left",
         d: createIrregularFoliageLobe(
-          275 + tilt,
-          245,
-          80 * foliageScale,
-          55 * foliageScale,
-          -0.2,
+          305 + tilt,
+          235,
+          56 * foliageScale,
+          38 * foliageScale,
+          -0.18,
           seed + 11
         ),
         color: palette.deepFoliage,
-        opacity: 0.95,
+        opacity: 0.94,
       },
       {
         id: "branching-deep-right",
         d: createIrregularFoliageLobe(
-          525 + tilt,
-          215,
-          85 * foliageScale,
-          60 * foliageScale,
-          0.2,
+          505 + tilt,
+          210,
+          58 * foliageScale,
+          40 * foliageScale,
+          0.18,
           seed + 12
         ),
         color: palette.deepFoliage,
-        opacity: 0.95,
+        opacity: 0.94,
       },
       {
         id: "branching-mid-center",
         d: createIrregularFoliageLobe(
-          395 + tilt,
-          205,
-          95 * foliageScale,
-          68 * foliageScale,
+          398 + tilt,
+          195,
+          62 * foliageScale,
+          44 * foliageScale,
           0,
           seed + 13
         ),
@@ -3642,11 +3676,11 @@ export function generateGardenSVGScene(
       {
         id: "branching-crown-left",
         d: createIrregularFoliageLobe(
-          340 + tilt,
-          155,
-          75 * foliageScale,
+          345 + tilt,
+          148,
           52 * foliageScale,
-          -0.12,
+          36 * foliageScale,
+          -0.10,
           seed + 14
         ),
         color: palette.lightFoliage,
@@ -3655,44 +3689,57 @@ export function generateGardenSVGScene(
       {
         id: "branching-crown-right",
         d: createIrregularFoliageLobe(
-          465 + tilt,
-          145,
-          78 * foliageScale,
+          455 + tilt,
+          140,
           54 * foliageScale,
-          0.12,
+          38 * foliageScale,
+          0.10,
           seed + 15
         ),
         color: palette.accentLeaf,
         opacity: 0.92,
+      },
+      {
+        id: "branching-top-crown",
+        d: createIrregularFoliageLobe(
+          400 + tilt,
+          112,
+          50 * foliageScale,
+          34 * foliageScale,
+          0.04,
+          seed + 16
+        ),
+        color: palette.lightFoliage,
+        opacity: 0.90,
       }
     );
 
     canopyShadowClusters.push(
       {
         id: "branching-shadow-left",
-        d: createIrregularFoliageLobe(275 + tilt, 258, 86 * foliageScale, 58 * foliageScale, -0.2, seed + 111),
+        d: createIrregularFoliageLobe(305 + tilt, 256, 48 * foliageScale, 32 * foliageScale, -0.18, seed + 111),
         color: palette.deepFoliage,
-        opacity: 0.94,
+        opacity: 0.60,
       },
       {
         id: "branching-shadow-right",
-        d: createIrregularFoliageLobe(525 + tilt, 228, 90 * foliageScale, 62 * foliageScale, 0.2, seed + 112),
+        d: createIrregularFoliageLobe(495 + tilt, 232, 50 * foliageScale, 34 * foliageScale, 0.18, seed + 112),
         color: palette.deepFoliage,
-        opacity: 0.94,
+        opacity: 0.60,
       }
     );
     canopyHighlightClusters.push(
       {
         id: "branching-highlight-left",
-        d: createIrregularFoliageLobe(335 + tilt, 145, 54 * foliageScale, 38 * foliageScale, -0.1, seed + 211),
+        d: createIrregularFoliageLobe(348 + tilt, 158, 30 * foliageScale, 20 * foliageScale, -0.1, seed + 211),
         color: palette.lightFoliage,
-        opacity: 0.88,
+        opacity: 0.58,
       },
       {
         id: "branching-highlight-right",
-        d: createIrregularFoliageLobe(460 + tilt, 135, 56 * foliageScale, 40 * foliageScale, 0.1, seed + 212),
+        d: createIrregularFoliageLobe(448 + tilt, 148, 32 * foliageScale, 22 * foliageScale, 0.1, seed + 212),
         color: palette.accentLeaf,
-        opacity: 0.88,
+        opacity: 0.58,
       }
     );
 

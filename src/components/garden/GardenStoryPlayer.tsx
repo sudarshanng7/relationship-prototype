@@ -28,6 +28,7 @@ export interface GardenStoryPlayerProps {
   liveCareEvents: GardenCareEvent[];
   isLiveLoading?: boolean;
   liveError?: string | null;
+  onExploreMoment?: (featureId: string) => void;
   onClose: () => void;
   onPlayAgain: () => void;
 }
@@ -41,6 +42,7 @@ export function GardenStoryPlayer({
   liveCareEvents,
   isLiveLoading = false,
   liveError = null,
+  onExploreMoment,
   onClose,
   onPlayAgain,
 }: GardenStoryPlayerProps) {
@@ -628,8 +630,33 @@ export function GardenStoryPlayer({
           </View>
         )}
 
-        {/* Secondary Actions: Skip to today & Close */}
+        {/* Secondary Actions: Skip to today, Explore this moment & Close */}
         <View style={styles.secondaryActionsRow}>
+          {!isPlaying && !isFinalStep && currentStep.highlightFeatureId && onExploreMoment && (
+            <Pressable
+              onPress={() => onExploreMoment(currentStep.highlightFeatureId!)}
+              style={({ pressed }) => [
+                styles.secondaryBtn,
+                styles.exploreMomentBtn,
+                { borderColor: theme.primaryAccent },
+                pressed && { opacity: 0.7 },
+              ]}
+              focusable={true}
+              accessibilityRole="button"
+              accessibilityLabel="Explore this moment in the garden"
+              accessibilityHint="Opens the interactive 2.5D exploration camera focused on this moment"
+            >
+              <Text
+                style={[
+                  styles.secondaryBtnText,
+                  { color: theme.primaryAccent, fontWeight: "600" },
+                ]}
+              >
+                🔍 Explore this moment
+              </Text>
+            </Pressable>
+          )}
+
           {!isFinalStep && (
             <Pressable
               onPress={handleSkipToToday}
@@ -868,6 +895,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     alignItems: "center",
     justifyContent: "center",
+  },
+  exploreMomentBtn: {
+    borderRadius: 22,
+    borderWidth: 1,
+    paddingHorizontal: 16,
   },
   secondaryBtnText: {
     fontSize: tokens.typeScale.body,

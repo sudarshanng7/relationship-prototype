@@ -9,3 +9,8 @@ export * from "./feature-bounds";
 export * from "./asset-manifest";
 export * from "./ecosystem";
 export * from "./garden-fixtures";
+export * from "./stage-contracts";
+export * from "./renderer-config";
+export * from "./couple-dna";
+export * from "./ambient-life";
+export * from "./explorable-memories";
