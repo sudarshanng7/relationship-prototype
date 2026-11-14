@@ -158,7 +158,7 @@ export function useGardenData(coupleId: string | null) {
         const todayUtcStr = new Date().toISOString().slice(0, 10);
         const { data: importantDates, error: datesError } = await supabase
           .from("couple_important_dates")
-          .select("id, event_date")
+          .select("id, event_date, created_at")
           .eq("couple_id", coupleId)
           .lte("event_date", todayUtcStr)
           .order("event_date", { ascending: false });
@@ -219,6 +219,9 @@ export function useGardenData(coupleId: string | null) {
             id: row.id,
             kind: "important_date",
             occurredAt: safeTs,
+            createdAt: row.created_at
+              ? normalizeTimestamp(row.created_at, nowIso)
+              : null,
           });
         }
 

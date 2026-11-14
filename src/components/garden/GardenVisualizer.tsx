@@ -36,6 +36,7 @@ export interface GardenVisualizerProps {
   careEvents?: GardenCareEvent[];
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
+  highlightFeatureId?: string | null;
 }
 
 export function GardenVisualizer({
@@ -48,6 +49,7 @@ export function GardenVisualizer({
   careEvents,
   style,
   children,
+  highlightFeatureId,
 }: GardenVisualizerProps) {
   const sceneId = useId().replace(/:/g, "_");
   const { effectiveTheme } = useTheme();
@@ -81,6 +83,28 @@ export function GardenVisualizer({
   const soilMoundGradId = `gardenSoilMoundGrad_${sceneId}`;
 
   const isCompact = compact === true;
+
+  const highlightCoord = useMemo(() => {
+    if (!highlightFeatureId) return null;
+    const b = scene.blossoms.find((x) => x.id === highlightFeatureId || x.id.startsWith(highlightFeatureId));
+    if (b) return { cx: b.cx, cy: b.cy, r: b.r || 10 };
+
+    const h = (scene.habitatDetails || []).find((x) => x.id === highlightFeatureId || x.id.startsWith(highlightFeatureId));
+    if (h) return { cx: h.cx, cy: h.cy, r: 14 };
+
+    const c = (scene.canopyDetails || []).find((x) => x.id === highlightFeatureId || x.id.startsWith(highlightFeatureId));
+    if (c) {
+      if (c.buds && c.buds.length > 0) return { cx: c.buds[0].cx, cy: c.buds[0].cy, r: 12 };
+      if (c.berries && c.berries.length > 0) return { cx: c.berries[0].cx, cy: c.berries[0].cy, r: 10 };
+    }
+
+    const g = scene.groundDetails.find((x) => x.id === highlightFeatureId || x.id.startsWith(highlightFeatureId));
+    if (g && typeof g.cx === "number" && typeof g.cy === "number") {
+      return { cx: g.cx, cy: g.cy, r: 12 };
+    }
+
+    return null;
+  }, [scene, highlightFeatureId]);
 
   // Step 7: Soil texture, embedded stones and root flare shadow (rendered beneath roots and trunk)
   const preTreeDetails = useMemo(() => {
@@ -1055,6 +1079,23 @@ export function GardenVisualizer({
               </G>
             );
           })}
+
+          {/* Gentle temporary aura around newly revealed botanical feature during story playback */}
+          {highlightCoord && (
+            <G id="story-reveal-halo">
+              <Circle
+                cx={highlightCoord.cx}
+                cy={highlightCoord.cy}
+                r={Math.max(16, highlightCoord.r * 1.8)}
+                stroke={scene.palette.blossomCenter || "#D4AF37"}
+                strokeWidth={1.5}
+                strokeDasharray="3,3"
+                fill={scene.palette.blossomSecondary || "#FFFFFF"}
+                fillOpacity={0.22}
+                opacity={0.85}
+              />
+            </G>
+          )}
         </Svg>
       </View>
 

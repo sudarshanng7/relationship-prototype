@@ -160,6 +160,7 @@ export type GardenCareEvent = {
   kind: "positive_moment" | "reconnection" | "important_date";
   occurredAt: string;
   category?: string | null;
+  createdAt?: string | null;
 };
 
 export type PositiveBotanicalFamily =

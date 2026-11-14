@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,6 +22,12 @@ import { supabase } from "@/lib/supabase";
 import { useGardenData } from "@/lib/use-garden-data";
 import { GardenVisualizer } from "@/components/garden/GardenVisualizer";
 import { getAmbienceLabel } from "@/lib/garden-generator";
+import {
+  createGardenStory,
+  type GardenStory,
+  type GardenStorySnapshot,
+} from "@/lib/garden-story";
+import { GardenStoryPlayer } from "@/components/garden/GardenStoryPlayer";
 
 export default function GardenScreen() {
   const router = useRouter();
@@ -111,6 +118,66 @@ export default function GardenScreen() {
       router.replace({ pathname: "/events", params: { scope: "ours" } });
     }
   };
+
+  // Garden Story Playback State
+  const [isPlayingStory, setIsPlayingStory] = useState(false);
+  const [story, setStory] = useState<GardenStory | null>(null);
+
+  // If couple membership changes, reset any active story playback
+  useEffect(() => {
+    setIsPlayingStory(false);
+    setStory(null);
+  }, [resolvedCoupleId]);
+
+  const handleStartStory = useCallback(() => {
+    if (!resolvedCoupleId) return;
+    const snapshot: GardenStorySnapshot = {
+      coupleId: resolvedCoupleId,
+      seedString: garden.seedString,
+      createdAt: garden.createdAt,
+      careEvents: garden.careEvents,
+      asOfTime: new Date().toISOString(),
+      isResting: garden.isResting,
+      themeKey: theme.key,
+    };
+    const newStory = createGardenStory(snapshot);
+    setStory(newStory);
+    setIsPlayingStory(true);
+  }, [
+    resolvedCoupleId,
+    garden.seedString,
+    garden.createdAt,
+    garden.careEvents,
+    garden.isResting,
+    theme.key,
+  ]);
+
+  const handleCloseStory = useCallback(() => {
+    setIsPlayingStory(false);
+    setStory(null);
+  }, []);
+
+  const handlePlayAgain = useCallback(() => {
+    if (!resolvedCoupleId) return;
+    const snapshot: GardenStorySnapshot = {
+      coupleId: resolvedCoupleId,
+      seedString: garden.seedString,
+      createdAt: garden.createdAt,
+      careEvents: garden.careEvents,
+      asOfTime: new Date().toISOString(),
+      isResting: garden.isResting,
+      themeKey: theme.key,
+    };
+    const newStory = createGardenStory(snapshot);
+    setStory(newStory);
+  }, [
+    resolvedCoupleId,
+    garden.seedString,
+    garden.createdAt,
+    garden.careEvents,
+    garden.isResting,
+    theme.key,
+  ]);
 
   // 1. Initial Identity / Membership Loading State
   if (isIdentityLoading || isResolvingCouple || (garden.loading && !garden.error)) {
@@ -288,77 +355,134 @@ export default function GardenScreen() {
             </View>
           )}
 
-          {/* SECTION 1 — Immersive Garden Hero and Sibling Summary */}
-          <View
-            style={[
-              styles.gardenHero,
-              {
-                backgroundColor: summaryBg,
-                borderColor: theme.borderSoft,
-              },
-            ]}
-          >
-            <GardenVisualizer
-              totalGrowthUnits={totalGrowthUnits}
-              careGrowthUnits={careGrowthUnits}
-              timeGrowthUnits={timeGrowthUnits}
-              seedString={seedString}
-              isResting={isResting}
-              careSignals={careSignals}
-              careEvents={careEvents}
-              style={styles.heroVisualizer}
+          {/* Discreet Play Story Toolbar immediately above artwork */}
+          {!isPlayingStory && (
+            <View style={styles.gardenToolbar}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.playStoryButton,
+                  {
+                    backgroundColor: isLight
+                      ? "#FFFFFF"
+                      : isDim
+                      ? "#3C3444"
+                      : "#241B2B",
+                    borderColor: theme.borderSoft,
+                  },
+                  pressed && styles.playStoryButtonPressed,
+                ]}
+                onPress={handleStartStory}
+                focusable={true}
+                accessibilityRole="button"
+                accessibilityLabel="Play our garden story"
+                accessibilityHint="Watch how your garden has grown from shared moments"
+              >
+                <Text
+                  style={[
+                    styles.playStoryIcon,
+                    { color: theme.primaryAccent },
+                  ]}
+                >
+                  ▶
+                </Text>
+                <Text
+                  style={[
+                    styles.playStoryLabel,
+                    { color: theme.primaryText },
+                  ]}
+                >
+                  Our garden story
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
+          {/* SECTION 1 — Immersive Garden Hero / Garden Story Playback */}
+          {isPlayingStory && story ? (
+            <GardenStoryPlayer
+              story={story}
+              theme={theme}
+              isLight={isLight}
+              isDim={isDim}
+              coupleId={resolvedCoupleId}
+              liveCareEvents={careEvents}
+              isLiveLoading={garden.loading}
+              liveError={garden.error}
+              onClose={handleCloseStory}
+              onPlayAgain={handlePlayAgain}
             />
+          ) : (
             <View
               style={[
-                styles.gardenSummary,
+                styles.gardenHero,
                 {
                   backgroundColor: summaryBg,
-                  borderTopColor: theme.borderSoft,
+                  borderColor: theme.borderSoft,
                 },
               ]}
             >
-              <View style={styles.summaryTopRow}>
+              <GardenVisualizer
+                totalGrowthUnits={totalGrowthUnits}
+                careGrowthUnits={careGrowthUnits}
+                timeGrowthUnits={timeGrowthUnits}
+                seedString={seedString}
+                isResting={isResting}
+                careSignals={careSignals}
+                careEvents={careEvents}
+                style={styles.heroVisualizer}
+              />
+              <View
+                style={[
+                  styles.gardenSummary,
+                  {
+                    backgroundColor: summaryBg,
+                    borderTopColor: theme.borderSoft,
+                  },
+                ]}
+              >
+                <View style={styles.summaryTopRow}>
+                  <Text
+                    style={[
+                      styles.summaryStageTitle,
+                      { color: theme.primaryText },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {stage.label}
+                  </Text>
+                  <View
+                    style={[
+                      styles.statusPill,
+                      {
+                        backgroundColor: pillBg,
+                        borderColor: pillBorder,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.statusPillText, { color: pillText }]}>
+                      {ambienceLabel}
+                    </Text>
+                  </View>
+                </View>
                 <Text
                   style={[
-                    styles.summaryStageTitle,
+                    styles.summarySupportingCopy,
                     { color: theme.primaryText },
                   ]}
-                  numberOfLines={1}
                 >
-                  {stage.label}
+                  {stage.supportingCopy}
                 </Text>
-                <View
+                <Text
                   style={[
-                    styles.statusPill,
-                    {
-                      backgroundColor: pillBg,
-                      borderColor: pillBorder,
-                    },
+                    styles.summaryCareReflection,
+                    { color: theme.secondaryText },
                   ]}
                 >
-                  <Text style={[styles.statusPillText, { color: pillText }]}>
-                    {ambienceLabel}
-                  </Text>
-                </View>
+                  {dynamicGrowthNote}
+                </Text>
               </View>
-              <Text
-                style={[
-                  styles.summarySupportingCopy,
-                  { color: theme.primaryText },
-                ]}
-              >
-                {stage.supportingCopy}
-              </Text>
-              <Text
-                style={[
-                  styles.summaryCareReflection,
-                  { color: theme.secondaryText },
-                ]}
-              >
-                {dynamicGrowthNote}
-              </Text>
             </View>
-          </View>
+          )}
 
           {/* SECTION 2 — Recent Growth Reflection (Only when eligible event exists) */}
           {latestEvent && (
@@ -581,6 +705,43 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 0,
     shadowOpacity: 0,
     elevation: 0,
+  },
+  gardenToolbar: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    marginBottom: -4,
+  },
+  playStoryButton: {
+    minWidth: 44,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 22,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  playStoryButtonPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  playStoryIcon: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  playStoryLabel: {
+    fontSize: tokens.typeScale.caption,
+    fontWeight: "600",
+    letterSpacing: 0.2,
   },
   gardenSummary: {
     position: "relative",
