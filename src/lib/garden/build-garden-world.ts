@@ -28,6 +28,8 @@ import {
   GARDEN_WORLD_SCHEMA_VERSION,
   GARDEN_GENERATOR_VERSION,
   GARDEN_ASSET_SET_VERSION,
+  CANONICAL_SCENE_BOUNDS,
+  EXPANDED_WORLD_BOUNDS,
   type GardenWorld,
   type GardenNode,
   type EarnedFeatureGroup,
@@ -35,6 +37,7 @@ import {
   type BoundingBox2D,
   type Transform2D,
   type Point2D,
+  type ScenicRegion,
 } from "./world-types";
 import {
   computeApproximatePathBounds,
@@ -146,14 +149,8 @@ export function buildGardenWorld(
 
   // 1. World Root
   const rootNodeId = "world-root";
-  const worldBounds: BoundingBox2D = {
-    minX: 0,
-    minY: 0,
-    maxX: 800,
-    maxY: 500,
-    width: 800,
-    height: 500,
-  };
+  const worldBounds: BoundingBox2D = EXPANDED_WORLD_BOUNDS;
+  const canonicalBounds: BoundingBox2D = CANONICAL_SCENE_BOUNDS;
 
   nodes[rootNodeId] = {
     id: rootNodeId,
@@ -168,6 +165,7 @@ export function buildGardenWorld(
     sourceEvent: null,
     appearanceOrigin: "stage_structure",
     mappingType: "continuous_structural",
+    scenicRegion: "atmosphere",
   };
   registerRenderId(rootNodeId, rootNodeId);
 
@@ -254,8 +252,90 @@ export function buildGardenWorld(
     }
   }
 
+  function determineScenicRegion(node: GardenNode): ScenicRegion {
+    const x = node.anchorPoint ? node.anchorPoint.x : 400;
+    const y = node.anchorPoint ? node.anchorPoint.y : 250;
+
+    if (node.role === "world_root") {
+      return "atmosphere";
+    }
+
+    if (node.role === "terrain_region") {
+      if (node.regionKind === "distant_woodland" || node.regionKind === "distant_hills") {
+        return "atmosphere";
+      }
+      if (node.regionKind === "stream_path") {
+        return "stream_edge";
+      }
+      if (node.regionKind === "root_shadow" || node.regionKind === "soil_bed") {
+        return "root_grove";
+      }
+      return "wildflower_meadow";
+    }
+
+    if (node.role === "landmark") {
+      return "stone_landmark_area";
+    }
+
+    if (node.role === "root") {
+      return "root_grove";
+    }
+
+    if (node.role === "trunk") {
+      if (y > 430) return "root_grove";
+      return "trunk";
+    }
+
+    if (node.role === "ground_flora") {
+      if (node.floraType === "stone") {
+        return "stone_landmark_area";
+      }
+      if (x > 500 && y > 380 && (node.pathD?.includes("stream") || x > 540)) {
+        return "stream_edge";
+      }
+      if (y >= 430 && Math.abs(x - 400) < 100) {
+        return "root_grove";
+      }
+      return "wildflower_meadow";
+    }
+
+    if (node.role === "foliage" || node.role === "bud_blossom_fruit" || node.role === "branch") {
+      if (y < 160 || (y < 210 && Math.abs(x - 400) < 70)) {
+        return "crown";
+      }
+      if (x < 380) {
+        return "left_canopy";
+      }
+      if (x > 420) {
+        return "right_canopy";
+      }
+      return y < 250 ? "crown" : "trunk";
+    }
+
+    if (node.role === "habitat_detail" || node.role === "habitat_node" || node.role === "creature_node") {
+      if (y > 380) {
+        return x > 520 ? "stream_edge" : "wildflower_meadow";
+      }
+      if (y < 170) {
+        return "crown";
+      }
+      if (x < 380) {
+        return "left_canopy";
+      }
+      if (x > 420) {
+        return "right_canopy";
+      }
+      return "trunk";
+    }
+
+    return "wildflower_meadow";
+  }
+
   // Unified node registration helper: ensures canonical storage and legacy alias
   function addNode(node: GardenNode, legacyId?: string) {
+    if (!node.scenicRegion) {
+      node.scenicRegion = determineScenicRegion(node);
+    }
     nodes[node.id] = node;
     if (legacyId) {
       registerRenderId(legacyId, node.id);
@@ -295,15 +375,52 @@ export function buildGardenWorld(
 
   const terrainRegions: Array<{
     id: string;
-    kind: "distant_hills" | "rear_grass" | "mid_grass" | "front_grass" | "soil_bed" | "root_shadow";
+    kind:
+      | "distant_woodland"
+      | "distant_hills"
+      | "rear_grass"
+      | "mid_grass"
+      | "front_grass"
+      | "stream_path"
+      | "garden_path"
+      | "soil_bed"
+      | "root_shadow";
     pathD: string;
     depth: number;
-  }> = [
+  }> = [];
+
+  if (scene.distantWoodlandPath) {
+    terrainRegions.push({
+      id: "terrain-woodland",
+      kind: "distant_woodland",
+      pathD: scene.distantWoodlandPath,
+      depth: -85,
+    });
+  }
+
+  terrainRegions.push(
     { id: "terrain-hills", kind: "distant_hills", pathD: scene.distantHillsPath, depth: -80 },
     { id: "terrain-rear-grass", kind: "rear_grass", pathD: scene.groundLayerBack, depth: -60 },
     { id: "terrain-mid-grass", kind: "mid_grass", pathD: scene.groundLayerMid, depth: -40 },
-    { id: "terrain-front-grass", kind: "front_grass", pathD: scene.groundLayerFront, depth: -30 },
-  ];
+    { id: "terrain-front-grass", kind: "front_grass", pathD: scene.groundLayerFront, depth: -30 }
+  );
+
+  if (scene.streamPath) {
+    terrainRegions.push({
+      id: "terrain-stream",
+      kind: "stream_path",
+      pathD: scene.streamPath,
+      depth: -25,
+    });
+  }
+  if (scene.gardenPathD) {
+    terrainRegions.push({
+      id: "terrain-path",
+      kind: "garden_path",
+      pathD: scene.gardenPathD,
+      depth: -25,
+    });
+  }
 
   if (scene.soilBedPath) {
     terrainRegions.push({
@@ -344,6 +461,88 @@ export function buildGardenWorld(
       pathD: tr.pathD,
     };
     addNode(trNode, tr.id);
+  }
+
+  // Expanded terrain margin nodes (deterministic breathing room outside canonical [0,0,800,500])
+  const expandedTerrainRegions: Array<{
+    id: string;
+    kind: "distant_woodland" | "mid_grass" | "stream_path";
+    depth: number;
+    bounds: BoundingBox2D;
+    anchor: Point2D;
+    scenicRegion: ScenicRegion;
+    pathD: string;
+  }> = [
+    {
+      id: "terrain-woodland-edge-left",
+      kind: "distant_woodland",
+      depth: -85,
+      bounds: { minX: -100, minY: 100, maxX: 40, maxY: 320, width: 140, height: 220 },
+      anchor: { x: -30, y: 320 },
+      scenicRegion: "atmosphere",
+      pathD: "M-100,100 L40,100 L40,320 L-100,320 Z",
+    },
+    {
+      id: "terrain-woodland-edge-right",
+      kind: "distant_woodland",
+      depth: -85,
+      bounds: { minX: 760, minY: 100, maxX: 900, maxY: 320, width: 140, height: 220 },
+      anchor: { x: 830, y: 320 },
+      scenicRegion: "atmosphere",
+      pathD: "M760,100 L900,100 L900,320 L760,320 Z",
+    },
+    {
+      id: "terrain-meadow-margin-left",
+      kind: "mid_grass",
+      depth: -40,
+      bounds: { minX: -100, minY: 340, maxX: 50, maxY: 540, width: 150, height: 200 },
+      anchor: { x: -25, y: 480 },
+      scenicRegion: "wildflower_meadow",
+      pathD: "M-100,340 L50,340 L50,540 L-100,540 Z",
+    },
+    {
+      id: "terrain-meadow-margin-right",
+      kind: "mid_grass",
+      depth: -40,
+      bounds: { minX: 750, minY: 340, maxX: 900, maxY: 540, width: 150, height: 200 },
+      anchor: { x: 825, y: 480 },
+      scenicRegion: "wildflower_meadow",
+      pathD: "M750,340 L900,340 L900,540 L750,540 Z",
+    },
+  ];
+
+  if (scene.streamPath) {
+    expandedTerrainRegions.push({
+      id: "terrain-stream-continuation",
+      kind: "stream_path",
+      depth: -25,
+      bounds: { minX: 780, minY: 440, maxX: 900, maxY: 550, width: 120, height: 110 },
+      anchor: { x: 840, y: 500 },
+      scenicRegion: "stream_edge",
+      pathD: "M780,440 L900,440 L900,550 L780,550 Z",
+    });
+  }
+
+  for (const etr of expandedTerrainRegions) {
+    const etrNode: GardenNode = {
+      id: etr.id,
+      role: "terrain_region",
+      regionKind: etr.kind,
+      parentId: terrainRootId,
+      childIds: [],
+      depthLayer: etr.depth,
+      localTransform: createDefaultTransform(etr.anchor.x, etr.anchor.y),
+      worldBounds: etr.bounds,
+      anchorPoint: etr.anchor,
+      isEarned: false,
+      sourceEvent: null,
+      appearanceOrigin: "stage_structure",
+      mappingType: "continuous_structural",
+      scenicRegion: etr.scenicRegion,
+      pathD: etr.pathD,
+      isExpanded: true,
+    };
+    addNode(etrNode, etr.id);
   }
 
   // ----------------------------------------------------
@@ -399,6 +598,31 @@ export function buildGardenWorld(
     shadowPathD: scene.trunkShadowPath,
   };
   addNode(trunkNode, "tree-trunk");
+
+  // Bark textures on the trunk
+  if (scene.barkTexturePaths && scene.barkTexturePaths.length > 0) {
+    scene.barkTexturePaths.forEach((bt, idx) => {
+      const bb = computeApproximatePathBounds(bt.d, bt.strokeWidth || 1.2);
+      const btId = `tree-bark-texture-${idx}`;
+      const btNode: GardenNode = {
+        id: btId,
+        role: "trunk",
+        parentId: "tree-trunk",
+        childIds: [],
+        depthLayer: 18,
+        localTransform: createDefaultTransform((bb.minX + bb.maxX) / 2, (bb.minY + bb.maxY) / 2),
+        worldBounds: bb,
+        anchorPoint: { x: (bb.minX + bb.maxX) / 2, y: (bb.minY + bb.maxY) / 2 },
+        isEarned: false,
+        sourceEvent: null,
+        appearanceOrigin: "stage_structure",
+        mappingType: "continuous_structural",
+        pathD: bt.d,
+        color: bt.color,
+      };
+      addNode(btNode, bt.id || btId);
+    });
+  }
 
   // Roots
   if (scene.rootPaths && scene.rootPaths.length > 0) {
@@ -456,6 +680,32 @@ export function buildGardenWorld(
   // 4. CANOPY FOLIAGE, BLOSSOMS, SEED PODS & SHOOTS
   // ----------------------------------------------------
 
+  // Canopy Shadow Masses (Layer 22)
+  if (scene.canopyShadowClusters && scene.canopyShadowClusters.length > 0) {
+    scene.canopyShadowClusters.forEach((sc, idx) => {
+      const fb = computeApproximatePathBounds(sc.d);
+      const scId = `canopy-shadow-${idx}`;
+      const scNode: GardenNode = {
+        id: scId,
+        role: "foliage",
+        canopyDepthType: "shadow_mass",
+        parentId: "tree-trunk",
+        childIds: [],
+        depthLayer: 22,
+        localTransform: createDefaultTransform((fb.minX + fb.maxX) / 2, (fb.minY + fb.maxY) / 2),
+        worldBounds: fb,
+        anchorPoint: { x: (fb.minX + fb.maxX) / 2, y: (fb.minY + fb.maxY) / 2 },
+        isEarned: false,
+        sourceEvent: null,
+        appearanceOrigin: "stage_structure",
+        mappingType: "continuous_structural",
+        pathD: sc.d,
+        color: sc.color,
+      };
+      addNode(scNode, sc.id || scId);
+    });
+  }
+
   // Foliage Clusters
   scene.foliageClusters.forEach((fc, idx) => {
     const fb = computeApproximatePathBounds(fc.d);
@@ -467,6 +717,7 @@ export function buildGardenWorld(
       legacyFeatureId: match.legacyFeatureId,
       earnedGroupKey: match.earnedGroupKey,
       role: "foliage",
+      canopyDepthType: "mid_canopy",
       semanticKey: match.semanticKey,
       parentId,
       childIds: [],
@@ -483,6 +734,32 @@ export function buildGardenWorld(
     };
     addNode(fNode, fc.id);
   });
+
+  // Canopy Highlight Masses (Layer 38)
+  if (scene.canopyHighlightClusters && scene.canopyHighlightClusters.length > 0) {
+    scene.canopyHighlightClusters.forEach((hc, idx) => {
+      const fb = computeApproximatePathBounds(hc.d);
+      const hcId = `canopy-highlight-${idx}`;
+      const hcNode: GardenNode = {
+        id: hcId,
+        role: "foliage",
+        canopyDepthType: "highlight_cluster",
+        parentId: "tree-trunk",
+        childIds: [],
+        depthLayer: 38,
+        localTransform: createDefaultTransform((fb.minX + fb.maxX) / 2, (fb.minY + fb.maxY) / 2),
+        worldBounds: fb,
+        anchorPoint: { x: (fb.minX + fb.maxX) / 2, y: (fb.minY + fb.maxY) / 2 },
+        isEarned: false,
+        sourceEvent: null,
+        appearanceOrigin: "stage_structure",
+        mappingType: "continuous_structural",
+        pathD: hc.d,
+        color: hc.color,
+      };
+      addNode(hcNode, hc.id || hcId);
+    });
+  }
 
   // Blossoms
   scene.blossoms.forEach((b, idx) => {
@@ -741,6 +1018,50 @@ export function buildGardenWorld(
     addNode(node, gd.id);
   });
 
+  // Margin flora: deterministic decorative botanicals in expanded breathing room (-100..0 and 800..900)
+  const marginFloraDetails: Array<{
+    id: string;
+    floraType: "fern" | "clover" | "moss" | "flower";
+    cx: number;
+    cy: number;
+    radius: number;
+  }> = [
+    { id: "margin-flora-left-fern", floraType: "fern", cx: -45, cy: 460, radius: 16 },
+    { id: "margin-flora-left-clover", floraType: "clover", cx: -20, cy: 495, radius: 12 },
+    { id: "margin-flora-right-moss", floraType: "moss", cx: 825, cy: 470, radius: 14 },
+    { id: "margin-flora-right-flower", floraType: "flower", cx: 860, cy: 505, radius: 15 },
+  ];
+
+  for (const mf of marginFloraDetails) {
+    const mfNode: GardenNode = {
+      id: mf.id,
+      legacyFeatureId: mf.id,
+      role: "ground_flora",
+      floraType: mf.floraType,
+      parentId: groundFloraRootId,
+      childIds: [],
+      depthLayer: 10,
+      localTransform: createDefaultTransform(mf.cx, mf.cy),
+      worldBounds: {
+        minX: mf.cx - mf.radius,
+        minY: mf.cy - mf.radius,
+        maxX: mf.cx + mf.radius,
+        maxY: mf.cy + mf.radius,
+        width: mf.radius * 2,
+        height: mf.radius * 2,
+      },
+      anchorPoint: { x: mf.cx, y: mf.cy },
+      isEarned: false,
+      sourceEvent: null,
+      appearanceOrigin: "stage_structure",
+      mappingType: "continuous_structural",
+      scenicRegion: "wildflower_meadow",
+      isExpanded: true,
+      position: { x: mf.cx, y: mf.cy },
+    };
+    addNode(mfNode, mf.id);
+  }
+
   // ----------------------------------------------------
   // 6. HABITAT DETAILS & WILDLIFE
   // ----------------------------------------------------
@@ -855,11 +1176,13 @@ export function buildGardenWorld(
 
   // Register habitat nodes
   for (const h of Object.values(ecosystem.habitats)) {
+    if (h.sourceEvent === undefined) (h as any).sourceEvent = null;
     addNode(h, h.id);
   }
 
   // Register creature nodes
   for (const c of Object.values(ecosystem.creatures)) {
+    if (c.sourceEvent === undefined) (c as any).sourceEvent = null;
     addNode(c, c.id);
   }
 
@@ -874,6 +1197,54 @@ export function buildGardenWorld(
   const uniqueNodes = Array.from(new Set(allNodes));
   const earnedNodeCount = uniqueNodes.filter((n) => n.isEarned).length;
   const decorativeNodeCount = uniqueNodes.length - earnedNodeCount;
+
+  // ----------------------------------------------------
+  // 8. SCENIC EXPLORATION REGIONS
+  // ----------------------------------------------------
+  const scenicRegionBounds: Partial<Record<ScenicRegion, BoundingBox2D>> = {};
+  for (const node of uniqueNodes) {
+    if (node.scenicRegion && node.worldBounds && node.worldBounds.width > 0 && node.worldBounds.height > 0) {
+      if (!scenicRegionBounds[node.scenicRegion]) {
+        scenicRegionBounds[node.scenicRegion] = { ...node.worldBounds };
+      } else {
+        scenicRegionBounds[node.scenicRegion] = mergeBounds([
+          scenicRegionBounds[node.scenicRegion]!,
+          node.worldBounds,
+        ]);
+      }
+    }
+  }
+
+  const allScenicKeys: ScenicRegion[] = [
+    "crown",
+    "left_canopy",
+    "right_canopy",
+    "trunk",
+    "root_grove",
+    "wildflower_meadow",
+    "stone_landmark_area",
+    "stream_edge",
+    "atmosphere",
+  ];
+
+  const defaultScenicRegions: Record<ScenicRegion, BoundingBox2D> = {
+    crown: { minX: 250, minY: 50, maxX: 550, maxY: 220, width: 300, height: 170 },
+    left_canopy: { minX: 120, minY: 140, maxX: 380, maxY: 340, width: 260, height: 200 },
+    right_canopy: { minX: 420, minY: 130, maxX: 680, maxY: 330, width: 260, height: 200 },
+    trunk: { minX: 340, minY: 220, maxX: 460, maxY: 440, width: 120, height: 220 },
+    root_grove: { minX: 280, minY: 400, maxX: 520, maxY: 470, width: 240, height: 70 },
+    wildflower_meadow: { minX: 40, minY: 360, maxX: 760, maxY: 490, width: 720, height: 130 },
+    stone_landmark_area: { minX: 450, minY: 410, maxX: 650, maxY: 480, width: 200, height: 70 },
+    stream_edge: { minX: 480, minY: 370, maxX: 800, maxY: 500, width: 320, height: 130 },
+    atmosphere: { minX: 0, minY: 0, maxX: 800, maxY: 320, width: 800, height: 320 },
+  };
+
+  const scenicRegions: Record<ScenicRegion, BoundingBox2D> = {} as any;
+  for (const key of allScenicKeys) {
+    scenicRegions[key] = scenicRegionBounds[key]
+      ? mergeBounds([scenicRegionBounds[key]!, defaultScenicRegions[key]])
+      : defaultScenicRegions[key];
+  }
 
   return {
     schemaVersion: GARDEN_WORLD_SCHEMA_VERSION,
@@ -898,7 +1269,9 @@ export function buildGardenWorld(
     renderIdToNodeIds,
     earnedFeatureGroups,
     ecosystem,
+    canonicalBounds,
     worldBounds,
+    scenicRegions,
     metadata: {
       totalNodes: uniqueNodes.length,
       earnedNodeCount,

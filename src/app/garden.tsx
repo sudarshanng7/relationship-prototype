@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -21,17 +21,23 @@ import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { useGardenData } from "@/lib/use-garden-data";
 import { GardenVisualizer } from "@/components/garden/GardenVisualizer";
-import { getAmbienceLabel } from "@/lib/garden-generator";
+import {
+  getAmbienceLabel,
+  generateGardenSVGScene,
+  hashStringToSeed,
+} from "@/lib/garden-generator";
+import { buildGardenWorld } from "@/lib/garden";
 import {
   createGardenStory,
   type GardenStory,
   type GardenStorySnapshot,
 } from "@/lib/garden-story";
 import { GardenStoryPlayer } from "@/components/garden/GardenStoryPlayer";
+import { GardenExplorer } from "@/components/garden/GardenExplorer";
 
 export default function GardenScreen() {
   const router = useRouter();
-  const { theme } = useTheme();
+  const { theme, effectiveTheme } = useTheme();
   const {
     coupleId: contextCoupleId,
     partnerName,
@@ -123,11 +129,61 @@ export default function GardenScreen() {
   const [isPlayingStory, setIsPlayingStory] = useState(false);
   const [story, setStory] = useState<GardenStory | null>(null);
 
-  // If couple membership changes, reset any active story playback
+  // Garden 2.5D Exploration Camera State (Phase 3A)
+  const [isExploring, setIsExploring] = useState(false);
+
+  // If couple membership changes, reset any active story playback or exploration
   useEffect(() => {
     setIsPlayingStory(false);
     setStory(null);
+    setIsExploring(false);
   }, [resolvedCoupleId]);
+
+  const handleStartExplore = useCallback(() => {
+    setIsPlayingStory(false);
+    setStory(null);
+    setIsExploring(true);
+  }, []);
+
+  const handleCloseExplore = useCallback(() => {
+    setIsExploring(false);
+  }, []);
+
+  // Dedicated GardenWorld representation for interactive exploration
+  const exploreGardenWorld = useMemo(() => {
+    if (!isExploring) return null;
+    const scene = generateGardenSVGScene(
+      garden.seedString,
+      garden.totalGrowthUnits,
+      garden.careGrowthUnits,
+      garden.isResting,
+      garden.careSignals,
+      effectiveTheme,
+      garden.careEvents
+    );
+    return buildGardenWorld(scene, {
+      coupleId: resolvedCoupleId || garden.seedString,
+      seedString: garden.seedString,
+      totalGrowthUnits: garden.totalGrowthUnits,
+      careGrowthUnits: garden.careGrowthUnits,
+      timeGrowthUnits: garden.timeGrowthUnits,
+      isResting: garden.isResting,
+      effectiveTheme,
+      careEvents: garden.careEvents,
+      careSignals: garden.careSignals,
+    });
+  }, [
+    isExploring,
+    garden.totalGrowthUnits,
+    garden.careGrowthUnits,
+    garden.timeGrowthUnits,
+    garden.seedString,
+    garden.isResting,
+    garden.careSignals,
+    garden.careEvents,
+    effectiveTheme,
+    resolvedCoupleId,
+  ]);
 
   const handleStartStory = useCallback(() => {
     if (!resolvedCoupleId) return;
@@ -355,9 +411,47 @@ export default function GardenScreen() {
             </View>
           )}
 
-          {/* Discreet Play Story Toolbar immediately above artwork */}
-          {!isPlayingStory && (
+          {/* Discreet Play Story & Explore Toolbar immediately above artwork */}
+          {!isPlayingStory && !isExploring && (
             <View style={styles.gardenToolbar}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.playStoryButton,
+                  {
+                    backgroundColor: isLight
+                      ? "#FFFFFF"
+                      : isDim
+                      ? "#3C3444"
+                      : "#241B2B",
+                    borderColor: theme.borderSoft,
+                  },
+                  pressed && styles.playStoryButtonPressed,
+                ]}
+                onPress={handleStartExplore}
+                focusable={true}
+                accessibilityRole="button"
+                accessibilityLabel="Explore garden"
+                accessibilityHint="Enter interactive 2.5D exploration camera with pan and zoom"
+                hitSlop={6}
+              >
+                <Text
+                  style={[
+                    styles.playStoryIcon,
+                    { color: theme.primaryAccent },
+                  ]}
+                >
+                  🔍
+                </Text>
+                <Text
+                  style={[
+                    styles.playStoryLabel,
+                    { color: theme.primaryText },
+                  ]}
+                >
+                  Explore garden
+                </Text>
+              </Pressable>
+
               <Pressable
                 style={({ pressed }) => [
                   styles.playStoryButton,
@@ -376,6 +470,7 @@ export default function GardenScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Play our garden story"
                 accessibilityHint="Watch how your garden has grown from shared moments"
+                hitSlop={6}
               >
                 <Text
                   style={[
@@ -397,7 +492,7 @@ export default function GardenScreen() {
             </View>
           )}
 
-          {/* SECTION 1 — Immersive Garden Hero / Garden Story Playback */}
+          {/* SECTION 1 — Immersive Garden Hero / Garden Story Playback / 2.5D Exploration */}
           {isPlayingStory && story ? (
             <GardenStoryPlayer
               key={`${story.seedString}-${story.asOfTime}`}
@@ -411,6 +506,21 @@ export default function GardenScreen() {
               liveError={garden.error}
               onClose={handleCloseStory}
               onPlayAgain={handlePlayAgain}
+            />
+          ) : isExploring && exploreGardenWorld ? (
+            <GardenExplorer
+              world={exploreGardenWorld}
+              theme={theme}
+              isLight={isLight}
+              isDim={isDim}
+              seedString={garden.seedString}
+              totalGrowthUnits={garden.totalGrowthUnits}
+              careGrowthUnits={garden.careGrowthUnits}
+              timeGrowthUnits={garden.timeGrowthUnits}
+              isResting={garden.isResting}
+              careSignals={garden.careSignals}
+              careEvents={garden.careEvents}
+              onClose={handleCloseExplore}
             />
           ) : (
             <View
@@ -713,6 +823,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     alignItems: "center",
     marginBottom: -4,
+    gap: 8,
   },
   playStoryButton: {
     minWidth: 44,

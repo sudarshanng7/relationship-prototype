@@ -25,6 +25,8 @@ import type {
   GardenNode,
   SourceEventRef,
   SemanticHitRegion,
+  GardenCameraState,
+  ScenicRegion,
 } from "./world-types";
 import {
   extendBounds,
@@ -49,12 +51,14 @@ export type ScreenHitRegion = SemanticHitRegion;
  */
 export function worldToScreen(
   worldPoint: Point2D,
-  camera: Camera2D,
+  camera: Camera2D | GardenCameraState,
   viewport: Viewport
 ): Point2D {
   const safeZoom = Math.max(0.01, camera.zoom);
-  const screenX = (worldPoint.x - camera.target.x) * safeZoom + viewport.width / 2;
-  const screenY = (worldPoint.y - camera.target.y) * safeZoom + viewport.height / 2;
+  const tx = "targetX" in camera ? camera.targetX : camera.target.x;
+  const ty = "targetY" in camera ? camera.targetY : camera.target.y;
+  const screenX = (worldPoint.x - tx) * safeZoom + viewport.width / 2;
+  const screenY = (worldPoint.y - ty) * safeZoom + viewport.height / 2;
   return {
     x: Math.round(screenX * 100) / 100,
     y: Math.round(screenY * 100) / 100,
@@ -67,12 +71,14 @@ export function worldToScreen(
  */
 export function screenToWorld(
   screenPoint: Point2D,
-  camera: Camera2D,
+  camera: Camera2D | GardenCameraState,
   viewport: Viewport
 ): Point2D {
   const safeZoom = Math.max(0.01, camera.zoom);
-  const worldX = (screenPoint.x - viewport.width / 2) / safeZoom + camera.target.x;
-  const worldY = (screenPoint.y - viewport.height / 2) / safeZoom + camera.target.y;
+  const tx = "targetX" in camera ? camera.targetX : camera.target.x;
+  const ty = "targetY" in camera ? camera.targetY : camera.target.y;
+  const worldX = (screenPoint.x - viewport.width / 2) / safeZoom + tx;
+  const worldY = (screenPoint.y - viewport.height / 2) / safeZoom + ty;
   return {
     x: Math.round(worldX * 100) / 100,
     y: Math.round(worldY * 100) / 100,
@@ -154,6 +160,304 @@ export function clampCameraTarget(
     x: Math.max(minX, Math.min(maxX, target.x)),
     y: Math.max(minY, Math.min(maxY, target.y)),
   };
+}
+
+/**
+ * Converts a unified GardenCameraState to a Camera2D structure.
+ */
+export function cameraStateToCamera2D(state: GardenCameraState): Camera2D {
+  return {
+    target: { x: state.targetX, y: state.targetY },
+    zoom: state.zoom,
+  };
+}
+
+/**
+ * Converts a unified GardenCameraState to a Viewport structure.
+ */
+export function cameraStateToViewport(state: GardenCameraState): Viewport {
+  return {
+    width: state.viewportWidth,
+    height: state.viewportHeight,
+  };
+}
+
+/**
+ * Creates a fitted camera state covering the given world bounds inside viewport.
+ */
+export function createCameraFromFit(
+  worldBounds: BoundingBox2D,
+  viewport: Viewport,
+  padding: number = 24
+): GardenCameraState {
+  const fit = fitCameraToViewport(worldBounds, viewport, padding);
+  return {
+    targetX: fit.target.x,
+    targetY: fit.target.y,
+    zoom: fit.zoom,
+    viewportWidth: viewport.width,
+    viewportHeight: viewport.height,
+  };
+}
+
+/**
+ * Computes min and max zoom limits for a bounded viewport.
+ * Minimum zoom corresponds to fit; maximum zoom allows approximately 3.5x to 4x exploration.
+ */
+export function calculateZoomBounds(
+  worldBounds: BoundingBox2D,
+  viewport: Viewport,
+  padding: number = 24
+): { minZoom: number; maxZoom: number; fitZoom: number } {
+  const fit = fitCameraToViewport(worldBounds, viewport, padding);
+  const minZoom = fit.zoom;
+  const maxZoom = Math.max(minZoom * 3.5, 2.5);
+  return {
+    minZoom: Math.round(minZoom * 1000) / 1000,
+    maxZoom: Math.round(maxZoom * 1000) / 1000,
+    fitZoom: fit.zoom,
+  };
+}
+
+/**
+ * Pans the camera by a screen pixel delta (dx, dy).
+ * Converts screen delta to world delta using current zoom and clamps target to world bounds.
+ */
+export function panCamera(
+  state: GardenCameraState,
+  screenDeltaX: number,
+  screenDeltaY: number,
+  worldBounds: BoundingBox2D
+): GardenCameraState {
+  const safeZoom = Math.max(0.01, state.zoom);
+  const worldDeltaX = screenDeltaX / safeZoom;
+  const worldDeltaY = screenDeltaY / safeZoom;
+
+  const rawTarget: Point2D = {
+    x: state.targetX - worldDeltaX,
+    y: state.targetY - worldDeltaY,
+  };
+
+  const clamped = clampCameraTarget(
+    rawTarget,
+    worldBounds,
+    cameraStateToCamera2D(state),
+    cameraStateToViewport(state)
+  );
+
+  return {
+    ...state,
+    targetX: Math.round(clamped.x * 100) / 100,
+    targetY: Math.round(clamped.y * 100) / 100,
+  };
+}
+
+/**
+ * Zooms the camera around a specific screen focal point (e.g. pointer coordinate or pinch center).
+ * Clamps zoom within [minZoom, maxZoom] and adjusts target so focal point remains stable on screen.
+ */
+export function zoomCameraAroundPoint(
+  state: GardenCameraState,
+  zoomRatio: number,
+  screenFocalPoint: Point2D,
+  worldBounds: BoundingBox2D,
+  minZoom: number,
+  maxZoom: number
+): GardenCameraState {
+  const camera = cameraStateToCamera2D(state);
+  const viewport = cameraStateToViewport(state);
+  const oldZoom = Math.max(0.01, state.zoom);
+  const newZoom = Math.max(minZoom, Math.min(maxZoom, oldZoom * zoomRatio));
+
+  if (Math.abs(newZoom - oldZoom) < 0.0001) {
+    return state;
+  }
+
+  // World point beneath the screen focal coordinate before zoom
+  const worldFocal = screenToWorld(screenFocalPoint, camera, viewport);
+
+  // New target so worldFocal stays at screenFocalPoint after newZoom
+  const rawTargetX = worldFocal.x - (screenFocalPoint.x - viewport.width / 2) / newZoom;
+  const rawTargetY = worldFocal.y - (screenFocalPoint.y - viewport.height / 2) / newZoom;
+
+  const clamped = clampCameraTarget(
+    { x: rawTargetX, y: rawTargetY },
+    worldBounds,
+    { target: { x: rawTargetX, y: rawTargetY }, zoom: newZoom },
+    viewport
+  );
+
+  return {
+    ...state,
+    targetX: Math.round(clamped.x * 100) / 100,
+    targetY: Math.round(clamped.y * 100) / 100,
+    zoom: Math.round(newZoom * 1000) / 1000,
+  };
+}
+
+/**
+ * Calculates a camera state focusing directly on a scenic exploration region.
+ */
+export function focusScenicRegion(
+  regionBounds: BoundingBox2D,
+  viewport: Viewport,
+  worldBounds: BoundingBox2D,
+  minZoom: number,
+  maxZoom: number,
+  padding: number = 32
+): GardenCameraState {
+  const fit = fitCameraToViewport(regionBounds, viewport, padding);
+  const zoom = Math.max(minZoom, Math.min(maxZoom, fit.zoom));
+  const clamped = clampCameraTarget(
+    fit.target,
+    worldBounds,
+    { target: fit.target, zoom },
+    viewport
+  );
+
+  return {
+    targetX: Math.round(clamped.x * 100) / 100,
+    targetY: Math.round(clamped.y * 100) / 100,
+    zoom: Math.round(zoom * 1000) / 1000,
+    viewportWidth: viewport.width,
+    viewportHeight: viewport.height,
+  };
+}
+
+/**
+ * Returns the exact SVG transform string for the world presentation group.
+ * Invariant: Applying this transform in SVG maps worldPoint (x, y) precisely to worldToScreen(pt).
+ */
+export function getCameraTransformString(
+  camera: Camera2D | GardenCameraState,
+  viewport: Viewport
+): string {
+  const tx = "targetX" in camera ? camera.targetX : camera.target.x;
+  const ty = "targetY" in camera ? camera.targetY : camera.target.y;
+  const zoom = camera.zoom;
+  const cx = viewport.width / 2;
+  const cy = viewport.height / 2;
+  return `translate(${cx}, ${cy}) scale(${zoom}) translate(${-tx}, ${-ty})`;
+}
+
+/**
+ * Canonical unified gesture threshold for distinguishing taps from drags.
+ * A stationary press or gesture with movement < 6px is a tap.
+ * Movement >= 6px immediately and irreversibly transitions to a pan drag.
+ */
+export const CANONICAL_DRAG_THRESHOLD_PX = 6;
+
+/**
+ * Pure gesture classifier:
+ * - Movement strictly less than threshold (< 6px) classifies as "tap".
+ * - Movement equal to or greater than threshold (>= 6px) classifies as "drag".
+ */
+export function classifyGesture(
+  dx: number,
+  dy: number,
+  threshold: number = CANONICAL_DRAG_THRESHOLD_PX
+): "tap" | "drag" {
+  return Math.hypot(dx, dy) >= threshold ? "drag" : "tap";
+}
+
+/**
+ * Derives the interaction priority class for a garden node:
+ * - Class 3 (highest): Eligible event-backed earned memory feature (isEarned === true and sourceEvent !== null)
+ * - Class 2 (middle): Eligible living habitat or fauna node (creatures, habitats)
+ * - Class 1 (base): Eligible decorative botanical / landscape node
+ */
+export function getNodeInteractionClass(node: GardenNode): number {
+  if (node.isEarned && node.sourceEvent) {
+    return 3;
+  }
+  if (
+    node.role === "creature_node" ||
+    node.role === "habitat_node" ||
+    node.role === "habitat_detail"
+  ) {
+    return 2;
+  }
+  return 1;
+}
+
+/**
+ * Resolves the topmost eligible node at a world coordinate.
+ *
+ * SELECTION PRIORITY CONTRACT:
+ * 1. Eligible event-backed earned feature (Class 3)
+ * 2. Eligible habitat or fauna node (Class 2)
+ * 3. Eligible decorative botanical/landscape node (Class 1)
+ *
+ * Within the same interaction class:
+ * - Highest visible depth first (depthLayer descending)
+ * - Deterministic node ID tie-breaker (nodeId ascending)
+ */
+export function resolveNodeAtWorldCoordinate(
+  worldPoint: Point2D,
+  world: GardenWorld,
+  hitSlop: number = 18
+): GardenNode | null {
+  const candidateNodes = Object.values(world.nodes).filter(
+    (n) => n.role !== "world_root"
+  );
+
+  candidateNodes.sort((a, b) => {
+    const classA = getNodeInteractionClass(a);
+    const classB = getNodeInteractionClass(b);
+    if (classA !== classB) {
+      return classB - classA; // Higher class first (earned 3 > fauna 2 > decorative 1)
+    }
+    if (a.depthLayer !== b.depthLayer) {
+      return b.depthLayer - a.depthLayer; // Within same class, highest depth first
+    }
+    return a.id.localeCompare(b.id); // Deterministic tie-breaker
+  });
+
+  for (const node of candidateNodes) {
+    const b = node.worldBounds;
+    const minX = b.minX - hitSlop;
+    const maxX = b.maxX + hitSlop;
+    const minY = b.minY - hitSlop;
+    const maxY = b.maxY + hitSlop;
+
+    if (
+      worldPoint.x >= minX &&
+      worldPoint.x <= maxX &&
+      worldPoint.y >= minY &&
+      worldPoint.y <= maxY
+    ) {
+      return node;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Resolves the topmost eligible node at a screen pixel coordinate.
+ *
+ * HIT-SLOP SCALING CONTRACT:
+ * Hit slop is defined in physical screen points (default 22pt) to ensure accessible touch targets.
+ * In world space, hit slop scales inversely with zoom:
+ *   hitSlopWorld = hitSlopScreen / effectiveZoomAndViewBoxScale
+ * This ensures the accessible touch target remains approximately constant on the user's screen
+ * across minimum, middle, and maximum zoom levels.
+ */
+export function resolveNodeAtScreenCoordinate(
+  screenPoint: Point2D,
+  world: GardenWorld,
+  camera: Camera2D | GardenCameraState,
+  viewport: Viewport,
+  hitSlopScreen: number = 22,
+  viewBoxScale: number = 1.0
+): GardenNode | null {
+  const cam: Camera2D = "targetX" in camera
+    ? { target: { x: camera.targetX, y: camera.targetY }, zoom: camera.zoom }
+    : camera;
+  const worldPt = screenToWorld(screenPoint, cam, viewport);
+  const effectiveScale = Math.max(0.001, cam.zoom * viewBoxScale);
+  const hitSlopWorld = hitSlopScreen / effectiveScale;
+  return resolveNodeAtWorldCoordinate(worldPt, world, hitSlopWorld);
 }
 
 /**
@@ -365,4 +669,48 @@ export function resolveFeatureBoundsFromWorld(
     r,
     bounds,
   };
+}
+
+/**
+ * Determines whether a scenic region is available and selectable in the current garden world.
+ * For example, "stream_edge" is only selectable if the garden contains a stream or stream_edge features.
+ */
+export function isScenicRegionAvailable(world: GardenWorld, region: ScenicRegion): boolean {
+  if (!world.scenicRegions || !world.scenicRegions[region]) {
+    return false;
+  }
+  if (region === "stream_edge") {
+    return Object.values(world.nodes).some(
+      (n) => n.role === "terrain_region" && n.regionKind === "stream_path"
+    );
+  }
+  return true;
+}
+
+/**
+ * Focuses on a scenic region by name if available, returning the new camera state.
+ * Returns null if the region is not available in the current world (e.g. stream when no brook exists).
+ */
+export function focusNamedScenicRegion(
+  region: ScenicRegion,
+  world: GardenWorld,
+  viewport: Viewport,
+  minZoom?: number,
+  maxZoom?: number,
+  padding: number = 32
+): GardenCameraState | null {
+  if (!isScenicRegionAvailable(world, region)) {
+    return null;
+  }
+  const bounds = world.scenicRegions?.[region];
+  if (!bounds) return null;
+  const zoomLimits = calculateZoomBounds(world.worldBounds, viewport);
+  return focusScenicRegion(
+    bounds,
+    viewport,
+    world.worldBounds,
+    minZoom ?? zoomLimits.minZoom,
+    maxZoom ?? zoomLimits.maxZoom,
+    padding
+  );
 }

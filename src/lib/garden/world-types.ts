@@ -24,6 +24,24 @@ export const GARDEN_WORLD_SCHEMA_VERSION = "1.0.0";
 export const GARDEN_GENERATOR_VERSION = "legacy-procedural-svg-v1";
 export const GARDEN_ASSET_SET_VERSION = "builtin-procedural-v1";
 
+export const CANONICAL_SCENE_BOUNDS: BoundingBox2D = {
+  minX: 0,
+  minY: 0,
+  maxX: 800,
+  maxY: 500,
+  width: 800,
+  height: 500,
+};
+
+export const EXPANDED_WORLD_BOUNDS: BoundingBox2D = {
+  minX: -100,
+  minY: -50,
+  maxX: 900,
+  maxY: 550,
+  width: 1000,
+  height: 600,
+};
+
 // ----------------------------------------------------
 // 1. BASIC 2D GEOMETRY PRIMITIVES
 // ----------------------------------------------------
@@ -47,6 +65,25 @@ export interface Transform2D {
   rotation: number; // in radians
   scale: Point2D;
   pivot: Point2D;
+}
+
+/**
+ * Pure canonical camera state for bounded 2.5D garden navigation.
+ *
+ * COORDINATE SPACE CONTRACT:
+ * - targetX, targetY: World coordinates (in expanded world space [-100, 900] x [-50, 550]) focused at viewport center.
+ * - zoom: Dimensionless scaling multiplier relative to world coordinate space.
+ * - viewportWidth, viewportHeight: Physical layout units (points) of the host container view.
+ *
+ * In Explore mode, the root SVG is rendered with viewBox="0 0 viewportWidth viewportHeight"
+ * and width="100%" height="100%". Consequently, 1 SVG user coordinate unit == 1 physical layout point.
+ */
+export interface GardenCameraState {
+  targetX: number;
+  targetY: number;
+  zoom: number;
+  viewportWidth: number;
+  viewportHeight: number;
 }
 
 // ----------------------------------------------------
@@ -77,6 +114,21 @@ export type AppearanceOrigin =
 export type StructuralMappingType =
   | "legacy_stage_local" // Known stage-local representation replaced at stage transitions
   | "continuous_structural"; // Preserved continuously across lifecycle growth
+
+/**
+ * Logical scenic exploration regions within the 2.5D shared garden space.
+ * Prepared for future guided navigation, pan/zoom view framing, and spatial memory inspection.
+ */
+export type ScenicRegion =
+  | "crown"
+  | "left_canopy"
+  | "right_canopy"
+  | "trunk"
+  | "root_grove"
+  | "wildflower_meadow"
+  | "stone_landmark_area"
+  | "stream_edge"
+  | "atmosphere";
 
 // ----------------------------------------------------
 // 3. SOURCE EVENT ATTRIBUTION (PRIVACY-PRESERVING)
@@ -109,6 +161,8 @@ interface BaseGardenNode {
   sourceEvent?: SourceEventRef | null;
   appearanceOrigin: AppearanceOrigin;
   mappingType: StructuralMappingType;
+  scenicRegion?: ScenicRegion;
+  isExpanded?: boolean;
 }
 
 export interface WorldRootNode extends BaseGardenNode {
@@ -123,7 +177,10 @@ export interface TerrainRegionNode extends BaseGardenNode {
     | "mid_grass"
     | "front_grass"
     | "soil_bed"
-    | "root_shadow";
+    | "root_shadow"
+    | "distant_woodland"
+    | "stream_path"
+    | "garden_path";
   pathD: string;
 }
 
@@ -132,6 +189,7 @@ export interface TrunkNode extends BaseGardenNode {
   pathD: string;
   highlightPathD?: string;
   shadowPathD?: string;
+  color?: string;
 }
 
 export interface BranchNode extends BaseGardenNode {
@@ -153,6 +211,7 @@ export interface FoliageNode extends BaseGardenNode {
   pathD?: string;
   leafVeinPathD?: string;
   color?: string;
+  canopyDepthType?: "shadow_mass" | "mid_canopy" | "highlight_cluster";
 }
 
 export interface BudBlossomFruitNode extends BaseGardenNode {
@@ -375,6 +434,8 @@ export interface GardenWorld {
   earnedFeatureGroups: Record<string, EarnedFeatureGroup>;
   ecosystem: GardenEcosystemState;
   worldBounds: BoundingBox2D;
+  canonicalBounds?: BoundingBox2D;
+  scenicRegions?: Record<ScenicRegion, BoundingBox2D>;
   metadata: {
     totalNodes: number;
     earnedNodeCount: number;

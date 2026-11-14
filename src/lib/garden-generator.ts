@@ -660,6 +660,7 @@ export interface GardenDNA {
     creature: "butterfly" | "robin" | "goldfinch" | "swallow";
     preferredPerch: "left_branch" | "right_branch" | "ground_stone" | "crown";
   };
+  clearingFeature: "meandering_brook" | "curved_path" | "woodland_glade";
 }
 
 export function deriveGardenDNA(seed: number): GardenDNA {
@@ -723,6 +724,12 @@ export function deriveGardenDNA(seed: number): GardenDNA {
       creature: creatures[Math.abs(seed >>> 5) % 4],
       preferredPerch: perches[Math.abs(seed >>> 8) % 4],
     },
+    clearingFeature:
+      Math.abs((seed >>> 29) % 3) === 0
+        ? "meandering_brook"
+        : Math.abs((seed >>> 29) % 3) === 1
+        ? "curved_path"
+        : "woodland_glade",
   };
 }
 
@@ -749,6 +756,13 @@ export interface GroundLandscapePalette {
   stoneLight: string;
   stoneMid: string;
   stoneDark: string;
+  woodlandDistantTop?: string;
+  woodlandDistantBottom?: string;
+  streamWaterTop?: string;
+  streamWaterBottom?: string;
+  streamBank?: string;
+  pathBase?: string;
+  pathFleck?: string;
 }
 
 function parseHex(h: string): [number, number, number] {
@@ -893,6 +907,14 @@ export function generateNaturalGroundPalette(
   const baseMoss = adjustHsl(lerpColor("#536B43", "#71845A", t), dH, sMul, lMul);
   // Stone: warm grey/taupe (#77736B to #A09A8D)
   const baseStone = adjustHsl(lerpColor("#77736B", "#A09A8D", t), 0, sMul * 0.95, lMul);
+  // Distant woodland edge: soft atmospheric muted indigo/sage (#65756C to #7D8E84)
+  const baseWoodland = adjustHsl(lerpColor("#65756C", "#7D8E84", t), dH * 0.5, sMul * 0.9, lMul);
+  // Stream water: tranquil woodland brook reflection (#6F8E8B to #88AAA7)
+  const baseStreamWater = adjustHsl(lerpColor("#6F8E8B", "#88AAA7", t), dH, sMul, lMul);
+  // Stream bank: moist dark loam (#44362D to #5C4B3F)
+  const baseStreamBank = adjustHsl(lerpColor("#44362D", "#5C4B3F", t), dH * 0.4, sMul, lMul);
+  // Natural garden path: warm stone dust / packed soil (#8A7B6E to #A29486)
+  const basePath = adjustHsl(lerpColor("#8A7B6E", "#A29486", t), 0, sMul * 0.9, lMul);
 
   return {
     meadowTop: adjustHsl(baseMeadow, 0, 0.95, 1.06),
@@ -913,6 +935,13 @@ export function generateNaturalGroundPalette(
     stoneLight: adjustHsl(baseStone, 0, 0.9, 1.10),
     stoneMid: baseStone,
     stoneDark: adjustHsl(baseStone, 0, 1.0, 0.82),
+    woodlandDistantTop: adjustHsl(baseWoodland, 0, 0.92, 1.10),
+    woodlandDistantBottom: baseWoodland,
+    streamWaterTop: adjustHsl(baseStreamWater, 0, 0.96, 1.12),
+    streamWaterBottom: baseStreamWater,
+    streamBank: baseStreamBank,
+    pathBase: basePath,
+    pathFleck: adjustHsl(basePath, 0, 0.85, 1.15),
   };
 }
 
@@ -1447,6 +1476,22 @@ export interface GeneratedGardenSVGScene {
     cy: number;
   };
   accessibilityDescription: string;
+
+  // 2.5D Painterly Landscape & Topography enrichments
+  distantWoodlandPath?: string;
+  streamPath?: string;
+  streamBankPath?: string;
+  streamRipples?: Array<{ id: string; d: string; color: string; opacity: number }>;
+  gardenPathD?: string;
+  pathStones?: Array<{ id: string; cx: number; cy: number; rx: number; ry: number; color: string }>;
+
+  // 2.5D Painterly Hero Tree Bark & Canopy masses
+  barkTexturePaths?: Array<{ id: string; d: string; color: string; opacity: number; strokeWidth?: number }>;
+  canopyShadowClusters?: FoliageClusterSVG[];
+  canopyHighlightClusters?: FoliageClusterSVG[];
+
+  // 2.5D Atmospheric Accents (Full view only)
+  atmosphericMotes?: Array<{ id: string; cx: number; cy: number; r: number; color: string; opacity: number }>;
 }
 
 // ----------------------------------------------------
@@ -2839,6 +2884,10 @@ export function generateGardenSVGScene(
   // 1. Distant rolling landscape layer modulated by couple DNA
   const distantHillsPath = `M 0,335 Q ${dna.terrainCurvature.meadowPeakX - 210},305 ${dna.terrainCurvature.meadowPeakX},325 T 800,315 L 800,500 L 0,500 Z`;
 
+  // 1B. Distant ancient woodland treeline silhouette (Layer -85) framing the glade
+  const wPeak = (dna.terrainCurvature.meadowPeakX + 160) % 800;
+  const distantWoodlandPath = `M 0,312 Q 70,296 140,306 Q 210,290 280,302 Q ${(wPeak - 80 + 800) % 800},282 ${wPeak},298 Q ${(wPeak + 90) % 800},284 580,300 Q 660,286 730,298 Q 770,290 800,305 L 800,500 L 0,500 Z`;
+
   // 2. Three depth-layered ground paths with organic contour
   const groundLayerBack = `M 0,370 Q ${dna.terrainCurvature.rearPeakX - 260},345 ${dna.terrainCurvature.rearPeakX},365 T 800,350 L 800,500 L 0,500 Z`;
   const groundLayerMid = `M 0,402 Q ${dna.terrainCurvature.midPeakX - 240},375 ${dna.terrainCurvature.midPeakX},398 T 800,385 L 800,500 L 0,500 Z`;
@@ -2851,6 +2900,29 @@ export function generateGardenSVGScene(
 
   // Subtle contact shadow directly beneath trunk flare on the soil
   const rootShadowPath = `M ${362 + dna.trunkLean * 0.3},444 Q 400,446 ${438 + dna.trunkLean * 0.3},444 Q 400,451 ${362 + dna.trunkLean * 0.3},444 Z`;
+
+  // 2B. Natural curved clearing path or meandering brook (Layer -25)
+  let streamPath: string | undefined = undefined;
+  let streamBankPath: string | undefined = undefined;
+  let streamRipples: Array<{ id: string; d: string; color: string; opacity: number }> | undefined = undefined;
+  let gardenPathD: string | undefined = undefined;
+  let pathStones: Array<{ id: string; cx: number; cy: number; rx: number; ry: number; color: string }> | undefined = undefined;
+
+  if (dna.clearingFeature === "meandering_brook") {
+    streamPath = `M 0,424 Q 85,415 150,442 Q 200,462 235,500 L 205,500 Q 170,466 125,448 Q 65,426 0,434 Z`;
+    streamBankPath = `M 0,422 Q 85,414 150,441 Q 200,461 236,500`;
+    streamRipples = [
+      { id: "stream-ripple-1", d: "M 45,428 Q 75,424 100,432", color: groundPalette.streamWaterTop || "#A0BCB8", opacity: 0.65 },
+      { id: "stream-ripple-2", d: "M 130,448 Q 160,456 185,474", color: groundPalette.streamWaterTop || "#A0BCB8", opacity: 0.6 },
+    ];
+  } else if (dna.clearingFeature === "curved_path") {
+    gardenPathD = `M 565,500 Q 600,462 645,442 Q 700,422 800,412 L 800,422 Q 710,432 660,452 Q 620,472 590,500 Z`;
+    pathStones = [
+      { id: "path-stone-1", cx: 605, cy: 472, rx: 7.5, ry: 4.2, color: groundPalette.stoneMid },
+      { id: "path-stone-2", cx: 652, cy: 448, rx: 6.8, ry: 3.8, color: groundPalette.stoneLight },
+      { id: "path-stone-3", cx: 715, cy: 428, rx: 6.2, ry: 3.4, color: groundPalette.stoneMid },
+    ];
+  }
 
   // Ground details (seeded stones, moss, grass clusters, soil flecks, ground cover)
   // All coordinates and IDs are strictly deterministic from seed and never jump
@@ -3116,6 +3188,9 @@ export function generateGardenSVGScene(
   const blossoms: BlossomSVG[] = [];
   const seedPods: SeedPodSVG[] = [];
   const habitatDetails: HabitatDetailSVG[] = [];
+  const barkTexturePaths: Array<{ id: string; d: string; color: string; opacity: number; strokeWidth?: number }> = [];
+  const canopyShadowClusters: FoliageClusterSVG[] = [];
+  const canopyHighlightClusters: FoliageClusterSVG[] = [];
 
   // ==================================================
   // STAGE 1: FIRST SEEDLING (0–15.5 units)
@@ -3131,6 +3206,14 @@ export function generateGardenSVGScene(
       "M 398,438 Q 390,446 378,448",
       "M 402,438 Q 410,445 424,447"
     );
+
+    barkTexturePaths.push({
+      id: "seedling-stem-vein",
+      d: `M 398,435 Q 401,360 404,300 Q 401,230 395,${stemTopY.toFixed(1)}`,
+      color: palette.lightFoliage,
+      opacity: 0.5,
+      strokeWidth: 1.0,
+    });
 
     const primaryLeafScale = 0.55 + 0.45 * stageProgress;
     const crownBaseY = stemTopY + 15;
@@ -3327,6 +3410,23 @@ export function generateGardenSVGScene(
       "M 416,438 Q 438,448 458,452"
     );
 
+    barkTexturePaths.push(
+      {
+        id: "sapling-bark-grain-1",
+        d: `M ${(flareLeft + 8).toFixed(1)},436 Q ${(midX - 2).toFixed(1)},375 ${(midX - 1).toFixed(1)},305 Q ${(crownX - 1).toFixed(1)},245 ${(crownX + 1).toFixed(1)},205`,
+        color: palette.trunkShadow,
+        opacity: 0.45,
+        strokeWidth: 1.2,
+      },
+      {
+        id: "sapling-bark-grain-2",
+        d: `M ${(flareLeft + 16).toFixed(1)},438 Q ${(midX + 4).toFixed(1)},375 ${(midX + 5).toFixed(1)},305 Q ${(crownX + 2).toFixed(1)},245 ${(crownX + 2).toFixed(1)},203`,
+        color: palette.trunkHighlight,
+        opacity: 0.4,
+        strokeWidth: 1.0,
+      }
+    );
+
     // Branches visually enter and support foliage masses
     branches.push(
       "M 395,290 Q 355,265 315,245 Q 355,275 396,305 Z",
@@ -3416,6 +3516,19 @@ export function generateGardenSVGScene(
       }
     );
 
+    canopyShadowClusters.push({
+      id: "sapling-shadow-left",
+      d: createIrregularFoliageLobe(310 + tilt, 235, 66 * foliageScale, 48 * foliageScale, -0.15, seed + 101),
+      color: palette.deepFoliage,
+      opacity: 0.92,
+    });
+    canopyHighlightClusters.push({
+      id: "sapling-highlight-crown",
+      d: createIrregularFoliageLobe(400 + tilt, 142, 54 * foliageScale, 38 * foliageScale, 0.05, seed + 201),
+      color: palette.lightFoliage,
+      opacity: 0.88,
+    });
+
     // Base ground flora
     groundDetails.push(
       { id: "sapling-flower-1", type: "flower", cx: 345, cy: 438, color: palette.blossomPrimary },
@@ -3441,6 +3554,30 @@ export function generateGardenSVGScene(
     rootPaths.push(
       "M 382,442 Q 355,448 335,452",
       "M 422,442 Q 448,448 468,452"
+    );
+
+    barkTexturePaths.push(
+      {
+        id: "branching-bark-grain-1",
+        d: `M ${(flareLeft + 12).toFixed(1)},438 Q ${(midX - 3).toFixed(1)},375 ${(midX - 1).toFixed(1)},310 Q ${(crownX - 1).toFixed(1)},245 ${(crownX + 1).toFixed(1)},222`,
+        color: palette.trunkShadow,
+        opacity: 0.48,
+        strokeWidth: 1.3,
+      },
+      {
+        id: "branching-bark-grain-2",
+        d: `M ${(flareLeft + 26).toFixed(1)},440 Q ${(midX + 5).toFixed(1)},370 ${(midX + 6).toFixed(1)},305 Q ${(crownX + 4).toFixed(1)},245 ${(crownX + 3).toFixed(1)},220`,
+        color: palette.trunkHighlight,
+        opacity: 0.45,
+        strokeWidth: 1.2,
+      },
+      {
+        id: "branching-bark-knot-1",
+        d: `M ${(midX + 2).toFixed(1)},348 C ${(midX - 3).toFixed(1)},348 ${(midX - 3).toFixed(1)},356 ${(midX + 2).toFixed(1)},356 C ${(midX + 7).toFixed(1)},356 ${(midX + 7).toFixed(1)},348 ${(midX + 2).toFixed(1)},348 Z`,
+        color: palette.trunkShadow,
+        opacity: 0.55,
+        strokeWidth: 1.3,
+      }
     );
 
     // Spreading branch framework connecting into foliage masses
@@ -3530,6 +3667,35 @@ export function generateGardenSVGScene(
       }
     );
 
+    canopyShadowClusters.push(
+      {
+        id: "branching-shadow-left",
+        d: createIrregularFoliageLobe(275 + tilt, 258, 86 * foliageScale, 58 * foliageScale, -0.2, seed + 111),
+        color: palette.deepFoliage,
+        opacity: 0.94,
+      },
+      {
+        id: "branching-shadow-right",
+        d: createIrregularFoliageLobe(525 + tilt, 228, 90 * foliageScale, 62 * foliageScale, 0.2, seed + 112),
+        color: palette.deepFoliage,
+        opacity: 0.94,
+      }
+    );
+    canopyHighlightClusters.push(
+      {
+        id: "branching-highlight-left",
+        d: createIrregularFoliageLobe(335 + tilt, 145, 54 * foliageScale, 38 * foliageScale, -0.1, seed + 211),
+        color: palette.lightFoliage,
+        opacity: 0.88,
+      },
+      {
+        id: "branching-highlight-right",
+        d: createIrregularFoliageLobe(460 + tilt, 135, 56 * foliageScale, 40 * foliageScale, 0.1, seed + 212),
+        color: palette.accentLeaf,
+        opacity: 0.88,
+      }
+    );
+
     // Base ground flora
     groundDetails.push(
       { id: "branching-flower-1", type: "flower", cx: 335, cy: 436, color: palette.blossomPrimary },
@@ -3571,6 +3737,37 @@ export function generateGardenSVGScene(
       "M 428,444 Q 455,450 480,454",
       "M 390,446 Q 375,452 360,456",
       "M 412,446 Q 425,452 440,456"
+    );
+
+    barkTexturePaths.push(
+      {
+        id: "canopy-bark-grain-1",
+        d: `M ${(flareLeft + 16).toFixed(1)},440 Q ${(midX - 4).toFixed(1)},375 ${(midX - 1).toFixed(1)},310 Q ${(crownX - 1).toFixed(1)},245 ${(crownX + 1).toFixed(1)},222`,
+        color: palette.trunkShadow,
+        opacity: 0.5,
+        strokeWidth: 1.4,
+      },
+      {
+        id: "canopy-bark-grain-2",
+        d: `M ${(flareLeft + 30).toFixed(1)},441 Q ${(midX + 6).toFixed(1)},370 ${(midX + 7).toFixed(1)},305 Q ${(crownX + 4).toFixed(1)},245 ${(crownX + 3).toFixed(1)},220`,
+        color: palette.trunkHighlight,
+        opacity: 0.45,
+        strokeWidth: 1.2,
+      },
+      {
+        id: "canopy-bark-grain-3",
+        d: `M ${(flareLeft + 44).toFixed(1)},442 Q ${(midX + 13).toFixed(1)},372 ${(midX + 12).toFixed(1)},308 Q ${(crownX + 6).toFixed(1)},245 ${(crownX + 5).toFixed(1)},225`,
+        color: palette.trunkShadow,
+        opacity: 0.42,
+        strokeWidth: 1.1,
+      },
+      {
+        id: "canopy-bark-knot-1",
+        d: `M ${(midX + 2).toFixed(1)},348 C ${(midX - 4).toFixed(1)},348 ${(midX - 4).toFixed(1)},356 ${(midX + 2).toFixed(1)},356 C ${(midX + 8).toFixed(1)},356 ${(midX + 8).toFixed(1)},348 ${(midX + 2).toFixed(1)},348 Z`,
+        color: palette.trunkShadow,
+        opacity: 0.55,
+        strokeWidth: 1.3,
+      }
     );
 
     // Robust branch architecture connecting into distinct foliage masses
@@ -3711,6 +3908,47 @@ export function generateGardenSVGScene(
       }
     );
 
+    canopyShadowClusters.push(
+      {
+        id: "canopy-shadow-left",
+        d: createIrregularFoliageLobe(245 + tilt, 268, 100 * foliageScale, 68 * foliageScale, -0.22, seed + 121),
+        color: palette.deepFoliage,
+        opacity: 0.95,
+      },
+      {
+        id: "canopy-shadow-right",
+        d: createIrregularFoliageLobe(555 + tilt, 238, 105 * foliageScale, 70 * foliageScale, 0.22, seed + 122),
+        color: palette.deepFoliage,
+        opacity: 0.95,
+      },
+      {
+        id: "canopy-shadow-base",
+        d: createIrregularFoliageLobe(400 + tilt, 258, 120 * foliageScale, 75 * foliageScale, 0, seed + 123),
+        color: palette.deepFoliage,
+        opacity: 0.95,
+      }
+    );
+    canopyHighlightClusters.push(
+      {
+        id: "canopy-highlight-crown-left",
+        d: createIrregularFoliageLobe(345 + tilt, 125, 62 * foliageScale, 44 * foliageScale, -0.08, seed + 221),
+        color: palette.lightFoliage,
+        opacity: 0.9,
+      },
+      {
+        id: "canopy-highlight-crown-right",
+        d: createIrregularFoliageLobe(450 + tilt, 115, 64 * foliageScale, 46 * foliageScale, 0.08, seed + 222),
+        color: palette.lightFoliage,
+        opacity: 0.9,
+      },
+      {
+        id: "canopy-highlight-accent-top",
+        d: createIrregularFoliageLobe(400 + tilt, 92, 54 * foliageScale, 36 * foliageScale, 0, seed + 223),
+        color: palette.accentLeaf,
+        opacity: 0.88,
+      }
+    );
+
     groundDetails.push(
       { id: "ground-flower-1", type: "flower", cx: 335, cy: 438, color: palette.blossomSecondary },
       { id: "ground-flower-2", type: "flower", cx: 475, cy: 442, color: palette.blossomSecondary },
@@ -3782,6 +4020,15 @@ export function generateGardenSVGScene(
     };
   }
 
+  // Atmospheric motes (Layer 92, full view only)
+  const atmosphericMotes = [
+    { id: "mote-1", cx: 280 + ((seed >>> 3) & 0x3f), cy: 190 + ((seed >>> 7) & 0x3f), r: 1.4, color: palette.sunGlow, opacity: isResting ? 0.25 : 0.45 },
+    { id: "mote-2", cx: 480 + ((seed >>> 5) & 0x3f), cy: 170 + ((seed >>> 9) & 0x3f), r: 1.6, color: palette.sunGlow, opacity: isResting ? 0.22 : 0.42 },
+    { id: "mote-3", cx: 370 + ((seed >>> 11) & 0x3f), cy: 130 + ((seed >>> 13) & 0x3f), r: 1.3, color: palette.sunGlow, opacity: isResting ? 0.28 : 0.5 },
+    { id: "mote-4", cx: 210 + ((seed >>> 15) & 0x3f), cy: 260 + ((seed >>> 17) & 0x3f), r: 1.5, color: palette.sunGlow, opacity: isResting ? 0.2 : 0.38 },
+    { id: "mote-5", cx: 580 + ((seed >>> 19) & 0x3f), cy: 240 + ((seed >>> 21) & 0x3f), r: 1.4, color: palette.sunGlow, opacity: isResting ? 0.22 : 0.4 },
+  ];
+
   const accessibilityDescription = `Shared Garden at ${stage.label} stage, ${Math.round(totalGrowthUnits)} total units of growth. State: ${ambienceLabel}.`;
 
   return {
@@ -3814,6 +4061,16 @@ export function generateGardenSVGScene(
     habitatDetails,
     restingCreature,
     accessibilityDescription,
+    distantWoodlandPath,
+    streamPath,
+    streamBankPath,
+    streamRipples,
+    gardenPathD,
+    pathStones,
+    barkTexturePaths,
+    canopyShadowClusters,
+    canopyHighlightClusters,
+    atmosphericMotes,
   };
 }
 

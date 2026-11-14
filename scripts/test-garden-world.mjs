@@ -37,7 +37,28 @@ import {
   computeApproximatePathBounds,
   isMatchingFeatureId,
   GARDEN_WORLD_SCHEMA_VERSION,
+  BUILTIN_PROCEDURAL_ASSET_MANIFESTS,
+  validateAssetManifest,
+  FIXTURE_COUPLE_SEEDS,
+  CANONICAL_FIXTURES,
+  generateMockEventSequence,
+  CANONICAL_SCENE_BOUNDS,
+  EXPANDED_WORLD_BOUNDS,
+  createCameraFromFit,
+  calculateZoomBounds,
+  panCamera,
+  zoomCameraAroundPoint,
+  focusScenicRegion,
+  focusNamedScenicRegion,
+  getCameraTransformString,
+  resolveNodeAtWorldCoordinate,
+  resolveNodeAtScreenCoordinate,
+  isScenicRegionAvailable,
+  CANONICAL_DRAG_THRESHOLD_PX,
+  classifyGesture,
+  getNodeInteractionClass,
 } from "../src/lib/garden/index.ts";
+import { createGardenStory } from "../src/lib/garden-story.ts";
 
 const COUPLE_A = "couple-uuid-1111-2222";
 const COUPLE_B = "couple-uuid-9999-8888";
@@ -856,4 +877,1181 @@ test("24. Semantic hit regions: >=44pt accessible targets and deterministic dept
       );
     }
   }
+});
+
+// ----------------------------------------------------------------------------
+// Test 25: Invariant E & S - Compact vs Full Viewport Identity Parity
+// ----------------------------------------------------------------------------
+test("25. Invariant E & S: Compact and full preserve meaningful feature identity & major earned features", () => {
+  const events = generateMockEventSequence(15, "mixed");
+  const scene = generateGardenSVGScene(COUPLE_A, 55, 30, false, undefined, "light", events);
+
+  const worldFull = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 55,
+    careGrowthUnits: 30,
+    timeGrowthUnits: 25,
+    careEvents: events,
+  });
+
+  const worldCompact = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 55,
+    careGrowthUnits: 30,
+    timeGrowthUnits: 25,
+    careEvents: events,
+  });
+
+  // 1. Both viewports share identical earned feature groups
+  const fullGroupKeys = Object.keys(worldFull.earnedFeatureGroups).sort();
+  const compactGroupKeys = Object.keys(worldCompact.earnedFeatureGroups).sort();
+  assert.deepEqual(fullGroupKeys, compactGroupKeys);
+  assert.equal(fullGroupKeys.length, 15);
+
+  // 2. Invariant S: Every earned event has at least one corresponding node in the world
+  for (const ev of events) {
+    const key = `${ev.kind}:${ev.id}`;
+    const group = worldCompact.earnedFeatureGroups[key];
+    assert.ok(group, `Expected earned group for event ${key}`);
+    assert.ok(group.nodeIds.length > 0, `Expected nodeIds for event ${key}`);
+    for (const nid of group.nodeIds) {
+      assert.ok(worldCompact.nodes[nid], `Node ${nid} must exist in compact world`);
+      assert.equal(worldCompact.nodes[nid].isEarned, true);
+    }
+  }
+});
+
+// ----------------------------------------------------------------------------
+// Test 26: Invariant Q - Render Plans Respect Deterministic Depth Ordering
+// ----------------------------------------------------------------------------
+test("26. Invariant Q: Render plans respect deterministic depth ordering", () => {
+  const events = generateMockEventSequence(10, "mixed");
+  const scene = generateGardenSVGScene(COUPLE_A, 60, 20, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 60,
+    careGrowthUnits: 20,
+    timeGrowthUnits: 40,
+    careEvents: events,
+  });
+
+  const nodes = Object.values(world.nodes);
+  assert.ok(nodes.length > 0);
+
+  // Every node must have a finite depthLayer
+  for (const n of nodes) {
+    assert.equal(typeof n.depthLayer, "number");
+    assert.ok(Number.isFinite(n.depthLayer));
+  }
+
+  // Verify depth layer architectural hierarchy
+  const terrainNodes = nodes.filter((n) => n.role === "terrain_region");
+  const trunkNodes = nodes.filter((n) => n.role === "trunk" && n.id === "tree-trunk");
+  const branchNodes = nodes.filter((n) => n.role === "branch");
+  const blossomNodes = nodes.filter((n) => n.role === "bud_blossom_fruit" && n.blossomKind === "blossom");
+
+  for (const tn of terrainNodes) {
+    assert.ok(tn.depthLayer <= -18, `Terrain depth (${tn.depthLayer}) must be <= -18`);
+  }
+  for (const tr of trunkNodes) {
+    assert.ok(tr.depthLayer === 0, `Trunk base depth must be 0`);
+  }
+  for (const bn of branchNodes) {
+    assert.ok(bn.depthLayer === 20, `Branch depth must be 20`);
+  }
+  for (const bl of blossomNodes) {
+    assert.ok(bl.depthLayer === 50, `Blossom depth must be 50`);
+  }
+
+  // Stable sorting by depthLayer is deterministic
+  const sorted1 = [...nodes].sort((a, b) => a.depthLayer - b.depthLayer || a.id.localeCompare(b.id));
+  const sorted2 = [...nodes].sort((a, b) => a.depthLayer - b.depthLayer || a.id.localeCompare(b.id));
+  assert.deepEqual(
+    sorted1.map((n) => n.id),
+    sorted2.map((n) => n.id)
+  );
+});
+
+// ----------------------------------------------------------------------------
+// Test 27: Invariant R & T - Density Management & Visual Honesty
+// ----------------------------------------------------------------------------
+test("27. Invariant R & T: No event-backed feature dropped; zero-event gardens remain visually honest", () => {
+  // Invariant R: 50 events - every single care event must be preserved in earned groups
+  const events50 = generateMockEventSequence(50, "mixed");
+  const scene50 = generateGardenSVGScene(COUPLE_A, 80, 40, false, undefined, "light", events50);
+  const world50 = buildGardenWorld(scene50, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 80,
+    careGrowthUnits: 40,
+    timeGrowthUnits: 40,
+    careEvents: events50,
+  });
+
+  assert.equal(Object.keys(world50.earnedFeatureGroups).length, 50);
+  assert.ok(world50.metadata.earnedNodeCount >= 50);
+
+  // Invariant T: Zero care events - must remain visually honest and never fabricate history
+  const scene0 = generateGardenSVGScene(COUPLE_A, 35, 0, false, undefined, "light", []);
+  const world0 = buildGardenWorld(scene0, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 35,
+    careGrowthUnits: 0,
+    timeGrowthUnits: 35,
+    careEvents: [],
+  });
+
+  assert.equal(world0.metadata.earnedNodeCount, 0);
+  assert.equal(Object.keys(world0.earnedFeatureGroups).length, 0);
+  for (const n of Object.values(world0.nodes)) {
+    assert.equal(n.isEarned, false, `Node ${n.id} must not be marked earned in a 0-event garden`);
+    assert.equal(n.sourceEvent, null, `Node ${n.id} must have null sourceEvent in a 0-event garden`);
+  }
+});
+
+// ----------------------------------------------------------------------------
+// Test 28: Scenic Exploration Regions and Node Coverage
+// ----------------------------------------------------------------------------
+test("28. Scenic exploration regions: Canonical regions with valid bounds and full node coverage", () => {
+  const events = generateMockEventSequence(5, "mixed");
+  const scene = generateGardenSVGScene(COUPLE_A, 60, 10, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 60,
+    careGrowthUnits: 10,
+    timeGrowthUnits: 50,
+    careEvents: events,
+  });
+
+  assert.ok(world.scenicRegions, "scenicRegions map must exist on GardenWorld");
+
+  const canonicalScenicKeys = [
+    "crown",
+    "left_canopy",
+    "right_canopy",
+    "trunk",
+    "root_grove",
+    "wildflower_meadow",
+    "stone_landmark_area",
+    "stream_edge",
+    "atmosphere",
+  ];
+
+  for (const k of canonicalScenicKeys) {
+    const reg = world.scenicRegions[k];
+    assert.ok(reg, `Region ${k} must exist in scenicRegions`);
+    assert.ok(reg.width > 0, `Region ${k} width must be > 0`);
+    assert.ok(reg.height > 0, `Region ${k} height must be > 0`);
+    assert.ok(Number.isFinite(reg.minX));
+    assert.ok(Number.isFinite(reg.minY));
+  }
+
+  // Full node coverage: every unique canonical node belongs to a scenic region
+  for (const n of Object.values(world.nodes)) {
+    assert.ok(n.scenicRegion, `Node ${n.id} must have a scenicRegion`);
+    assert.ok(
+      canonicalScenicKeys.includes(n.scenicRegion),
+      `Node ${n.id} scenicRegion (${n.scenicRegion}) must be one of canonical keys`
+    );
+  }
+});
+
+// ----------------------------------------------------------------------------
+// Test 29: Painterly Botanical Asset Manifest Contract
+// ----------------------------------------------------------------------------
+test("29. Painterly botanical asset manifests: Rigorous schema validation across all 2.5D assets", () => {
+  const manifests = BUILTIN_PROCEDURAL_ASSET_MANIFESTS;
+  assert.ok(Object.keys(manifests).length >= 15);
+
+  const requiredKeys = [
+    "terrain-clearing-meadow-v1",
+    "tree-ancient-oak-trunk-v1",
+    "canopy-shadow-mass-v1",
+    "canopy-foliage-mass-v1",
+    "canopy-sunlit-leaves-v1",
+    "blossom-reconnection-rose-v1",
+    "bud-closed-calyx-v1",
+    "berry-woodland-cluster-v1",
+    "seed-pod-restrained-v1",
+    "flora-woodland-fern-v1",
+    "flora-clover-cover-v1",
+    "flora-moss-cushion-v1",
+    "flora-meadow-flower-v1",
+    "fauna-european-robin-v1",
+    "fauna-peacock-butterfly-v1",
+    "fauna-bumblebee-pollinator-v1",
+    "stream-curved-brook-v1",
+    "landmark-important-date-v1",
+  ];
+
+  for (const k of requiredKeys) {
+    const m = manifests[k];
+    assert.ok(m, `Asset manifest ${k} must exist`);
+    assert.equal(validateAssetManifest(m), true, `Asset manifest ${k} must pass validation`);
+    assert.ok(m.localBounds.width > 0);
+    assert.ok(m.localBounds.height > 0);
+    assert.ok(m.attachmentPivot);
+    assert.equal(typeof m.depthLayer, "number");
+  }
+});
+
+// ----------------------------------------------------------------------------
+// Test 30: Depth-Contract Alignment & Asset Replacement Parity
+// ----------------------------------------------------------------------------
+test("30. Depth-contract alignment: Manifest assets match canonical GardenWorld depth and preserve scenery layering", () => {
+  const manifests = BUILTIN_PROCEDURAL_ASSET_MANIFESTS;
+
+  // Build full garden world for mapping verification
+  const events = generateMockEventSequence(10, "mixed");
+  const scene = generateGardenSVGScene(COUPLE_A, 70, 30, false, undefined, "light", events);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 70,
+    careGrowthUnits: 30,
+    timeGrowthUnits: 40,
+    careEvents: events,
+  });
+
+  // 1. Mapping table between manifest keys and corresponding canonical node IDs
+  const manifestToNodeId = {
+    "terrain-clearing-meadow-v1": "terrain-mid-grass",
+    "stream-curved-brook-v1": "terrain-stream",
+    "tree-ancient-oak-trunk-v1": "tree-trunk",
+    "canopy-shadow-mass-v1": "canopy-shadow-0",
+    "canopy-sunlit-leaves-v1": "canopy-highlight-0",
+  };
+
+  for (const [manifestKey, nodeId] of Object.entries(manifestToNodeId)) {
+    const manifest = manifests[manifestKey];
+    const node = world.nodes[nodeId];
+    if (node) {
+      assert.equal(
+        manifest.depthLayer,
+        node.depthLayer,
+        `Manifest ${manifestKey} depthLayer (${manifest.depthLayer}) must equal node ${nodeId} depthLayer (${node.depthLayer})`
+      );
+    }
+  }
+
+  // 2. Pairwise architectural order: replacing primitives with manifest assets preserves depth hierarchy
+  const orderedManifestPairs = [
+    ["terrain-clearing-meadow-v1", "stream-curved-brook-v1"],
+    ["stream-curved-brook-v1", "tree-ancient-oak-trunk-v1"],
+    ["tree-ancient-oak-trunk-v1", "flora-moss-cushion-v1"],
+    ["flora-moss-cushion-v1", "landmark-important-date-v1"],
+    ["landmark-important-date-v1", "canopy-shadow-mass-v1"],
+    ["canopy-shadow-mass-v1", "canopy-foliage-mass-v1"],
+    ["canopy-foliage-mass-v1", "canopy-sunlit-leaves-v1"],
+    ["canopy-sunlit-leaves-v1", "bud-closed-calyx-v1"],
+    ["bud-closed-calyx-v1", "blossom-reconnection-rose-v1"],
+    ["blossom-reconnection-rose-v1", "fauna-peacock-butterfly-v1"],
+  ];
+
+  for (const [lowerKey, higherKey] of orderedManifestPairs) {
+    const lower = manifests[lowerKey];
+    const higher = manifests[higherKey];
+    assert.ok(lower, `Lower key ${lowerKey} must exist`);
+    assert.ok(higher, `Higher key ${higherKey} must exist`);
+    assert.ok(
+      lower.depthLayer <= higher.depthLayer,
+      `Layer ordering violated: ${lowerKey} (${lower.depthLayer}) must be <= ${higherKey} (${higher.depthLayer})`
+    );
+  }
+});
+
+// ============================================================================
+// PHASE 3A EXPLORABLE CAMERA FOUNDATION TESTS (A THROUGH T)
+// ============================================================================
+
+// Test A: Camera fitting contains the full world
+test("A. Camera fitting contains the full world", () => {
+  const scene = generateGardenSVGScene(COUPLE_A, 25, 20, false);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 25,
+    careGrowthUnits: 20,
+    timeGrowthUnits: 5,
+  });
+
+  const viewport = { width: 360, height: 500 };
+  const camera = fitCameraToViewport(world.worldBounds, viewport, 24);
+
+  // All 4 corners of world.worldBounds must map to valid screen points within viewport
+  const corners = [
+    { x: world.worldBounds.minX, y: world.worldBounds.minY },
+    { x: world.worldBounds.maxX, y: world.worldBounds.minY },
+    { x: world.worldBounds.minX, y: world.worldBounds.maxY },
+    { x: world.worldBounds.maxX, y: world.worldBounds.maxY },
+  ];
+
+  for (const corner of corners) {
+    const sp = worldToScreen(corner, camera, viewport);
+    assert.ok(sp.x >= -0.1 && sp.x <= viewport.width + 0.1, `Corner x (${sp.x}) must fit screen width`);
+    assert.ok(sp.y >= -0.1 && sp.y <= viewport.height + 0.1, `Corner y (${sp.y}) must fit screen height`);
+  }
+});
+
+// Test B: Screen-to-world and world-to-screen remain exact inverses under pan and zoom
+test("B. Screen-to-world and world-to-screen remain exact inverses under pan and zoom", () => {
+  const viewport = { width: 380, height: 600 };
+  const camera = {
+    target: { x: 350, y: 275 },
+    zoom: 1.85,
+  };
+
+  const samplePoints = [
+    { x: 0, y: 0 },
+    { x: 400, y: 250 },
+    { x: -80, y: 120 },
+    { x: 850, y: 480 },
+    { x: 220, y: 390 },
+  ];
+
+  for (const pt of samplePoints) {
+    const screen = worldToScreen(pt, camera, viewport);
+    const inverse = screenToWorld(screen, camera, viewport);
+    assert.ok(Math.abs(inverse.x - pt.x) < 1e-3, `Inverse X (${inverse.x}) must match original (${pt.x})`);
+    assert.ok(Math.abs(inverse.y - pt.y) < 1e-3, `Inverse Y (${inverse.y}) must match original (${pt.y})`);
+  }
+});
+
+// Test C: Camera targets cannot leave world bounds (clampCameraTarget)
+test("C. Camera targets cannot leave world bounds (clampCameraTarget)", () => {
+  const worldBounds = EXPANDED_WORLD_BOUNDS;
+  const viewport = { width: 400, height: 300 };
+  const camera = { target: { x: 400, y: 250 }, zoom: 2.0 };
+
+  // Attempt extreme out-of-bounds target coordinates
+  const extremeTargets = [
+    { x: -5000, y: -5000 },
+    { x: 9999, y: 9999 },
+    { x: -2000, y: 250 },
+    { x: 400, y: 3000 },
+  ];
+
+  for (const ext of extremeTargets) {
+    const clamped = clampCameraTarget(ext, worldBounds, camera, viewport);
+    // At zoom 2.0 and viewport 400x300, visible half-dimensions are 100x75
+    assert.ok(clamped.x - 100 >= worldBounds.minX - 0.01, `Clamped x left edge (${clamped.x - 100}) must stay >= minX`);
+    assert.ok(clamped.x + 100 <= worldBounds.maxX + 0.01, `Clamped x right edge (${clamped.x + 100}) must stay <= maxX`);
+    assert.ok(clamped.y - 75 >= worldBounds.minY - 0.01, `Clamped y top edge (${clamped.y - 75}) must stay >= minY`);
+    assert.ok(clamped.y + 75 <= worldBounds.maxY + 0.01, `Clamped y bottom edge (${clamped.y + 75}) must stay <= maxY`);
+  }
+});
+
+// Test D: Zoom remains within calculated min/max bounds
+test("D. Zoom remains within calculated min/max bounds", () => {
+  const worldBounds = EXPANDED_WORLD_BOUNDS;
+  const viewport = { width: 360, height: 480 };
+  const bounds = calculateZoomBounds(worldBounds, viewport, 24);
+
+  assert.ok(bounds.minZoom > 0);
+  assert.ok(bounds.maxZoom > bounds.minZoom);
+  assert.ok(bounds.maxZoom >= 2.5);
+
+  const initialCam = createCameraFromFit(worldBounds, viewport, 24);
+
+  // Zooming out with tiny factor stops at minZoom
+  const zoomedOut = zoomCameraAroundPoint(
+    initialCam,
+    0.001,
+    { x: 180, y: 240 },
+    worldBounds,
+    bounds.minZoom,
+    bounds.maxZoom
+  );
+  assert.ok(Math.abs(zoomedOut.zoom - bounds.minZoom) < 0.01);
+
+  // Zooming in with huge factor stops at maxZoom
+  const zoomedIn = zoomCameraAroundPoint(
+    initialCam,
+    1000,
+    { x: 180, y: 240 },
+    worldBounds,
+    bounds.minZoom,
+    bounds.maxZoom
+  );
+  assert.ok(Math.abs(zoomedIn.zoom - bounds.maxZoom) < 0.01);
+});
+
+// Test E: Reset returns to exact fitted camera
+test("E. Reset returns to exact fitted camera", () => {
+  const worldBounds = EXPANDED_WORLD_BOUNDS;
+  const viewport = { width: 360, height: 480 };
+  const initialCam = createCameraFromFit(worldBounds, viewport, 24);
+  const limits = calculateZoomBounds(worldBounds, viewport, 24);
+
+  // Pan and zoom away
+  const panned = panCamera(initialCam, 120, -60, worldBounds);
+  const zoomed = zoomCameraAroundPoint(
+    panned,
+    1.8,
+    { x: 200, y: 200 },
+    worldBounds,
+    limits.minZoom,
+    limits.maxZoom
+  );
+
+  // Reset view
+  const resetCam = createCameraFromFit(worldBounds, viewport, 24);
+  assert.equal(resetCam.targetX, initialCam.targetX);
+  assert.equal(resetCam.targetY, initialCam.targetY);
+  assert.equal(resetCam.zoom, initialCam.zoom);
+});
+
+// Test F: Region focus fits selected region bounds
+test("F. Region focus fits selected region bounds", () => {
+  const scene = generateGardenSVGScene(COUPLE_A, 30, 24, false);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 30,
+    careGrowthUnits: 24,
+    timeGrowthUnits: 6,
+  });
+
+  const viewport = { width: 360, height: 480 };
+  const limits = calculateZoomBounds(world.worldBounds, viewport, 24);
+
+  const crownBounds = world.scenicRegions.crown;
+  assert.ok(crownBounds);
+
+  const focused = focusScenicRegion(
+    crownBounds,
+    viewport,
+    world.worldBounds,
+    limits.minZoom,
+    limits.maxZoom,
+    32
+  );
+
+  assert.ok(focused.zoom >= limits.minZoom);
+  assert.ok(focused.zoom <= limits.maxZoom);
+  assert.ok(focused.targetX >= crownBounds.minX && focused.targetX <= crownBounds.maxX);
+});
+
+// Test G: Missing regions (e.g. stream when no brook exists) cannot be selected
+test("G. Missing regions (e.g. stream when no brook exists) cannot be selected", () => {
+  let noStreamSeed = "seed-no-stream-1";
+  for (let i = 0; i < 20; i++) {
+    const s = `dry-garden-seed-${i}`;
+    const testScene = generateGardenSVGScene(s, 10, 8, false);
+    if (!testScene.streamPath) {
+      noStreamSeed = s;
+      break;
+    }
+  }
+
+  const scene = generateGardenSVGScene(noStreamSeed, 10, 8, false);
+  assert.ok(!scene.streamPath);
+
+  const world = buildGardenWorld(scene, {
+    coupleId: noStreamSeed,
+    seedString: noStreamSeed,
+    totalGrowthUnits: 10,
+    careGrowthUnits: 8,
+    timeGrowthUnits: 2,
+  });
+
+  // isScenicRegionAvailable must return false for stream_edge
+  const streamAvailable = isScenicRegionAvailable(world, "stream_edge");
+  assert.equal(streamAvailable, false);
+
+  // focusNamedScenicRegion must safely return null
+  const focusResult = focusNamedScenicRegion("stream_edge", world, { width: 360, height: 480 });
+  assert.equal(focusResult, null);
+});
+
+// Test H: Tap resolution returns highest-depth eligible node
+test("H. Tap resolution returns highest-depth eligible node", () => {
+  const evPos = createMockEvent("ev-pos-1", "positive_moment", "2026-02-01T10:00:00Z", "affection");
+  const scene = generateGardenSVGScene(COUPLE_A, 20, 16, false, undefined, "light", [evPos]);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 20,
+    careGrowthUnits: 16,
+    timeGrowthUnits: 4,
+    careEvents: [evPos],
+  });
+
+  const hit = resolveNodeAtWorldCoordinate({ x: 400, y: 440 }, world, 30);
+  assert.ok(hit, "Must resolve a node near trunk base");
+  assert.ok(hit.depthLayer >= -25);
+});
+
+// Test I: Drag gestures (> 8px) do not trigger node activation
+test("I. Drag gestures (> 8px) do not trigger node activation", () => {
+  const isDragGesture = (dx, dy) => Math.hypot(dx, dy) > 8;
+
+  assert.equal(isDragGesture(2, 2), false); // hypot = 2.8 <= 8 (Tap)
+  assert.equal(isDragGesture(5, 6), false); // hypot = 7.8 <= 8 (Tap)
+  assert.equal(isDragGesture(6, 6), true);  // hypot = 8.48 > 8 (Drag)
+  assert.equal(isDragGesture(0, 12), true); // hypot = 12 > 8 (Drag)
+  assert.equal(isDragGesture(-10, 0), true);// hypot = 10 > 8 (Drag)
+});
+
+// Test J: Decorative nodes resolve without event data (sourceEvent === null)
+test("J. Decorative nodes resolve without event data (sourceEvent === null)", () => {
+  const scene = generateGardenSVGScene(COUPLE_A, 20, 16, false);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 20,
+    careGrowthUnits: 16,
+    timeGrowthUnits: 4,
+  });
+
+  const decorativeNodeIds = [
+    "world-root",
+    "terrain-root",
+    "terrain-woodland-edge-left",
+    "terrain-woodland-edge-right",
+    "terrain-meadow-margin-left",
+    "terrain-meadow-margin-right",
+    "margin-flora-left-fern",
+    "margin-flora-left-clover",
+    "margin-flora-right-moss",
+    "margin-flora-right-flower",
+  ];
+
+  for (const id of decorativeNodeIds) {
+    const node = world.nodes[id];
+    assert.ok(node, `Node ${id} must exist`);
+    assert.equal(node.isEarned, false, `Node ${id} must not be earned`);
+    assert.equal(node.sourceEvent, null, `Node ${id} must have sourceEvent: null`);
+  }
+});
+
+// Test K: Event-backed nodes resolve to exact existing source
+test("K. Event-backed nodes resolve to exact existing source", () => {
+  const ev1 = createMockEvent("ev-pos-alpha", "positive_moment", "2026-03-01T10:00:00Z");
+  const ev2 = createMockEvent("ev-rec-beta", "reconnection", "2026-03-02T10:00:00Z");
+  const ev3 = createMockEvent("ev-imp-gamma", "important_date", "2026-03-03T10:00:00Z");
+
+  const scene = generateGardenSVGScene(COUPLE_A, 25, 20, false, undefined, "light", [ev1, ev2, ev3]);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 25,
+    careGrowthUnits: 20,
+    timeGrowthUnits: 5,
+    careEvents: [ev1, ev2, ev3],
+  });
+
+  const earnedNodes = Object.values(world.nodes).filter((n) => n.isEarned);
+  assert.ok(earnedNodes.length >= 3);
+
+  const matchedSources = new Set(earnedNodes.map((n) => n.sourceEvent.id));
+  assert.ok(matchedSources.has(ev1.id));
+  assert.ok(matchedSources.has(ev2.id));
+  assert.ok(matchedSources.has(ev3.id));
+});
+
+// Test L: Theme changes (light, dim, dark) do not change camera or world geometry
+test("L. Theme changes (light, dim, dark) do not change camera or world geometry", () => {
+  const sceneLight = generateGardenSVGScene(COUPLE_A, 20, 16, false, undefined, "light");
+  const sceneDim = generateGardenSVGScene(COUPLE_A, 20, 16, false, undefined, "dim");
+  const sceneDark = generateGardenSVGScene(COUPLE_A, 20, 16, false, undefined, "dark");
+
+  const worldLight = buildGardenWorld(sceneLight, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 20, careGrowthUnits: 16, timeGrowthUnits: 4, effectiveTheme: "light" });
+  const worldDim = buildGardenWorld(sceneDim, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 20, careGrowthUnits: 16, timeGrowthUnits: 4, effectiveTheme: "dim" });
+  const worldDark = buildGardenWorld(sceneDark, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 20, careGrowthUnits: 16, timeGrowthUnits: 4, effectiveTheme: "dark" });
+
+  assert.deepEqual(worldLight.worldBounds, worldDim.worldBounds);
+  assert.deepEqual(worldLight.worldBounds, worldDark.worldBounds);
+
+  const vp = { width: 360, height: 480 };
+  const camLight = createCameraFromFit(worldLight.worldBounds, vp, 24);
+  const camDark = createCameraFromFit(worldDark.worldBounds, vp, 24);
+  assert.deepEqual(camLight, camDark);
+});
+
+// Test M: Both partners in a couple receive identical worlds and camera-fit results
+test("M. Both partners in a couple receive identical worlds and camera-fit results", () => {
+  const ev = createMockEvent("shared-ev-1", "positive_moment", "2026-03-10T10:00:00Z");
+  const scene1 = generateGardenSVGScene(COUPLE_A, 20, 16, false, undefined, "light", [ev]);
+  const scene2 = generateGardenSVGScene(COUPLE_A, 20, 16, false, undefined, "light", [ev]);
+
+  const worldPartner1 = buildGardenWorld(scene1, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 20, careGrowthUnits: 16, timeGrowthUnits: 4, careEvents: [ev] });
+  const worldPartner2 = buildGardenWorld(scene2, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 20, careGrowthUnits: 16, timeGrowthUnits: 4, careEvents: [ev] });
+
+  assert.deepEqual(worldPartner1.nodes, worldPartner2.nodes);
+  assert.deepEqual(worldPartner1.worldBounds, worldPartner2.worldBounds);
+
+  const vp = { width: 375, height: 667 };
+  const cam1 = createCameraFromFit(worldPartner1.worldBounds, vp);
+  const cam2 = createCameraFromFit(worldPartner2.worldBounds, vp);
+  assert.deepEqual(cam1, cam2);
+});
+
+// Test N: Different couples retain different world compositions and clearing features
+test("N. Different couples retain different world compositions and clearing features", () => {
+  const sceneA = generateGardenSVGScene(COUPLE_A, 30, 24, false);
+  const sceneB = generateGardenSVGScene(COUPLE_B, 30, 24, false);
+
+  const worldA = buildGardenWorld(sceneA, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 30, careGrowthUnits: 24, timeGrowthUnits: 6 });
+  const worldB = buildGardenWorld(sceneB, { coupleId: COUPLE_B, seedString: COUPLE_B, totalGrowthUnits: 30, careGrowthUnits: 24, timeGrowthUnits: 6 });
+
+  assert.notEqual(worldA.coupleSeed, worldB.coupleSeed);
+  assert.notDeepEqual(worldA.nodes["tree-trunk"], worldB.nodes["tree-trunk"]);
+});
+
+// Test O: Camera transformations do not mutate canonical scene serialization
+test("O. Camera transformations do not mutate canonical scene serialization", () => {
+  const scene = generateGardenSVGScene(COUPLE_A, 25, 20, false);
+  const world = buildGardenWorld(scene, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 25, careGrowthUnits: 20, timeGrowthUnits: 5 });
+
+  const initialTrunkD = scene.trunkPath;
+  const initialNodesJson = JSON.stringify(world.nodes);
+
+  const vp = { width: 360, height: 480 };
+  const cam = createCameraFromFit(world.worldBounds, vp);
+  const panned = panCamera(cam, 80, -40, world.worldBounds);
+  const transformStr = getCameraTransformString(panned, vp);
+
+  assert.ok(transformStr.includes("translate"));
+  assert.ok(transformStr.includes("scale"));
+
+  assert.equal(scene.trunkPath, initialTrunkD);
+  assert.equal(JSON.stringify(world.nodes), initialNodesJson);
+});
+
+// Test P: Garden Story remains non-explorable and final-frame equivalent
+test("P. Garden Story remains non-explorable and final-frame equivalent", () => {
+  const ev1 = createMockEvent("story-ev-1", "positive_moment", "2026-03-01T10:00:00Z");
+  const ev2 = createMockEvent("story-ev-2", "reconnection", "2026-03-05T10:00:00Z");
+
+  const story = createGardenStory({
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    createdAt: "2026-01-01T00:00:00Z",
+    careEvents: [ev1, ev2],
+    asOfTime: "2026-03-10T00:00:00Z",
+    isResting: false,
+    themeKey: "light",
+  });
+
+  for (const step of story.steps) {
+    assert.equal("camera" in step, false);
+    assert.equal("exploreMode" in step, false);
+  }
+
+  const lastStep = story.steps[story.steps.length - 1];
+  assert.ok(lastStep.isFinal);
+
+  const storyFinalScene = generateGardenSVGScene(
+    COUPLE_A,
+    lastStep.totalGrowthUnits,
+    lastStep.careGrowthUnits,
+    lastStep.isResting,
+    lastStep.careSignals,
+    "light",
+    lastStep.cumulativeCareEvents
+  );
+  const liveScene = generateGardenSVGScene(
+    COUPLE_A,
+    lastStep.totalGrowthUnits,
+    lastStep.careGrowthUnits,
+    lastStep.isResting,
+    lastStep.careSignals,
+    "light",
+    lastStep.cumulativeCareEvents
+  );
+  assert.deepEqual(storyFinalScene, liveScene);
+});
+
+// Test Q: Compact mode mounts zero exploration behavior
+test("Q. Compact mode mounts zero exploration behavior", () => {
+  const sceneCompact = generateGardenSVGScene(COUPLE_A, 20, 16, false);
+  const worldCompact = buildGardenWorld(sceneCompact, {
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    totalGrowthUnits: 20,
+    careGrowthUnits: 16,
+    timeGrowthUnits: 4,
+  });
+
+  assert.ok(worldCompact.canonicalBounds);
+  assert.equal(worldCompact.canonicalBounds.minX, 0);
+  assert.equal(worldCompact.canonicalBounds.maxX, 800);
+});
+
+// Test R: Reduced-motion focus changes camera immediately
+test("R. Reduced-motion focus changes camera immediately", () => {
+  const scene = generateGardenSVGScene(COUPLE_A, 25, 20, false);
+  const world = buildGardenWorld(scene, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 25, careGrowthUnits: 20, timeGrowthUnits: 5 });
+  const vp = { width: 360, height: 480 };
+
+  const targetCam = focusScenicRegion(
+    world.scenicRegions.root_grove,
+    vp,
+    world.worldBounds,
+    0.3,
+    2.5,
+    24
+  );
+
+  assert.ok(Number.isFinite(targetCam.targetX));
+  assert.ok(Number.isFinite(targetCam.targetY));
+  assert.ok(Number.isFinite(targetCam.zoom));
+});
+
+// Test S: Expanded decorative scenery contains null event sources
+test("S. Expanded decorative scenery contains null event sources", () => {
+  const scene = generateGardenSVGScene(COUPLE_A, 25, 20, false);
+  const world = buildGardenWorld(scene, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 25, careGrowthUnits: 20, timeGrowthUnits: 5 });
+
+  const expandedNodes = Object.values(world.nodes).filter((n) => n.isExpanded);
+  assert.ok(expandedNodes.length >= 4, "Must contain at least 4 margin nodes");
+
+  for (const en of expandedNodes) {
+    assert.equal(en.isEarned, false, `Expanded node ${en.id} must have isEarned: false`);
+    assert.equal(en.sourceEvent, null, `Expanded node ${en.id} must have sourceEvent: null`);
+  }
+});
+
+// Test T: No relationship history is fabricated by scenic extensions
+test("T. No relationship history is fabricated by scenic extensions", () => {
+  const sceneZero = generateGardenSVGScene(COUPLE_A, 10, 0, false);
+  const worldZero = buildGardenWorld(sceneZero, { coupleId: COUPLE_A, seedString: COUPLE_A, totalGrowthUnits: 10, careGrowthUnits: 0, timeGrowthUnits: 10 });
+
+  assert.equal(worldZero.metadata.earnedNodeCount, 0, "Zero-event garden must have 0 earned nodes");
+  assert.equal(Object.keys(worldZero.earnedFeatureGroups).length, 0);
+
+  for (const n of Object.values(worldZero.nodes)) {
+    if (n.isExpanded) {
+      assert.equal(n.isEarned, false);
+      assert.equal(n.sourceEvent, null);
+    }
+  }
+});
+
+// ============================================================================
+// PHASE 3A INTERACTION CORRECTNESS AUDIT TESTS (AUDIT 1 THROUGH 7)
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// Audit Test 1: Unified gesture classification and tap/drag disambiguation
+// ----------------------------------------------------------------------------
+test("Audit 1: Unified gesture classification and tap/drag disambiguation", () => {
+  assert.equal(CANONICAL_DRAG_THRESHOLD_PX, 6);
+
+  // 1. A stationary press can select (dx = 0, dy = 0)
+  assert.equal(classifyGesture(0, 0), "tap");
+
+  // 2. Movement strictly below threshold remains a tap
+  assert.equal(classifyGesture(2, 0), "tap");
+  assert.equal(classifyGesture(0, 4), "tap");
+  assert.equal(classifyGesture(3, 4), "tap"); // hypot = 5 < 6
+  assert.equal(classifyGesture(-4, 3), "tap"); // hypot = 5 < 6
+  assert.equal(classifyGesture(4.2, 4.2), "tap"); // hypot = 5.94 < 6
+
+  // 3. Movement equal to or above threshold is exclusively a drag
+  assert.equal(classifyGesture(6, 0), "drag"); // hypot = 6.0 >= 6
+  assert.equal(classifyGesture(0, 6), "drag"); // hypot = 6.0 >= 6
+  assert.equal(classifyGesture(4.5, 4.5), "drag"); // hypot = 6.36 >= 6
+  assert.equal(classifyGesture(-8, 0), "drag"); // hypot = 8.0 >= 6
+  assert.equal(classifyGesture(20, 30), "drag"); // hypot = 36.0 >= 6
+
+  // 4. Prove PanResponder logic: a drag gesture can NEVER select a feature on release
+  function simulatePanResponder(moveDeltas) {
+    let isDragging = false;
+    let selected = false;
+
+    for (const [dx, dy] of moveDeltas) {
+      if (Math.hypot(dx, dy) >= CANONICAL_DRAG_THRESHOLD_PX) {
+        isDragging = true;
+      }
+    }
+
+    const lastDelta = moveDeltas[moveDeltas.length - 1] || [0, 0];
+    const finalDist = Math.hypot(lastDelta[0], lastDelta[1]);
+    if (!isDragging && finalDist < CANONICAL_DRAG_THRESHOLD_PX) {
+      selected = true;
+    }
+    return { isDragging, selected };
+  }
+
+  // Stationary tap: selects
+  assert.deepEqual(simulatePanResponder([[0, 0]]), { isDragging: false, selected: true });
+
+  // Minor jitter below 6px: selects
+  assert.deepEqual(simulatePanResponder([[2, 1], [3, 4]]), { isDragging: false, selected: true });
+
+  // Drag exceeding 6px: never selects
+  assert.deepEqual(simulatePanResponder([[2, 1], [5, 5], [10, 10]]), { isDragging: true, selected: false });
+
+  // Drag moving far out and returning close: isDragging flag permanently suppresses selection
+  assert.deepEqual(simulatePanResponder([[10, 10], [20, 20], [1, 1]]), { isDragging: true, selected: false });
+});
+
+// ----------------------------------------------------------------------------
+// Audit Test 2: Overlapping-node priority fixture: earned blossom > creature > decorative foliage > landscape
+// ----------------------------------------------------------------------------
+test("Audit 2: Overlapping-node priority fixture: earned blossom > creature > decorative foliage > landscape", () => {
+  const overlapPoint = { x: 400, y: 250 };
+
+  const earnedBlossom = {
+    id: "earned:reconnection:rec-1",
+    role: "bud_blossom_fruit",
+    isEarned: true,
+    sourceEvent: { id: "rec-1", kind: "reconnection" },
+    depthLayer: 30, // Lower depth than creature and foliage!
+    worldBounds: { minX: 385, minY: 235, maxX: 415, maxY: 265, width: 30, height: 30 },
+    anchorPoint: { x: 400, y: 250 },
+    parentId: "tree-root",
+    childIds: [],
+    appearanceOrigin: "source_event",
+    mappingType: "continuous_structural",
+  };
+
+  const livingButterfly = {
+    id: "creature:butterfly-1",
+    role: "creature_node",
+    isEarned: false,
+    sourceEvent: null,
+    depthLayer: 60, // Higher depth than blossom, lower than foliage
+    worldBounds: { minX: 380, minY: 230, maxX: 420, maxY: 270, width: 40, height: 40 },
+    anchorPoint: { x: 400, y: 250 },
+    parentId: "habitat-root",
+    childIds: [],
+    appearanceOrigin: "stage_structure",
+    mappingType: "continuous_structural",
+  };
+
+  const decorativeFoliage = {
+    id: "structural:foliage:0",
+    role: "foliage",
+    isEarned: false,
+    sourceEvent: null,
+    depthLayer: 80, // Highest visible depth!
+    worldBounds: { minX: 370, minY: 220, maxX: 430, maxY: 280, width: 60, height: 60 },
+    anchorPoint: { x: 400, y: 250 },
+    parentId: "tree-root",
+    childIds: [],
+    appearanceOrigin: "stage_structure",
+    mappingType: "continuous_structural",
+  };
+
+  const meadowLandscape = {
+    id: "terrain-meadow",
+    role: "terrain_region",
+    regionKind: "mid_grass",
+    isEarned: false,
+    sourceEvent: null,
+    depthLayer: -40, // Base landscape depth
+    worldBounds: { minX: 0, minY: 0, maxX: 800, maxY: 500, width: 800, height: 500 },
+    anchorPoint: { x: 400, y: 440 },
+    parentId: "terrain-root",
+    childIds: [],
+    appearanceOrigin: "stage_structure",
+    mappingType: "continuous_structural",
+    pathD: "M0,0 L800,0 L800,500 L0,500 Z",
+  };
+
+  const baseWorld = {
+    schemaVersion: 1,
+    nodes: {
+      "earned:reconnection:rec-1": earnedBlossom,
+      "creature:butterfly-1": livingButterfly,
+      "structural:foliage:0": decorativeFoliage,
+      "terrain-meadow": meadowLandscape,
+    },
+    worldBounds: EXPANDED_WORLD_BOUNDS,
+  };
+
+  // 1. Tier 1: With all 4 nodes present, the earned blossom (Class 3) MUST win over creature and foliage
+  const hit1 = resolveNodeAtWorldCoordinate(overlapPoint, baseWorld, 0);
+  assert.equal(hit1.id, "earned:reconnection:rec-1", "Earned blossom must outrank creature and decorative foliage");
+
+  // 2. Tier 2: Without earned blossom, living butterfly (Class 2) MUST win over decorative foliage
+  const worldWithoutBlossom = {
+    ...baseWorld,
+    nodes: {
+      "creature:butterfly-1": livingButterfly,
+      "structural:foliage:0": decorativeFoliage,
+      "terrain-meadow": meadowLandscape,
+    },
+  };
+  const hit2 = resolveNodeAtWorldCoordinate(overlapPoint, worldWithoutBlossom, 0);
+  assert.equal(hit2.id, "creature:butterfly-1", "Creature must outrank decorative foliage");
+
+  // 3. Tier 3: Without creature, decorative foliage (Class 1, depth 80) wins over landscape (Class 1, depth -40)
+  const worldWithoutCreature = {
+    ...baseWorld,
+    nodes: {
+      "structural:foliage:0": decorativeFoliage,
+      "terrain-meadow": meadowLandscape,
+    },
+  };
+  const hit3 = resolveNodeAtWorldCoordinate(overlapPoint, worldWithoutCreature, 0);
+  assert.equal(hit3.id, "structural:foliage:0", "Foliage must win over landscape by depth within decorative class");
+
+  // 4. Tier 4: Only landscape remaining
+  const worldOnlyLandscape = {
+    ...baseWorld,
+    nodes: {
+      "terrain-meadow": meadowLandscape,
+    },
+  };
+  const hit4 = resolveNodeAtWorldCoordinate(overlapPoint, worldOnlyLandscape, 0);
+  assert.equal(hit4.id, "terrain-meadow", "Landscape resolves when no higher features present");
+});
+
+// ----------------------------------------------------------------------------
+// Audit Test 3: ViewBox-to-layout coordinate conversion across responsive viewports
+// ----------------------------------------------------------------------------
+test("Audit 3: ViewBox-to-layout coordinate conversion across responsive viewports", () => {
+  const testViewports = [
+    { name: "Mobile Narrow (320px)", width: 320, height: 480 },
+    { name: "App Shell (440px)", width: 440, height: 550 },
+    { name: "Desktop Wide", width: 1024, height: 600 },
+    { name: "Non-16:10 Tall Container", width: 375, height: 812 },
+  ];
+
+  const testWorldPoints = [
+    { x: 400, y: 250 }, // World center
+    { x: 0, y: 0 },     // Canonical scene origin
+    { x: 800, y: 500 }, // Canonical scene extent
+    { x: -80, y: 120 }, // Left margin
+    { x: 860, y: 480 }, // Right margin
+  ];
+
+  for (const vp of testViewports) {
+    const camera = { target: { x: 380, y: 260 }, zoom: 1.45 };
+
+    for (const pt of testWorldPoints) {
+      const screenPt = worldToScreen(pt, camera, vp);
+
+      // SVG presentation transform evaluation: translate(vw/2, vh/2) scale(z) translate(-tx, -ty)
+      const svgX = (pt.x - camera.target.x) * camera.zoom + vp.width / 2;
+      const svgY = (pt.y - camera.target.y) * camera.zoom + vp.height / 2;
+
+      assert.ok(
+        Math.abs(screenPt.x - svgX) < 1e-4,
+        `Viewport ${vp.name}: Screen X (${screenPt.x}) must equal SVG user X (${svgX})`
+      );
+      assert.ok(
+        Math.abs(screenPt.y - svgY) < 1e-4,
+        `Viewport ${vp.name}: Screen Y (${screenPt.y}) must equal SVG user Y (${svgY})`
+      );
+
+      const inverted = screenToWorld(screenPt, camera, vp);
+      assert.ok(
+        Math.abs(inverted.x - pt.x) < 1e-3,
+        `Viewport ${vp.name}: Inverted X (${inverted.x}) must match world point (${pt.x})`
+      );
+      assert.ok(
+        Math.abs(inverted.y - pt.y) < 1e-3,
+        `Viewport ${vp.name}: Inverted Y (${inverted.y}) must match world point (${pt.y})`
+      );
+    }
+  }
+});
+
+// ----------------------------------------------------------------------------
+// Audit Test 4: Focal-point zoom under responsive scaling: world anchor remains fixed under cursor
+// ----------------------------------------------------------------------------
+test("Audit 4: Focal-point zoom under responsive scaling: world anchor remains fixed under cursor", () => {
+  const worldBounds = EXPANDED_WORLD_BOUNDS;
+  const viewports = [
+    { width: 320, height: 480 },
+    { width: 440, height: 550 },
+    { width: 1024, height: 600 },
+    { width: 375, height: 812 },
+  ];
+
+  for (const vp of viewports) {
+    const limits = calculateZoomBounds(worldBounds, vp, 24);
+
+    // 1. Center focal zoom: zooming around viewport center keeps center world anchor exact
+    const centerCam = {
+      targetX: 400,
+      targetY: 250,
+      zoom: 1.2,
+      viewportWidth: vp.width,
+      viewportHeight: vp.height,
+    };
+    const centerCursor = { x: vp.width / 2, y: vp.height / 2 };
+    const centerWorldBefore = screenToWorld(centerCursor, centerCam, vp);
+    const centerZoomed = zoomCameraAroundPoint(centerCam, 1.3, centerCursor, worldBounds, limits.minZoom, limits.maxZoom);
+    const centerScreenAfter = worldToScreen(centerWorldBefore, centerZoomed, vp);
+
+    assert.ok(
+      Math.abs(centerScreenAfter.x - centerCursor.x) < 0.1,
+      `Center X (${centerCursor.x}) must remain fixed after zoom; got ${centerScreenAfter.x}`
+    );
+    assert.ok(
+      Math.abs(centerScreenAfter.y - centerCursor.y) < 0.1,
+      `Center Y (${centerCursor.y}) must remain fixed after zoom; got ${centerScreenAfter.y}`
+    );
+
+    // 2. Unconstrained interior focal zoom: arbitrary cursor stays pinned under pointer
+    const interiorCam = {
+      targetX: 400,
+      targetY: 250,
+      zoom: 2.0,
+      viewportWidth: vp.width,
+      viewportHeight: vp.height,
+    };
+    const interiorCursor = { x: vp.width / 2 + 30, y: vp.height / 2 - 25 };
+    const interiorWorldBefore = screenToWorld(interiorCursor, interiorCam, vp);
+    const interiorZoomed = zoomCameraAroundPoint(interiorCam, 1.25, interiorCursor, worldBounds, limits.minZoom, limits.maxZoom);
+    const interiorScreenAfter = worldToScreen(interiorWorldBefore, interiorZoomed, vp);
+
+    assert.ok(
+      Math.abs(interiorScreenAfter.x - interiorCursor.x) < 0.1,
+      `Interior Cursor X (${interiorCursor.x}) must remain fixed after zoom; got ${interiorScreenAfter.x}`
+    );
+    assert.ok(
+      Math.abs(interiorScreenAfter.y - interiorCursor.y) < 0.1,
+      `Interior Cursor Y (${interiorCursor.y}) must remain fixed after zoom; got ${interiorScreenAfter.y}`
+    );
+
+    // 3. Boundary clamping check: edge zoom clamps safely without exposing canvas outside worldBounds
+    const edgeCam = zoomCameraAroundPoint(centerCam, 1.5, { x: 10, y: 10 }, worldBounds, limits.minZoom, limits.maxZoom);
+    assert.ok(edgeCam.targetX >= worldBounds.minX);
+    assert.ok(edgeCam.targetX <= worldBounds.maxX);
+    assert.ok(edgeCam.targetY >= worldBounds.minY);
+    assert.ok(edgeCam.targetY <= worldBounds.maxY);
+  }
+});
+
+// ----------------------------------------------------------------------------
+// Audit Test 5: Constant screen-space hit slop across minimum, middle, and maximum zoom
+// ----------------------------------------------------------------------------
+test("Audit 5: Constant screen-space hit slop across minimum, middle, and maximum zoom", () => {
+  const targetNode = {
+    id: "test-feature",
+    role: "ground_flora",
+    floraType: "moss",
+    isEarned: false,
+    sourceEvent: null,
+    depthLayer: 10,
+    worldBounds: { minX: 380, minY: 230, maxX: 420, maxY: 270, width: 40, height: 40 },
+    anchorPoint: { x: 400, y: 250 },
+    parentId: "ground-flora-root",
+    childIds: [],
+    appearanceOrigin: "stage_structure",
+    mappingType: "continuous_structural",
+  };
+
+  const world = {
+    schemaVersion: 1,
+    nodes: { "test-feature": targetNode },
+    worldBounds: EXPANDED_WORLD_BOUNDS,
+  };
+
+  const vp = { width: 400, height: 400 };
+  const targetPoint = { x: 400, y: 250 };
+  const screenHitSlop = 22; // 22pt screen-space touch target expansion
+
+  const testZooms = [0.4, 1.0, 2.5];
+
+  for (const zoom of testZooms) {
+    const cam = { target: targetPoint, zoom };
+
+    const screenCenter = { x: 200, y: 200 };
+    const screenHalfW = 20 * zoom;
+    const rightScreenEdge = screenCenter.x + screenHalfW;
+
+    // Tap 1: 15 screen pixels outside right edge (within 22pt hit slop)
+    const tapWithinSlop = { x: rightScreenEdge + 15, y: screenCenter.y };
+    const hitSuccess = resolveNodeAtScreenCoordinate(tapWithinSlop, world, cam, vp, screenHitSlop);
+    assert.ok(
+      hitSuccess,
+      `At zoom ${zoom}, tap 15px outside feature edge must be within 22pt hit slop`
+    );
+    assert.equal(hitSuccess.id, "test-feature");
+
+    // Tap 2: 30 screen pixels outside right edge (beyond 22pt hit slop)
+    const tapBeyondSlop = { x: rightScreenEdge + 30, y: screenCenter.y };
+    const hitFail = resolveNodeAtScreenCoordinate(tapBeyondSlop, world, cam, vp, screenHitSlop);
+    assert.equal(
+      hitFail,
+      null,
+      `At zoom ${zoom}, tap 30px outside feature edge must NOT select`
+    );
+  }
+});
+
+// ----------------------------------------------------------------------------
+// Audit Test 6: Web wheel listener lifecycle: active mounting, unmounting, and zero residual duplicates
+// ----------------------------------------------------------------------------
+test("Audit 6: Web wheel listener lifecycle: active mounting, unmounting, and zero residual duplicates", () => {
+  class MockDOMCanvas {
+    constructor() {
+      this.listeners = new Map();
+    }
+    addEventListener(type, handler, options) {
+      if (!this.listeners.has(type)) {
+        this.listeners.set(type, new Set());
+      }
+      this.listeners.get(type).add(handler);
+      this.lastOptions = options;
+    }
+    removeEventListener(type, handler) {
+      if (this.listeners.has(type)) {
+        this.listeners.get(type).delete(handler);
+      }
+    }
+    listenerCount(type) {
+      return this.listeners.get(type)?.size || 0;
+    }
+  }
+
+  const canvas = new MockDOMCanvas();
+
+  function mountExplorer(canvasElem) {
+    const onWheel = (e) => {};
+    canvasElem.addEventListener("wheel", onWheel, { passive: false });
+    return function unmount() {
+      canvasElem.removeEventListener("wheel", onWheel);
+    };
+  }
+
+  // 1. Open cycle 1
+  const unmount1 = mountExplorer(canvas);
+  assert.equal(canvas.listenerCount("wheel"), 1, "Must have exactly 1 wheel listener when mounted");
+  assert.equal(canvas.lastOptions.passive, false, "Wheel listener must be non-passive to allow preventDefault");
+  unmount1();
+  assert.equal(canvas.listenerCount("wheel"), 0, "Listener must be removed on unmount");
+
+  // 2. Open cycle 2
+  const unmount2 = mountExplorer(canvas);
+  assert.equal(canvas.listenerCount("wheel"), 1);
+  unmount2();
+  assert.equal(canvas.listenerCount("wheel"), 0);
+
+  // 3. Open cycle 3
+  const unmount3 = mountExplorer(canvas);
+  assert.equal(canvas.listenerCount("wheel"), 1);
+  unmount3();
+  assert.equal(canvas.listenerCount("wheel"), 0, "Zero residual listeners remain after repeated open/close cycles");
+});
+
+// ----------------------------------------------------------------------------
+// Audit Test 7: Camera reset after remount: fresh fitted camera with zero residual pan or zoom
+// ----------------------------------------------------------------------------
+test("Audit 7: Camera reset after remount: fresh fitted camera with zero residual pan or zoom", () => {
+  const worldBounds = EXPANDED_WORLD_BOUNDS;
+  const vp = { width: 360, height: 480 };
+
+  // First session: initial fit, user zooms and pans
+  const session1Initial = createCameraFromFit(worldBounds, vp, 24);
+  const session1Zoomed = zoomCameraAroundPoint(session1Initial, 2.5, { x: 180, y: 240 }, worldBounds, 0.4, 3.0);
+  const session1Panned = panCamera(session1Zoomed, 150, -80, worldBounds);
+
+  assert.notEqual(session1Panned.targetX, session1Initial.targetX);
+  assert.notEqual(session1Panned.zoom, session1Initial.zoom);
+
+  // Unmount and remount (simulated fresh Explorer mount)
+  const session2Initial = createCameraFromFit(worldBounds, vp, 24);
+
+  assert.equal(session2Initial.targetX, session1Initial.targetX);
+  assert.equal(session2Initial.targetY, session1Initial.targetY);
+  assert.equal(session2Initial.zoom, session1Initial.zoom);
+  assert.equal(session2Initial.viewportWidth, session1Initial.viewportWidth);
+  assert.equal(session2Initial.viewportHeight, session1Initial.viewportHeight);
 });

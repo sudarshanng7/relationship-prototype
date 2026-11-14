@@ -1,5 +1,6 @@
-import React, { useId, useMemo } from "react";
+import React, { useEffect, useId, useMemo, useState } from "react";
 import {
+  AccessibilityInfo,
   StyleProp,
   StyleSheet,
   View,
@@ -27,7 +28,11 @@ import {
 import {
   resolveFeatureBoundsFromScene,
   buildGardenWorld,
+  getCameraTransformString,
   type GardenWorld,
+  type GardenCameraState,
+  type Camera2D,
+  type Viewport,
 } from "@/lib/garden";
 
 export interface GardenVisualizerProps {
@@ -43,6 +48,10 @@ export interface GardenVisualizerProps {
   children?: React.ReactNode;
   highlightFeatureId?: string | null;
   world?: GardenWorld;
+  // Exploration Camera additions (Phase 3A)
+  camera?: Camera2D | GardenCameraState;
+  viewport?: Viewport;
+  exploreMode?: boolean;
 }
 
 export function GardenVisualizer({
@@ -58,9 +67,25 @@ export function GardenVisualizer({
   children,
   highlightFeatureId,
   world: worldProp,
+  camera,
+  viewport,
+  exploreMode = false,
 }: GardenVisualizerProps) {
   const sceneId = useId().replace(/:/g, "_");
   const { effectiveTheme } = useTheme();
+
+  const [isReduceMotion, setIsReduceMotion] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => setIsReduceMotion(Boolean(enabled)))
+      .catch(() => setIsReduceMotion(false));
+    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", (enabled) => {
+      setIsReduceMotion(Boolean(enabled));
+    });
+    return () => {
+      if (typeof sub?.remove === "function") sub.remove();
+    };
+  }, []);
 
   const scene: GeneratedGardenSVGScene = useMemo(() => {
     return generateGardenSVGScene(
@@ -84,10 +109,14 @@ export function GardenVisualizer({
 
   const skyGradId = `gardenSkyGrad_${sceneId}`;
   const sunGlowId = `gardenSunGlow_${sceneId}`;
+  const moonAuraId = `gardenMoonAura_${sceneId}`;
+  const woodlandGradId = `gardenWoodlandGrad_${sceneId}`;
   const meadowGradId = `gardenMeadowGrad_${sceneId}`;
   const rearGrassGradId = `gardenRearGrassGrad_${sceneId}`;
   const midGrassGradId = `gardenMidGrassGrad_${sceneId}`;
   const foregroundGrassGradId = `gardenForegroundGrassGrad_${sceneId}`;
+  const streamGradId = `gardenStreamGrad_${sceneId}`;
+  const pathGradId = `gardenPathGrad_${sceneId}`;
   const soilMoundGradId = `gardenSoilMoundGrad_${sceneId}`;
 
   const isCompact = compact === true;
@@ -169,10 +198,17 @@ export function GardenVisualizer({
     );
   }, [scene.habitatDetails, isCompact]);
 
+  const isExplore = Boolean(exploreMode && camera && viewport);
+  const cameraTransform = isExplore ? getCameraTransformString(camera!, viewport!) : undefined;
+
   return (
     <View
       style={[
-        compact ? styles.compactContainer : styles.fullContainer,
+        compact
+          ? styles.compactContainer
+          : isExplore
+          ? styles.exploreContainer
+          : styles.fullContainer,
         style,
       ]}
       accessible={true}
@@ -185,10 +221,10 @@ export function GardenVisualizer({
         importantForAccessibility="no"
       >
         <Svg
-          viewBox="0 0 800 500"
+          viewBox={isExplore ? `0 0 ${viewport!.width} ${viewport!.height}` : "0 0 800 500"}
           width="100%"
           height="100%"
-          preserveAspectRatio="xMidYMid slice"
+          preserveAspectRatio={isExplore ? "xMidYMid meet" : "xMidYMid slice"}
         >
           <Defs>
             <LinearGradient id={skyGradId} x1="0" y1="0" x2="0" y2="1">
@@ -226,6 +262,46 @@ export function GardenVisualizer({
               />
             </RadialGradient>
 
+            {/* Tranquil resting moon aura */}
+            <RadialGradient
+              id={moonAuraId}
+              cx="50%"
+              cy="50%"
+              r="50%"
+              fx="50%"
+              fy="50%"
+            >
+              <Stop
+                offset="0%"
+                stopColor={scene.palette.blossomCream || "#FAF8F5"}
+                stopOpacity={0.65}
+              />
+              <Stop
+                offset="55%"
+                stopColor={scene.palette.blossomSecondary || "#B2C5B2"}
+                stopOpacity={0.25}
+              />
+              <Stop
+                offset="100%"
+                stopColor={scene.palette.blossomSecondary || "#B2C5B2"}
+                stopOpacity={0}
+              />
+            </RadialGradient>
+
+            {/* Distant ancient woodland treeline silhouette gradient */}
+            {scene.distantWoodlandPath && (
+              <LinearGradient id={woodlandGradId} x1="0" y1="0" x2="0" y2="1">
+                <Stop
+                  offset="0%"
+                  stopColor={scene.groundPalette.woodlandDistantTop || scene.groundPalette.meadowTop}
+                />
+                <Stop
+                  offset="100%"
+                  stopColor={scene.groundPalette.woodlandDistantBottom || scene.groundPalette.meadowBottom}
+                />
+              </LinearGradient>
+            )}
+
             {/* Natural Landscape Linear Gradients */}
             <LinearGradient id={meadowGradId} x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0%" stopColor={scene.groundPalette.meadowTop} />
@@ -242,6 +318,34 @@ export function GardenVisualizer({
               <Stop offset="100%" stopColor={scene.groundPalette.midGrassBottom} />
             </LinearGradient>
 
+            {/* Stream water & bank gradient */}
+            {scene.streamPath && (
+              <LinearGradient id={streamGradId} x1="0" y1="0" x2="1" y2="1">
+                <Stop
+                  offset="0%"
+                  stopColor={scene.groundPalette.streamWaterTop || "#6F8E8B"}
+                />
+                <Stop
+                  offset="100%"
+                  stopColor={scene.groundPalette.streamWaterBottom || "#88AAA7"}
+                />
+              </LinearGradient>
+            )}
+
+            {/* Natural garden path gradient */}
+            {scene.gardenPathD && (
+              <LinearGradient id={pathGradId} x1="0" y1="0" x2="0" y2="1">
+                <Stop
+                  offset="0%"
+                  stopColor={scene.groundPalette.pathBase || "#8A7B6E"}
+                />
+                <Stop
+                  offset="100%"
+                  stopColor={scene.groundPalette.pathFleck || "#A29486"}
+                />
+              </LinearGradient>
+            )}
+
             <LinearGradient id={foregroundGrassGradId} x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0%" stopColor={scene.groundPalette.frontGrassTop} />
               <Stop offset="100%" stopColor={scene.groundPalette.frontGrassBottom} />
@@ -254,6 +358,58 @@ export function GardenVisualizer({
             </LinearGradient>
           </Defs>
 
+          <G transform={cameraTransform}>
+            {/* Extended Scenic Atmosphere and Margins in Exploration Mode */}
+            {isExplore && (
+              <>
+                <Rect
+                  x="-250"
+                  y="-150"
+                  width="1300"
+                  height="850"
+                  fill={`url(#${skyGradId})`}
+                />
+                <Path
+                  d="M-120,250 Q-60,230 0,255 Q40,240 80,255 L80,340 L-120,340 Z"
+                  fill={`url(#${woodlandGradId})`}
+                  opacity={0.85}
+                />
+                <Path
+                  d="M720,255 Q760,238 820,255 Q860,235 920,250 L920,340 L720,340 Z"
+                  fill={`url(#${woodlandGradId})`}
+                  opacity={0.85}
+                />
+                <Path
+                  d="M-120,360 Q-40,340 40,370 L40,560 L-120,560 Z"
+                  fill={`url(#${midGrassGradId})`}
+                  opacity={0.9}
+                />
+                <Path
+                  d="M760,370 Q840,340 920,360 L920,560 L760,560 Z"
+                  fill={`url(#${midGrassGradId})`}
+                  opacity={0.9}
+                />
+                {scene.streamPath && (
+                  <G>
+                    <Path
+                      d="M780,455 Q830,475 920,505 L920,545 Q830,515 780,485 Z"
+                      fill={scene.groundPalette.streamBank || scene.groundPalette.deepSoilShadow}
+                      opacity={0.85}
+                    />
+                    <Path
+                      d="M785,460 Q830,478 920,508 L920,540 Q830,512 785,482 Z"
+                      fill={`url(#${streamGradId})`}
+                      opacity={0.9}
+                    />
+                  </G>
+                )}
+                <Circle cx="-45" cy="460" r="14" fill={scene.palette.deepFoliage || "#3A5A40"} opacity={0.65} />
+                <Circle cx="-20" cy="495" r="10" fill={scene.palette.midFoliage || "#4A7C59"} opacity={0.7} />
+                <Circle cx="825" cy="470" r="12" fill={scene.palette.midFoliage || "#4A7C59"} opacity={0.7} />
+                <Circle cx="860" cy="505" r="13" fill={scene.palette.blossomPrimary || "#A3B18A"} opacity={0.65} />
+              </>
+            )}
+
           {/* 1. Sky & Atmospheric Background */}
           <Rect
             x="0"
@@ -264,20 +420,40 @@ export function GardenVisualizer({
             fill={`url(#${skyGradId})`}
           />
 
-          {/* Sun / Moon Orb */}
+          {/* Celestial Orb (Sun with radiant atmosphere / Moon with silver crescent & aura) */}
           <Circle
             cx="640"
             cy="115"
-            r={isResting ? 36 : 56}
-            fill={`url(#${sunGlowId})`}
+            r={isResting ? 38 : 56}
+            fill={`url(#${isResting ? moonAuraId : sunGlowId})`}
           />
           {isResting && (
-            <Circle
-              cx="644"
-              cy="112"
-              r="14"
-              fill={scene.palette.blossomSecondary}
-              opacity={0.7}
+            <G>
+              {/* Moon disk */}
+              <Circle
+                cx="642"
+                cy="112"
+                r="13"
+                fill={scene.palette.blossomCream || "#FAF8F5"}
+                opacity={0.88}
+              />
+              {/* Moon shadow defining soft crescent */}
+              <Circle
+                cx="647"
+                cy="109"
+                r="12"
+                fill={scene.skyTop}
+                opacity={0.9}
+              />
+            </G>
+          )}
+
+          {/* 1B. Distant Ancient Woodland Treeline (Layer -85) */}
+          {scene.distantWoodlandPath && (
+            <Path
+              d={scene.distantWoodlandPath}
+              fill={`url(#${woodlandGradId})`}
+              opacity={0.92}
             />
           )}
 
@@ -299,11 +475,57 @@ export function GardenVisualizer({
             fill={`url(#${midGrassGradId})`}
           />
 
-          {/* 5. Foreground grass layer */}
+          {/* 5. Foreground grass layer (Layer -30) */}
           <Path
             d={scene.groundLayerFront}
             fill={`url(#${foregroundGrassGradId})`}
           />
+
+          {/* 5B. Natural Topographic Clearing Features: Meandering Brook or Curved Garden Path (Layer -25) */}
+          {scene.streamBankPath && (
+            <Path
+              d={scene.streamBankPath}
+              fill={scene.groundPalette.streamBank || scene.groundPalette.deepSoilShadow}
+              opacity={0.85}
+            />
+          )}
+          {scene.streamPath && (
+            <Path
+              d={scene.streamPath}
+              fill={`url(#${streamGradId})`}
+              opacity={0.95}
+            />
+          )}
+          {scene.streamRipples?.map((rip) => (
+            <Path
+              key={rip.id}
+              d={rip.d}
+              stroke={rip.color}
+              strokeWidth={1.2}
+              strokeLinecap="round"
+              fill="none"
+              opacity={rip.opacity}
+            />
+          ))}
+
+          {scene.gardenPathD && (
+            <Path
+              d={scene.gardenPathD}
+              fill={`url(#${pathGradId})`}
+              opacity={0.9}
+            />
+          )}
+          {scene.pathStones?.map((st) => (
+            <Ellipse
+              key={st.id}
+              cx={st.cx}
+              cy={st.cy}
+              rx={st.rx}
+              ry={st.ry}
+              fill={st.color}
+              opacity={0.75}
+            />
+          ))}
 
           {/* 6. Exposed soil mound */}
           {scene.soilBedPath && (
@@ -425,6 +647,19 @@ export function GardenVisualizer({
               opacity={0.65}
             />
           )}
+
+          {/* Trunk Bark Texture Grain & Knots (Layer 18) */}
+          {scene.barkTexturePaths?.map((bt) => (
+            <Path
+              key={bt.id}
+              d={bt.d}
+              stroke={bt.color}
+              strokeWidth={bt.strokeWidth || 1.2}
+              strokeLinecap="round"
+              fill="none"
+              opacity={bt.opacity}
+            />
+          ))}
 
           {/* 9. Moss, grass blades, ground cover and companion flora (layering in front of root base) */}
           {postTreeDetails.map((item) => {
@@ -725,6 +960,16 @@ export function GardenVisualizer({
           })}
 
           {/* 10. Tree Branches, Foliage, Leaf Veins, Canopy Positive Accents, Blossoms, Seed Pods and Wildlife */}
+          {/* Canopy Shadow Masses: Deep painterly back-canopy volume (Layer 22) */}
+          {scene.canopyShadowClusters?.map((sc) => (
+            <Path
+              key={sc.id}
+              d={sc.d}
+              fill={sc.color}
+              opacity={sc.opacity}
+            />
+          ))}
+
           {/* Branches */}
           {scene.branches.map((branchD, i) => (
             <Path
@@ -757,6 +1002,16 @@ export function GardenVisualizer({
                 opacity={vein.opacity ?? 0.5}
               />
             ))}
+
+          {/* Canopy Sunlit Highlight Masses: Top-lit foliage clusters (Layer 38) */}
+          {scene.canopyHighlightClusters?.map((hc) => (
+            <Path
+              key={hc.id}
+              d={hc.d}
+              fill={hc.color}
+              opacity={hc.opacity}
+            />
+          ))}
 
           {/* Diversified Positive Moment Canopy Details (shoots, twigs, closed buds, berries) */}
           {visibleCanopyDetails.map((detail) => (
@@ -1099,6 +1354,22 @@ export function GardenVisualizer({
             );
           })}
 
+          {/* Atmospheric Motes / Pollen Drifts (Full view only, Layer 92, suspended during resting or story playback) */}
+          {!compact &&
+            !isResting &&
+            !isReduceMotion &&
+            !highlightFeatureId &&
+            scene.atmosphericMotes?.map((mote) => (
+              <Circle
+                key={mote.id}
+                cx={mote.cx}
+                cy={mote.cy}
+                r={mote.r}
+                fill={mote.color}
+                opacity={mote.opacity}
+              />
+            ))}
+
           {/* Gentle temporary aura around newly revealed botanical feature during story playback */}
           {highlightCoord && (
             <G id="story-reveal-halo">
@@ -1115,6 +1386,7 @@ export function GardenVisualizer({
               />
             </G>
           )}
+          </G>
         </Svg>
       </View>
 
@@ -1141,6 +1413,12 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   compactContainer: {
+    width: "100%",
+    height: "100%",
+    overflow: "hidden",
+    position: "relative",
+  },
+  exploreContainer: {
     width: "100%",
     height: "100%",
     overflow: "hidden",

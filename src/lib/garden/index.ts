@@ -8,3 +8,4 @@ export * from "./world-projection";
 export * from "./feature-bounds";
 export * from "./asset-manifest";
 export * from "./ecosystem";
+export * from "./garden-fixtures";
