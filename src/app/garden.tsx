@@ -400,6 +400,7 @@ export default function GardenScreen() {
           {/* SECTION 1 — Immersive Garden Hero / Garden Story Playback */}
           {isPlayingStory && story ? (
             <GardenStoryPlayer
+              key={`${story.seedString}-${story.asOfTime}`}
               story={story}
               theme={theme}
               isLight={isLight}

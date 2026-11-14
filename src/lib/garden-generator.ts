@@ -161,6 +161,7 @@ export type GardenCareEvent = {
   occurredAt: string;
   category?: string | null;
   createdAt?: string | null;
+  displayTitle?: string | null;
 };
 
 export type PositiveBotanicalFamily =

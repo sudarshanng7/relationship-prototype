@@ -12,7 +12,11 @@ import {
 import { tokens } from "@/components/couply-tokens";
 import { ThemeColors } from "@/context/ThemeContext";
 import type { GardenCareEvent } from "@/lib/garden-generator";
-import type { GardenStory } from "@/lib/garden-story";
+import {
+  type GardenStory,
+  getStoryProgressViewModel,
+  getStepDurationMs,
+} from "@/lib/garden-story";
 import { GardenVisualizer } from "@/components/garden/GardenVisualizer";
 
 export interface GardenStoryPlayerProps {
@@ -55,6 +59,29 @@ export function GardenStoryPlayer({
   const currentStep = story.steps[currentIndex] || story.steps[0];
   const previousStep = currentIndex > 0 ? story.steps[currentIndex - 1] : null;
   const isFinalStep = currentIndex === totalSteps - 1;
+
+  // Derive pure, consistent global progress view-model
+  const viewModel = useMemo(
+    () => getStoryProgressViewModel(story, currentIndex, isPlaying),
+    [story, currentIndex, isPlaying]
+  );
+
+  // Announce frame transition in standard accessibility order (Section 9)
+  useEffect(() => {
+    try {
+      if (viewModel.frameAccessibilityLabel && AccessibilityInfo.announceForAccessibility) {
+        AccessibilityInfo.announceForAccessibility(viewModel.frameAccessibilityLabel);
+      }
+    } catch {
+      // Non-blocking accessibility announcement fallback
+    }
+  }, [currentIndex, viewModel.frameAccessibilityLabel]);
+
+  // If story snapshot refreshes (e.g. from play again), ensure index begins cleanly at 0
+  useEffect(() => {
+    setCurrentIndex(0);
+    setIsPlaying(!isReduceMotion);
+  }, [story.seedString, story.asOfTime, isReduceMotion]);
 
   // 1. Reduced Motion Detection (Accessibility)
   useEffect(() => {
@@ -218,16 +245,9 @@ export function GardenStoryPlayer({
     }
 
     // Adaptive pacing based on history size and pacing mode
-    let stepDurationMs: number;
     const careCount = story.steps.filter((s) => s.addedEventKey !== null).length;
-
-    if (careCount > 20) {
-      stepDurationMs = pacingMode === "quick" ? 1400 : 2200;
-    } else if (careCount > 8) {
-      stepDurationMs = 1900;
-    } else {
-      stepDurationMs = 2800;
-    }
+    const isFirst = currentIndex === 0;
+    const stepDurationMs = getStepDurationMs(careCount, pacingMode, isFirst);
 
     advanceTimerRef.current = setTimeout(() => {
       if (mountedRef.current) {
@@ -258,14 +278,23 @@ export function GardenStoryPlayer({
     setCurrentIndex((prev) => Math.min(totalSteps - 1, prev + 1));
   }, [totalSteps]);
 
+  const handleReplay = useCallback(() => {
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
+    setCurrentIndex(0);
+    setIsPlaying(!isReduceMotion);
+    onPlayAgain();
+  }, [isReduceMotion, onPlayAgain]);
+
   const handleTogglePlayPause = useCallback(() => {
     if (isFinalStep) {
-      setCurrentIndex(0);
-      setIsPlaying(true);
+      handleReplay();
     } else {
       setIsPlaying((prev) => !prev);
     }
-  }, [isFinalStep]);
+  }, [isFinalStep, handleReplay]);
 
   const handleSkipToToday = useCallback(() => {
     if (advanceTimerRef.current) {
@@ -275,16 +304,6 @@ export function GardenStoryPlayer({
     setCurrentIndex(totalSteps - 1);
     setIsPlaying(false);
   }, [totalSteps]);
-
-  const handleReplay = useCallback(() => {
-    if (advanceTimerRef.current) {
-      clearTimeout(advanceTimerRef.current);
-      advanceTimerRef.current = null;
-    }
-    setCurrentIndex(0);
-    setIsPlaying(true);
-    onPlayAgain();
-  }, [onPlayAgain]);
 
   // Themed backgrounds & borders
   const footerBg = isLight ? "#F4EEF7" : isDim ? "#514958" : "#302536";
@@ -347,6 +366,39 @@ export function GardenStoryPlayer({
           },
         ]}
       >
+        {/* Stable Linear Progress Track */}
+        <View
+          style={[
+            styles.progressTrack,
+            {
+              backgroundColor: isLight
+                ? "#E3DCE7"
+                : isDim
+                ? "#453B4D"
+                : "#322638",
+            },
+          ]}
+          importantForAccessibility="no"
+          accessibilityElementsHidden={true}
+          accessibilityRole="progressbar"
+          accessibilityValue={{
+            min: 1,
+            max: totalSteps,
+            now: viewModel.visibleStepNumber,
+            text: viewModel.progressText,
+          }}
+        >
+          <View
+            style={[
+              styles.progressFill,
+              {
+                backgroundColor: theme.primaryAccent,
+                width: `${Math.round(viewModel.progressFraction * 100)}%`,
+              },
+            ]}
+          />
+        </View>
+
         {/* Explanatory Line */}
         <Text style={[styles.explanationText, { color: theme.secondaryText }]}>
           {story.explanation}
@@ -377,32 +429,42 @@ export function GardenStoryPlayer({
           </View>
         )}
 
-        {/* Chapter & Growth Step Indicators */}
+        {/* Global Progress & Botanical Stage Header */}
         <View style={styles.headerInfoRow}>
-          <View style={styles.chapterTitleBlock}>
-            <Text style={[styles.chapterHeading, { color: theme.secondaryText }]}>
-              {`Chapter ${currentStep.chapterIndex + 1} · ${currentStep.chapterTitle}`}
+          <View style={styles.titleBlock}>
+            <Text
+              style={[styles.frameTypeOverline, { color: theme.secondaryText }]}
+            >
+              {viewModel.frameType}
             </Text>
-            <Text style={[styles.stepCounter, { color: theme.primaryText }]}>
-              {currentStep.addedEventKey
-                ? `Growth ${currentStep.chapterStepIndex} of ${currentStep.chapterTotalSteps}`
-                : `Step ${currentStep.stepIndex + 1} of ${totalSteps}`}
+            <Text style={[styles.stageTitle, { color: theme.primaryText }]}>
+              {viewModel.stageTitle}
             </Text>
           </View>
 
-          {currentStep.dateLabel && (
-            <View
-              style={[
-                styles.dateBadge,
-                { backgroundColor: controlBtnBg, borderColor: controlBtnBorder },
-              ]}
+          <View style={styles.progressBlock}>
+            <Text
+              style={[styles.globalStepCounter, { color: theme.primaryText }]}
+              accessibilityLabel={viewModel.accessibilityProgressLabel}
             >
-              <Text style={[styles.dateBadgeText, { color: theme.primaryText }]}>
-                {currentStep.dateLabel}
-              </Text>
-            </View>
-          )}
+              {viewModel.progressText}
+            </Text>
+          </View>
         </View>
+
+        {/* Shared Moment Title (for event-backed frames) */}
+        {currentStep.displayTitle ? (
+          <View style={styles.eventTitleContainer}>
+            <Text
+              style={[styles.eventTitleText, { color: theme.primaryText }]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+              accessibilityLabel={currentStep.displayTitle}
+            >
+              “{currentStep.displayTitle}”
+            </Text>
+          </View>
+        ) : null}
 
         {/* Caption */}
         <View
@@ -415,33 +477,42 @@ export function GardenStoryPlayer({
           </Text>
         </View>
 
+        {/* Formatted Date */}
+        {currentStep.dateLabel ? (
+          <View style={styles.dateRow}>
+            <Text style={[styles.dateText, { color: theme.secondaryText }]}>
+              {currentStep.dateLabel}
+            </Text>
+          </View>
+        ) : null}
+
         {/* Playback Controls (Min 44x44 Touch Targets) */}
         <View style={styles.controlsRow}>
           {/* Previous Step Button */}
           <Pressable
             onPress={handlePrevious}
-            disabled={currentIndex === 0}
+            disabled={viewModel.isFirstStep}
             style={({ pressed }) => [
               styles.controlBtn,
               {
                 backgroundColor: controlBtnBg,
                 borderColor: controlBtnBorder,
-                opacity: currentIndex === 0 ? 0.35 : pressed ? 0.8 : 1,
+                opacity: viewModel.isFirstStep ? 0.35 : pressed ? 0.8 : 1,
               },
             ]}
             focusable={true}
             accessibilityRole="button"
-            accessibilityLabel="Previous growth step"
-            accessibilityState={{ disabled: currentIndex === 0 }}
+            accessibilityLabel="Previous story step"
+            accessibilityState={{ disabled: viewModel.isFirstStep }}
           >
             <Text style={[styles.controlBtnText, { color: theme.primaryText }]}>
               ‹ Prev
             </Text>
           </Pressable>
 
-          {/* Pause / Continue Button */}
+          {/* Primary Action Button: Play again on final step, or Pause/Continue during story */}
           <Pressable
-            onPress={handleTogglePlayPause}
+            onPress={isFinalStep ? handleReplay : handleTogglePlayPause}
             style={({ pressed }) => [
               styles.controlBtn,
               styles.primaryControlBtn,
@@ -455,33 +526,33 @@ export function GardenStoryPlayer({
             accessibilityRole="button"
             accessibilityLabel={
               isFinalStep
-                ? "Replay story from the beginning"
+                ? "Play story again from the beginning"
                 : isPlaying
-                ? "Pause playback"
-                : "Continue playback"
+                ? "Pause story playback"
+                : "Continue story playback"
             }
           >
             <Text style={styles.primaryControlBtnText}>
-              {isFinalStep ? "Replay ↺" : isPlaying ? "Pause ⏸" : "Continue ▶"}
+              {viewModel.primaryActionLabel}
             </Text>
           </Pressable>
 
-          {/* Next Step Button */}
+          {/* Next Step Button (disabled on final step in favor of Play again) */}
           <Pressable
             onPress={handleNext}
-            disabled={isFinalStep}
+            disabled={viewModel.isFinalStep}
             style={({ pressed }) => [
               styles.controlBtn,
               {
                 backgroundColor: controlBtnBg,
                 borderColor: controlBtnBorder,
-                opacity: isFinalStep ? 0.35 : pressed ? 0.8 : 1,
+                opacity: viewModel.isFinalStep ? 0.35 : pressed ? 0.8 : 1,
               },
             ]}
             focusable={true}
             accessibilityRole="button"
-            accessibilityLabel="Next growth step"
-            accessibilityState={{ disabled: isFinalStep }}
+            accessibilityLabel="Next story step"
+            accessibilityState={{ disabled: viewModel.isFinalStep }}
           >
             <Text style={[styles.controlBtnText, { color: theme.primaryText }]}>
               Next ›
@@ -581,28 +652,6 @@ export function GardenStoryPlayer({
             </Pressable>
           )}
 
-          {isFinalStep && (
-            <Pressable
-              onPress={handleReplay}
-              style={({ pressed }) => [
-                styles.secondaryBtn,
-                pressed && { opacity: 0.7 },
-              ]}
-              focusable={true}
-              accessibilityRole="button"
-              accessibilityLabel="Play story again with fresh data"
-            >
-              <Text
-                style={[
-                  styles.secondaryBtnText,
-                  { color: theme.primaryAccent },
-                ]}
-              >
-                Play again ↺
-              </Text>
-            </Pressable>
-          )}
-
           <Pressable
             onPress={onClose}
             style={({ pressed }) => [
@@ -692,39 +741,66 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
   },
-  chapterTitleBlock: {
+  progressTrack: {
+    width: "100%",
+    height: 4,
+    borderRadius: 2,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 2,
+  },
+  titleBlock: {
     flex: 1,
     gap: 2,
   },
-  chapterHeading: {
-    fontSize: tokens.typeScale.caption,
-    fontWeight: "500",
-    letterSpacing: 0.2,
+  frameTypeOverline: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
   },
-  stepCounter: {
+  stageTitle: {
     fontSize: tokens.typeScale.sectionTitle,
     fontWeight: "700",
     letterSpacing: -0.2,
   },
-  dateBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
+  progressBlock: {
+    alignItems: "flex-end",
   },
-  dateBadgeText: {
-    fontSize: tokens.typeScale.overline,
-    fontWeight: "600",
-    letterSpacing: 0.3,
+  globalStepCounter: {
+    fontSize: tokens.typeScale.sectionTitle,
+    fontWeight: "700",
+    letterSpacing: -0.2,
+  },
+  eventTitleContainer: {
+    minHeight: 24,
+    justifyContent: "center",
+  },
+  eventTitleText: {
+    fontSize: tokens.typeScale.sectionTitle,
+    fontWeight: "700",
+    lineHeight: 22,
+    letterSpacing: -0.2,
   },
   captionContainer: {
-    minHeight: 44,
+    minHeight: 40,
     justifyContent: "center",
   },
   chapterCaption: {
     fontSize: tokens.typeScale.bodyLarge,
     fontWeight: "500",
     lineHeight: 22,
+  },
+  dateRow: {
+    marginTop: -2,
+  },
+  dateText: {
+    fontSize: tokens.typeScale.caption,
+    fontWeight: "600",
+    letterSpacing: 0.2,
   },
   controlsRow: {
     flexDirection: "row",

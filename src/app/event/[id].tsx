@@ -10,6 +10,7 @@ import {
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
+import { formatCategory } from "@/lib/event-heading";
 import {
   ArrivalResponseCode,
   SettlementResponseCode,
@@ -1820,12 +1821,6 @@ export default function EventDetailScreen() {
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function formatCategory(value: string) {
-  return value
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function formatStatus(status: RelationshipEvent["status"]) {

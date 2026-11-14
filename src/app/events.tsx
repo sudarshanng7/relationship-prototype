@@ -1,5 +1,6 @@
 import { tokens } from "@/components/couply-tokens";
 import { AppBottomNav } from "@/components/AppBottomNav";
+import { formatCategory } from "@/lib/event-heading";
 import { GardenEntryCard } from "@/components/garden/GardenEntryCard";
 import {
   CouplyEmptyState,
@@ -1268,12 +1269,6 @@ export default function EventsScreen() {
       />
     </SafeAreaView>
   );
-}
-
-function formatCategory(category: string) {
-  return category
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function formatStatus(status: RelationshipEvent["status"]) {

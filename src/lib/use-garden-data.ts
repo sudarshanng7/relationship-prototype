@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { supabase } from "@/lib/supabase";
+import { formatCategory } from "@/lib/event-heading";
 import {
   GardenCareEvent,
   GardenCareSignals,
@@ -146,7 +147,7 @@ export function useGardenData(coupleId: string | null) {
         // 3. Fetch reconnected shared friction moments (event_type = 'friction' AND visibility = 'ours' AND status = 'reconnected')
         const { data: reconnectedEvents, error: reconnectedError } = await supabase
           .from("relationship_events")
-          .select("id, reconnected_at, created_at, event_type, status")
+          .select("id, reconnected_at, created_at, event_type, status, category")
           .eq("couple_id", coupleId)
           .eq("event_type", "friction")
           .eq("visibility", "ours")
@@ -158,7 +159,7 @@ export function useGardenData(coupleId: string | null) {
         const todayUtcStr = new Date().toISOString().slice(0, 10);
         const { data: importantDates, error: datesError } = await supabase
           .from("couple_important_dates")
-          .select("id, event_date, created_at")
+          .select("id, event_date, created_at, label")
           .eq("couple_id", coupleId)
           .lte("event_date", todayUtcStr)
           .order("event_date", { ascending: false });
@@ -197,6 +198,7 @@ export function useGardenData(coupleId: string | null) {
             kind: "positive_moment",
             occurredAt: safeTs,
             category: row.category ?? null,
+            displayTitle: formatCategory(row.category) || null,
           });
         }
 
@@ -210,6 +212,8 @@ export function useGardenData(coupleId: string | null) {
             id: row.id,
             kind: "reconnection",
             occurredAt: safeTs,
+            category: row.category ?? null,
+            displayTitle: formatCategory(row.category) || null,
           });
         }
 
@@ -222,6 +226,7 @@ export function useGardenData(coupleId: string | null) {
             createdAt: row.created_at
               ? normalizeTimestamp(row.created_at, nowIso)
               : null,
+            displayTitle: row.label ? row.label.trim() : null,
           });
         }
 

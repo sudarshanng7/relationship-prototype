@@ -24,6 +24,11 @@ import {
   generateGardenSVGScene,
   GeneratedGardenSVGScene,
 } from "@/lib/garden-generator";
+import {
+  resolveFeatureBoundsFromScene,
+  buildGardenWorld,
+  type GardenWorld,
+} from "@/lib/garden";
 
 export interface GardenVisualizerProps {
   totalGrowthUnits: number;
@@ -37,11 +42,13 @@ export interface GardenVisualizerProps {
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
   highlightFeatureId?: string | null;
+  world?: GardenWorld;
 }
 
 export function GardenVisualizer({
   totalGrowthUnits,
   careGrowthUnits,
+  timeGrowthUnits,
   seedString,
   isResting = false,
   compact = false,
@@ -50,6 +57,7 @@ export function GardenVisualizer({
   style,
   children,
   highlightFeatureId,
+  world: worldProp,
 }: GardenVisualizerProps) {
   const sceneId = useId().replace(/:/g, "_");
   const { effectiveTheme } = useTheme();
@@ -84,26 +92,37 @@ export function GardenVisualizer({
 
   const isCompact = compact === true;
 
+  // Normalized GardenWorld participation in the active visualizer path
+  const gardenWorld = useMemo(() => {
+    if (worldProp) return worldProp;
+    return buildGardenWorld(scene, {
+      coupleId: seedString,
+      seedString,
+      totalGrowthUnits,
+      careGrowthUnits,
+      timeGrowthUnits: timeGrowthUnits ?? 0,
+      isResting,
+      effectiveTheme,
+      careEvents,
+      careSignals,
+    });
+  }, [
+    worldProp,
+    scene,
+    seedString,
+    totalGrowthUnits,
+    careGrowthUnits,
+    timeGrowthUnits,
+    isResting,
+    effectiveTheme,
+    careEvents,
+    careSignals,
+  ]);
+
+  // Comprehensive semantic feature bounds resolver across all primitive families
   const highlightCoord = useMemo(() => {
     if (!highlightFeatureId) return null;
-    const b = scene.blossoms.find((x) => x.id === highlightFeatureId || x.id.startsWith(highlightFeatureId));
-    if (b) return { cx: b.cx, cy: b.cy, r: b.r || 10 };
-
-    const h = (scene.habitatDetails || []).find((x) => x.id === highlightFeatureId || x.id.startsWith(highlightFeatureId));
-    if (h) return { cx: h.cx, cy: h.cy, r: 14 };
-
-    const c = (scene.canopyDetails || []).find((x) => x.id === highlightFeatureId || x.id.startsWith(highlightFeatureId));
-    if (c) {
-      if (c.buds && c.buds.length > 0) return { cx: c.buds[0].cx, cy: c.buds[0].cy, r: 12 };
-      if (c.berries && c.berries.length > 0) return { cx: c.berries[0].cx, cy: c.berries[0].cy, r: 10 };
-    }
-
-    const g = scene.groundDetails.find((x) => x.id === highlightFeatureId || x.id.startsWith(highlightFeatureId));
-    if (g && typeof g.cx === "number" && typeof g.cy === "number") {
-      return { cx: g.cx, cy: g.cy, r: 12 };
-    }
-
-    return null;
+    return resolveFeatureBoundsFromScene(scene, highlightFeatureId);
   }, [scene, highlightFeatureId]);
 
   // Step 7: Soil texture, embedded stones and root flare shadow (rendered beneath roots and trunk)

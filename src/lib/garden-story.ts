@@ -8,6 +8,9 @@ import {
   getCareFeatureId,
   stableEventHash,
 } from "./garden-generator";
+import { formatCategory, getCanonicalEventHeading } from "./event-heading";
+
+export { formatCategory, getCanonicalEventHeading };
 
 const STAGE_KEYS: GardenStageKey[] = [
   "first_seedling",
@@ -32,6 +35,119 @@ export type StoryEventKind =
   | "time_growth"
   | "stage_transition"
   | "today";
+
+/**
+ * Calm, non-numeric frame classification overline.
+ * Derived strictly from safe metadata (event kind and step position).
+ * Never exposes titles, reflections, notes, partner names, scores, or streaks.
+ */
+export type StoryFrameType =
+  | "THE BEGINNING"
+  | "SHARED CARE"
+  | "RECONNECTION"
+  | "IMPORTANT DATE"
+  | "GARDEN MILESTONE"
+  | "TODAY";
+
+export function getStoryFrameType(step: {
+  isFinal?: boolean;
+  eventKind?: StoryEventKind;
+  stepIndex?: number;
+  id?: string;
+}): StoryFrameType {
+  if (step.isFinal || step.eventKind === "today" || step.id === "step-today") {
+    return "TODAY";
+  }
+  if (step.stepIndex === 0 || step.id === "step-beginning") {
+    return "THE BEGINNING";
+  }
+  if (step.eventKind === "stage_transition") {
+    return "GARDEN MILESTONE";
+  }
+  if (step.eventKind === "reconnection") {
+    return "RECONNECTION";
+  }
+  if (step.eventKind === "positive_moment") {
+    return "SHARED CARE";
+  }
+  if (step.eventKind === "important_date") {
+    return "IMPORTANT DATE";
+  }
+  return "GARDEN MILESTONE";
+}
+
+export function getFrameSpokenName(frameType: StoryFrameType): string {
+  switch (frameType) {
+    case "THE BEGINNING":
+      return "The Beginning";
+    case "SHARED CARE":
+      return "Shared Care";
+    case "RECONNECTION":
+      return "Reconnection";
+    case "IMPORTANT DATE":
+      return "Important Date";
+    case "GARDEN MILESTONE":
+      return "Garden Milestone";
+    case "TODAY":
+      return "Today";
+    default:
+      return "Garden Story";
+  }
+}
+
+export const STORY_TITLE_MAX_LENGTH = 100;
+
+/**
+ * Calm generic fallback when no safe title exists for an event-backed frame.
+ * Does not derive fallbacks from categories, notes, email addresses, or partner names.
+ */
+export function getStoryTitleFallback(eventKind?: StoryEventKind): string | null {
+  switch (eventKind) {
+    case "positive_moment":
+      return "A shared good moment";
+    case "reconnection":
+      return "A shared moment";
+    case "important_date":
+      return "An important date";
+    default:
+      return null;
+  }
+}
+
+/**
+ * Pure presentation normalizer for shared moment titles:
+ * - trims leading and trailing whitespace
+ * - collapses repeated whitespace and line breaks into one space
+ * - treats blank strings as null
+ * - strips raw HTML tags
+ * - enforces conservative display limit without mutating stored data
+ * - provides generic fallbacks for event frames, null for non-event frames
+ */
+export function normalizeStoryEventTitle(
+  rawTitle?: string | null,
+  eventKind?: StoryEventKind
+): string | null {
+  if (typeof rawTitle !== "string") {
+    return getStoryTitleFallback(eventKind);
+  }
+
+  // Strip simple HTML tags if present
+  const stripped = rawTitle.replace(/<[^>]*>/g, "");
+  // Collapse repeated whitespace and line breaks into single space, trim outer edges
+  const cleaned = stripped.replace(/\s+/g, " ").trim();
+
+  if (!cleaned) {
+    return getStoryTitleFallback(eventKind);
+  }
+
+  const formatted = formatCategory(cleaned);
+
+  if (formatted.length > STORY_TITLE_MAX_LENGTH) {
+    return formatted.slice(0, STORY_TITLE_MAX_LENGTH).trim();
+  }
+
+  return formatted;
+}
 
 export interface GardenStoryChapter {
   id: string;
@@ -64,6 +180,7 @@ export interface GardenStoryStep {
   effectiveTimestamp: string; // ISO string
   addedEventKey: string | null; // e.g. "positive_moment:uuid"
   eventKind: StoryEventKind;
+  frameType: StoryFrameType;
   cumulativeCareEvents: GardenCareEvent[];
   timeGrowthUnits: number;
   careGrowthUnits: number;
@@ -72,6 +189,7 @@ export interface GardenStoryStep {
   careSignals: GardenCareSignals;
   caption: string;
   dateLabel: string | null;
+  displayTitle: string | null; // Safe shared title or calm generic fallback, null for non-event frames
   highlightFeatureId: string | null; // e.g. "care-positive-01a2b3c4"
   isResting: boolean;
   isFinal: boolean;
@@ -79,6 +197,116 @@ export interface GardenStoryStep {
 
 // Backward-compatible alias for existing consumers
 export type GardenStoryFrame = GardenStoryStep;
+
+/**
+ * Pure view-model for global story playback progress, frame classification,
+ * stage headers, and accessible navigation states.
+ */
+export interface StoryProgressViewModel {
+  visibleStepNumber: number; // 1-based index (activeStepIndex + 1)
+  visibleStepTotal: number; // Total steps in the complete story (frozen throughout playback)
+  progressFraction: number; // visibleStepNumber / visibleStepTotal (0..1)
+  progressText: string; // "6 of 22"
+  accessibilityProgressLabel: string; // "Garden story step 6 of 22"
+  stageTitle: string; // "The Beginning", "Tender Sapling", "Our Garden Today"
+  frameType: StoryFrameType; // "SHARED CARE", "GARDEN MILESTONE", etc.
+  displayTitle: string | null; // Safe shared title or calm generic fallback, null for non-event frames
+  frameAccessibilityLabel: string; // Full announcement in standard accessibility order
+  isFirstStep: boolean;
+  isFinalStep: boolean;
+  canGoPrevious: boolean;
+  canGoNext: boolean;
+  primaryActionLabel: "Pause ⏸" | "Continue ▶" | "Play again";
+}
+
+export function getStoryProgressViewModel(
+  story: GardenStory,
+  activeStepIndex: number,
+  isPlaying: boolean = true
+): StoryProgressViewModel {
+  const total = Math.max(1, story.steps.length);
+  const clampedIndex = Math.max(0, Math.min(total - 1, activeStepIndex));
+  const step = story.steps[clampedIndex] || story.steps[0];
+  const visibleStepNumber = clampedIndex + 1;
+  const isFirst = clampedIndex === 0;
+  const isFinal = clampedIndex === total - 1;
+
+  const frameType = step.frameType || getStoryFrameType(step);
+
+  let stageTitle: string;
+  if (isFinal || step.isFinal || step.eventKind === "today") {
+    stageTitle = "Our Garden Today";
+  } else if (isFirst || step.stepIndex === 0 || step.id === "step-beginning") {
+    stageTitle = "The Beginning";
+  } else {
+    stageTitle = step.stage.label;
+  }
+
+  const primaryActionLabel = isFinal
+    ? "Play again"
+    : isPlaying
+    ? "Pause ⏸"
+    : "Continue ▶";
+
+  const accessibilityProgressLabel = `Garden story step ${visibleStepNumber} of ${total}`;
+
+  // Accessibility announcement order:
+  // 1. Spoken Frame Type ("Reconnection", "Shared Care", "Important Date", "The Beginning", etc.)
+  // 2. Display Title if present ("Phones and screens")
+  // 3. Stage Title ("Tender Sapling")
+  // 4. Progress step ("Garden story step 6 of 22")
+  // 5. Date label if present ("Reconnected 11 Nov 2026")
+  const spokenFrame = getFrameSpokenName(frameType);
+  const spokenParts = [spokenFrame];
+  if (step.displayTitle) {
+    spokenParts.push(step.displayTitle);
+  }
+  spokenParts.push(stageTitle);
+  spokenParts.push(accessibilityProgressLabel);
+  if (step.dateLabel) {
+    spokenParts.push(step.dateLabel);
+  }
+  const frameAccessibilityLabel = spokenParts.join(". ") + ".";
+
+  return {
+    visibleStepNumber,
+    visibleStepTotal: total,
+    progressFraction: visibleStepNumber / total,
+    progressText: `${visibleStepNumber} of ${total}`,
+    accessibilityProgressLabel,
+    stageTitle,
+    frameType,
+    displayTitle: step.displayTitle ?? null,
+    frameAccessibilityLabel,
+    isFirstStep: isFirst,
+    isFinalStep: isFinal,
+    canGoPrevious: !isFirst,
+    canGoNext: !isFinal,
+    primaryActionLabel,
+  };
+}
+
+/**
+ * Pacing helper: determines duration for automatic step advancement.
+ * The initial Beginning frame always receives a generous, calm viewing duration
+ * to prevent accidental rushing into subsequent stages.
+ */
+export function getStepDurationMs(
+  careCount: number,
+  pacingMode: "gentle" | "quick",
+  isFirstStep: boolean = false
+): number {
+  if (isFirstStep) {
+    return pacingMode === "quick" ? 2200 : 3000;
+  }
+  if (careCount > 20) {
+    return pacingMode === "quick" ? 1400 : 2200;
+  }
+  if (careCount > 8) {
+    return pacingMode === "quick" ? 1800 : 2400;
+  }
+  return pacingMode === "quick" ? 2200 : 2800;
+}
 
 /**
  * Immutable snapshot captured when user initiates playback.
@@ -263,6 +491,7 @@ interface InterimStep {
   effectiveTimestamp: string;
   addedEventKey: string | null;
   eventKind: StoryEventKind;
+  frameType: StoryFrameType;
   cumulativeCareEvents: GardenCareEvent[];
   timeGrowthUnits: number;
   careGrowthUnits: number;
@@ -271,6 +500,7 @@ interface InterimStep {
   careSignals: GardenCareSignals;
   caption: string;
   dateLabel: string | null;
+  displayTitle: string | null;
   highlightFeatureId: string | null;
   isResting: boolean;
   isFinal: boolean;
@@ -290,9 +520,22 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
     ? new Date(snapshot.createdAt).getTime()
     : NaN;
 
-  // 1. Deduplicate and filter out future events relative to safeAsOfMs
+  // 1. Deduplicate, sanitize, and filter out future events relative to safeAsOfMs
   const dedupMap = new Map<string, { event: GardenCareEvent; effectiveMs: number }>();
-  for (const ev of snapshot.careEvents || []) {
+  for (const rawEv of snapshot.careEvents || []) {
+    // Whitelist only canonical GardenCareEvent fields to guarantee no private notes, reflections, or shared context enter
+    const ev: GardenCareEvent = {
+      id: rawEv.id,
+      kind: rawEv.kind,
+      occurredAt: rawEv.occurredAt,
+      category: rawEv.category ?? null,
+      createdAt: rawEv.createdAt ?? null,
+      displayTitle: rawEv.category
+        ? formatCategory(rawEv.category)
+        : rawEv.displayTitle
+        ? formatCategory(rawEv.displayTitle)
+        : null,
+    };
     const effMs = getEventEffectiveTimestamp(ev, coupleCreatedMs, safeAsOfMs);
     if (effMs <= safeAsOfMs) {
       dedupMap.set(`${ev.kind}:${ev.id}`, { event: ev, effectiveMs: effMs });
@@ -340,6 +583,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
     effectiveTimestamp: new Date(startMs).toISOString(),
     addedEventKey: null,
     eventKind: "time_growth",
+    frameType: "THE BEGINNING",
     cumulativeCareEvents: [],
     timeGrowthUnits: initialGrowth.timeGrowthUnits,
     careGrowthUnits: initialGrowth.careGrowthUnits,
@@ -348,6 +592,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
     careSignals: initialGrowth.careSignals,
     caption: "A quiet beginning is taking root.",
     dateLabel: formatStoryDateUtc(startMs),
+    displayTitle: null,
     highlightFeatureId: null,
     isResting: false,
     isFinal: false,
@@ -394,6 +639,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
             effectiveTimestamp: new Date(transMs).toISOString(),
             addedEventKey: null,
             eventKind: "stage_transition",
+            frameType: "GARDEN MILESTONE",
             cumulativeCareEvents: [...currentCumulative],
             timeGrowthUnits: transGrowth.timeGrowthUnits,
             careGrowthUnits: transGrowth.careGrowthUnits,
@@ -402,6 +648,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
             careSignals: transGrowth.careSignals,
             caption: getStageTransitionCaption(candidateStageKey),
             dateLabel: formatStoryDateUtc(transMs),
+            displayTitle: null,
             highlightFeatureId: null,
             isResting: false,
             isFinal: false,
@@ -418,13 +665,18 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
     const eventGrowth = calculateHistoricalGrowth(currentCumulative, eventElapsedDays);
     const highlightId = getCareFeatureId(event.kind, event.id);
 
-    // Formatting date and caption
+    // Formatting date, title, and caption
     let dateLabel: string;
-    if (event.kind === "important_date") {
-      dateLabel = `Entered garden ${formatStoryDateUtc(entry.effectiveMs)}`;
+    if (event.kind === "reconnection") {
+      dateLabel = `Reconnected ${formatStoryDateUtc(entry.effectiveMs)}`;
+    } else if (event.kind === "important_date") {
+      dateLabel = `Added ${formatStoryDateUtc(entry.effectiveMs)}`;
     } else {
-      dateLabel = formatStoryDateUtc(entry.effectiveMs);
+      dateLabel = `Added ${formatStoryDateUtc(entry.effectiveMs)}`;
     }
+
+    const rawHeading = event.category ? formatCategory(event.category) : event.displayTitle;
+    const displayTitle = normalizeStoryEventTitle(rawHeading, event.kind);
 
     const isSharedTimestamp = (timestampCounts.get(entry.effectiveMs) || 0) > 1;
     let caption: string;
@@ -453,6 +705,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
       effectiveTimestamp: new Date(entry.effectiveMs).toISOString(),
       addedEventKey: `${event.kind}:${event.id}`,
       eventKind: event.kind,
+      frameType: getStoryFrameType({ eventKind: event.kind }),
       cumulativeCareEvents: [...currentCumulative],
       timeGrowthUnits: eventGrowth.timeGrowthUnits,
       careGrowthUnits: eventGrowth.careGrowthUnits,
@@ -461,6 +714,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
       careSignals: eventGrowth.careSignals,
       caption,
       dateLabel,
+      displayTitle,
       highlightFeatureId: highlightId,
       isResting: false,
       isFinal: false,
@@ -474,6 +728,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
         effectiveTimestamp: new Date(entry.effectiveMs).toISOString(),
         addedEventKey: null,
         eventKind: "stage_transition",
+        frameType: "GARDEN MILESTONE",
         cumulativeCareEvents: [...currentCumulative],
         timeGrowthUnits: eventGrowth.timeGrowthUnits,
         careGrowthUnits: eventGrowth.careGrowthUnits,
@@ -481,7 +736,8 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
         stage: stageAfterEvent,
         careSignals: eventGrowth.careSignals,
         caption: getStageTransitionCaption(stageAfterEvent.key),
-        dateLabel,
+        dateLabel: formatStoryDateUtc(entry.effectiveMs),
+        displayTitle: null,
         highlightFeatureId: null,
         isResting: false,
         isFinal: false,
@@ -522,6 +778,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
           effectiveTimestamp: new Date(transMs).toISOString(),
           addedEventKey: null,
           eventKind: "stage_transition",
+          frameType: "GARDEN MILESTONE",
           cumulativeCareEvents: [...currentCumulative],
           timeGrowthUnits: transGrowth.timeGrowthUnits,
           careGrowthUnits: transGrowth.careGrowthUnits,
@@ -530,6 +787,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
           careSignals: transGrowth.careSignals,
           caption: getStageTransitionCaption(candidateStageKey),
           dateLabel: formatStoryDateUtc(transMs),
+          displayTitle: null,
           highlightFeatureId: null,
           isResting: false,
           isFinal: false,
@@ -549,6 +807,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
     effectiveTimestamp: new Date(safeAsOfMs).toISOString(),
     addedEventKey: null,
     eventKind: "today",
+    frameType: "TODAY",
     cumulativeCareEvents: [...currentCumulative],
     timeGrowthUnits: todayGrowth.timeGrowthUnits,
     careGrowthUnits: todayGrowth.careGrowthUnits,
@@ -557,6 +816,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
     careSignals: todayGrowth.careSignals,
     caption: "This is your garden today.",
     dateLabel: formatStoryDateUtc(safeAsOfMs),
+    displayTitle: null,
     highlightFeatureId: null,
     isResting: Boolean(snapshot.isResting),
     isFinal: true,
@@ -626,9 +886,11 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
         careSignals: step.careSignals,
         caption: step.caption,
         dateLabel: step.dateLabel,
+        displayTitle: step.displayTitle,
         highlightFeatureId: step.highlightFeatureId,
         isResting: step.isResting,
         isFinal: step.isFinal,
+        frameType: step.frameType || getStoryFrameType(step),
       });
 
       globalStepIndex++;
