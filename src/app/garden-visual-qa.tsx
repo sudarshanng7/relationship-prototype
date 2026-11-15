@@ -68,6 +68,7 @@ import {
   type GardenCareSignals,
   generateGardenSVGScene,
   getGardenStage,
+  getCareFeatureId,
 } from "@/lib/garden-generator";
 
 const BACKPLATE_ASSET = require("../../assets/garden/painterly/woodland-backplate-light-v1.png");
