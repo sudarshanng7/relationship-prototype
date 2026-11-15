@@ -587,6 +587,118 @@ export interface GardenMilestoneProgress {
   nextMilestoneCopy: string;
 }
 
+export interface MvpFoundationPresentation {
+  subphaseKey: "planted_acorn" | "emerging_shoot" | "small_seedling";
+  label: string;
+  supportingCopy: string;
+  isFoundationComplete: boolean;
+}
+
+/**
+ * The production MVP intentionally tells only the first three frames of the
+ * oak journey. Canonical growth data is retained for compatibility and future
+ * releases, while the live visual presentation stops at the small seedling.
+ */
+export function resolveMvpFoundationPresentation(
+  totalGrowthUnits: number,
+  careEventsCount = 0
+): MvpFoundationPresentation {
+  const units = Math.max(0, totalGrowthUnits);
+
+  if (units === 0 && careEventsCount === 0) {
+    return {
+      subphaseKey: "planted_acorn",
+      label: "Planted Acorn",
+      supportingCopy: "Your shared garden begins quietly in the woodland soil.",
+      isFoundationComplete: false,
+    };
+  }
+
+  if (units <= 8) {
+    return {
+      subphaseKey: "emerging_shoot",
+      label: "Emerging Oak Shoot",
+      supportingCopy: "A first shoot is reaching gently toward the light.",
+      isFoundationComplete: false,
+    };
+  }
+
+  return {
+    subphaseKey: "small_seedling",
+    label: "Small Oak Seedling",
+    supportingCopy: "Your young oak has opened its first leaves.",
+    isFoundationComplete: true,
+  };
+}
+
+/** Gentle progress for the bounded three-frame MVP foundation journey. */
+export function resolveMvpFoundationProgress(
+  totalGrowthUnits: number,
+  careEventsCount = 0
+): GardenMilestoneProgress {
+  const presentation = resolveMvpFoundationPresentation(
+    totalGrowthUnits,
+    careEventsCount
+  );
+  const units = Math.max(0, totalGrowthUnits);
+
+  if (presentation.subphaseKey === "planted_acorn") {
+    return {
+      currentStageKey: "beginning",
+      currentStageLabel: presentation.label,
+      nextMilestoneKey: "first_seedling",
+      nextMilestoneLabel: "Emerging Oak Shoot",
+      intervalStartUnits: 0,
+      intervalEndUnits: 1,
+      unitsInInterval: 0,
+      intervalTotalUnits: 1,
+      intervalProgress: 0,
+      intervalDisplayPercent: 0,
+      remainingUnits: 1,
+      isFinalStage: false,
+      supportingCopy: "The first sign of growth will appear through shared care and time.",
+      nextMilestoneCopy: "Next growth: Emerging Oak Shoot",
+    };
+  }
+
+  if (presentation.subphaseKey === "emerging_shoot") {
+    const progress = Math.max(0, Math.min(1, units / 8));
+    return {
+      currentStageKey: "first_seedling",
+      currentStageLabel: presentation.label,
+      nextMilestoneKey: "tender_sapling",
+      nextMilestoneLabel: "Small Oak Seedling",
+      intervalStartUnits: 0,
+      intervalEndUnits: 8,
+      unitsInInterval: Math.min(8, units),
+      intervalTotalUnits: 8,
+      intervalProgress: progress,
+      intervalDisplayPercent: Math.min(99, Math.floor(progress * 100)),
+      remainingUnits: Math.max(0, 8 - units),
+      isFinalStage: false,
+      supportingCopy: "Growing toward its first true leaves.",
+      nextMilestoneCopy: "Next growth: Small Oak Seedling",
+    };
+  }
+
+  return {
+    currentStageKey: "tender_sapling",
+    currentStageLabel: presentation.label,
+    nextMilestoneKey: null,
+    nextMilestoneLabel: null,
+    intervalStartUnits: 8,
+    intervalEndUnits: 8,
+    unitsInInterval: 0,
+    intervalTotalUnits: 0,
+    intervalProgress: 1,
+    intervalDisplayPercent: 100,
+    remainingUnits: 0,
+    isFinalStage: true,
+    supportingCopy: "The MVP foundation journey is complete. Shared moments will continue to gather here.",
+    nextMilestoneCopy: "Your young oak keeps collecting your shared moments.",
+  };
+}
+
 /**
  * Resolves derived growth progress toward the next visual milestone.
  *

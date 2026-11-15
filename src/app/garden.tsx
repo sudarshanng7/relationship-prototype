@@ -38,6 +38,7 @@ import {
 import { GardenStoryPlayer } from "@/components/garden/GardenStoryPlayer";
 import { GardenExplorer } from "@/components/garden/GardenExplorer";
 import { GardenProgressSection } from "@/components/garden/GardenProgressSection";
+import { resolveMvpFoundationPresentation } from "@/lib/garden/stage-contracts";
 
 export default function GardenScreen() {
   const router = useRouter();
@@ -162,6 +163,10 @@ export default function GardenScreen() {
   const effectiveTimeGrowthUnits = garden.timeGrowthUnits;
   const effectiveStage = garden.stage;
   const effectiveCareEvents = garden.careEvents;
+  const foundationStage = resolveMvpFoundationPresentation(
+    effectiveTotalGrowthUnits,
+    effectiveCareEvents.length
+  );
   const effectiveCareSignals = garden.careSignals;
   const effectiveSeedString = garden.seedString || resolvedCoupleId || "couple-seed-default";
   const effectiveCoupleId = resolvedCoupleId || "";
@@ -569,7 +574,7 @@ export default function GardenScreen() {
                     ]}
                     numberOfLines={1}
                   >
-                    {effectiveStage.label}
+                    {foundationStage.label}
                   </Text>
                   <View
                     style={[
@@ -591,7 +596,7 @@ export default function GardenScreen() {
                     { color: theme.primaryText },
                   ]}
                 >
-                  {effectiveStage.supportingCopy}
+                  {foundationStage.supportingCopy}
                 </Text>
                 <Text
                   style={[

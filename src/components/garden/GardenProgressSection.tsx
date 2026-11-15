@@ -24,7 +24,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { resolveGardenMilestoneProgress, type GardenMilestoneProgress } from "@/lib/garden/stage-contracts";
+import { resolveMvpFoundationProgress, type GardenMilestoneProgress } from "@/lib/garden/stage-contracts";
 
 export interface GardenProgressSectionProps {
   totalGrowthUnits: number;
@@ -47,7 +47,7 @@ export function GardenProgressSection({
 
   // Derive pure milestone progress model
   const progress: GardenMilestoneProgress = useMemo(() => {
-    return resolveGardenMilestoneProgress(totalGrowthUnits, careEventsCount);
+    return resolveMvpFoundationProgress(totalGrowthUnits, careEventsCount);
   }, [totalGrowthUnits, careEventsCount]);
 
   // Reduced motion listener
@@ -97,11 +97,11 @@ export function GardenProgressSection({
   const infoCardBg = isLight ? "#FAF7FC" : isDim ? "#251D2D" : "#1A1521";
 
   const accessibilityValueText = progress.isFinalStage
-    ? "100 percent, final growth milestone reached"
+    ? `100 percent, ${progress.currentStageLabel} foundation reached`
     : `${progress.intervalDisplayPercent} percent progress toward ${progress.nextMilestoneLabel}`;
 
   const accessibilityLabel = progress.isFinalStage
-    ? "Garden milestone progress: Garden in Bloom reached. Your garden keeps collecting your shared moments."
+    ? `Garden milestone progress: ${progress.currentStageLabel} reached. Your garden keeps collecting your shared moments.`
     : `Garden milestone progress: Current stage is ${progress.currentStageLabel}. Next growth: ${progress.nextMilestoneLabel}, ${progress.intervalDisplayPercent} percent toward next development.`;
 
   // --------------------------------------------------------------------------
@@ -127,7 +127,7 @@ export function GardenProgressSection({
             numberOfLines={1}
           >
             {progress.isFinalStage
-              ? "Garden in full bloom"
+              ? progress.currentStageLabel
               : `Next growth: ${progress.nextMilestoneLabel}`}
           </Text>
           {!progress.isFinalStage && (
@@ -198,7 +198,7 @@ export function GardenProgressSection({
             numberOfLines={1}
           >
             {progress.isFinalStage
-              ? "Garden in full bloom"
+              ? progress.currentStageLabel
               : `Next growth: ${progress.nextMilestoneLabel}`}
           </Text>
           <Text
@@ -253,7 +253,7 @@ export function GardenProgressSection({
         </View>
       ) : (
         <Text style={[styles.completedNote, { color: theme.secondaryText }]}>
-          All milestone developments unlocked. Every shared moment continues to bloom.
+          The three-step MVP foundation is complete. Every shared moment remains part of your garden.
         </Text>
       )}
 

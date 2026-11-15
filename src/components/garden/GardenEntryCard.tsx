@@ -15,6 +15,7 @@ import { useGardenData } from "@/lib/use-garden-data";
 import { getAmbienceLabel } from "@/lib/garden-generator";
 import { GardenVisualizer } from "@/components/garden/GardenVisualizer";
 import { GardenProgressSection } from "@/components/garden/GardenProgressSection";
+import { resolveMvpFoundationPresentation } from "@/lib/garden/stage-contracts";
 
 export interface GardenEntryCardProps {
   coupleId: string;
@@ -83,16 +84,20 @@ export function GardenEntryCard({
   } = garden;
 
   const ambienceLabel = getAmbienceLabel(stage.key, isResting);
+  const foundationStage = resolveMvpFoundationPresentation(
+    totalGrowthUnits,
+    careEvents?.length ?? 0
+  );
 
   // Clear, truth-aligned editorial lines
-  const primaryLine = stage.supportingCopy;
+  const primaryLine = foundationStage.supportingCopy;
   const secondaryLine = isResting
     ? "Your garden is resting peacefully. Everything you have grown remains here."
     : careGrowthUnits > 0
     ? "The care you share is taking shape here."
     : "Your roots are deepening quietly with time.";
 
-  const accessibilityLabel = `Your Shared Garden. Stage: ${stage.label}. ${primaryLine} ${secondaryLine} Tap to enter your garden.`;
+  const accessibilityLabel = `Your Shared Garden. Stage: ${foundationStage.label}. ${primaryLine} ${secondaryLine} Tap to enter your garden.`;
 
   // Contrast-safe botanical pill colors aligned with Purple Garden identity
   const isLight = theme.key === "light";
@@ -180,7 +185,7 @@ export function GardenEntryCard({
             style={[styles.stageLabel, { color: theme.primaryText }]}
             numberOfLines={1}
           >
-            {stage.label}
+            {foundationStage.label}
           </Text>
           <View
             style={[

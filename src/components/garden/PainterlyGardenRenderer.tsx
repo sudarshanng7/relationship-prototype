@@ -75,6 +75,7 @@ import {
   type ProceduralGardenRendererProps,
 } from "./ProceduralGardenRenderer";
 import { PainterlyTreeStructure } from "./PainterlyTreeStructure";
+import { resolveMvpFoundationPresentation } from "@/lib/garden/stage-contracts";
 
 // Production bundled painterly raster assets
 const BACKPLATE_ASSET = require("../../../assets/garden/painterly/woodland-backplate-light-v1.png");
@@ -168,6 +169,18 @@ export function PainterlyGardenRenderer({
   const stageKey = useMemo(() => {
     return resolveCanonicalStageKey(totalGrowthUnits, careEvents?.length ?? 0);
   }, [totalGrowthUnits, careEvents]);
+
+  const mvpFoundationPresentation = useMemo(
+    () =>
+      resolveMvpFoundationPresentation(
+        totalGrowthUnits,
+        careEvents?.length ?? 0
+      ),
+    [totalGrowthUnits, careEvents]
+  );
+  // Future canopy, habitat and mature-tree layers remain implemented but are
+  // intentionally withheld from the bounded three-frame MVP journey.
+  const showFutureCanopyLayers = false;
 
   const activeMode = modeProp ?? getGardenRendererMode();
   const isDev =
@@ -569,6 +582,7 @@ export function PainterlyGardenRenderer({
             structuralAssetKey={renderPlan.structureAssetKey}
             stageKey={stageKey}
             totalGrowthUnits={totalGrowthUnits}
+            subphaseKey={mvpFoundationPresentation.subphaseKey}
             worldBounds={CANONICAL_SCENE_BOUNDS}
             cropPreset={cropPreset}
             showGuides={showGuides}
@@ -783,7 +797,7 @@ export function PainterlyGardenRenderer({
 
             {/* 3B-E. Unified Canopy Presentation Group */}
             {/* Scales and translates in lockstep with the tree structure */}
-            <G
+            {showFutureCanopyLayers && <G
               id="canopy-presentation-group"
               transform={`translate(${presentationTransform.offsetX.toFixed(2)}, ${presentationTransform.offsetY.toFixed(2)}) scale(${presentationTransform.totalScale.toFixed(4)})`}
             >
@@ -1141,7 +1155,7 @@ export function PainterlyGardenRenderer({
                 })}
               </G>
             )}
-            </G>
+            </G>}
 
             {/* 3G. Accessible Highlight Ring / Halo */}
             {highlightCoord && (

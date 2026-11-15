@@ -9,6 +9,7 @@ import {
   stableEventHash,
 } from "./garden-generator";
 import { formatCategory, getCanonicalEventHeading } from "./event-heading";
+import { resolveMvpFoundationPresentation } from "./garden/stage-contracts";
 
 export { formatCategory, getCanonicalEventHeading };
 
@@ -239,7 +240,10 @@ export function getStoryProgressViewModel(
   } else if (isFirst || step.stepIndex === 0 || step.id === "step-beginning") {
     stageTitle = "The Beginning";
   } else {
-    stageTitle = step.stage.label;
+    stageTitle = resolveMvpFoundationPresentation(
+      step.totalGrowthUnits,
+      step.cumulativeCareEvents.length
+    ).label;
   }
 
   const primaryActionLabel = isFinal

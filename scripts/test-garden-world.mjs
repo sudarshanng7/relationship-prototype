@@ -102,6 +102,8 @@ import {
   resolveLifecycleVisualPhase,
   LIFECYCLE_STAGE_TO_ART_MAPPING,
   resolveGardenMilestoneProgress,
+  resolveMvpFoundationPresentation,
+  resolveMvpFoundationProgress,
   resolvePreviewMilestoneProgress,
   EARLY_LIFE_PREVIEW_TARGET_SLOTS,
 } from "../src/lib/garden/index.ts";
@@ -5548,6 +5550,30 @@ test("33. Authoritative Growth Progress & Visual Milestone Contracts", async () 
   const seedlingHighPreview = resolvePreviewMilestoneProgress(15.99, 1);
   assert.equal(seedlingHighPreview.subphaseKey, "small_seedling");
   assert.equal(seedlingHighPreview.nextSubphaseKey, "small_sapling");
+
+  // Production MVP is intentionally bounded to the first three journey frames.
+  assert.equal(resolveMvpFoundationPresentation(0, 0).subphaseKey, "planted_acorn");
+  assert.equal(resolveMvpFoundationPresentation(4, 1).subphaseKey, "emerging_shoot");
+  assert.equal(resolveMvpFoundationPresentation(8, 1).subphaseKey, "emerging_shoot");
+  assert.equal(resolveMvpFoundationPresentation(8.1, 1).subphaseKey, "small_seedling");
+  assert.equal(resolveMvpFoundationPresentation(100, 50).subphaseKey, "small_seedling");
+  const mvpComplete = resolveMvpFoundationProgress(56, 20);
+  assert.equal(mvpComplete.currentStageLabel, "Small Oak Seedling");
+  assert.equal(mvpComplete.isFinalStage, true);
+  assert.equal(mvpComplete.intervalDisplayPercent, 100);
+
+  const painterlyRendererSource = fs.readFileSync(
+    "src/components/garden/PainterlyGardenRenderer.tsx",
+    "utf8"
+  );
+  assert.ok(
+    painterlyRendererSource.includes("subphaseKey={mvpFoundationPresentation.subphaseKey}"),
+    "Production renderer must explicitly bind the three-frame MVP subphase"
+  );
+  assert.ok(
+    painterlyRendererSource.includes("showFutureCanopyLayers = false"),
+    "Future canopy and habitat layers must remain withheld from the MVP"
+  );
 
   const saplingPreview = resolvePreviewMilestoneProgress(16.0, 1);
   assert.equal(saplingPreview.subphaseKey, "small_sapling");

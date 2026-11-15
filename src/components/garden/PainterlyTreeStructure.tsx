@@ -157,11 +157,13 @@ export function PainterlyTreeStructure({
 
   // Determine whether this structure is eligible for the painterly mature oak asset
   const isMatureOakEligible =
-    stageKey === "garden_in_bloom" ||
-    isCanonicalMatureAssetKey(structuralAssetKey);
+    !subphaseKey &&
+    (stageKey === "garden_in_bloom" ||
+      isCanonicalMatureAssetKey(structuralAssetKey));
 
   // Determine whether this structure is eligible for the painterly branching oak asset
   const isBranchingOakEligible =
+    !subphaseKey &&
     stageKey === "branching_out" &&
     isCanonicalBranchingAssetKey(structuralAssetKey);
 
@@ -214,7 +216,7 @@ export function PainterlyTreeStructure({
 
   // Determine whether this structure is eligible for the painterly small sapling raster asset
   const isSaplingRasterEligible =
-    (effectiveSubphase === "small_sapling" || stageKey === "tender_sapling") &&
+    effectiveSubphase === "small_sapling" &&
     (structuralAssetKey === "painterly-sapling-v1" ||
       isCanonicalSaplingAssetKey(structuralAssetKey) ||
       saplingSlot?.status === "development_preview" ||
