@@ -221,7 +221,10 @@ export function GardenExplorer({
   // Resolved presentation geometry of the world aligning camera and hit testing
   // with active structure scaling, offset, and couple DNA
   const presentationWorld = useMemo(() => {
-    return resolveGardenWorldPresentation(world, { cropPreset: "middle_distance" });
+    return resolveGardenWorldPresentation(world, {
+      cropPreset: "middle_distance",
+      mvpFoundationMemories: true,
+    });
   }, [world]);
 
   // Canonical chronological collection of explorable earned memories

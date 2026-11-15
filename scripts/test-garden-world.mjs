@@ -2786,7 +2786,7 @@ test("Invariant J: Reconnection memory routes to parent relationship event", () 
   assert.equal(recMem.source.targetRoute, "/event/ev-rec-99");
   assert.equal(recMem.actionRoute, "/event/ev-rec-99");
   assert.equal(recMem.memoryType, "Reconnection");
-  assert.equal(recMem.botanicalRepresentation, "Reconnection Shoot");
+  assert.equal(recMem.botanicalRepresentation, "Foundation Reconnection Pair");
 });
 
 test("Invariant K: Important date memory routes safely or indicates date status", () => {
@@ -2810,7 +2810,7 @@ test("Invariant K: Important date memory routes safely or indicates date status"
   const dateMem = memories[0];
   assert.equal(dateMem.source.sourceType, "important_date");
   assert.equal(dateMem.memoryType, "Important Date");
-  assert.equal(dateMem.botanicalRepresentation, "Important-Date Landmark");
+  assert.equal(dateMem.botanicalRepresentation, "Foundation Date Acorn");
   assert.equal(dateMem.actionLabel, "View important date");
 });
 
@@ -4780,7 +4780,7 @@ test("28. Natural Oak Foliage, Root Integration & Deeper Composition Invariants"
   const memories = getExplorableMemories(world, [recEvent]);
   assert.equal(memories.length, 1, "Exactly 1 earned memory must exist for 1 reconnection event (no duplicate meadow flower)");
   const mem = memories[0];
-  assert.equal(mem.botanicalRepresentation, "Reconnection Shoot", "Reconnection must represent as 'Reconnection Shoot'");
+  assert.equal(mem.botanicalRepresentation, "Foundation Reconnection Pair", "Reconnection must use the MVP paired-leaf marker");
   assert.equal(mem.memoryType, "Reconnection");
   assert.equal(mem.actionRoute, "/event/ev-rec-oak-1");
   assert.equal(mem.source.sourceType, "completed_reconnection");
@@ -5553,9 +5553,10 @@ test("33. Authoritative Growth Progress & Visual Milestone Contracts", async () 
 
   // Production MVP is intentionally bounded to the first three journey frames.
   assert.equal(resolveMvpFoundationPresentation(0, 0).subphaseKey, "planted_acorn");
-  assert.equal(resolveMvpFoundationPresentation(4, 1).subphaseKey, "emerging_shoot");
+  assert.equal(resolveMvpFoundationPresentation(4, 1).subphaseKey, "planted_acorn");
   assert.equal(resolveMvpFoundationPresentation(8, 1).subphaseKey, "emerging_shoot");
-  assert.equal(resolveMvpFoundationPresentation(8.1, 1).subphaseKey, "small_seedling");
+  assert.equal(resolveMvpFoundationPresentation(19.99, 1).subphaseKey, "emerging_shoot");
+  assert.equal(resolveMvpFoundationPresentation(20, 1).subphaseKey, "small_seedling");
   assert.equal(resolveMvpFoundationPresentation(100, 50).subphaseKey, "small_seedling");
   const mvpComplete = resolveMvpFoundationProgress(56, 20);
   assert.equal(mvpComplete.currentStageLabel, "Small Oak Seedling");

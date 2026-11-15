@@ -19,7 +19,9 @@ import {
   getEligiblePainterlyAssetForStage,
   isPainterlyAvailableForStage,
   resolveCanonicalStageKey,
+  resolveMvpFoundationMemoryMarkers,
 } from "./stage-contracts";
+import type { GardenCareEvent } from "../garden-generator";
 import type {
   BotanicalAttachmentTarget,
   BoundingBox2D,
@@ -585,6 +587,7 @@ export function resolveGardenWorldPresentation(
     coupleDNA?: PainterlyCoupleDNA;
     stageKey?: CanonicalStageKeyOrBeginning;
     structuralAssetKey?: string | null;
+    mvpFoundationMemories?: boolean;
   }
 ): GardenWorld {
   if (!world || !world.nodes) return world;
@@ -674,6 +677,43 @@ export function resolveGardenWorldPresentation(
   }
 
   const resolvedGroups: Record<string, EarnedFeatureGroup> = {};
+  if (options?.mvpFoundationMemories && world.earnedFeatureGroups) {
+    const markerEvents: GardenCareEvent[] = Object.values(
+      world.earnedFeatureGroups
+    ).map((group) => ({
+      id: group.sourceEvent.id,
+      kind: group.sourceEvent.kind,
+      occurredAt: group.sourceEvent.authoritativeTimestamp || "",
+      createdAt: group.sourceEvent.authoritativeTimestamp || null,
+    }));
+    const markers = resolveMvpFoundationMemoryMarkers(markerEvents);
+
+    for (const marker of markers) {
+      const group = world.earnedFeatureGroups[marker.semanticKey];
+      const primaryId = group?.nodeIds[0];
+      const primaryNode = primaryId ? resolvedNodes[primaryId] : null;
+      if (!group || !primaryId || !primaryNode) continue;
+
+      resolvedNodes[primaryId] = {
+        ...primaryNode,
+        anchorPoint: { x: marker.x, y: marker.y },
+        worldBounds: {
+          minX: marker.x - 8,
+          minY: marker.y - 10,
+          maxX: marker.x + 8,
+          maxY: marker.y + 6,
+          width: 16,
+          height: 16,
+        },
+        attachmentTarget: "terrain",
+        scenicRegion: "root_grove",
+        isCanopyAttached: false,
+        isGroundAttached: true,
+        isRootAttached: false,
+      };
+    }
+  }
+
   if (world.earnedFeatureGroups) {
     for (const [key, group] of Object.entries(world.earnedFeatureGroups)) {
       const primaryNode = resolvedNodes[group.nodeIds[0]];

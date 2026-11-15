@@ -42,6 +42,7 @@ import {
   type GardenCareSignals,
   type GeneratedGardenSVGScene,
   generateGardenSVGScene,
+  getCareFeatureId,
   createOakLobedLeafD,
   createLeafVeinD,
 } from "@/lib/garden-generator";
@@ -76,6 +77,7 @@ import {
 } from "./ProceduralGardenRenderer";
 import { PainterlyTreeStructure } from "./PainterlyTreeStructure";
 import { resolveMvpFoundationPresentation } from "@/lib/garden/stage-contracts";
+import { resolveMvpFoundationMemoryMarkers } from "@/lib/garden/stage-contracts";
 
 // Production bundled painterly raster assets
 const BACKPLATE_ASSET = require("../../../assets/garden/painterly/woodland-backplate-light-v1.png");
@@ -181,6 +183,10 @@ export function PainterlyGardenRenderer({
   // Future canopy, habitat and mature-tree layers remain implemented but are
   // intentionally withheld from the bounded three-frame MVP journey.
   const showFutureCanopyLayers = false;
+  const foundationMemoryMarkers = useMemo(
+    () => resolveMvpFoundationMemoryMarkers(careEvents ?? []),
+    [careEvents]
+  );
 
   const activeMode = modeProp ?? getGardenRendererMode();
   const isDev =
@@ -319,6 +325,15 @@ export function PainterlyGardenRenderer({
 
   const highlightCoord = useMemo(() => {
     if (!highlightFeatureId) return null;
+    const foundationMarker = foundationMemoryMarkers.find((marker) =>
+      isMatchingFeatureId(
+        highlightFeatureId,
+        getCareFeatureId(marker.kind, marker.sourceId)
+      )
+    );
+    if (foundationMarker) {
+      return { cx: foundationMarker.x, cy: foundationMarker.y, r: 8 };
+    }
     const baseBounds = resolveFeatureBoundsFromScene(scene, highlightFeatureId);
     if (!baseBounds) return null;
 
@@ -386,6 +401,7 @@ export function PainterlyGardenRenderer({
     cropPreset,
     calibrationTransform,
     coupleDNA,
+    foundationMemoryMarkers,
   ]);
 
   // 6. Viewport and Camera Transformations
@@ -424,8 +440,14 @@ export function PainterlyGardenRenderer({
 
   // 7. Ground and Canopy Flora details
   const groundFlora = useMemo(() => {
+    const earnedFeatureIds = (careEvents ?? []).map((event) =>
+      getCareFeatureId(event.kind, event.id)
+    );
     return scene.groundDetails.filter((item) => {
       if (compact && item.compact === false) return false;
+      if (earnedFeatureIds.some((id) => isMatchingFeatureId(item.id, id))) {
+        return false;
+      }
       return (
         item.type === "moss" ||
         item.type === "grass" ||
@@ -440,7 +462,7 @@ export function PainterlyGardenRenderer({
         item.type === "flowering-herb"
       );
     });
-  }, [scene.groundDetails, compact]);
+  }, [scene.groundDetails, compact, careEvents]);
 
   const canopyAccents = useMemo(() => {
     return (scene.canopyDetails || []).filter(
@@ -583,6 +605,7 @@ export function PainterlyGardenRenderer({
             stageKey={stageKey}
             totalGrowthUnits={totalGrowthUnits}
             subphaseKey={mvpFoundationPresentation.subphaseKey}
+            foundationLevelProgress={mvpFoundationPresentation.levelProgress}
             worldBounds={CANONICAL_SCENE_BOUNDS}
             cropPreset={cropPreset}
             showGuides={showGuides}
@@ -789,6 +812,71 @@ export function PainterlyGardenRenderer({
                       cy={hab.cy - 1.5 * s}
                       r={1.0 * s}
                       fill={hab.secondaryColor}
+                    />
+                  </G>
+                );
+              })}
+            </G>
+
+            {/* MVP event history: one deterministic memory marker per authorized event. */}
+            <G id="mvp-foundation-memory-markers">
+              {foundationMemoryMarkers.map((marker) => {
+                if (marker.kind === "important_date") {
+                  return (
+                    <G key={marker.semanticKey}>
+                      <Ellipse
+                        cx={marker.x}
+                        cy={marker.y + 1.5}
+                        rx={6.2}
+                        ry={2.2}
+                        fill="#192219"
+                        opacity={0.28}
+                      />
+                      <Path
+                        d={`M ${marker.x - 4.8},${marker.y} Q ${marker.x},${marker.y - 7.5} ${marker.x + 4.8},${marker.y} Q ${marker.x},${marker.y + 5.5} ${marker.x - 4.8},${marker.y} Z`}
+                        fill="#B99155"
+                        stroke="#E1C58C"
+                        strokeWidth={0.8}
+                      />
+                      <Circle cx={marker.x} cy={marker.y - 0.8} r={1.2} fill="#F2D995" />
+                    </G>
+                  );
+                }
+
+                if (marker.kind === "reconnection") {
+                  return (
+                    <G key={marker.semanticKey}>
+                      <Circle
+                        cx={marker.x}
+                        cy={marker.y - 2}
+                        r={8}
+                        fill="#D7B96B"
+                        opacity={0.12}
+                      />
+                      <Path
+                        d={`M ${marker.x},${marker.y + 2} Q ${marker.x - 7},${marker.y - 1} ${marker.x - 6},${marker.y - 7} Q ${marker.x - 1},${marker.y - 7} ${marker.x},${marker.y + 2} Z`}
+                        fill="#789553"
+                      />
+                      <Path
+                        d={`M ${marker.x},${marker.y + 2} Q ${marker.x + 7},${marker.y - 1} ${marker.x + 6},${marker.y - 7} Q ${marker.x + 1},${marker.y - 7} ${marker.x},${marker.y + 2} Z`}
+                        fill="#93AD63"
+                      />
+                    </G>
+                  );
+                }
+
+                return (
+                  <G key={marker.semanticKey}>
+                    <Path
+                      d={`M ${marker.x},${marker.y + 3} C ${marker.x - 6},${marker.y} ${marker.x - 6},${marker.y - 7} ${marker.x},${marker.y - 9} C ${marker.x + 6},${marker.y - 6} ${marker.x + 5},${marker.y} ${marker.x},${marker.y + 3} Z`}
+                      fill="#6F8C50"
+                      stroke="#9EB476"
+                      strokeWidth={0.7}
+                    />
+                    <Path
+                      d={`M ${marker.x},${marker.y + 2} L ${marker.x},${marker.y - 7}`}
+                      stroke="#405C35"
+                      strokeWidth={0.7}
                     />
                   </G>
                 );

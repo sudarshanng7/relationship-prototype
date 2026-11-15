@@ -335,9 +335,9 @@ test("9. Important dates reveal their exact landmark identity", () => {
 // ----------------------------------------------------------------------------
 // Test 10: Stage transitions caused only by time receive explicit steps
 // ----------------------------------------------------------------------------
-test("10. Stage transitions caused only by time receive explicit steps", () => {
-  // Couple created Jan 1, event occurs in March (60+ days elapsed).
-  // Time units alone cross threshold 16 (day 32) into tender_sapling before the March event!
+test("10. Foundation milestones crossed by time receive explicit bounded steps", () => {
+  // Couple created Jan 1, event occurs in March. The long interval crosses
+  // both bounded MVP thresholds without exposing later full-tree chapters.
   const evMarch = createMockEvent("ev-march", "positive_moment", "2026-03-15T10:00:00Z");
 
   const snapshot = {
@@ -350,23 +350,33 @@ test("10. Stage transitions caused only by time receive explicit steps", () => {
   };
 
   const story = createGardenStory(snapshot);
-  const timeStageStep = story.steps.find(
+  const milestoneSteps = story.steps.filter(
     (s) => s.eventKind === "stage_transition" && s.addedEventKey === null
   );
 
-  assert.ok(timeStageStep, "Expected explicit stage transition step driven by time");
-  assert.equal(timeStageStep.stage.key, "tender_sapling");
-  assert.equal(timeStageStep.caption, "The young tree grew into a tender sapling.");
+  assert.deepEqual(milestoneSteps.map((s) => s.totalGrowthUnits), [8, 20]);
+  assert.deepEqual(milestoneSteps.map((s) => s.chapterTitle), [
+    "Emerging Oak Shoot",
+    "Small Oak Seedling",
+  ]);
+  assert.equal(
+    milestoneSteps[0].caption,
+    "The planted acorn has raised its first oak shoot."
+  );
+  assert.equal(
+    milestoneSteps[1].caption,
+    "The young oak has opened its first true leaves."
+  );
 });
 
 // ----------------------------------------------------------------------------
 // Test 11: Event-driven stage crossings follow the documented consistent rule
 // ----------------------------------------------------------------------------
-test("11. Event-driven stage crossings show new feature first, then explicit stage transition", () => {
-  // Set up 7 positive moments (14 care units) in seedling.
-  // 8th positive moment pushes care units to 16, crossing into tender_sapling.
+test("11. Event-driven foundation crossing shows its memory first, then the shoot milestone", () => {
+  // Four positive moments contribute 8 care units, crossing the first MVP
+  // boundary while elapsed time is still below the next boundary.
   const events = [];
-  for (let i = 1; i <= 8; i++) {
+  for (let i = 1; i <= 4; i++) {
     events.push(createMockEvent(`pos-${i}`, "positive_moment", "2026-01-02T10:00:00Z"));
   }
 
@@ -380,20 +390,20 @@ test("11. Event-driven stage crossings show new feature first, then explicit sta
   };
 
   const story = createGardenStory(snapshot);
-  // Find step adding the 8th event
-  const step8Idx = story.steps.findIndex((s) => s.addedEventKey === "positive_moment:pos-8");
-  assert.ok(step8Idx !== -1);
+  const crossingIdx = story.steps.findIndex((s) => s.addedEventKey === "positive_moment:pos-4");
+  assert.ok(crossingIdx !== -1);
 
   // In step 8, new feature is shown in current stage
-  const step8 = story.steps[step8Idx];
-  assert.ok(step8.highlightFeatureId);
+  const crossingStep = story.steps[crossingIdx];
+  assert.ok(crossingStep.highlightFeatureId);
 
   // Immediately followed by an explicit stage transition step
-  const followUpStep = story.steps[step8Idx + 1];
+  const followUpStep = story.steps[crossingIdx + 1];
   assert.ok(followUpStep);
   assert.equal(followUpStep.eventKind, "stage_transition");
-  assert.equal(followUpStep.stage.key, "tender_sapling");
-  assert.equal(followUpStep.caption, "The young tree grew into a tender sapling.");
+  assert.equal(followUpStep.totalGrowthUnits, 8);
+  assert.equal(followUpStep.chapterTitle, "Emerging Oak Shoot");
+  assert.equal(followUpStep.caption, "The planted acorn has raised its first oak shoot.");
 });
 
 // ----------------------------------------------------------------------------

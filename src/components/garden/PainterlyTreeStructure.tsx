@@ -91,6 +91,7 @@ export interface PainterlyTreeStructureProps {
   stageKey: CanonicalStageKeyOrBeginning;
   totalGrowthUnits?: number;
   subphaseKey?: EarlyLifeSubphaseKey;
+  foundationLevelProgress?: number;
   worldBounds?: BoundingBox2D;
   cameraTransform?: {
     scale?: number;
@@ -121,6 +122,7 @@ export function PainterlyTreeStructure({
   stageKey,
   totalGrowthUnits,
   subphaseKey,
+  foundationLevelProgress,
   worldBounds = CANONICAL_SCENE_BOUNDS,
   cameraTransform,
   presentationMode = "full",
@@ -239,6 +241,17 @@ export function PainterlyTreeStructure({
     Boolean(earlyLifeRasterSlot?.fileExists) &&
     earlyLifeRasterSlot?.status === "development_preview" &&
     Boolean(earlyLifeRasterSource && earlyLifeCalibration);
+
+  const boundedFoundationProgress = Math.max(
+    0,
+    Math.min(1, foundationLevelProgress ?? 1)
+  );
+  const earlyLifeGrowthScale =
+    effectiveSubphase === "planted_acorn"
+      ? 0.94 + boundedFoundationProgress * 0.06
+      : effectiveSubphase === "emerging_shoot"
+      ? 0.82 + boundedFoundationProgress * 0.18
+      : 0.84 + boundedFoundationProgress * 0.16;
 
   return (
     <View
@@ -599,14 +612,24 @@ export function PainterlyTreeStructure({
             style={[
               styles.earlyLifeOakImage,
               {
-                left: earlyLifeCalibration.translateX,
-                top: earlyLifeCalibration.translateY,
+                left:
+                  390.4 -
+                  earlyLifeRasterSlot.sourceContactPoint.x *
+                    earlyLifeCalibration.scale *
+                    earlyLifeGrowthScale,
+                top:
+                  441.0 -
+                  earlyLifeRasterSlot.sourceContactPoint.y *
+                    earlyLifeCalibration.scale *
+                    earlyLifeGrowthScale,
                 width:
                   earlyLifeRasterSlot.sourceDimensions.width *
-                  earlyLifeCalibration.scale,
+                  earlyLifeCalibration.scale *
+                  earlyLifeGrowthScale,
                 height:
                   earlyLifeRasterSlot.sourceDimensions.height *
-                  earlyLifeCalibration.scale,
+                  earlyLifeCalibration.scale *
+                  earlyLifeGrowthScale,
               },
             ]}
             resizeMode="stretch"

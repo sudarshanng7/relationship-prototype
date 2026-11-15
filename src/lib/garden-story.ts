@@ -826,6 +826,61 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
     isFinal: true,
   });
 
+  // Replace future full-tree milestones with the two bounded MVP foundation
+  // crossings. Every event step remains intact and in chronological order.
+  const withoutFutureMilestones = rawSteps.filter(
+    (step) => step.eventKind !== "stage_transition"
+  );
+  const mvpAlignedSteps: InterimStep[] = [];
+  let previousFoundationUnits = 0;
+  const foundationThresholds = [
+    { units: 8, key: "emerging-shoot", label: "Emerging Oak Shoot" },
+    { units: 20, key: "small-seedling", label: "Small Oak Seedling" },
+  ] as const;
+
+  for (const step of withoutFutureMilestones) {
+    const crossed = foundationThresholds.filter(
+      (milestone) =>
+        previousFoundationUnits < milestone.units &&
+        step.totalGrowthUnits >= milestone.units
+    );
+    const milestoneSteps = crossed.map<InterimStep>((milestone) => ({
+      ...step,
+      id: `step-mvp-foundation-${milestone.key}-${step.id}`,
+      chapterTitle: milestone.label,
+      addedEventKey: null,
+      eventKind: "stage_transition",
+      frameType: "GARDEN MILESTONE",
+      caption:
+        milestone.units === 8
+          ? "The planted acorn has raised its first oak shoot."
+          : "The young oak has opened its first true leaves.",
+      displayTitle: null,
+      highlightFeatureId: null,
+      isFinal: false,
+      // Freeze the milestone frame at its visual threshold. Without this,
+      // a long gap between visits could make both milestone frames render the
+      // latest plant and visually skip the emerging-shoot chapter.
+      timeGrowthUnits: Math.min(step.timeGrowthUnits, milestone.units),
+      careGrowthUnits:
+        milestone.units - Math.min(step.timeGrowthUnits, milestone.units),
+      totalGrowthUnits: milestone.units,
+      stage: getGardenStage(milestone.units),
+    }));
+
+    // When a recorded moment reaches a boundary, reveal its memory marker
+    // first and then show the plant milestone. For time-only advancement the
+    // current (Today) frame has no private/event content, so the same ordering
+    // remains safe and predictable.
+    mvpAlignedSteps.push(step, ...milestoneSteps);
+    previousFoundationUnits = Math.max(
+      previousFoundationUnits,
+      step.totalGrowthUnits
+    );
+  }
+
+  rawSteps.splice(0, rawSteps.length, ...mvpAlignedSteps);
+
   // 7. Group steps into ordered, bounded Chapters
   // Group contiguous steps sharing the same chapterTitle
   interface ChapterAccumulator {

@@ -40,7 +40,10 @@ export interface ExplorableMemoryItem {
     | "Shared Moment Growth"
     | "Reconnection Shoot"
     | "Reconnection Blossom"
-    | "Important-Date Landmark";
+    | "Important-Date Landmark"
+    | "Foundation Memory Leaf"
+    | "Foundation Reconnection Pair"
+    | "Foundation Date Acorn";
   displayHeadline: string;
   displayDateLabel: string;
   explanatoryCopy: string;
@@ -97,7 +100,10 @@ export function getExplorableMemories(
       | "Shared Moment Growth"
       | "Reconnection Shoot"
       | "Reconnection Blossom"
-      | "Important-Date Landmark";
+      | "Important-Date Landmark"
+      | "Foundation Memory Leaf"
+      | "Foundation Reconnection Pair"
+      | "Foundation Date Acorn";
     displayHeadline: string;
     displayDateLabel: string;
     explanatoryCopy: string;
@@ -163,25 +169,28 @@ export function getExplorableMemories(
       | "Shared Moment Growth"
       | "Reconnection Shoot"
       | "Reconnection Blossom"
-      | "Important-Date Landmark";
+      | "Important-Date Landmark"
+      | "Foundation Memory Leaf"
+      | "Foundation Reconnection Pair"
+      | "Foundation Date Acorn";
     let explanatoryCopy: string;
     let actionLabel: string;
 
     if (source.sourceType === "completed_reconnection") {
       memoryType = "Reconnection";
-      botanicalRepresentation = "Reconnection Shoot";
-      explanatoryCopy = "Grown from a moment reconnected through understanding.";
+      botanicalRepresentation = "Foundation Reconnection Pair";
+      explanatoryCopy = "A paired leaf marker grown from a moment of reconnection.";
       actionLabel = "View reconnection";
     } else if (source.sourceType === "important_date") {
       memoryType = "Important Date";
-      botanicalRepresentation = "Important-Date Landmark";
+      botanicalRepresentation = "Foundation Date Acorn";
       explanatoryCopy =
-        "A landmark anchored in the history you celebrate together.";
+        "A warm acorn marker holding an important date in your shared history.";
       actionLabel = "View important date";
     } else {
       memoryType = "Shared Good Moment";
-      botanicalRepresentation = "Shared Moment Growth";
-      explanatoryCopy = "Nourished by the care and appreciation you share.";
+      botanicalRepresentation = "Foundation Memory Leaf";
+      explanatoryCopy = "A young oak leaf marking shared care and appreciation.";
       actionLabel = "Open moment";
     }
 

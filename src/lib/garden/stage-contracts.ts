@@ -15,6 +15,7 @@
  */
 
 import {
+  type GardenCareEvent,
   type GardenStageKey,
   GARDEN_STAGES,
   getGardenStage,
@@ -592,6 +593,10 @@ export interface MvpFoundationPresentation {
   label: string;
   supportingCopy: string;
   isFoundationComplete: boolean;
+  /** Continuous progress inside the visible level, used for anchored growth. */
+  levelProgress: number;
+  /** Overall progress through the bounded 36-unit MVP foundation. */
+  foundationProgress: number;
 }
 
 /**
@@ -604,22 +609,27 @@ export function resolveMvpFoundationPresentation(
   careEventsCount = 0
 ): MvpFoundationPresentation {
   const units = Math.max(0, totalGrowthUnits);
+  const foundationProgress = Math.max(0, Math.min(1, units / 36));
 
-  if (units === 0 && careEventsCount === 0) {
+  if (units < 8) {
     return {
       subphaseKey: "planted_acorn",
       label: "Planted Acorn",
       supportingCopy: "Your shared garden begins quietly in the woodland soil.",
       isFoundationComplete: false,
+      levelProgress: Math.max(0, Math.min(1, units / 8)),
+      foundationProgress,
     };
   }
 
-  if (units <= 8) {
+  if (units < 20) {
     return {
       subphaseKey: "emerging_shoot",
       label: "Emerging Oak Shoot",
       supportingCopy: "A first shoot is reaching gently toward the light.",
       isFoundationComplete: false,
+      levelProgress: Math.max(0, Math.min(1, (units - 8) / 12)),
+      foundationProgress,
     };
   }
 
@@ -627,7 +637,9 @@ export function resolveMvpFoundationPresentation(
     subphaseKey: "small_seedling",
     label: "Small Oak Seedling",
     supportingCopy: "Your young oak has opened its first leaves.",
-    isFoundationComplete: true,
+    isFoundationComplete: units >= 36,
+    levelProgress: Math.max(0, Math.min(1, (units - 20) / 16)),
+    foundationProgress,
   };
 }
 
@@ -643,18 +655,19 @@ export function resolveMvpFoundationProgress(
   const units = Math.max(0, totalGrowthUnits);
 
   if (presentation.subphaseKey === "planted_acorn") {
+    const progress = Math.max(0, Math.min(1, units / 8));
     return {
       currentStageKey: "beginning",
       currentStageLabel: presentation.label,
       nextMilestoneKey: "first_seedling",
       nextMilestoneLabel: "Emerging Oak Shoot",
       intervalStartUnits: 0,
-      intervalEndUnits: 1,
-      unitsInInterval: 0,
-      intervalTotalUnits: 1,
-      intervalProgress: 0,
-      intervalDisplayPercent: 0,
-      remainingUnits: 1,
+      intervalEndUnits: 8,
+      unitsInInterval: units,
+      intervalTotalUnits: 8,
+      intervalProgress: progress,
+      intervalDisplayPercent: Math.min(99, Math.floor(progress * 100)),
+      remainingUnits: Math.max(0, 8 - units),
       isFinalStage: false,
       supportingCopy: "The first sign of growth will appear through shared care and time.",
       nextMilestoneCopy: "Next growth: Emerging Oak Shoot",
@@ -662,22 +675,42 @@ export function resolveMvpFoundationProgress(
   }
 
   if (presentation.subphaseKey === "emerging_shoot") {
-    const progress = Math.max(0, Math.min(1, units / 8));
+    const progress = Math.max(0, Math.min(1, (units - 8) / 12));
     return {
       currentStageKey: "first_seedling",
       currentStageLabel: presentation.label,
       nextMilestoneKey: "tender_sapling",
       nextMilestoneLabel: "Small Oak Seedling",
-      intervalStartUnits: 0,
-      intervalEndUnits: 8,
-      unitsInInterval: Math.min(8, units),
-      intervalTotalUnits: 8,
+      intervalStartUnits: 8,
+      intervalEndUnits: 20,
+      unitsInInterval: Math.min(12, units - 8),
+      intervalTotalUnits: 12,
       intervalProgress: progress,
       intervalDisplayPercent: Math.min(99, Math.floor(progress * 100)),
-      remainingUnits: Math.max(0, 8 - units),
+      remainingUnits: Math.max(0, 20 - units),
       isFinalStage: false,
       supportingCopy: "Growing toward its first true leaves.",
       nextMilestoneCopy: "Next growth: Small Oak Seedling",
+    };
+  }
+
+  if (!presentation.isFoundationComplete) {
+    const progress = Math.max(0, Math.min(1, (units - 20) / 16));
+    return {
+      currentStageKey: "tender_sapling",
+      currentStageLabel: presentation.label,
+      nextMilestoneKey: "branching_out",
+      nextMilestoneLabel: "Foundation Complete",
+      intervalStartUnits: 20,
+      intervalEndUnits: 36,
+      unitsInInterval: Math.min(16, units - 20),
+      intervalTotalUnits: 16,
+      intervalProgress: progress,
+      intervalDisplayPercent: Math.min(99, Math.floor(progress * 100)),
+      remainingUnits: Math.max(0, 36 - units),
+      isFinalStage: false,
+      supportingCopy: "Its first leaves are strengthening through shared care and time.",
+      nextMilestoneCopy: "Next growth: Foundation Complete",
     };
   }
 
@@ -686,10 +719,10 @@ export function resolveMvpFoundationProgress(
     currentStageLabel: presentation.label,
     nextMilestoneKey: null,
     nextMilestoneLabel: null,
-    intervalStartUnits: 8,
-    intervalEndUnits: 8,
+    intervalStartUnits: 20,
+    intervalEndUnits: 36,
     unitsInInterval: 0,
-    intervalTotalUnits: 0,
+    intervalTotalUnits: 16,
     intervalProgress: 1,
     intervalDisplayPercent: 100,
     remainingUnits: 0,
@@ -697,6 +730,42 @@ export function resolveMvpFoundationProgress(
     supportingCopy: "The MVP foundation journey is complete. Shared moments will continue to gather here.",
     nextMilestoneCopy: "Your young oak keeps collecting your shared moments.",
   };
+}
+
+export interface MvpFoundationMemoryMarker {
+  semanticKey: string;
+  sourceId: string;
+  kind: GardenCareEvent["kind"];
+  index: number;
+  x: number;
+  y: number;
+}
+
+/**
+ * A deterministic moss-floor memory constellation shared by live Garden,
+ * Explore hit regions and Story. It replaces mature-tree perennials during MVP.
+ */
+export function resolveMvpFoundationMemoryMarkers(
+  careEvents: GardenCareEvent[]
+): MvpFoundationMemoryMarker[] {
+  const ordered = [...careEvents].sort((a, b) => {
+    const aTime = new Date(a.occurredAt || a.createdAt || "").getTime() || 0;
+    const bTime = new Date(b.occurredAt || b.createdAt || "").getTime() || 0;
+    return aTime !== bTime ? aTime - bTime : a.id.localeCompare(b.id);
+  });
+
+  return ordered.map((event, index) => {
+    const angle = index * 2.399963229728653;
+    const ring = 24 + Math.floor(index / 8) * 11 + (index % 8) * 1.15;
+    return {
+      semanticKey: `${event.kind}:${event.id}`,
+      sourceId: event.id,
+      kind: event.kind,
+      index,
+      x: Math.round((390.4 + Math.cos(angle) * ring * 1.65) * 10) / 10,
+      y: Math.round((333 + Math.sin(angle) * ring * 0.52 + Math.floor(index / 8) * 2) * 10) / 10,
+    };
+  });
 }
 
 /**
