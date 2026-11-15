@@ -70,6 +70,22 @@ const OAK_SEEDLING_ASSET = require("../../../assets/garden/painterly/oak-seedlin
 // Calibrated painterly oak foliage cluster proof (837x858 alpha PNG)
 const FOLIAGE_CLUSTER_ASSET = require("../../../assets/garden/painterly/foliage-oak-cluster-alpha-v1.png");
 
+/**
+ * Juvenile leaf flushes for the Branching Out interval. Coordinates are in
+ * canonical structure space and terminate at verified outer twig regions of
+ * the branching oak. They unlock gradually, so the stage visibly develops
+ * toward Leafy Canopy without presenting a finished crown prematurely.
+ */
+const BRANCHING_FOLIAGE_FLUSHES = [
+  { key: "leader", left: 357, top: 35, size: 54, rotation: "-4deg", unlockAt: 0.08 },
+  { key: "left-upper", left: 207, top: 70, size: 58, rotation: "-28deg", unlockAt: 0.22 },
+  { key: "right-upper", left: 535, top: 68, size: 58, rotation: "24deg", unlockAt: 0.36 },
+  { key: "left-outer", left: 120, top: 151, size: 62, rotation: "-46deg", unlockAt: 0.52 },
+  { key: "right-outer", left: 621, top: 142, size: 62, rotation: "42deg", unlockAt: 0.68 },
+  { key: "left-inner", left: 276, top: 126, size: 52, rotation: "-17deg", unlockAt: 0.82 },
+  { key: "right-inner", left: 464, top: 124, size: 52, rotation: "16deg", unlockAt: 0.94 },
+] as const;
+
 export interface PainterlyTreeStructureProps {
   structuralAssetKey?: string | null;
   stageKey: CanonicalStageKeyOrBeginning;
@@ -153,6 +169,11 @@ export function PainterlyTreeStructure({
     showFoliageProof !== undefined
       ? showFoliageProof
       : false;
+
+  const branchingIntervalProgress = Math.max(
+    0,
+    Math.min(1, ((totalGrowthUnits ?? 36) - 36) / 20)
+  );
 
   // Consolidated single transform source shared with renderer and geometry resolver
   const presentationTransform = resolveTreePresentationTransform({
@@ -497,20 +518,63 @@ export function PainterlyTreeStructure({
             resizeMode="stretch"
           />
         ) : isBranchingOakEligible ? (
-          /* Calibrated 2.5D Intermediate Branching Oak (Standard React Native Image) */
-          <RNImage
-            source={OAK_BRANCHING_ASSET}
-            style={[
-              styles.branchingOakImage,
-              {
-                left: branchingLeft,
-                top: branchingTop,
-                width: branchingWidth,
-                height: branchingHeight,
-              },
-            ]}
-            resizeMode="stretch"
-          />
+          <>
+            {/* Calibrated 2.5D Intermediate Branching Oak */}
+            <RNImage
+              source={OAK_BRANCHING_ASSET}
+              style={[
+                styles.branchingOakImage,
+                {
+                  left: branchingLeft,
+                  top: branchingTop,
+                  width: branchingWidth,
+                  height: branchingHeight,
+                },
+              ]}
+              resizeMode="stretch"
+            />
+
+            {/* Stage-progressive juvenile oak flushes at real twig endpoints. */}
+            {BRANCHING_FOLIAGE_FLUSHES.map((flush) => {
+              const reveal = Math.max(
+                0,
+                Math.min(1, (branchingIntervalProgress - flush.unlockAt) / 0.14)
+              );
+              if (reveal <= 0) return null;
+
+              const renderedSize = flush.size * (0.84 + reveal * 0.16);
+
+              return (
+                <View
+                  key={flush.key}
+                  style={[
+                    styles.branchingFoliageFlush,
+                    {
+                      left: flush.left,
+                      top: flush.top,
+                      width: renderedSize,
+                      height: renderedSize * 0.76,
+                      opacity: 0.58 + reveal * 0.34,
+                      transform: [{ rotate: flush.rotation }],
+                    },
+                  ]}
+                  pointerEvents="none"
+                >
+                  <RNImage
+                    source={FOLIAGE_CLUSTER_ASSET}
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 0,
+                      width: renderedSize,
+                      height: renderedSize,
+                    }}
+                    resizeMode="contain"
+                  />
+                </View>
+              );
+            })}
+          </>
         ) : isSaplingRasterEligible ? (
           /* Calibrated 2.5D Small Oak Sapling Raster Asset */
           <RNImage
@@ -1271,6 +1335,11 @@ const styles = StyleSheet.create({
   branchingOakImage: {
     position: "absolute",
     opacity: 1.0, // 100% physically opaque structure
+  },
+  branchingFoliageFlush: {
+    position: "absolute",
+    zIndex: 5,
+    overflow: "hidden",
   },
   saplingOakImage: {
     position: "absolute",
