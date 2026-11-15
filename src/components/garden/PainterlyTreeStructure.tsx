@@ -48,6 +48,7 @@ import type {
 import type { PainterlyCoupleDNA } from "@/lib/garden/couple-dna";
 import {
   CANONICAL_SCENE_BOUNDS,
+  EARLY_LIFE_PREVIEW_TARGET_SLOTS,
   isCanonicalBranchingAssetKey,
   isCanonicalMatureAssetKey,
   isCanonicalSaplingAssetKey,
@@ -63,6 +64,9 @@ const OAK_MATURE_ASSET = require("../../../assets/garden/painterly/oak-structure
 const OAK_BRANCHING_ASSET = require("../../../assets/garden/painterly/oak-structure-branching-alpha-v1.png");
 // Calibrated transparent small leafy oak sapling (1024x1536 alpha PNG)
 const OAK_SAPLING_ASSET = require("../../../assets/garden/painterly/oak-structure-sapling-alpha-v1.png");
+const OAK_ACORN_ASSET = require("../../../assets/garden/painterly/oak-acorn-planted-alpha-v1.png");
+const OAK_SHOOT_ASSET = require("../../../assets/garden/painterly/oak-shoot-emerging-alpha-v1.png");
+const OAK_SEEDLING_ASSET = require("../../../assets/garden/painterly/oak-seedling-alpha-v1.png");
 // Calibrated painterly oak foliage cluster proof (837x858 alpha PNG)
 const FOLIAGE_CLUSTER_ASSET = require("../../../assets/garden/painterly/foliage-oak-cluster-alpha-v1.png");
 
@@ -194,6 +198,24 @@ export function PainterlyTreeStructure({
       isCanonicalSaplingAssetKey(structuralAssetKey) ||
       saplingSlot?.status === "development_preview" ||
       saplingSlot?.status === "approved");
+
+  const earlyLifeRasterSlot =
+    effectiveSubphase && effectiveSubphase !== "small_sapling"
+      ? EARLY_LIFE_PREVIEW_TARGET_SLOTS[effectiveSubphase]
+      : null;
+  const earlyLifeCalibration = earlyLifeRasterSlot?.calibrationTransform;
+  const earlyLifeRasterSource =
+    effectiveSubphase === "planted_acorn"
+      ? OAK_ACORN_ASSET
+      : effectiveSubphase === "emerging_shoot"
+      ? OAK_SHOOT_ASSET
+      : effectiveSubphase === "small_seedling"
+      ? OAK_SEEDLING_ASSET
+      : null;
+  const isEarlyLifeRasterEligible =
+    Boolean(earlyLifeRasterSlot?.fileExists) &&
+    earlyLifeRasterSlot?.status === "development_preview" &&
+    Boolean(earlyLifeRasterSource && earlyLifeCalibration);
 
   return (
     <View
@@ -500,6 +522,25 @@ export function PainterlyTreeStructure({
                 top: saplingTop,
                 width: saplingWidth,
                 height: saplingHeight,
+              },
+            ]}
+            resizeMode="stretch"
+          />
+        ) : isEarlyLifeRasterEligible && earlyLifeRasterSlot && earlyLifeCalibration ? (
+          /* Calibrated realistic early-life oak raster; procedural branches remain the safe fallback. */
+          <RNImage
+            source={earlyLifeRasterSource}
+            style={[
+              styles.earlyLifeOakImage,
+              {
+                left: earlyLifeCalibration.translateX,
+                top: earlyLifeCalibration.translateY,
+                width:
+                  earlyLifeRasterSlot.sourceDimensions.width *
+                  earlyLifeCalibration.scale,
+                height:
+                  earlyLifeRasterSlot.sourceDimensions.height *
+                  earlyLifeCalibration.scale,
               },
             ]}
             resizeMode="stretch"
@@ -1224,6 +1265,10 @@ const styles = StyleSheet.create({
   saplingOakImage: {
     position: "absolute",
     opacity: 1.0, // 100% physically opaque structure
+  },
+  earlyLifeOakImage: {
+    position: "absolute",
+    zIndex: 4,
   },
   proceduralSvg: {
     position: "absolute",

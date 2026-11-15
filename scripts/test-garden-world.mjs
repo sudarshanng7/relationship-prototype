@@ -5559,24 +5559,38 @@ test("33. Authoritative Growth Progress & Visual Milestone Contracts", async () 
     EARLY_LIFE_PREVIEW_TARGET_SLOTS.planted_acorn.targetFilename,
     "assets/garden/painterly/oak-acorn-planted-alpha-v1.png"
   );
-  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.planted_acorn.status, "missing");
-  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.planted_acorn.fileExists, false);
+  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.planted_acorn.status, "development_preview");
+  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.planted_acorn.fileExists, true);
 
   assert.ok(EARLY_LIFE_PREVIEW_TARGET_SLOTS.emerging_shoot, "emerging_shoot target slot must exist");
   assert.equal(
     EARLY_LIFE_PREVIEW_TARGET_SLOTS.emerging_shoot.targetFilename,
     "assets/garden/painterly/oak-shoot-emerging-alpha-v1.png"
   );
-  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.emerging_shoot.status, "missing");
-  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.emerging_shoot.fileExists, false);
+  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.emerging_shoot.status, "development_preview");
+  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.emerging_shoot.fileExists, true);
 
   assert.ok(EARLY_LIFE_PREVIEW_TARGET_SLOTS.small_seedling, "small_seedling target slot must exist");
   assert.equal(
     EARLY_LIFE_PREVIEW_TARGET_SLOTS.small_seedling.targetFilename,
     "assets/garden/painterly/oak-seedling-alpha-v1.png"
   );
-  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.small_seedling.status, "missing");
-  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.small_seedling.fileExists, false);
+  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.small_seedling.status, "development_preview");
+  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.small_seedling.fileExists, true);
+  for (const slot of Object.values(EARLY_LIFE_PREVIEW_TARGET_SLOTS)) {
+    assert.ok(fs.existsSync(slot.targetFilename), `${slot.slotKey} raster must exist on disk`);
+    const pngHeader = fs.readFileSync(slot.targetFilename).subarray(0, 24);
+    assert.equal(pngHeader.toString("hex", 0, 8), "89504e470d0a1a0a", `${slot.slotKey} must be a PNG`);
+    assert.equal(pngHeader.readUInt32BE(16), slot.sourceDimensions.width, `${slot.slotKey} width must match manifest`);
+    assert.equal(pngHeader.readUInt32BE(20), slot.sourceDimensions.height, `${slot.slotKey} height must match manifest`);
+    const { scale, translateX, translateY } = slot.calibrationTransform;
+    assert.ok(scale > 0, `${slot.slotKey} must have a positive calibrated scale`);
+    assert.ok(Number.isFinite(translateX) && Number.isFinite(translateY));
+    const resolvedX = slot.sourceContactPoint.x * scale + translateX;
+    const resolvedY = slot.sourceContactPoint.y * scale + translateY;
+    assert.ok(Math.abs(resolvedX - 390.4) < 0.02, `${slot.slotKey} contact x must resolve to permanent anchor`);
+    assert.ok(Math.abs(resolvedY - 441.0) < 0.02, `${slot.slotKey} contact y must resolve to permanent anchor`);
+  }
 
   // 8. Shared Structural Artwork Decoupled from Logical Stages
   // Canonical stages branching_out (36-55), leafy_canopy (56-75), and rooted_flourishing (76-90)
@@ -5661,6 +5675,47 @@ test("33. Authoritative Growth Progress & Visual Milestone Contracts", async () 
   assert.ok(
     visualQASource.includes("useSimulatedGrowth"),
     "garden-visual-qa.tsx must support interactive simulated growth"
+  );
+  assert.ok(
+    visualQASource.includes("PRESENT — DEVELOPMENT PREVIEW"),
+    "Visual QA must report an integrated development-preview asset truthfully"
+  );
+  assert.ok(
+    visualQASource.includes("EARLY_LIFE_PREVIEW_UNITS[spKey]"),
+    "Manual subphase selection must synchronize its displayed preview units"
+  );
+  assert.ok(
+    visualQASource.includes('"Manual preview selection"'),
+    "Visual QA must distinguish manual selection from simulated progression"
+  );
+  assert.ok(
+    visualQASource.includes(': false\n  );'),
+    "Diagnostic alignment guides must default off for clean visual review"
+  );
+  assert.deepEqual(
+    EARLY_LIFE_SUBPHASE_CONTRACTS.small_sapling.eligibleEarnedRoles,
+    ["foliage", "ground_flora", "creature"],
+    "A juvenile oak sapling must not expose a blossom attachment role"
+  );
+  const treeStructureSource = fs.readFileSync(
+    "src/components/garden/PainterlyTreeStructure.tsx",
+    "utf8"
+  );
+  for (const filename of [
+    "oak-acorn-planted-alpha-v1.png",
+    "oak-shoot-emerging-alpha-v1.png",
+    "oak-seedling-alpha-v1.png",
+  ]) {
+    assert.ok(
+      treeStructureSource.includes(filename),
+      `${filename} must be wired into PainterlyTreeStructure`
+    );
+  }
+  assert.ok(
+    treeStructureSource.includes('effectiveSubphase === "planted_acorn"') &&
+      treeStructureSource.includes('effectiveSubphase === "emerging_shoot"') &&
+      treeStructureSource.includes('effectiveSubphase === "small_seedling"'),
+    "Every early-life raster must retain an explicit lifecycle eligibility gate"
   );
 
   assert.ok(true, "All growth progress and visual milestone contracts passed");

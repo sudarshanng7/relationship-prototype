@@ -45,7 +45,9 @@ import {
   CANONICAL_SCENE_BOUNDS,
   TREE_COMPOSITION_PRESETS,
   THREE_ASSET_FOUNDATION_SLOTS,
+  EARLY_LIFE_PREVIEW_TARGET_SLOTS,
   EARLY_LIFE_SUBPHASE_CONTRACTS,
+  STAGE_STRUCTURAL_ASSET_SLOTS,
   PAINTERLY_STAGE_ASSET_REGISTRY,
   PAINTERLY_CALIBRATION_WORKFLOW,
   BOTANICAL_ATTACHMENT_REGIONS,
@@ -66,6 +68,13 @@ import {
 } from "@/lib/garden-generator";
 
 const BACKPLATE_ASSET = require("../../assets/garden/painterly/woodland-backplate-light-v1.png");
+
+const EARLY_LIFE_PREVIEW_UNITS: Record<EarlyLifeSubphaseKey, number> = {
+  planted_acorn: 0,
+  emerging_shoot: 8,
+  small_seedling: 14,
+  small_sapling: 24,
+};
 
 // Realistic deterministic in-memory fixtures
 const FIXTURE_COUPLE_ID = "qa-fixture-couple-alpha";
@@ -344,7 +353,7 @@ export default function GardenVisualQARoute() {
     useState<FoundationSlotKey>("branching_out");
   const [showSideBySide, setShowSideBySide] = useState(false);
   const [showAlignmentGuides, setShowAlignmentGuides] = useState(
-    params.guides !== undefined ? params.guides === "true" || params.guides === "1" : true
+    params.guides !== undefined ? params.guides === "true" || params.guides === "1" : false
   );
   const [showWoodlandBackplate, setShowWoodlandBackplate] = useState(true);
   const [showBotanicalOverlays, setShowBotanicalOverlays] = useState(true);
@@ -443,7 +452,9 @@ export default function GardenVisualQARoute() {
   const [earlyLifeCameraMode, setEarlyLifeCameraMode] = useState<"overview" | "inspect">(
     params.camera === "inspect" ? "inspect" : "overview"
   );
-  const [simulatedUnits, setSimulatedUnits] = useState<number>(8.0);
+  const [simulatedUnits, setSimulatedUnits] = useState<number>(
+    EARLY_LIFE_PREVIEW_UNITS[earlyLifeSubphase]
+  );
   const [useSimulatedGrowth, setUseSimulatedGrowth] = useState<boolean>(false);
 
   const previewMilestone = useMemo(() => {
@@ -459,6 +470,10 @@ export default function GardenVisualQARoute() {
     : earlyLifeSubphase;
 
   const earlyLifeContract = EARLY_LIFE_SUBPHASE_CONTRACTS[effectiveEarlyLifeSubphase];
+  const earlyLifeAssetSlot =
+    effectiveEarlyLifeSubphase === "small_sapling"
+      ? STAGE_STRUCTURAL_ASSET_SLOTS.tender_sapling
+      : EARLY_LIFE_PREVIEW_TARGET_SLOTS[effectiveEarlyLifeSubphase];
   const earlyLifeGrowth = useMemo(() => {
     if (useSimulatedGrowth) {
       const clamped = Math.max(0, Math.min(36, simulatedUnits));
@@ -570,12 +585,18 @@ export default function GardenVisualQARoute() {
   const earlyLifeSubphaseIdx = EARLY_LIFE_SUBPHASES.indexOf(earlyLifeSubphase);
   const handlePrevSubphase = () => {
     if (earlyLifeSubphaseIdx > 0) {
-      setEarlyLifeSubphase(EARLY_LIFE_SUBPHASES[earlyLifeSubphaseIdx - 1]);
+      const nextSubphase = EARLY_LIFE_SUBPHASES[earlyLifeSubphaseIdx - 1];
+      setUseSimulatedGrowth(false);
+      setEarlyLifeSubphase(nextSubphase);
+      setSimulatedUnits(EARLY_LIFE_PREVIEW_UNITS[nextSubphase]);
     }
   };
   const handleNextSubphase = () => {
     if (earlyLifeSubphaseIdx < EARLY_LIFE_SUBPHASES.length - 1) {
-      setEarlyLifeSubphase(EARLY_LIFE_SUBPHASES[earlyLifeSubphaseIdx + 1]);
+      const nextSubphase = EARLY_LIFE_SUBPHASES[earlyLifeSubphaseIdx + 1];
+      setUseSimulatedGrowth(false);
+      setEarlyLifeSubphase(nextSubphase);
+      setSimulatedUnits(EARLY_LIFE_PREVIEW_UNITS[nextSubphase]);
     }
   };
 
@@ -1404,10 +1425,7 @@ export default function GardenVisualQARoute() {
                       onPress={() => {
                         setUseSimulatedGrowth(false);
                         setEarlyLifeSubphase(spKey);
-                        if (spKey === "planted_acorn") setSimulatedUnits(0);
-                        else if (spKey === "emerging_shoot") setSimulatedUnits(8);
-                        else if (spKey === "small_seedling") setSimulatedUnits(14);
-                        else setSimulatedUnits(24);
+                        setSimulatedUnits(EARLY_LIFE_PREVIEW_UNITS[spKey]);
                       }}
                     >
                       <Text
@@ -1497,7 +1515,7 @@ export default function GardenVisualQARoute() {
                 </View>
 
                 <Text style={{ fontSize: 12, color: theme.secondaryText }}>
-                  Active visual subphase: <Text style={{ fontWeight: "600", color: theme.primaryText }}>{previewMilestone.label}</Text>
+                  {useSimulatedGrowth ? "Active simulated subphase" : "Manual preview selection"}: <Text style={{ fontWeight: "600", color: theme.primaryText }}>{previewMilestone.label}</Text>
                   {simulatedUnits === 8.0 && " • Exactly at shoot-to-seedling boundary"}
                   {simulatedUnits === 16.0 && " • Exactly at seedling-to-sapling boundary"}
                 </Text>
@@ -1591,44 +1609,65 @@ export default function GardenVisualQARoute() {
                 { backgroundColor: isLight ? "#F9F6FB" : "#2A2132" },
               ]}
             >
-              <Text style={styles.cardHeading}>SUBPHASE SPECIFICATION & INTEGRATION CONTRACT</Text>
+              <Text
+                style={[
+                  styles.cardHeading,
+                  { color: isLight ? "#6B7280" : "#D8CBE0" },
+                ]}
+              >
+                SUBPHASE SPECIFICATION & INTEGRATION CONTRACT
+              </Text>
               <View style={styles.statusGrid}>
-                <Text style={styles.statusLabel}>Subphase:</Text>
-                <Text style={styles.statusValue}>
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Subphase:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
                   {earlyLifeContract.label} ({earlyLifeContract.subphaseKey})
                 </Text>
 
-                <Text style={styles.statusLabel}>Canonical Stage:</Text>
-                <Text style={styles.statusValue}>
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Canonical Stage:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
                   {earlyLifeContract.reconciledCanonicalStage} ({earlyLifeGrowth.total} units)
                 </Text>
 
-                <Text style={styles.statusLabel}>Soil Horizon Baseline:</Text>
-                <Text style={styles.statusValue}>
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Soil Horizon Baseline:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
                   y = {earlyLifeContract.soilBaseline.toFixed(1)} px (Continuous clearing soil)
                 </Text>
 
-                <Text style={styles.statusLabel}>Trunk / Shoot Origin:</Text>
-                <Text style={styles.statusValue}>
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Trunk / Shoot Origin:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
                   x = {earlyLifeContract.rootOrigin.x.toFixed(1)} px
                 </Text>
 
-                <Text style={styles.statusLabel}>Target Missing Asset:</Text>
-                <Text style={[styles.statusValue, { color: "#D97706" }]}>
-                  {earlyLifeContract.targetFilename} (Status: MISSING)
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Target Asset:</Text>
+                <Text
+                  style={[
+                    styles.statusValue,
+                    {
+                      color:
+                        earlyLifeAssetSlot.status === "missing"
+                          ? "#F59E0B"
+                          : earlyLifeAssetSlot.status === "approved"
+                          ? "#34D399"
+                          : "#A78BFA",
+                    },
+                  ]}
+                >
+                  {earlyLifeAssetSlot.targetFilename} (Status: {earlyLifeAssetSlot.status === "development_preview" ? "PRESENT — DEVELOPMENT PREVIEW" : earlyLifeAssetSlot.status.toUpperCase()})
                 </Text>
 
-                <Text style={styles.statusLabel}>Active Fallback:</Text>
-                <Text style={styles.statusValue}>
-                  Stage-correct procedural structure (No mature tree scaling)
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Active Rendering Path:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
+                  {earlyLifeAssetSlot.status === "missing"
+                    ? "Stage-correct procedural fallback (no mature tree scaling)"
+                    : "Calibrated painterly raster asset"}
                 </Text>
 
-                <Text style={styles.statusLabel}>Natural Foliage Source:</Text>
-                <Text style={styles.statusValue}>
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Natural Foliage Source:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
                   sourceEvent = null, isEarned = false (Zero memory attribution)
                 </Text>
               </View>
-              <Text style={[styles.cardSubtext, { marginTop: 10, fontStyle: "italic" }]}>
+              <Text style={[styles.cardSubtext, { marginTop: 10, fontStyle: "italic", color: isLight ? "#6B7280" : "#C4B5D0" }]}>
                 {earlyLifeContract.description}
               </Text>
             </View>

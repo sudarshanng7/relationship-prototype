@@ -1473,36 +1473,62 @@ export const THREE_ASSET_FOUNDATION_SLOTS = {
 } as const;
 
 /**
- * Separate Target Slots for Early-Life Lifecycle Visual Phases (Development Preview).
- * Reconciled safely with manifest contracts without breaking existing references.
- * All marked MISSING as no raster assets currently exist on disk.
+ * Separate calibrated slots for early-life lifecycle visual phases.
+ * These assets remain development previews until live visual acceptance.
  */
 export const EARLY_LIFE_PREVIEW_TARGET_SLOTS = {
   planted_acorn: {
     slotKey: "planted_acorn",
     assetKey: "painterly-oak-acorn-planted-v1",
     targetFilename: "assets/garden/painterly/oak-acorn-planted-alpha-v1.png",
-    status: "missing" as const,
-    approvalStatus: "missing" as const,
-    fileExists: false,
+    status: "development_preview" as const,
+    approvalStatus: "development_preview" as const,
+    fileExists: true,
+    sourceDimensions: { width: 1254, height: 1254 },
+    meaningfulAlphaBounds: { minX: 293, minY: 726, maxX: 960, maxY: 1037 },
+    sourceContactPoint: { x: 627, y: 1038 },
+    calibrationTransform: {
+      scale: 0.025641,
+      translateX: 374.323,
+      translateY: 414.385,
+      rotation: 0,
+    },
     description: "Planted acorn in woodland soil",
   },
   emerging_shoot: {
     slotKey: "emerging_shoot",
     assetKey: "painterly-oak-shoot-emerging-v1",
     targetFilename: "assets/garden/painterly/oak-shoot-emerging-alpha-v1.png",
-    status: "missing" as const,
-    approvalStatus: "missing" as const,
-    fileExists: false,
-    description: "Emerging oak shoot hypocotyl and cotyledons",
+    status: "development_preview" as const,
+    approvalStatus: "development_preview" as const,
+    fileExists: true,
+    sourceDimensions: { width: 1024, height: 1536 },
+    meaningfulAlphaBounds: { minX: 162, minY: 520, maxX: 850, maxY: 1398 },
+    sourceContactPoint: { x: 506.5, y: 1399 },
+    calibrationTransform: {
+      scale: 0.028441,
+      translateX: 375.995,
+      translateY: 401.211,
+      rotation: 0,
+    },
+    description: "Emerging oak epicotyl with hypogeal cotyledons retained in the acorn",
   },
   small_seedling: {
     slotKey: "small_seedling",
     assetKey: "painterly-oak-seedling-v1",
     targetFilename: "assets/garden/painterly/oak-seedling-alpha-v1.png",
-    status: "missing" as const,
-    approvalStatus: "missing" as const,
-    fileExists: false,
+    status: "development_preview" as const,
+    approvalStatus: "development_preview" as const,
+    fileExists: true,
+    sourceDimensions: { width: 1024, height: 1536 },
+    meaningfulAlphaBounds: { minX: 213, minY: 306, maxX: 788, maxY: 1261 },
+    sourceContactPoint: { x: 501, y: 1262 },
+    calibrationTransform: {
+      scale: 0.057531,
+      translateX: 361.577,
+      translateY: 368.399,
+      rotation: 0,
+    },
     description: "Small oak seedling with juvenile lobed leaves",
   },
 } as const;
