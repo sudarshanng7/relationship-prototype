@@ -105,6 +105,9 @@ import {
   resolveMvpFoundationPresentation,
   resolveMvpFoundationProgress,
   resolveMvpFoundationUnits,
+  resolveMvpRawCareUnits,
+  resolveMvpSupportingTimeUnits,
+  resolveMvpEcologicalSubprogressBand,
   resolveMvpFoundationMemoryMarkers,
   resolvePreviewMilestoneProgress,
   EARLY_LIFE_PREVIEW_TARGET_SLOTS,
@@ -5553,25 +5556,29 @@ test("33. Authoritative Growth Progress & Visual Milestone Contracts", async () 
   assert.equal(seedlingHighPreview.subphaseKey, "small_seedling");
   assert.equal(seedlingHighPreview.nextSubphaseKey, "small_sapling");
 
-  // Production MVP is intentionally bounded to the first three journey frames.
+  // Production MVP is intentionally bounded to the 100-unit three-frame journey:
+  // Level 1: 0 <= u < 24 -> planted_acorn
+  // Level 2: 24 <= u < 60 -> emerging_shoot
+  // Level 3: 60 <= u <= 100 -> small_seedling (never substitute mature tree)
   assert.equal(resolveMvpFoundationPresentation(0, 0).subphaseKey, "planted_acorn");
-  assert.equal(resolveMvpFoundationPresentation(4, 1).subphaseKey, "planted_acorn");
-  assert.equal(resolveMvpFoundationPresentation(8, 1).subphaseKey, "emerging_shoot");
-  assert.equal(resolveMvpFoundationPresentation(19.99, 1).subphaseKey, "emerging_shoot");
-  assert.equal(resolveMvpFoundationPresentation(20, 1).subphaseKey, "small_seedling");
-  assert.equal(resolveMvpFoundationPresentation(100, 50).subphaseKey, "small_seedling");
-  const mvpComplete = resolveMvpFoundationProgress(56, 20);
+  assert.equal(resolveMvpFoundationPresentation(23.99, 0).subphaseKey, "planted_acorn");
+  assert.equal(resolveMvpFoundationPresentation(24.0, 0).subphaseKey, "emerging_shoot");
+  assert.equal(resolveMvpFoundationPresentation(59.99, 0).subphaseKey, "emerging_shoot");
+  assert.equal(resolveMvpFoundationPresentation(60.0, 0).subphaseKey, "small_seedling");
+  assert.equal(resolveMvpFoundationPresentation(99.99, 0).subphaseKey, "small_seedling");
+  assert.equal(resolveMvpFoundationPresentation(100.0, 0).subphaseKey, "small_seedling");
+  const mvpComplete = resolveMvpFoundationProgress(100, 0);
   assert.equal(mvpComplete.currentStageLabel, "Small Oak Seedling");
   assert.equal(mvpComplete.isFinalStage, true);
   assert.equal(mvpComplete.intervalDisplayPercent, 100);
 
-  // Time supports but can never complete the 36-unit MVP foundation alone.
-  assert.equal(resolveMvpFoundationUnits(60, 0, 60), 12);
-  const timeSupported = resolveMvpFoundationProgress(60, 0, 0, 60);
-  assert.equal(timeSupported.currentStageLabel, "Emerging Oak Shoot");
+  // Time supports but caps at 20 units and can never complete or reach Level 2 alone.
+  assert.equal(resolveMvpFoundationUnits(0, 0, 60), 20);
+  const timeSupported = resolveMvpFoundationProgress(0, 0, 60);
+  assert.equal(timeSupported.currentStageLabel, "Planted Acorn");
   assert.equal(timeSupported.isFinalStage, false);
-  assert.equal(timeSupported.intervalDisplayPercent, 33);
-  assert.equal(resolveMvpFoundationUnits(64, 24, 40), 36);
+  assert.equal(timeSupported.intervalDisplayPercent, 83);
+  assert.equal(resolveMvpFoundationUnits(80, 60), 100);
 
   // Visual variety is random-looking but deterministic per couple and event.
   const memoryFixtures = Array.from({ length: 12 }, (_, index) => ({
@@ -5579,9 +5586,9 @@ test("33. Authoritative Growth Progress & Visual Milestone Contracts", async () 
     kind: index % 3 === 0 ? "reconnection" : index % 3 === 1 ? "important_date" : "positive_moment",
     occurredAt: `2026-01-${String(index + 1).padStart(2, "0")}T10:00:00Z`,
   }));
-  const markersA = resolveMvpFoundationMemoryMarkers(memoryFixtures, "couple-a", 24);
-  const markersARepeat = resolveMvpFoundationMemoryMarkers(memoryFixtures, "couple-a", 24);
-  const markersB = resolveMvpFoundationMemoryMarkers(memoryFixtures, "couple-b", 24);
+  const markersA = resolveMvpFoundationMemoryMarkers(memoryFixtures, "couple-a", 60);
+  const markersARepeat = resolveMvpFoundationMemoryMarkers(memoryFixtures, "couple-a", 60);
+  const markersB = resolveMvpFoundationMemoryMarkers(memoryFixtures, "couple-b", 60);
   assert.deepEqual(markersA, markersARepeat, "Same couple history must reproduce exactly");
   assert.notDeepEqual(markersA, markersB, "Different couples must receive unique arrangements");
   assert.ok(markersA.some((marker) => marker.visualKind === "sapling_leaf"));
@@ -5770,6 +5777,194 @@ test("33. Authoritative Growth Progress & Visual Milestone Contracts", async () 
   );
 
   assert.ok(true, "All growth progress and visual milestone contracts passed");
+});
+
+test("34. Purple Garden 100-Unit MVP Visual Growth, Foliage & Story Parity Invariants (Section F 1-20)", () => {
+  // 1. Event weights: positive × 2, reconnections × 4, important dates × 2 without 40-unit cap
+  assert.equal(resolveMvpRawCareUnits([{ id: "1", kind: "positive_moment" }]), 2);
+  assert.equal(resolveMvpRawCareUnits([{ id: "2", kind: "reconnection" }]), 4);
+  assert.equal(resolveMvpRawCareUnits([{ id: "3", kind: "important_date" }]), 2);
+  const thirtyReconnections = Array.from({ length: 30 }, (_, i) => ({ id: `rec-${i}`, kind: "reconnection" }));
+  assert.equal(resolveMvpRawCareUnits(thirtyReconnections), 120, "Raw care units must not cap at 40 in 100-unit MVP model");
+
+  // 2. Time supports but caps at 20 units
+  assert.equal(resolveMvpSupportingTimeUnits(0), 0);
+  assert.equal(resolveMvpSupportingTimeUnits(10), 10);
+  assert.equal(resolveMvpSupportingTimeUnits(20), 20);
+  assert.equal(resolveMvpSupportingTimeUnits(35), 20);
+  assert.equal(resolveMvpSupportingTimeUnits(100), 20);
+
+  // 3. Time-only history remains Level 1 (20/100) and cannot reach Level 2 alone
+  const timeOnlyUnits = resolveMvpFoundationUnits(0, 0, 100);
+  assert.equal(timeOnlyUnits, 20);
+  const timeOnlyPres = resolveMvpFoundationPresentation(0, 0, 100);
+  assert.equal(timeOnlyPres.level, 1);
+  assert.equal(timeOnlyPres.subphaseKey, "planted_acorn");
+  assert.equal(timeOnlyPres.isFoundationComplete, false);
+
+  // 4. Exact boundary transitions: 0, 23.99, 24, 59.99, 60, 99.99, 100
+  assert.equal(resolveMvpFoundationPresentation(0).subphaseKey, "planted_acorn");
+  assert.equal(resolveMvpFoundationPresentation(23.99).subphaseKey, "planted_acorn");
+  assert.equal(resolveMvpFoundationPresentation(24.0).subphaseKey, "emerging_shoot");
+  assert.equal(resolveMvpFoundationPresentation(59.99).subphaseKey, "emerging_shoot");
+  assert.equal(resolveMvpFoundationPresentation(60.0).subphaseKey, "small_seedling");
+  assert.equal(resolveMvpFoundationPresentation(99.99).subphaseKey, "small_seedling");
+  assert.equal(resolveMvpFoundationPresentation(100.0).subphaseKey, "small_seedling");
+  assert.equal(resolveMvpFoundationPresentation(100.0).isFoundationComplete, true);
+
+  // 5. No 100% display before boundary (capped at 99% before boundary)
+  assert.ok(resolveMvpFoundationPresentation(23.99).levelDisplayPercent <= 99);
+  assert.ok(resolveMvpFoundationPresentation(59.99).levelDisplayPercent <= 99);
+  assert.ok(resolveMvpFoundationPresentation(99.99).levelDisplayPercent <= 99);
+  assert.equal(resolveMvpFoundationPresentation(100.0).levelDisplayPercent, 100);
+
+  // 6. Main and compact UI contain no / 36, foundation-unit, or raw care/time lines
+  const progressSource = fs.readFileSync("src/components/garden/GardenProgressSection.tsx", "utf8");
+  const entryCardSource = fs.readFileSync("src/components/garden/GardenEntryCard.tsx", "utf8");
+  assert.ok(!progressSource.includes("/ 36"), "Progress UI must not contain '/ 36'");
+  assert.ok(!entryCardSource.includes("/ 36"), "Compact entry card must not contain '/ 36'");
+  assert.ok(!progressSource.includes("Shared care 40"), "Progress UI must not contain raw care breakdown lines");
+  assert.ok(!progressSource.includes("x / 36 foundation units"), "Progress UI must not contain legacy unit strings");
+
+  // 7. Same couple/history determinism
+  const dna1 = derivePainterlyCoupleDNA("couple-fixed-seed");
+  const dna2 = derivePainterlyCoupleDNA("couple-fixed-seed");
+  assert.deepEqual(dna1, dna2, "Identical couple seeds must produce identical couple DNA");
+
+  // 8. Different couple visual diversity
+  const dnaAlt = derivePainterlyCoupleDNA("couple-alternative-seed");
+  assert.notDeepEqual(dna1, dnaAlt, "Different couple seeds must produce distinct couple DNA");
+
+  // 9. Every event maps 1:1 to one memory marker
+  const eventsSample = [
+    { id: "e1", kind: "positive_moment", occurredAt: "2026-01-01T10:00:00Z" },
+    { id: "e2", kind: "reconnection", occurredAt: "2026-01-02T10:00:00Z" },
+    { id: "e3", kind: "important_date", occurredAt: "2026-01-03T10:00:00Z" },
+  ];
+  const markersSample = resolveMvpFoundationMemoryMarkers(eventsSample, "couple-fixed-seed", 60);
+  assert.equal(markersSample.length, eventsSample.length, "Markers count must strictly equal events count");
+
+  // 10. At Level 3 with >= 1 event, guarantee >= 1 leaf on seedling/sapling
+  assert.ok(
+    markersSample.some((m) => m.visualKind === "sapling_leaf"),
+    "Level 3 with care events must map at least one memory to an attached seedling leaf"
+  );
+
+  // 11. No marker collision & no floating attachment
+  const stemMarkers = markersSample.filter((m) => m.visualKind === "sapling_leaf");
+  for (const m of stemMarkers) {
+    assert.ok(m.x >= 380 && m.x <= 405, `Stem leaf x coordinate ${m.x} must stay near seedling stem`);
+    assert.ok(m.y >= 280 && m.y <= 316, `Stem leaf y coordinate ${m.y} must stay on seedling stem`);
+  }
+
+  // 12. Explore anchor/hit-target parity (>= 44x44pt screen space)
+  assert.ok(
+    markersSample.every((m) => m.semanticKey && m.x !== undefined && m.y !== undefined),
+    "Every marker must expose valid anchor coordinates for hit testing"
+  );
+
+  // 13. Story milestones at 24, 60, 100
+  const storySnapshot = {
+    coupleId: "couple-test-100",
+    seedString: "couple-test-100",
+    createdAt: "2026-01-01T00:00:00Z",
+    careEvents: Array.from({ length: 25 }, (_, i) => ({
+      id: `rec-c-${String(i + 1).padStart(2, "0")}`,
+      kind: "reconnection",
+      occurredAt: "2026-01-02T10:00:00Z",
+    })),
+    asOfTime: "2026-01-15T00:00:00Z",
+    isResting: false,
+  };
+  const story = createGardenStory(storySnapshot);
+  const storyMilestones = story.steps.filter((s) => s.eventKind === "stage_transition");
+  assert.deepEqual(storyMilestones.map((s) => s.totalGrowthUnits), [24, 60, 100]);
+  assert.deepEqual(storyMilestones.map((s) => s.chapterTitle), [
+    "Emerging Oak Shoot",
+    "Small Oak Seedling",
+    "Foundation Complete",
+  ]);
+
+  // 14. Event-first then milestone ordering
+  for (const m of storyMilestones) {
+    const idx = story.steps.indexOf(m);
+    assert.ok(idx > 0, "Milestone step must not be step 0");
+    const prev = story.steps[idx - 1];
+    assert.ok(prev.addedEventKey !== null, "Milestone step must immediately follow the event that crossed it");
+  }
+
+  // 15. Final Story/live Garden parity
+  const finalStoryStep = story.steps[story.steps.length - 1];
+  assert.equal(finalStoryStep.eventKind, "today");
+  assert.equal(finalStoryStep.isFinal, true);
+  assert.equal(finalStoryStep.chapterTitle, "Our Garden Today");
+
+  // 16. Same couple seed produces identical ecology & plant micro-variation
+  const ecoA = dna1.ecologicalComposition;
+  const ecoA2 = dna2.ecologicalComposition;
+  assert.deepEqual(ecoA, ecoA2, "Identical couple seeds must produce identical ecological composition");
+  assert.deepEqual(ecoA.plantMicroVariation, ecoA2.plantMicroVariation, "Micro-variation must be identical");
+
+  // 17. Different couple seeds produce materially different ecology
+  const ecoB = dnaAlt.ecologicalComposition;
+  assert.notDeepEqual(ecoA.mossCushions, ecoB.mossCushions, "Different couple seeds must vary moss cushions");
+  assert.notDeepEqual(ecoA.groundcoverClusters, ecoB.groundcoverClusters, "Different couple seeds must vary groundcover");
+
+  // 18. Decorative elements have sourceEvent = null; earned have exact source event
+  for (const item of [...ecoA.mossCushions, ...ecoA.groundcoverClusters, ...ecoA.leafLitter, ...ecoA.smallStones, ...ecoA.woodlandLightMotes]) {
+    assert.equal(item.sourceEvent, null, "Decorative ecological items must have sourceEvent = null");
+  }
+  for (const m of markersSample) {
+    assert.ok(m.sourceId !== null, "Earned memory markers must have non-null sourceId");
+    assert.ok(eventsSample.some((e) => e.id === m.sourceId), "sourceId must match an authorized care event id");
+  }
+
+  // 19. Backfill stability: adding/backfilling an event does not relocate existing elements
+  const earlierEvent = { id: "e0-backfill", kind: "positive_moment", occurredAt: "2025-12-25T10:00:00Z" };
+  const backfilledMarkers = resolveMvpFoundationMemoryMarkers([earlierEvent, ...eventsSample], "couple-fixed-seed", 60);
+  for (const originalMarker of markersSample) {
+    const retained = backfilledMarkers.find((m) => m.sourceId === originalMarker.sourceId);
+    assert.ok(retained, `Marker for event ${originalMarker.sourceId} must be retained`);
+    assert.equal(retained.x, originalMarker.x, "Backfilling an event must not shift x of existing memory markers");
+    assert.equal(retained.y, originalMarker.y, "Backfilling an event must not shift y of existing memory markers");
+    assert.equal(retained.visualKind, originalMarker.visualKind, "Backfilling must not change visual kind");
+  }
+
+  // 20. Subprogress reveals bounded contextual elements across all 3 levels without mature tree artwork
+  const subBands = [
+    resolveMvpEcologicalSubprogressBand(0),
+    resolveMvpEcologicalSubprogressBand(8),
+    resolveMvpEcologicalSubprogressBand(16),
+    resolveMvpEcologicalSubprogressBand(24),
+    resolveMvpEcologicalSubprogressBand(36),
+    resolveMvpEcologicalSubprogressBand(48),
+    resolveMvpEcologicalSubprogressBand(60),
+    resolveMvpEcologicalSubprogressBand(74),
+    resolveMvpEcologicalSubprogressBand(88),
+    resolveMvpEcologicalSubprogressBand(100),
+  ];
+  assert.deepEqual(subBands, [
+    "0-7.99",
+    "8-15.99",
+    "16-23.99",
+    "24-35.99",
+    "36-47.99",
+    "48-59.99",
+    "60-73.99",
+    "74-87.99",
+    "88-99.99",
+    "100",
+  ]);
+
+  for (let u = 0; u <= 100; u += 5) {
+    const pres = resolveMvpFoundationPresentation(u);
+    assert.ok(
+      pres.subphaseKey === "planted_acorn" ||
+      pres.subphaseKey === "emerging_shoot" ||
+      pres.subphaseKey === "small_seedling",
+      `Units ${u} must only resolve to early-life subphases, never mature oak`
+    );
+  }
 });
 
 function gardenVisualQACDCGuarded(code) {

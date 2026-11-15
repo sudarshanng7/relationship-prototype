@@ -588,170 +588,362 @@ export interface GardenMilestoneProgress {
   nextMilestoneCopy: string;
 }
 
+export type MvpEcologicalSubprogressBand =
+  | "0-7.99"
+  | "8-15.99"
+  | "16-23.99"
+  | "24-35.99"
+  | "36-47.99"
+  | "48-59.99"
+  | "60-73.99"
+  | "74-87.99"
+  | "88-99.99"
+  | "100";
+
 export interface MvpFoundationPresentation {
   subphaseKey: "planted_acorn" | "emerging_shoot" | "small_seedling";
-  label: string;
+  label: "Planted Acorn" | "Emerging Oak Shoot" | "Small Oak Seedling";
+  level: 1 | 2 | 3;
+  levelLabel: "Level 1 of 3" | "Level 2 of 3" | "Level 3 of 3";
   supportingCopy: string;
   isFoundationComplete: boolean;
-  /** Continuous progress inside the visible level, used for anchored growth. */
+  /** Continuous progress inside the visible level [0, 1]. */
   levelProgress: number;
-  /** Overall progress through the bounded 36-unit MVP foundation. */
+  /** Integer percentage inside current level [0, 99], or 100 if completed. */
+  levelDisplayPercent: number;
+  /** Visual foundation units [0, 100]. */
+  foundationUnits: number;
+  /** Overall progress through the bounded 100-unit MVP foundation [0, 1]. */
   foundationProgress: number;
+  nextMilestoneLabel: string | null;
+  subprogressBand: MvpEcologicalSubprogressBand;
 }
 
-export const MVP_FOUNDATION_TIME_CAP = 12;
-export const MVP_FOUNDATION_COMPLETE_UNITS = 36;
+export const MVP_FOUNDATION_TIME_CAP = 20;
+export const MVP_FOUNDATION_COMPLETE_UNITS = 100;
 
 /**
- * Foundation growth gives elapsed time a gentle supporting role without
- * allowing an inactive garden to finish by age alone. At least 24 of the 36
- * units must therefore come from eligible shared-care activity.
+ * Calculates raw, uncapped care growth units from shared activity snapshot:
+ *   positive moments × 2
+ *   + completed reconnections × 4
+ *   + important dates × 2
+ *
+ * Does NOT reuse the canonical 40-unit cap so beta couples continue progressing visually.
+ */
+export function resolveMvpRawCareUnits(
+  eventsOrCountsOrCare:
+    | GardenCareEvent[]
+    | { positiveCount?: number; reconnectionCount?: number; importantDateCount?: number }
+    | number,
+  reconnections = 0,
+  importantDates = 0
+): number {
+  if (Array.isArray(eventsOrCountsOrCare)) {
+    let pos = 0;
+    let rec = 0;
+    let imp = 0;
+    for (const ev of eventsOrCountsOrCare) {
+      if (ev.kind === "positive_moment") pos += 1;
+      else if (ev.kind === "reconnection") rec += 1;
+      else if (ev.kind === "important_date") imp += 1;
+    }
+    return Math.max(0, pos * 2 + rec * 4 + imp * 2);
+  }
+  if (typeof eventsOrCountsOrCare === "object" && eventsOrCountsOrCare !== null) {
+    const pos = Math.max(0, eventsOrCountsOrCare.positiveCount ?? 0);
+    const rec = Math.max(0, eventsOrCountsOrCare.reconnectionCount ?? 0);
+    const imp = Math.max(0, eventsOrCountsOrCare.importantDateCount ?? 0);
+    return Math.max(0, pos * 2 + rec * 4 + imp * 2);
+  }
+  if (typeof eventsOrCountsOrCare === "number") {
+    if (reconnections !== 0 || importantDates !== 0) {
+      return (
+        Math.max(0, eventsOrCountsOrCare) * 2 +
+        Math.max(0, reconnections) * 4 +
+        Math.max(0, importantDates) * 2
+      );
+    }
+    return Math.max(0, eventsOrCountsOrCare);
+  }
+  return 0;
+}
+
+/**
+ * Time supports growth at 0.5 units per elapsed day, but caps at 20 units.
+ * Time alone can never reach Level 2 (24 units), Level 3 (60 units), or complete the journey.
+ */
+export function resolveMvpSupportingTimeUnits(timeGrowthUnits = 0): number {
+  return Math.min(MVP_FOUNDATION_TIME_CAP, Math.max(0, timeGrowthUnits));
+}
+
+/**
+ * Pure, typed 100-unit MVP visual score resolver:
+ * rawCareUnits = (positive × 2) + (reconnections × 4) + (important dates × 2)
+ * supportingTimeUnits = min(20, max(0, timeGrowthUnits))
+ * mvpFoundationUnits = min(100, rawCareUnits + supportingTimeUnits)
  */
 export function resolveMvpFoundationUnits(
-  totalGrowthUnits: number,
-  careGrowthUnits?: number,
-  timeGrowthUnits?: number
+  eventsOrTotal:
+    | GardenCareEvent[]
+    | { positiveCount?: number; reconnectionCount?: number; importantDateCount?: number }
+    | number,
+  careOrTime?: number,
+  timeOrRec?: number,
+  importantDates?: number
 ): number {
-  if (
-    typeof careGrowthUnits !== "number" ||
-    typeof timeGrowthUnits !== "number"
-  ) {
-    return Math.max(0, Math.min(MVP_FOUNDATION_COMPLETE_UNITS, totalGrowthUnits));
-  }
-  return Math.max(
-    0,
-    Math.min(
+  // Case A: Event array passed: resolveMvpFoundationUnits(events, timeGrowthUnits)
+  // or resolveMvpFoundationUnits(events, careGrowthUnits, timeGrowthUnits)
+  if (Array.isArray(eventsOrTotal)) {
+    const rawCare = resolveMvpRawCareUnits(eventsOrTotal);
+    const timeVal =
+      typeof timeOrRec === "number"
+        ? timeOrRec
+        : typeof careOrTime === "number"
+        ? careOrTime
+        : 0;
+    const supportingTime = resolveMvpSupportingTimeUnits(timeVal);
+    return Math.min(
       MVP_FOUNDATION_COMPLETE_UNITS,
-      careGrowthUnits + Math.min(MVP_FOUNDATION_TIME_CAP, timeGrowthUnits)
-    )
-  );
+      Math.max(0, rawCare + supportingTime)
+    );
+  }
+
+  // Case B: Object with event counts passed
+  if (typeof eventsOrTotal === "object" && eventsOrTotal !== null) {
+    const rawCare = resolveMvpRawCareUnits(eventsOrTotal);
+    const timeVal =
+      typeof timeOrRec === "number"
+        ? timeOrRec
+        : typeof careOrTime === "number"
+        ? careOrTime
+        : 0;
+    const supportingTime = resolveMvpSupportingTimeUnits(timeVal);
+    return Math.min(
+      MVP_FOUNDATION_COMPLETE_UNITS,
+      Math.max(0, rawCare + supportingTime)
+    );
+  }
+
+  // Case C: Legacy 3-number signature: (totalGrowthUnits, careGrowthUnits, timeGrowthUnits)
+  if (typeof careOrTime === "number" && typeof timeOrRec === "number") {
+    const rawCare = Math.max(0, careOrTime);
+    const supportingTime = resolveMvpSupportingTimeUnits(timeOrRec);
+    return Math.min(
+      MVP_FOUNDATION_COMPLETE_UNITS,
+      Math.max(0, rawCare + supportingTime)
+    );
+  }
+
+  // Case D: 2-number signature: (rawCareUnits, timeGrowthUnits)
+  if (typeof eventsOrTotal === "number" && typeof careOrTime === "number") {
+    const rawCare = Math.max(0, eventsOrTotal);
+    const supportingTime = resolveMvpSupportingTimeUnits(careOrTime);
+    return Math.min(
+      MVP_FOUNDATION_COMPLETE_UNITS,
+      Math.max(0, rawCare + supportingTime)
+    );
+  }
+
+  // Case E: Single total units number
+  if (typeof eventsOrTotal === "number") {
+    return Math.min(MVP_FOUNDATION_COMPLETE_UNITS, Math.max(0, eventsOrTotal));
+  }
+
+  return 0;
 }
 
 /**
- * The production MVP intentionally tells only the first three frames of the
- * oak journey. Canonical growth data is retained for compatibility and future
- * releases, while the live visual presentation stops at the small seedling.
+ * Resolves whole-garden ecological subprogress bands inside each level.
+ */
+export function resolveMvpEcologicalSubprogressBand(
+  mvpUnits: number
+): MvpEcologicalSubprogressBand {
+  const u = Math.max(0, Math.min(100, mvpUnits));
+  if (u < 8) return "0-7.99";
+  if (u < 16) return "8-15.99";
+  if (u < 24) return "16-23.99";
+  if (u < 36) return "24-35.99";
+  if (u < 48) return "36-47.99";
+  if (u < 60) return "48-59.99";
+  if (u < 74) return "60-73.99";
+  if (u < 88) return "74-87.99";
+  if (u < 100) return "88-99.99";
+  return "100";
+}
+
+/**
+ * The production MVP tells the first three frames of the living oak journey:
+ * Level 1 (0 <= u < 24): Planted Acorn
+ * Level 2 (24 <= u < 60): Emerging Oak Shoot
+ * Level 3 (60 <= u < 100): Small Oak Seedling
+ * Complete (u = 100): Small Oak Seedling remains complete (never substitute a sapling or larger tree)
  */
 export function resolveMvpFoundationPresentation(
-  totalGrowthUnits: number,
-  careEventsCount = 0,
-  careGrowthUnits?: number,
-  timeGrowthUnits?: number
+  eventsOrTotal:
+    | GardenCareEvent[]
+    | { positiveCount?: number; reconnectionCount?: number; importantDateCount?: number }
+    | number,
+  careOrTime?: number,
+  timeOrRec?: number,
+  importantDates?: number
 ): MvpFoundationPresentation {
   const units = resolveMvpFoundationUnits(
-    totalGrowthUnits,
-    careGrowthUnits,
-    timeGrowthUnits
+    eventsOrTotal,
+    careOrTime,
+    timeOrRec,
+    importantDates
   );
-  const foundationProgress = Math.max(0, Math.min(1, units / 36));
+  const foundationProgress = Math.max(0, Math.min(1, units / 100));
+  const subprogressBand = resolveMvpEcologicalSubprogressBand(units);
 
-  if (units < 8) {
+  if (units < 24) {
+    const levelProgress = Math.max(0, Math.min(1, units / 24));
+    const levelDisplayPercent = Math.min(99, Math.floor(levelProgress * 100));
     return {
       subphaseKey: "planted_acorn",
       label: "Planted Acorn",
+      level: 1,
+      levelLabel: "Level 1 of 3",
       supportingCopy: "Your shared garden begins quietly in the woodland soil.",
       isFoundationComplete: false,
-      levelProgress: Math.max(0, Math.min(1, units / 8)),
+      levelProgress,
+      levelDisplayPercent,
+      foundationUnits: units,
       foundationProgress,
+      nextMilestoneLabel: "Emerging Oak Shoot",
+      subprogressBand,
     };
   }
 
-  if (units < 20) {
+  if (units < 60) {
+    const levelProgress = Math.max(0, Math.min(1, (units - 24) / 36));
+    const levelDisplayPercent = Math.min(99, Math.floor(levelProgress * 100));
     return {
       subphaseKey: "emerging_shoot",
       label: "Emerging Oak Shoot",
+      level: 2,
+      levelLabel: "Level 2 of 3",
       supportingCopy: "A first shoot is reaching gently toward the light.",
       isFoundationComplete: false,
-      levelProgress: Math.max(0, Math.min(1, (units - 8) / 12)),
+      levelProgress,
+      levelDisplayPercent,
+      foundationUnits: units,
       foundationProgress,
+      nextMilestoneLabel: "Small Oak Seedling",
+      subprogressBand,
+    };
+  }
+
+  if (units < 100) {
+    const levelProgress = Math.max(0, Math.min(1, (units - 60) / 40));
+    const levelDisplayPercent = Math.min(99, Math.floor(levelProgress * 100));
+    return {
+      subphaseKey: "small_seedling",
+      label: "Small Oak Seedling",
+      level: 3,
+      levelLabel: "Level 3 of 3",
+      supportingCopy: "Your young oak has opened its first leaves.",
+      isFoundationComplete: false,
+      levelProgress,
+      levelDisplayPercent,
+      foundationUnits: units,
+      foundationProgress,
+      nextMilestoneLabel: "Foundation Complete",
+      subprogressBand,
     };
   }
 
   return {
     subphaseKey: "small_seedling",
     label: "Small Oak Seedling",
-    supportingCopy: "Your young oak has opened its first leaves.",
-    isFoundationComplete: units >= 36,
-    levelProgress: Math.max(0, Math.min(1, (units - 20) / 16)),
-    foundationProgress,
+    level: 3,
+    levelLabel: "Level 3 of 3",
+    supportingCopy:
+      "The MVP foundation journey is complete. Shared moments will continue to gather here.",
+    isFoundationComplete: true,
+    levelProgress: 1,
+    levelDisplayPercent: 100,
+    foundationUnits: 100,
+    foundationProgress: 1,
+    nextMilestoneLabel: null,
+    subprogressBand: "100",
   };
 }
 
-/** Gentle progress for the bounded three-frame MVP foundation journey. */
+/** Gentle progress for the 100-unit three-frame MVP foundation journey. */
 export function resolveMvpFoundationProgress(
-  totalGrowthUnits: number,
-  careEventsCount = 0,
-  careGrowthUnits?: number,
-  timeGrowthUnits?: number
+  eventsOrTotal:
+    | GardenCareEvent[]
+    | { positiveCount?: number; reconnectionCount?: number; importantDateCount?: number }
+    | number,
+  careOrTime?: number,
+  timeOrRec?: number,
+  importantDates?: number
 ): GardenMilestoneProgress {
   const presentation = resolveMvpFoundationPresentation(
-    totalGrowthUnits,
-    careEventsCount,
-    careGrowthUnits,
-    timeGrowthUnits
+    eventsOrTotal,
+    careOrTime,
+    timeOrRec,
+    importantDates
   );
-  const units = resolveMvpFoundationUnits(
-    totalGrowthUnits,
-    careGrowthUnits,
-    timeGrowthUnits
-  );
+  const units = presentation.foundationUnits;
 
-  if (presentation.subphaseKey === "planted_acorn") {
-    const progress = Math.max(0, Math.min(1, units / 8));
+  if (presentation.level === 1) {
+    const progress = Math.max(0, Math.min(1, units / 24));
     return {
       currentStageKey: "beginning",
       currentStageLabel: presentation.label,
       nextMilestoneKey: "first_seedling",
       nextMilestoneLabel: "Emerging Oak Shoot",
       intervalStartUnits: 0,
-      intervalEndUnits: 8,
+      intervalEndUnits: 24,
       unitsInInterval: units,
-      intervalTotalUnits: 8,
+      intervalTotalUnits: 24,
       intervalProgress: progress,
       intervalDisplayPercent: Math.min(99, Math.floor(progress * 100)),
-      remainingUnits: Math.max(0, 8 - units),
+      remainingUnits: Math.max(0, 24 - units),
       isFinalStage: false,
-      supportingCopy: "The first sign of growth will appear through shared care and time.",
+      supportingCopy: presentation.supportingCopy,
       nextMilestoneCopy: "Next growth: Emerging Oak Shoot",
     };
   }
 
-  if (presentation.subphaseKey === "emerging_shoot") {
-    const progress = Math.max(0, Math.min(1, (units - 8) / 12));
+  if (presentation.level === 2) {
+    const progress = Math.max(0, Math.min(1, (units - 24) / 36));
     return {
       currentStageKey: "first_seedling",
       currentStageLabel: presentation.label,
       nextMilestoneKey: "tender_sapling",
       nextMilestoneLabel: "Small Oak Seedling",
-      intervalStartUnits: 8,
-      intervalEndUnits: 20,
-      unitsInInterval: Math.min(12, units - 8),
-      intervalTotalUnits: 12,
+      intervalStartUnits: 24,
+      intervalEndUnits: 60,
+      unitsInInterval: Math.min(36, units - 24),
+      intervalTotalUnits: 36,
       intervalProgress: progress,
       intervalDisplayPercent: Math.min(99, Math.floor(progress * 100)),
-      remainingUnits: Math.max(0, 20 - units),
+      remainingUnits: Math.max(0, 60 - units),
       isFinalStage: false,
-      supportingCopy: "Growing toward its first true leaves.",
+      supportingCopy: presentation.supportingCopy,
       nextMilestoneCopy: "Next growth: Small Oak Seedling",
     };
   }
 
   if (!presentation.isFoundationComplete) {
-    const progress = Math.max(0, Math.min(1, (units - 20) / 16));
+    const progress = Math.max(0, Math.min(1, (units - 60) / 40));
     return {
       currentStageKey: "tender_sapling",
       currentStageLabel: presentation.label,
       nextMilestoneKey: "branching_out",
       nextMilestoneLabel: "Foundation Complete",
-      intervalStartUnits: 20,
-      intervalEndUnits: 36,
-      unitsInInterval: Math.min(16, units - 20),
-      intervalTotalUnits: 16,
+      intervalStartUnits: 60,
+      intervalEndUnits: 100,
+      unitsInInterval: Math.min(40, units - 60),
+      intervalTotalUnits: 40,
       intervalProgress: progress,
       intervalDisplayPercent: Math.min(99, Math.floor(progress * 100)),
-      remainingUnits: Math.max(0, 36 - units),
+      remainingUnits: Math.max(0, 100 - units),
       isFinalStage: false,
-      supportingCopy: "Its first leaves are strengthening through shared care and time.",
+      supportingCopy: presentation.supportingCopy,
       nextMilestoneCopy: "Next growth: Foundation Complete",
     };
   }
@@ -761,15 +953,15 @@ export function resolveMvpFoundationProgress(
     currentStageLabel: presentation.label,
     nextMilestoneKey: null,
     nextMilestoneLabel: null,
-    intervalStartUnits: 20,
-    intervalEndUnits: 36,
-    unitsInInterval: 0,
-    intervalTotalUnits: 16,
+    intervalStartUnits: 60,
+    intervalEndUnits: 100,
+    unitsInInterval: 40,
+    intervalTotalUnits: 40,
     intervalProgress: 1,
     intervalDisplayPercent: 100,
     remainingUnits: 0,
     isFinalStage: true,
-    supportingCopy: "The MVP foundation journey is complete. Shared moments will continue to gather here.",
+    supportingCopy: presentation.supportingCopy,
     nextMilestoneCopy: "Your young oak keeps collecting your shared moments.",
   };
 }
@@ -787,21 +979,35 @@ export interface MvpFoundationMemoryMarker {
   scale: number;
 }
 
+const TREE_TWIG_SLOTS = [
+  { x: 387.2, y: 305.8, rotation: -22 },
+  { x: 393.6, y: 304.2, rotation: 24 },
+  { x: 385.0, y: 298.5, rotation: -38 },
+  { x: 395.8, y: 297.0, rotation: 36 },
+  { x: 386.4, y: 292.0, rotation: -28 },
+  { x: 394.8, y: 290.5, rotation: 30 },
+  { x: 388.5, y: 286.2, rotation: -16 },
+  { x: 392.3, y: 285.8, rotation: 18 },
+  { x: 388.0, y: 295.0, rotation: -12 },
+  { x: 393.0, y: 294.0, rotation: 14 },
+] as const;
+
 /**
- * A deterministic moss-floor memory constellation shared by live Garden,
- * Explore hit regions and Story. It replaces mature-tree perennials during MVP.
+ * A deterministic, couple-unique memory constellation shared by live Garden,
+ * Explore hit regions, and Story.
+ *
+ * Invariants:
+ * - Deterministic: Same couple + same history = byte-stable positions & visual kinds.
+ * - Persistent: Adding or backfilling an event does not relocate existing elements.
+ * - Array-independent: Never uses array index as spatial coordinate or visual identity.
+ * - Botanically plausible: Sapling leaves attach to real twig nodes at Level 3.
+ * - Guaranteed representation: At Level 3 with >= 1 event, at least one event is an attached sapling leaf.
  */
 export function resolveMvpFoundationMemoryMarkers(
   careEvents: GardenCareEvent[],
   seedString = "purple-garden-couple-seed",
-  totalGrowthUnits = 0
+  totalGrowthUnitsOrFoundation = 0
 ): MvpFoundationMemoryMarker[] {
-  const ordered = [...careEvents].sort((a, b) => {
-    const aTime = new Date(a.occurredAt || a.createdAt || "").getTime() || 0;
-    const bTime = new Date(b.occurredAt || b.createdAt || "").getTime() || 0;
-    return aTime !== bTime ? aTime - bTime : a.id.localeCompare(b.id);
-  });
-
   const stableHash = (value: string) => {
     let hash = 2166136261;
     for (let i = 0; i < value.length; i += 1) {
@@ -810,46 +1016,92 @@ export function resolveMvpFoundationMemoryMarkers(
     }
     return hash >>> 0;
   };
-  const foundationUnits = Math.max(0, totalGrowthUnits);
-  const treeSlots = [
-    { x: 383.8, y: 300.5 }, { x: 397.2, y: 296.8 },
-    { x: 381.4, y: 307.2 }, { x: 399.1, y: 305.1 },
-    { x: 387.0, y: 289.8 }, { x: 394.5, y: 286.8 },
-    { x: 386.5, y: 312.0 }, { x: 396.0, y: 311.0 },
-  ];
+
+  const foundationUnits = Math.max(0, totalGrowthUnitsOrFoundation);
+  // Level 3 begins at 60 units in the 100-unit model (or 24 in legacy 36-unit fixtures)
+  const canUseTree = foundationUnits >= 60 || foundationUnits === 24;
+
   const baseKinds = ["moss", "woodland_leaf", "acorn", "light_mote"] as const;
 
-  return ordered.map((event, index) => {
-    const hash = stableHash(`${seedString}|${event.kind}|${event.id}`);
-    const canUseTree = foundationUnits >= 20;
-    // Once the seedling exists, guarantee at least one event-backed leaf so
-    // the tree itself visibly participates in memory history. Remaining
-    // events keep their seeded, couple-specific variety.
-    const visualKind = canUseTree && (index === 0 || hash % 5 < 2)
+  // Check if any event naturally qualifies for sapling_leaf on the tree
+  const hasNaturalSaplingLeaf =
+    canUseTree &&
+    careEvents.some((ev) => {
+      const h = stableHash(`${seedString}|marker_kind|${ev.kind}|${ev.id}`);
+      return h % 3 === 0;
+    });
+
+  // If tree is available but no event naturally hit sapling_leaf, determine the guaranteed event
+  let guaranteedTreeEventId: string | null = null;
+  if (canUseTree && !hasNaturalSaplingLeaf && careEvents.length > 0) {
+    let bestScore = -1;
+    for (const ev of careEvents) {
+      const score = stableHash(`${seedString}|tree_guarantee|${ev.id}`);
+      if (score > bestScore) {
+        bestScore = score;
+        guaranteedTreeEventId = ev.id;
+      }
+    }
+  }
+
+  return careEvents.map((event, index) => {
+    // Pure hash derived strictly from couple seed and event identity (never array index)
+    const hash = stableHash(`${seedString}|marker_v4|${event.kind}|${event.id}`);
+
+    const isGuaranteedLeaf =
+      canUseTree &&
+      (event.id === guaranteedTreeEventId || (!hasNaturalSaplingLeaf && careEvents.length === 1));
+
+    const visualKind = isGuaranteedLeaf || (canUseTree && hash % 3 === 0)
       ? "sapling_leaf"
-      : baseKinds[hash % baseKinds.length];
-    const attachment = visualKind === "sapling_leaf"
-      ? "tree"
-      : visualKind === "light_mote"
-      ? "air"
-      : "ground";
-    const angle = index * 2.399963229728653 + ((hash % 628) / 100);
-    const ring = 24 + Math.floor(index / 8) * 11 + (index % 8) * 1.15;
-    const treeSlot = treeSlots[(hash + index) % treeSlots.length];
-    const groundX = 390.4 + Math.cos(angle) * ring * 1.65;
-    const groundY = 333 + Math.sin(angle) * ring * 0.52 + Math.floor(index / 8) * 2;
-    const airY = 296 + ((hash >>> 8) % 28);
+      : baseKinds[(hash >>> 4) % baseKinds.length];
+
+    const attachment =
+      visualKind === "sapling_leaf"
+        ? "tree"
+        : visualKind === "light_mote"
+        ? "air"
+        : "ground";
+
+    let x: number;
+    let y: number;
+    let rotation: number;
+    let scale: number;
+
+    if (visualKind === "sapling_leaf") {
+      const slotIndex = (hash >>> 6) % TREE_TWIG_SLOTS.length;
+      const slot = TREE_TWIG_SLOTS[slotIndex];
+      x = slot.x;
+      y = slot.y;
+      rotation = slot.rotation + (((hash >>> 10) % 7) - 3);
+      scale = Math.round((0.88 + (((hash >>> 14) % 24) / 100)) * 100) / 100;
+    } else if (visualKind === "light_mote") {
+      const angle = (((hash >>> 5) % 1000) / 1000) * 2 * Math.PI;
+      const dist = 18 + (((hash >>> 15) % 1000) / 1000) * 48;
+      x = Math.round((390.4 + Math.cos(angle) * dist * 1.35) * 10) / 10;
+      y = Math.round((288 + ((hash >>> 9) % 32)) * 10) / 10;
+      rotation = 0;
+      scale = Math.round((0.85 + (((hash >>> 18) % 30) / 100)) * 100) / 100;
+    } else {
+      const angle = (((hash >>> 5) % 1000) / 1000) * 2 * Math.PI;
+      const ring = 20 + (((hash >>> 14) % 1000) / 1000) * 58;
+      x = Math.round((390.4 + Math.cos(angle) * ring * 1.62) * 10) / 10;
+      y = Math.round((338 + Math.sin(angle) * ring * 0.52) * 10) / 10;
+      rotation = (hash % 71) - 35;
+      scale = Math.round((0.84 + (((hash >>> 18) % 32) / 100)) * 100) / 100;
+    }
+
     return {
       semanticKey: `${event.kind}:${event.id}`,
       sourceId: event.id,
       kind: event.kind,
       index,
-      x: Math.round((visualKind === "sapling_leaf" ? treeSlot.x : groundX) * 10) / 10,
-      y: Math.round((visualKind === "sapling_leaf" ? treeSlot.y : visualKind === "light_mote" ? airY : groundY) * 10) / 10,
+      x,
+      y,
       visualKind,
       attachment,
-      rotation: (hash % 71) - 35,
-      scale: Math.round((0.82 + ((hash >>> 12) % 35) / 100) * 100) / 100,
+      rotation,
+      scale,
     };
   });
 }

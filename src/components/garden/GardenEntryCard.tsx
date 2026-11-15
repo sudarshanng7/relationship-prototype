@@ -85,8 +85,7 @@ export function GardenEntryCard({
 
   const ambienceLabel = getAmbienceLabel(stage.key, isResting);
   const foundationStage = resolveMvpFoundationPresentation(
-    totalGrowthUnits,
-    careEvents?.length ?? 0,
+    careEvents && careEvents.length > 0 ? careEvents : totalGrowthUnits,
     careGrowthUnits,
     timeGrowthUnits
   );

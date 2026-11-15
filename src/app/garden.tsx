@@ -164,8 +164,9 @@ export default function GardenScreen() {
   const effectiveStage = garden.stage;
   const effectiveCareEvents = garden.careEvents;
   const foundationStage = resolveMvpFoundationPresentation(
-    effectiveTotalGrowthUnits,
-    effectiveCareEvents.length,
+    effectiveCareEvents && effectiveCareEvents.length > 0
+      ? effectiveCareEvents
+      : effectiveTotalGrowthUnits,
     effectiveCareGrowthUnits,
     effectiveTimeGrowthUnits
   );

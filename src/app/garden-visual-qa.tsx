@@ -33,6 +33,9 @@ import { CouplyHeader, CouplyPage } from "@/components/CouplyUI";
 import { useTheme } from "@/context/ThemeContext";
 import { GardenVisualizer } from "@/components/garden/GardenVisualizer";
 import { GardenExplorer } from "@/components/garden/GardenExplorer";
+import { GardenProgressSection } from "@/components/garden/GardenProgressSection";
+import { GardenStoryPlayer } from "@/components/garden/GardenStoryPlayer";
+import { createGardenStory } from "@/lib/garden-story";
 import {
   type CanonicalStageKeyOrBeginning,
   type GardenAtmosphereTone,
@@ -322,14 +325,21 @@ export default function GardenVisualQARoute() {
     subphase?: string;
     camera?: string;
     guides?: string;
+    units?: string;
+    presentation?: string;
+    scenario?: string;
+    initialFeature?: string;
   }>();
   const { theme, effectiveTheme } = useTheme();
 
   // Top-level Navigation Mode
   const [activeTab, setActiveTab] = useState<
-    "slots" | "simulation" | "early_life"
+    "slots" | "simulation" | "early_life" | "story"
   >(
-    params.tab === "early_life" || params.tab === "simulation" || params.tab === "slots"
+    params.tab === "early_life" ||
+    params.tab === "simulation" ||
+    params.tab === "slots" ||
+    params.tab === "story"
       ? params.tab
       : "slots"
   );
@@ -368,9 +378,17 @@ export default function GardenVisualQARoute() {
     useState<GardenRendererMode>("painterly_when_eligible");
   const [tone, setTone] = useState<GardenAtmosphereTone>("calm_light");
   const [presentationMode, setPresentationMode] =
-    useState<"full" | "compact" | "explore">("full");
+    useState<"full" | "compact" | "explore">(
+      params.presentation === "explore" || params.presentation === "compact" || params.presentation === "full"
+        ? params.presentation
+        : "full"
+    );
   const [scenarioKey, setScenarioKey] =
-    useState<ScenarioKey>("structure_calibration");
+    useState<ScenarioKey>(
+      params.scenario && params.scenario in SCENARIOS
+        ? (params.scenario as ScenarioKey)
+        : "multiple_good_moments"
+    );
   const [selectedViewportIdx, setSelectedViewportIdx] = useState(1); // 390x844 default
 
   const scenario = SCENARIOS[scenarioKey];
@@ -453,9 +471,13 @@ export default function GardenVisualQARoute() {
     params.camera === "inspect" ? "inspect" : "overview"
   );
   const [simulatedUnits, setSimulatedUnits] = useState<number>(
-    EARLY_LIFE_PREVIEW_UNITS[earlyLifeSubphase]
+    params.units !== undefined
+      ? parseFloat(params.units)
+      : EARLY_LIFE_PREVIEW_UNITS[earlyLifeSubphase]
   );
-  const [useSimulatedGrowth, setUseSimulatedGrowth] = useState<boolean>(false);
+  const [useSimulatedGrowth, setUseSimulatedGrowth] = useState<boolean>(
+    params.units !== undefined
+  );
 
   const previewMilestone = useMemo(() => {
     return resolvePreviewMilestoneProgress(
@@ -476,7 +498,7 @@ export default function GardenVisualQARoute() {
       : EARLY_LIFE_PREVIEW_TARGET_SLOTS[effectiveEarlyLifeSubphase];
   const earlyLifeGrowth = useMemo(() => {
     if (useSimulatedGrowth) {
-      const clamped = Math.max(0, Math.min(36, simulatedUnits));
+      const clamped = Math.max(0, Math.min(100, simulatedUnits));
       return {
         total: clamped,
         care: earlyLifeShowEarnedFeature ? Math.min(clamped, 6) : 0,
@@ -576,6 +598,55 @@ export default function GardenVisualQARoute() {
     });
   }, [earlyLifeGrowth, earlyLifeFixtureEvents, effectiveTheme]);
 
+  const qaStory = useMemo(() => {
+    const events: GardenCareEvent[] = [
+      {
+        id: "qa-rec-1",
+        kind: "reconnection",
+        occurredAt: "2026-01-02T10:00:00Z",
+        displayTitle: "Listening With Openness",
+      },
+      {
+        id: "qa-rec-2",
+        kind: "reconnection",
+        occurredAt: "2026-01-03T10:00:00Z",
+        displayTitle: "Giving Space",
+      },
+      {
+        id: "qa-rec-3",
+        kind: "reconnection",
+        occurredAt: "2026-01-04T10:00:00Z",
+        displayTitle: "Gentle Reset",
+      },
+      {
+        id: "qa-rec-4",
+        kind: "reconnection",
+        occurredAt: "2026-01-05T10:00:00Z",
+        displayTitle: "Clear Apology",
+      },
+      {
+        id: "qa-rec-5",
+        kind: "reconnection",
+        occurredAt: "2026-01-06T10:00:00Z",
+        displayTitle: "Mutual Understanding",
+      },
+      {
+        id: "qa-rec-6",
+        kind: "reconnection",
+        occurredAt: "2026-01-07T10:00:00Z",
+        displayTitle: "Finding Balance",
+      },
+    ];
+    return createGardenStory({
+      coupleId: FIXTURE_COUPLE_ID,
+      seedString: FIXTURE_SEED,
+      createdAt: "2026-01-01T00:00:00Z",
+      careEvents: events,
+      asOfTime: "2026-01-10T00:00:00Z",
+      isResting: false,
+    });
+  }, []);
+
   const EARLY_LIFE_SUBPHASES: EarlyLifeSubphaseKey[] = [
     "planted_acorn",
     "emerging_shoot",
@@ -672,6 +743,22 @@ export default function GardenVisualQARoute() {
               ]}
             >
               3. Early-Life Lifecycle Preview
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.tabButton,
+              activeTab === "story" && styles.tabButtonActive,
+            ]}
+            onPress={() => setActiveTab("story")}
+          >
+            <Text
+              style={[
+                styles.tabButtonText,
+                activeTab === "story" && styles.tabButtonTextActive,
+              ]}
+            >
+              4. Story (100-Unit Parity)
             </Text>
           </Pressable>
         </View>
@@ -1370,6 +1457,12 @@ export default function GardenVisualQARoute() {
                     isResting={scenario.isResting}
                     careSignals={scenario.signals}
                     careEvents={scenario.events}
+                    initialFeatureId={
+                      params.initialFeature ||
+                      (scenario.events[0]
+                        ? getCareFeatureId(scenario.events[0].kind, scenario.events[0].id)
+                        : null)
+                    }
                     onClose={() => setPresentationMode("full")}
                   />
                 ) : (
@@ -1523,17 +1616,17 @@ export default function GardenVisualQARoute() {
 
               {/* Threshold Crossing Simulation Presets */}
               <Text style={[styles.toggleLabel, { marginTop: 12, marginBottom: 6 }]}>
-                Boundary Crossing Test Points:
+                100-Unit MVP Boundary Test Points:
               </Text>
               <View style={styles.pillRow}>
                 {[
-                  { label: "0.0 (Acorn)", val: 0.0 },
-                  { label: "4.0 (Shoot 50%)", val: 4.0 },
-                  { label: "8.0 (Shoot Bound)", val: 8.0 },
-                  { label: "8.1 (Seedling Start)", val: 8.1 },
-                  { label: "15.9 (Seedling 99%)", val: 15.9 },
-                  { label: "16.0 (Sapling Start)", val: 16.0 },
-                  { label: "24.0 (Sapling)", val: 24.0 },
+                  { label: "0.0 (Acorn 0%)", val: 0.0 },
+                  { label: "23.99 (Level 1 99%)", val: 23.99 },
+                  { label: "24.0 (Level 2 0%)", val: 24.0 },
+                  { label: "59.99 (Level 2 99%)", val: 59.99 },
+                  { label: "60.0 (Level 3 0%)", val: 60.0 },
+                  { label: "99.99 (Level 3 99%)", val: 99.99 },
+                  { label: "100.0 (Complete)", val: 100.0 },
                 ].map((pt) => {
                   const isCur = Math.abs(simulatedUnits - pt.val) < 0.05 && useSimulatedGrowth;
                   return (
@@ -1908,6 +2001,36 @@ export default function GardenVisualQARoute() {
                   camera={earlyLifeCamera}
                 />
               </View>
+
+              {/* Production MVP 100-Unit Growth Progress Section */}
+              <GardenProgressSection
+                totalGrowthUnits={earlyLifeGrowth.total}
+                careGrowthUnits={earlyLifeGrowth.care}
+                timeGrowthUnits={earlyLifeGrowth.time}
+                style={{ marginTop: 12 }}
+              />
+
+              {/* Our Space Compact Card Variant */}
+              <View
+                style={[
+                  styles.card,
+                  {
+                    marginTop: 12,
+                    backgroundColor: isLight ? "#FFFFFF" : "#1F162B",
+                    padding: 14,
+                    borderColor: theme.borderSoft,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={styles.cardHeading}>OUR SPACE COMPACT CARD VARIANT</Text>
+                <GardenProgressSection
+                  totalGrowthUnits={earlyLifeGrowth.total}
+                  careGrowthUnits={earlyLifeGrowth.care}
+                  timeGrowthUnits={earlyLifeGrowth.time}
+                  compact={true}
+                />
+              </View>
             </View>
 
             {/* Invariant Verification Grid */}
@@ -1975,6 +2098,44 @@ export default function GardenVisualQARoute() {
                   ✓ Presentation-only animation; zero database writes or state persistence
                 </Text>
               </View>
+            </View>
+          </View>
+        )}
+
+        {/* ---------------------------------------------------------------- */}
+        {/* TAB 4: GARDEN STORY 100-UNIT MILESTONE PARITY                   */}
+        {/* ---------------------------------------------------------------- */}
+        {activeTab === "story" && (
+          <View style={styles.sectionContainer}>
+            <View style={styles.card}>
+              <Text style={styles.cardHeading}>GARDEN STORY 100-UNIT PLAYBACK LAB</Text>
+              <Text style={styles.cardSubtext}>
+                Inspects event-first ordering, memory leaf highlight, followed by the crossed milestone frame.
+              </Text>
+            </View>
+
+            <View
+              style={{
+                width: "100%",
+                maxWidth: 420,
+                alignSelf: "center",
+                borderRadius: 20,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: theme.borderSoft,
+              }}
+            >
+              <GardenStoryPlayer
+                key="qa-story-player"
+                story={qaStory}
+                theme={theme}
+                isLight={isLight}
+                isDim={effectiveTheme === "dim"}
+                coupleId={FIXTURE_COUPLE_ID}
+                liveCareEvents={qaStory.steps[qaStory.steps.length - 1].cumulativeCareEvents}
+                onClose={() => setActiveTab("early_life")}
+                onPlayAgain={() => {}}
+              />
             </View>
           </View>
         )}

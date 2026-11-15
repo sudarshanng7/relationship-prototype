@@ -24,7 +24,12 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { resolveMvpFoundationProgress, resolveMvpFoundationUnits, type GardenMilestoneProgress } from "@/lib/garden/stage-contracts";
+import {
+  resolveMvpFoundationProgress,
+  resolveMvpFoundationPresentation,
+  type GardenMilestoneProgress,
+  type MvpFoundationPresentation,
+} from "@/lib/garden/stage-contracts";
 
 export interface GardenProgressSectionProps {
   totalGrowthUnits: number;
@@ -49,23 +54,24 @@ export function GardenProgressSection({
   const [isReducedMotion, setIsReducedMotion] = useState(false);
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
-  // Derive pure milestone progress model
-  const progress: GardenMilestoneProgress = useMemo(() => {
-    return resolveMvpFoundationProgress(
+  // Derive pure 100-unit MVP presentation & milestone progress model
+  const presentation: MvpFoundationPresentation = useMemo(() => {
+    return resolveMvpFoundationPresentation(
       totalGrowthUnits,
-      careEventsCount,
       careGrowthUnits,
       timeGrowthUnits
     );
-  }, [totalGrowthUnits, careEventsCount, careGrowthUnits, timeGrowthUnits]);
-  const foundationUnits = resolveMvpFoundationUnits(
-    totalGrowthUnits,
-    careGrowthUnits,
-    timeGrowthUnits
-  );
-  const supportedTimeUnits = Math.min(12, Math.max(0, timeGrowthUnits ?? 0));
-  const currentLevel = foundationUnits < 8 ? 1 : foundationUnits < 20 ? 2 : 3;
-  const unitSummary = `${foundationUnits.toFixed(1)} / 36 foundation units`;
+  }, [totalGrowthUnits, careGrowthUnits, timeGrowthUnits]);
+
+  const progress: GardenMilestoneProgress = useMemo(() => {
+    return resolveMvpFoundationProgress(
+      totalGrowthUnits,
+      careGrowthUnits,
+      timeGrowthUnits
+    );
+  }, [totalGrowthUnits, careGrowthUnits, timeGrowthUnits]);
+
+  const levelHeading = `${presentation.levelLabel} · ${presentation.label}`;
 
   // Reduced motion listener
   useEffect(() => {
@@ -103,9 +109,7 @@ export function GardenProgressSection({
     extrapolate: "clamp",
   });
 
-  // Dynamic color palette based on theme
-  // A restrained botanical palette keeps progress feeling like organic
-  // development instead of a game score competing with the garden artwork.
+  // Restrained botanical color palette
   const trackBg = isLight ? "#DDE6DD" : isDim ? "#34423A" : "#29362F";
   const fillBg = isLight ? "#4F775B" : isDim ? "#8DB895" : "#9CC7A0";
   const fillHighlight = isLight ? "#C9DCC4" : "#D5E8D0";
@@ -114,12 +118,12 @@ export function GardenProgressSection({
   const infoCardBg = isLight ? "#FAF7FC" : isDim ? "#251D2D" : "#1A1521";
 
   const accessibilityValueText = progress.isFinalStage
-    ? `100 percent, ${progress.currentStageLabel} foundation reached`
+    ? `100 percent, ${levelHeading} reached`
     : `${progress.intervalDisplayPercent} percent progress toward ${progress.nextMilestoneLabel}`;
 
   const accessibilityLabel = progress.isFinalStage
-    ? `Garden milestone progress: ${progress.currentStageLabel} reached. Your garden keeps collecting your shared moments.`
-    : `Garden milestone progress: Current stage is ${progress.currentStageLabel}. Next growth: ${progress.nextMilestoneLabel}, ${progress.intervalDisplayPercent} percent toward next development.`;
+    ? `Garden milestone progress: ${levelHeading} reached. Your garden keeps collecting your shared moments.`
+    : `Garden milestone progress: ${levelHeading}. Next growth: ${progress.nextMilestoneLabel}, ${progress.intervalDisplayPercent} percent toward next development.`;
 
   // --------------------------------------------------------------------------
   // COMPACT VARIANT (For Our Space GardenEntryCard)
@@ -143,9 +147,7 @@ export function GardenProgressSection({
             style={[styles.compactTitle, { color: theme.primaryText }]}
             numberOfLines={1}
           >
-            {progress.isFinalStage
-              ? progress.currentStageLabel
-              : `Next growth: ${progress.nextMilestoneLabel}`}
+            {levelHeading}
           </Text>
           {!progress.isFinalStage && (
             <Text
@@ -178,10 +180,9 @@ export function GardenProgressSection({
           style={[styles.compactCaption, { color: theme.secondaryText }]}
           numberOfLines={1}
         >
-          {progress.supportingCopy}
-        </Text>
-        <Text style={[styles.compactDetail, { color: theme.mutedText }]} numberOfLines={1}>
-          Level {currentLevel} of 3 · {unitSummary}
+          {progress.isFinalStage
+            ? "Foundation Complete"
+            : `Next growth: ${progress.nextMilestoneLabel}`}
         </Text>
       </View>
     );
@@ -217,14 +218,15 @@ export function GardenProgressSection({
             style={[styles.milestoneHeading, { color: theme.primaryText }]}
             numberOfLines={1}
           >
-            {progress.isFinalStage
-              ? progress.currentStageLabel
-              : `Next growth: ${progress.nextMilestoneLabel}`}
+            {levelHeading}
           </Text>
           <Text
             style={[styles.supportingCopy, { color: theme.secondaryText }]}
+            numberOfLines={1}
           >
-            {progress.supportingCopy}
+            {progress.isFinalStage
+              ? "Foundation Complete"
+              : `Next growth: ${progress.nextMilestoneLabel}`}
           </Text>
         </View>
 
@@ -261,38 +263,6 @@ export function GardenProgressSection({
         </Animated.View>
       </View>
 
-      <View style={styles.levelDetailRow}>
-        <Text style={[styles.levelDetailText, { color: theme.secondaryText }]}>
-          Level {currentLevel} of 3 · {unitSummary}
-        </Text>
-        {!progress.isFinalStage && (
-          <Text style={[styles.levelDetailText, { color: theme.secondaryText }]}>
-            {progress.remainingUnits.toFixed(1)} units to next growth
-          </Text>
-        )}
-      </View>
-      {typeof careGrowthUnits === "number" && typeof timeGrowthUnits === "number" && (
-        <Text style={[styles.unitBreakdown, { color: theme.mutedText }]}>
-          Shared care {careGrowthUnits.toFixed(1)} · Time support {supportedTimeUnits.toFixed(1)} / 12
-        </Text>
-      )}
-
-      {/* Interval Bounds Subtext */}
-      {!progress.isFinalStage ? (
-        <View style={styles.boundsRow} accessible={false}>
-          <Text style={[styles.boundText, { color: theme.mutedText }]}>
-            {progress.currentStageLabel}
-          </Text>
-          <Text style={[styles.boundText, { color: theme.mutedText }]}>
-            {progress.nextMilestoneLabel}
-          </Text>
-        </View>
-      ) : (
-        <Text style={[styles.completedNote, { color: theme.secondaryText }]}>
-          The three-step MVP foundation is complete. Every shared moment remains part of your garden.
-        </Text>
-      )}
-
       {/* Concise "How your garden grows" Educational Section */}
       <View style={[styles.explanationSection, { borderTopColor: theme.borderSoft }]}>
         <Pressable
@@ -318,7 +288,7 @@ export function GardenProgressSection({
         {isExplanationOpen && (
           <View style={[styles.explanationCard, { backgroundColor: infoCardBg }]}>
             <Text style={[styles.explanationIntro, { color: theme.primaryText }]}>
-              Your garden develops gently through shared connection and steady time:
+              {progress.supportingCopy}
             </Text>
 
             <View style={styles.bulletItem}>
@@ -348,21 +318,13 @@ export function GardenProgressSection({
             <View style={styles.bulletItem}>
               <Text style={[styles.bulletDot, { color: theme.primaryAccent }]}>•</Text>
               <Text style={[styles.bulletText, { color: theme.secondaryText }]}>
-                <Text style={{ fontWeight: "600", color: theme.primaryText }}>Care contribution: </Text>
-                Shared activities contribute up to 40 units. Every eligible moment also becomes a stable, explorable part of your unique garden.
-              </Text>
-            </View>
-
-            <View style={styles.bulletItem}>
-              <Text style={[styles.bulletDot, { color: theme.primaryAccent }]}>•</Text>
-              <Text style={[styles.bulletText, { color: theme.secondaryText }]}>
                 <Text style={{ fontWeight: "600", color: theme.primaryText }}>Steady time: </Text>
-                Time adds 0.5 units per elapsed day, but supports at most 12 of the 36 MVP foundation units. Time alone cannot complete the foundation.
+                Time adds 0.5 units per elapsed day, but supports at most 20 of the 100 MVP foundation units. Time alone cannot complete the journey.
               </Text>
             </View>
 
             <Text style={[styles.explanationOutro, { color: theme.mutedText }]}>
-              The MVP foundation completes at 36 units. At least 24 must come from shared care; there are no daily obligations or partner comparisons.
+              At least 80 units must come from meaningful shared care. There are no daily streaks or score comparisons.
             </Text>
           </View>
         )}

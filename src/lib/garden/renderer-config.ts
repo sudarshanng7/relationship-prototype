@@ -703,16 +703,21 @@ export function resolveGardenWorldPresentation(
       const primaryNode = primaryId ? resolvedNodes[primaryId] : null;
       if (!group || !primaryId || !primaryNode) continue;
 
+      const isSaplingLeaf = marker.visualKind === "sapling_leaf";
+      const boundsWidth = isSaplingLeaf ? 5.2 : 9.0;
+      const boundsHeight = isSaplingLeaf ? 4.8 : 7.0;
+      const halfW = boundsWidth / 2;
+
       resolvedNodes[primaryId] = {
         ...primaryNode,
         anchorPoint: { x: marker.x, y: marker.y },
         worldBounds: {
-          minX: marker.x - 8,
-          minY: marker.y - 10,
-          maxX: marker.x + 8,
-          maxY: marker.y + 6,
-          width: 16,
-          height: 16,
+          minX: marker.x - halfW,
+          minY: isSaplingLeaf ? marker.y - 4.8 : marker.y - 3.5,
+          maxX: marker.x + halfW,
+          maxY: isSaplingLeaf ? marker.y + 0.5 : marker.y + 3.5,
+          width: boundsWidth,
+          height: boundsHeight,
         },
         attachmentTarget: marker.attachment === "tree" ? "canopy" : "terrain",
         scenicRegion: marker.attachment === "tree" ? "crown" : "root_grove",

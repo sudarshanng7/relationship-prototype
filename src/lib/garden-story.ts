@@ -241,8 +241,9 @@ export function getStoryProgressViewModel(
     stageTitle = "The Beginning";
   } else {
     stageTitle = resolveMvpFoundationPresentation(
-      step.totalGrowthUnits,
-      step.cumulativeCareEvents.length,
+      step.cumulativeCareEvents.length > 0
+        ? step.cumulativeCareEvents
+        : step.totalGrowthUnits,
       step.careGrowthUnits,
       step.timeGrowthUnits
     ).label;
@@ -836,16 +837,20 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
   const mvpAlignedSteps: InterimStep[] = [];
   let previousFoundationUnits = 0;
   const foundationThresholds = [
-    { units: 8, key: "emerging-shoot", label: "Emerging Oak Shoot" },
-    { units: 20, key: "small-seedling", label: "Small Oak Seedling" },
+    { units: 24, key: "emerging-shoot", label: "Emerging Oak Shoot" },
+    { units: 60, key: "small-seedling", label: "Small Oak Seedling" },
+    { units: 100, key: "foundation-complete", label: "Foundation Complete" },
   ] as const;
 
   for (const step of withoutFutureMilestones) {
-    const currentFoundationUnits = resolveMvpFoundationUnits(
-      step.totalGrowthUnits,
-      step.careGrowthUnits,
-      step.timeGrowthUnits
-    );
+    const currentFoundationUnits =
+      step.cumulativeCareEvents.length > 0
+        ? resolveMvpFoundationUnits(step.cumulativeCareEvents, step.timeGrowthUnits)
+        : resolveMvpFoundationUnits(
+            step.totalGrowthUnits,
+            step.careGrowthUnits,
+            step.timeGrowthUnits
+          );
     const crossed = foundationThresholds.filter(
       (milestone) =>
         previousFoundationUnits < milestone.units &&
@@ -859,27 +864,32 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
       eventKind: "stage_transition",
       frameType: "GARDEN MILESTONE",
       caption:
-        milestone.units === 8
+        milestone.units === 24
           ? "The planted acorn has raised its first oak shoot."
-          : "The young oak has opened its first true leaves.",
+          : milestone.units === 60
+          ? "The young oak has opened its first true leaves."
+          : "The MVP foundation is complete. Your young oak keeps collecting your shared moments.",
       displayTitle: null,
       highlightFeatureId: null,
       isFinal: false,
       // Freeze the milestone frame at its visual threshold. Without this,
       // a long gap between visits could make both milestone frames render the
-      // latest plant and visually skip the emerging-shoot chapter.
-      timeGrowthUnits: Math.min(step.timeGrowthUnits, 12, milestone.units),
+      // latest plant and visually skip earlier chapters.
+      timeGrowthUnits: Math.min(step.timeGrowthUnits, 20, milestone.units),
       careGrowthUnits:
-        milestone.units - Math.min(step.timeGrowthUnits, 12, milestone.units),
+        milestone.units - Math.min(step.timeGrowthUnits, 20, milestone.units),
       totalGrowthUnits: milestone.units,
       stage: getGardenStage(milestone.units),
     }));
 
     // When a recorded moment reaches a boundary, reveal its memory marker
-    // first and then show the plant milestone. For time-only advancement the
-    // current (Today) frame has no private/event content, so the same ordering
-    // remains safe and predictable.
-    mvpAlignedSteps.push(step, ...milestoneSteps);
+    // first and then show the plant milestone. For time-only advancement reaching
+    // Today, present the milestone before the final Today summary.
+    if (step.eventKind === "today" || step.isFinal) {
+      mvpAlignedSteps.push(...milestoneSteps, step);
+    } else {
+      mvpAlignedSteps.push(step, ...milestoneSteps);
+    }
     previousFoundationUnits = Math.max(
       previousFoundationUnits,
       currentFoundationUnits

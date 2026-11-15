@@ -333,61 +333,74 @@ test("9. Important dates reveal their exact landmark identity", () => {
 });
 
 // ----------------------------------------------------------------------------
-// Test 10: Stage transitions caused only by time receive explicit steps
+// Test 10: Time caps at 20 units and cannot reach Level 2 (24 units) alone
 // ----------------------------------------------------------------------------
-test("10. Time can reveal the shoot milestone but cannot complete the foundation alone", () => {
-  // Couple created Jan 1, event occurs in March. Time support caps at 12
-  // foundation units, so this history may reach the shoot but not the seedling.
-  const evMarch = createMockEvent("ev-march", "positive_moment", "2026-03-15T10:00:00Z");
-
-  const snapshot = {
+test("10. Time caps at 20 units and cannot reach Level 2 (24 units) alone", () => {
+  // Couple created Jan 1, no events, as of March. Time caps at 20 units (0.5 * 74 days = 37, capped at 20).
+  const snapshotTimeOnly = {
     coupleId: COUPLE_ID_A,
     seedString: COUPLE_ID_A,
     createdAt: COUPLE_CREATED_AT, // Jan 1
-    careEvents: [evMarch],
+    careEvents: [],
     asOfTime: AS_OF_TIME,
     isResting: false,
   };
+  const storyTimeOnly = createGardenStory(snapshotTimeOnly);
+  const timeOnlyMilestones = storyTimeOnly.steps.filter(
+    (s) => s.eventKind === "stage_transition"
+  );
+  // Time alone cannot reach Level 2 (24 units), so 0 milestone transitions occur
+  assert.equal(timeOnlyMilestones.length, 0);
 
-  const story = createGardenStory(snapshot);
-  const milestoneSteps = story.steps.filter(
+  // With 2 reconnections (+8 units) + 20 time units = 28 units -> crosses 24 (Emerging Oak Shoot)
+  const ev1 = createMockEvent("rec-time-1", "reconnection", "2026-03-01T10:00:00Z");
+  const ev2 = createMockEvent("rec-time-2", "reconnection", "2026-03-15T10:00:00Z");
+  const snapshotWithCare = {
+    coupleId: COUPLE_ID_A,
+    seedString: COUPLE_ID_A,
+    createdAt: COUPLE_CREATED_AT,
+    careEvents: [ev1, ev2],
+    asOfTime: AS_OF_TIME,
+    isResting: false,
+  };
+  const storyWithCare = createGardenStory(snapshotWithCare);
+  const milestoneSteps = storyWithCare.steps.filter(
     (s) => s.eventKind === "stage_transition" && s.addedEventKey === null
   );
 
-  assert.deepEqual(milestoneSteps.map((s) => s.totalGrowthUnits), [8]);
+  assert.deepEqual(milestoneSteps.map((s) => s.totalGrowthUnits), [24]);
   assert.deepEqual(milestoneSteps.map((s) => s.chapterTitle), ["Emerging Oak Shoot"]);
   assert.equal(
     milestoneSteps[0].caption,
     "The planted acorn has raised its first oak shoot."
   );
-  assert.ok(!story.steps.some((s) => s.chapterTitle === "Small Oak Seedling"));
+  assert.ok(!storyWithCare.steps.some((s) => s.chapterTitle === "Small Oak Seedling"));
 });
 
 // ----------------------------------------------------------------------------
 // Test 11: Event-driven stage crossings follow the documented consistent rule
 // ----------------------------------------------------------------------------
 test("11. Event-driven foundation crossing shows its memory first, then the shoot milestone", () => {
-  // Four positive moments contribute 8 care units, crossing the first MVP
-  // boundary while elapsed time is still below the next boundary.
+  // 6 reconnections contribute 24 care units (4 × 6 = 24), crossing the 24-unit boundary
   const events = [];
-  for (let i = 1; i <= 4; i++) {
-    events.push(createMockEvent(`pos-${i}`, "positive_moment", "2026-01-02T10:00:00Z"));
+  for (let i = 1; i <= 6; i++) {
+    events.push(createMockEvent(`rec-${i}`, "reconnection", "2026-01-02T10:00:00Z"));
   }
 
   const snapshot = {
     coupleId: COUPLE_ID_A,
     seedString: COUPLE_ID_A,
-    createdAt: COUPLE_CREATED_AT, // 1 day elapsed = 0.5 time units
+    createdAt: COUPLE_CREATED_AT, // 1 day elapsed
     careEvents: events,
     asOfTime: AS_OF_TIME,
     isResting: false,
   };
 
   const story = createGardenStory(snapshot);
-  const crossingIdx = story.steps.findIndex((s) => s.addedEventKey === "positive_moment:pos-4");
+  const crossingIdx = story.steps.findIndex((s) => s.addedEventKey === "reconnection:rec-6");
   assert.ok(crossingIdx !== -1);
 
-  // In step 8, new feature is shown in current stage
+  // In crossing step, new feature is shown in current stage
   const crossingStep = story.steps[crossingIdx];
   assert.ok(crossingStep.highlightFeatureId);
 
@@ -395,9 +408,53 @@ test("11. Event-driven foundation crossing shows its memory first, then the shoo
   const followUpStep = story.steps[crossingIdx + 1];
   assert.ok(followUpStep);
   assert.equal(followUpStep.eventKind, "stage_transition");
-  assert.equal(followUpStep.totalGrowthUnits, 8);
+  assert.equal(followUpStep.totalGrowthUnits, 24);
   assert.equal(followUpStep.chapterTitle, "Emerging Oak Shoot");
   assert.equal(followUpStep.caption, "The planted acorn has raised its first oak shoot.");
+});
+
+// ----------------------------------------------------------------------------
+// Test 11b: Story milestones at 24, 60, and 100 with event-first then milestone ordering
+// ----------------------------------------------------------------------------
+test("11b. Story milestones at 24, 60, and 100 with event-first then milestone ordering", () => {
+  // 25 reconnections = 100 care units, all sharing day 1 so time does not skew crossing indexes
+  const richEvents = [];
+  for (let i = 1; i <= 25; i++) {
+    const padded = String(i).padStart(2, "0");
+    richEvents.push(createMockEvent(`rec-full-${padded}`, "reconnection", "2026-01-02T10:00:00Z"));
+  }
+  const snapshot = {
+    coupleId: COUPLE_ID_A,
+    seedString: COUPLE_ID_A,
+    createdAt: COUPLE_CREATED_AT,
+    careEvents: richEvents,
+    asOfTime: AS_OF_TIME,
+    isResting: false,
+  };
+  const story = createGardenStory(snapshot);
+  const milestones = story.steps.filter((s) => s.eventKind === "stage_transition");
+  assert.deepEqual(milestones.map((m) => m.totalGrowthUnits), [24, 60, 100]);
+  assert.deepEqual(milestones.map((m) => m.chapterTitle), [
+    "Emerging Oak Shoot",
+    "Small Oak Seedling",
+    "Foundation Complete",
+  ]);
+
+  // Event-first then milestone ordering:
+  // rec-full-06 crosses 24: step for rec-full-06 is before milestone 24
+  const idx24 = story.steps.findIndex((s) => s.totalGrowthUnits === 24 && s.eventKind === "stage_transition");
+  assert.equal(story.steps[idx24 - 1].addedEventKey, "reconnection:rec-full-06");
+
+  // rec-full-15 crosses 60: step for rec-full-15 is before milestone 60
+  const idx60 = story.steps.findIndex((s) => s.totalGrowthUnits === 60 && s.eventKind === "stage_transition");
+  assert.equal(story.steps[idx60 - 1].addedEventKey, "reconnection:rec-full-15");
+
+  // rec-full-25 crosses 100: step for rec-full-25 is before milestone 100
+  const idx100 = story.steps.findIndex((s) => s.totalGrowthUnits === 100 && s.eventKind === "stage_transition");
+  assert.equal(story.steps[idx100 - 1].addedEventKey, "reconnection:rec-full-25");
+
+  // At 100, seedling remains without replacing with a larger tree
+  assert.equal(story.steps[idx100].chapterTitle, "Foundation Complete");
 });
 
 // ----------------------------------------------------------------------------

@@ -175,16 +175,20 @@ export function PainterlyGardenRenderer({
   const mvpFoundationPresentation = useMemo(
     () =>
       resolveMvpFoundationPresentation(
-        totalGrowthUnits,
-        careEvents?.length ?? 0,
+        careEvents && careEvents.length > 0 ? careEvents : totalGrowthUnits,
         careGrowthUnits,
         timeGrowthUnits
       ),
     [totalGrowthUnits, careGrowthUnits, timeGrowthUnits, careEvents]
   );
   const mvpFoundationUnits = useMemo(
-    () => resolveMvpFoundationUnits(totalGrowthUnits, careGrowthUnits, timeGrowthUnits),
-    [totalGrowthUnits, careGrowthUnits, timeGrowthUnits]
+    () =>
+      resolveMvpFoundationUnits(
+        careEvents && careEvents.length > 0 ? careEvents : totalGrowthUnits,
+        careGrowthUnits,
+        timeGrowthUnits
+      ),
+    [totalGrowthUnits, careGrowthUnits, timeGrowthUnits, careEvents]
   );
   // Future canopy, habitat and mature-tree layers remain implemented but are
   // intentionally withheld from the bounded three-frame MVP journey.
@@ -824,6 +828,117 @@ export function PainterlyGardenRenderer({
               })}
             </G>
 
+            {/* Couple-unique decorative ecology (sourceEvent = null, bounded by subprogress) */}
+            {coupleDNA?.ecologicalComposition && (
+              <G id="mvp-couple-ecological-groundcover">
+                {/* Seeded moss cushions */}
+                {coupleDNA.ecologicalComposition.mossCushions
+                  .filter((m) => mvpFoundationUnits >= m.minUnitsToReveal)
+                  .map((m) => (
+                    <G key={m.id} transform={`rotate(${m.rotation} ${m.x} ${m.y})`}>
+                      <Ellipse
+                        cx={m.x}
+                        cy={m.y + 0.8}
+                        rx={m.rx * m.scale}
+                        ry={m.ry * m.scale}
+                        fill="#233522"
+                        opacity={0.3}
+                      />
+                      <Circle
+                        cx={m.x - 1.8 * m.scale}
+                        cy={m.y - 0.8 * m.scale}
+                        r={2.2 * m.scale}
+                        fill="#5D7A44"
+                      />
+                      <Circle
+                        cx={m.x + 1.6 * m.scale}
+                        cy={m.y - 0.6 * m.scale}
+                        r={2.5 * m.scale}
+                        fill="#6E8E50"
+                      />
+                      <Circle
+                        cx={m.x}
+                        cy={m.y - 1.8 * m.scale}
+                        r={1.8 * m.scale}
+                        fill="#86A25B"
+                      />
+                    </G>
+                  ))}
+
+                {/* Seeded small stones */}
+                {coupleDNA.ecologicalComposition.smallStones
+                  .filter((s) => mvpFoundationUnits >= s.minUnitsToReveal)
+                  .map((s) => (
+                    <G key={s.id} transform={`rotate(${s.rotation} ${s.x} ${s.y})`}>
+                      <Ellipse
+                        cx={s.x}
+                        cy={s.y + 0.8}
+                        rx={s.rx * 1.1}
+                        ry={s.ry * 0.8}
+                        fill="#1C241B"
+                        opacity={0.35}
+                      />
+                      <Ellipse
+                        cx={s.x}
+                        cy={s.y}
+                        rx={s.rx}
+                        ry={s.ry}
+                        fill="#767268"
+                        stroke="#8A867B"
+                        strokeWidth={0.3}
+                      />
+                    </G>
+                  ))}
+
+                {/* Seeded leaf litter fragments */}
+                {coupleDNA.ecologicalComposition.leafLitter
+                  .filter((l) => mvpFoundationUnits >= l.minUnitsToReveal)
+                  .map((l) => {
+                    const shadeFill =
+                      l.shade === "russet"
+                        ? "#7D4A2B"
+                        : l.shade === "golden_amber"
+                        ? "#9E7B3A"
+                        : "#6E5437";
+                    return (
+                      <G key={l.id} transform={`rotate(${l.rotation} ${l.x} ${l.y})`}>
+                        <Path
+                          d={`M ${l.x - 2.5 * l.scale},${l.y + 1.2 * l.scale} C ${l.x - 4 * l.scale},${l.y} ${l.x - 3 * l.scale},${l.y - 3 * l.scale} ${l.x},${l.y - 4 * l.scale} C ${l.x + 3 * l.scale},${l.y - 3 * l.scale} ${l.x + 4 * l.scale},${l.y} ${l.x + 2.5 * l.scale},${l.y + 1.2 * l.scale} Z`}
+                          fill={shadeFill}
+                          opacity={0.85}
+                        />
+                      </G>
+                    );
+                  })}
+
+                {/* Seeded groundcover clusters (ferns/sorrels) */}
+                {coupleDNA.ecologicalComposition.groundcoverClusters
+                  .filter((gc) => mvpFoundationUnits >= gc.minUnitsToReveal)
+                  .map((gc) => (
+                    <G key={gc.id} transform={`rotate(${gc.rotation} ${gc.x} ${gc.y})`}>
+                      <Circle cx={gc.x - 2.2 * gc.scale} cy={gc.y - 1.2 * gc.scale} r={1.8 * gc.scale} fill="#5C7A42" />
+                      <Circle cx={gc.x + 2.2 * gc.scale} cy={gc.y - 1.2 * gc.scale} r={1.8 * gc.scale} fill="#698A4C" />
+                      <Circle cx={gc.x} cy={gc.y - 2.8 * gc.scale} r={2.0 * gc.scale} fill="#7A9B58" />
+                      <Path
+                        d={`M ${gc.x},${gc.y} L ${gc.x},${gc.y - 2.2 * gc.scale}`}
+                        stroke="#455B31"
+                        strokeWidth={0.35}
+                      />
+                    </G>
+                  ))}
+
+                {/* Seeded light motes */}
+                {coupleDNA.ecologicalComposition.woodlandLightMotes
+                  .filter((lm) => mvpFoundationUnits >= lm.minUnitsToReveal)
+                  .map((lm) => (
+                    <G key={lm.id}>
+                      <Circle cx={lm.x} cy={lm.y} r={lm.r * 2.8} fill="#EBD998" opacity={0.06 * lm.intensity} />
+                      <Circle cx={lm.x} cy={lm.y} r={lm.r} fill="#EEDCA2" opacity={0.75 * lm.intensity} />
+                    </G>
+                  ))}
+              </G>
+            )}
+
             {/* MVP event history: one deterministic memory marker per authorized event. */}
             <G id="mvp-foundation-memory-markers">
               {foundationMemoryMarkers.map((marker) => {
@@ -850,21 +965,46 @@ export function PainterlyGardenRenderer({
                 }
 
                 if (marker.visualKind === "sapling_leaf") {
+                  const leafPalette = [
+                    { fill: "#73994B", stroke: "#4B6B2F", vein: "#3F5B27" },
+                    { fill: "#7DA653", stroke: "#537536", vein: "#45622C" },
+                    { fill: "#6A8E43", stroke: "#456329", vein: "#395321" },
+                    { fill: "#84AD59", stroke: "#577B38", vein: "#48662F" },
+                  ];
+                  const tone = leafPalette[Math.abs(Math.round(marker.scale * 100)) % leafPalette.length];
+                  const mx = marker.x;
+                  const my = marker.y;
                   return (
                     <G
                       key={marker.semanticKey}
-                      transform={`rotate(${marker.rotation} ${marker.x} ${marker.y})`}
+                      transform={`rotate(${marker.rotation} ${mx} ${my})`}
                     >
+                      {/* Short petiole connecting twig node to leaf blade base */}
                       <Path
-                        d={`M ${marker.x},${marker.y + 2} C ${marker.x - 2},${marker.y} ${marker.x - 7},${marker.y - 1} ${marker.x - 6},${marker.y - 5} C ${marker.x - 4},${marker.y - 4} ${marker.x - 3},${marker.y - 9} ${marker.x},${marker.y - 8} C ${marker.x + 3},${marker.y - 9} ${marker.x + 4},${marker.y - 4} ${marker.x + 6},${marker.y - 5} C ${marker.x + 7},${marker.y - 1} ${marker.x + 2},${marker.y} ${marker.x},${marker.y + 2} Z`}
-                        fill="#83A956"
-                        stroke="#B6CB7D"
-                        strokeWidth={0.65}
+                        d={`M ${mx},${my} L ${mx},${my - 1.0}`}
+                        stroke="#4B3A26"
+                        strokeWidth={0.32}
+                        strokeLinecap="round"
                       />
+                      {/* Realistic juvenile English oak leaf blade (~4.8px wide x 4.2px high, shallow rounded lobes) */}
                       <Path
-                        d={`M ${marker.x},${marker.y + 3} L ${marker.x},${marker.y - 7}`}
-                        stroke="#49673A"
-                        strokeWidth={0.7}
+                        d={`M ${mx},${my - 1.0}
+                           C ${mx - 1.2},${my - 1.4} ${mx - 2.2},${my - 2.0} ${mx - 2.0},${my - 2.8}
+                           C ${mx - 1.5},${my - 3.4} ${mx - 2.4},${my - 4.0} ${mx - 1.8},${my - 4.6}
+                           C ${mx - 1.0},${my - 5.0} ${mx - 0.4},${my - 4.9} ${mx},${my - 5.2}
+                           C ${mx + 0.4},${my - 4.9} ${mx + 1.0},${my - 5.0} ${mx + 1.8},${my - 4.6}
+                           C ${mx + 2.4},${my - 4.0} ${mx + 1.5},${my - 3.4} ${mx + 2.0},${my - 2.8}
+                           C ${mx + 2.2},${my - 2.0} ${mx + 1.2},${my - 1.4} ${mx},${my - 1.0} Z`}
+                        fill={tone.fill}
+                        stroke={tone.stroke}
+                        strokeWidth={0.28}
+                      />
+                      {/* Fine central vein */}
+                      <Path
+                        d={`M ${mx},${my - 1.0} L ${mx},${my - 4.8}`}
+                        stroke={tone.vein}
+                        strokeWidth={0.22}
+                        strokeLinecap="round"
                       />
                     </G>
                   );
