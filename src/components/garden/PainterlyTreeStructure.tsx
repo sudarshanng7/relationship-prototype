@@ -1027,12 +1027,22 @@ export function PainterlyTreeStructure({
             ) : effectiveSubphase === "small_sapling" ? (
               <G id="sapling-soil-bedding">
                 <Path
-                  d="M 386.2 441.2 C 388.0 440.6, 392.8 440.6, 394.6 441.2 C 392.5 441.8, 388.5 441.8, 386.2 441.2 Z"
-                  fill="#241B13"
-                  opacity={0.85}
+                  d="M 383.8 441.5 C 386.8 440.4, 393.8 440.3, 397.0 441.4 C 394.2 442.3, 387.0 442.4, 383.8 441.5 Z"
+                  fill="#2B2518"
+                  opacity={0.78}
                 />
-                <Circle cx={387.6} cy={441.6} r={0.7} fill="#241B13" opacity={0.7} />
-                <Circle cx={393.2} cy={441.5} r={0.6} fill="#3E5228" opacity={0.7} />
+                <Path
+                  d="M 385.0 441.2 C 386.6 439.8, 388.3 439.8, 389.5 441.1 C 388.0 441.5, 386.4 441.5, 385.0 441.2 Z"
+                  fill="#4B5B2D"
+                  opacity={0.68}
+                />
+                <Path
+                  d="M 391.7 441.1 C 393.4 439.7, 395.1 440.0, 396.0 441.2 C 394.4 441.7, 393.0 441.6, 391.7 441.1 Z"
+                  fill="#596536"
+                  opacity={0.62}
+                />
+                <Circle cx={384.8} cy={442.0} r={0.65} fill="#1F1A12" opacity={0.65} />
+                <Circle cx={396.0} cy={441.8} r={0.55} fill="#3E5228" opacity={0.72} />
               </G>
             ) : isBranchingOakEligible ? (
               <G id="branching-root-bedding">

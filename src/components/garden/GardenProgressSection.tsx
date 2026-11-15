@@ -87,9 +87,13 @@ export function GardenProgressSection({
   });
 
   // Dynamic color palette based on theme
-  const trackBg = isLight ? "#E5E1E8" : isDim ? "#372F3F" : "#2A2132";
-  const fillBg = isLight ? "#7C3AED" : isDim ? "#9D68F7" : "#A78BFA";
-  const pillBg = isLight ? "#F3EFF8" : isDim ? "#322A3A" : "#231B2A";
+  // A restrained botanical palette keeps progress feeling like organic
+  // development instead of a game score competing with the garden artwork.
+  const trackBg = isLight ? "#DDE6DD" : isDim ? "#34423A" : "#29362F";
+  const fillBg = isLight ? "#4F775B" : isDim ? "#8DB895" : "#9CC7A0";
+  const fillHighlight = isLight ? "#C9DCC4" : "#D5E8D0";
+  const pillBg = isLight ? "#EFF5EE" : isDim ? "#2D3932" : "#223029";
+  const botanicalBorder = isLight ? "#D5E1D4" : isDim ? "#45564B" : "#35463B";
   const infoCardBg = isLight ? "#FAF7FC" : isDim ? "#251D2D" : "#1A1521";
 
   const accessibilityValueText = progress.isFinalStage
@@ -148,7 +152,9 @@ export function GardenProgressSection({
                   : (animatedWidth as any),
               },
             ]}
-          />
+          >
+            <View style={[styles.fillTip, { backgroundColor: fillHighlight }]} />
+          </Animated.View>
         </View>
 
         <Text
@@ -170,7 +176,7 @@ export function GardenProgressSection({
         styles.standardContainer,
         {
           backgroundColor: theme.surface,
-          borderColor: theme.borderSoft,
+          borderColor: botanicalBorder,
         },
         style,
       ]}
@@ -204,7 +210,7 @@ export function GardenProgressSection({
 
         {!progress.isFinalStage && (
           <View
-            style={[styles.percentBadge, { backgroundColor: pillBg, borderColor: theme.borderSoft }]}
+            style={[styles.percentBadge, { backgroundColor: pillBg, borderColor: botanicalBorder }]}
             accessible={false}
           >
             <Text style={[styles.percentText, { color: fillBg }]}>
@@ -229,7 +235,10 @@ export function GardenProgressSection({
                 : (animatedWidth as any),
             },
           ]}
-        />
+        >
+          <View style={styles.fillSheen} pointerEvents="none" />
+          <View style={[styles.fillTip, { backgroundColor: fillHighlight }]} />
+        </Animated.View>
       </View>
 
       {/* Interval Bounds Subtext */}
@@ -349,14 +358,16 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   compactTrack: {
-    height: 5,
-    borderRadius: 3,
+    height: 6,
+    borderRadius: 6,
     overflow: "hidden",
     width: "100%",
   },
   compactFill: {
     height: "100%",
-    borderRadius: 3,
+    borderRadius: 6,
+    minWidth: 3,
+    overflow: "hidden",
   },
   compactCaption: {
     fontSize: 11,
@@ -366,10 +377,15 @@ const styles = StyleSheet.create({
 
   // Standard full styles
   standardContainer: {
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 16,
+    padding: 17,
     marginVertical: 12,
+    shadowColor: "#172A1D",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 1,
   },
   headerRow: {
     flexDirection: "row",
@@ -404,15 +420,35 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   track: {
-    height: 8,
-    borderRadius: 4,
+    height: 7,
+    borderRadius: 7,
     overflow: "hidden",
     width: "100%",
     marginVertical: 6,
   },
   fill: {
     height: "100%",
+    borderRadius: 7,
+    minWidth: 3,
+    overflow: "hidden",
+  },
+  fillSheen: {
+    position: "absolute",
+    left: 2,
+    right: 2,
+    top: 1,
+    height: 1,
+    borderRadius: 1,
+    backgroundColor: "rgba(255,255,255,0.22)",
+  },
+  fillTip: {
+    position: "absolute",
+    right: 1,
+    top: 1,
+    width: 4,
+    bottom: 1,
     borderRadius: 4,
+    opacity: 0.72,
   },
   boundsRow: {
     flexDirection: "row",
