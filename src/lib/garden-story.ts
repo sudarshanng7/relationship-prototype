@@ -1,14 +1,13 @@
+import { formatCategory, getCanonicalEventHeading } from "./event-heading";
 import {
   type GardenCareEvent,
   type GardenCareSignals,
   type GardenStage,
   type GardenStageKey,
   GARDEN_STAGES,
-  getGardenStage,
   getCareFeatureId,
-  stableEventHash,
+  getGardenStage
 } from "./garden-generator";
-import { formatCategory, getCanonicalEventHeading } from "./event-heading";
 import { resolveMvpFoundationPresentation, resolveMvpFoundationUnits } from "./garden/stage-contracts";
 
 export { formatCategory, getCanonicalEventHeading };
@@ -252,8 +251,8 @@ export function getStoryProgressViewModel(
   const primaryActionLabel = isFinal
     ? "Play again"
     : isPlaying
-    ? "Pause ⏸"
-    : "Continue ▶";
+      ? "Pause ⏸"
+      : "Continue ▶";
 
   const accessibilityProgressLabel = `Garden story step ${visibleStepNumber} of ${total}`;
 
@@ -449,15 +448,15 @@ export function getEventEffectiveTimestamp(
     typeof coupleCreatedAt === "number"
       ? coupleCreatedAt
       : coupleCreatedAt
-      ? new Date(coupleCreatedAt).getTime()
-      : NaN;
+        ? new Date(coupleCreatedAt).getTime()
+        : NaN;
 
   const asOfMs =
     typeof asOfTime === "number"
       ? asOfTime
       : asOfTime
-      ? new Date(asOfTime).getTime()
-      : Date.now();
+        ? new Date(asOfTime).getTime()
+        : Date.now();
 
   let t = NaN;
 
@@ -540,8 +539,8 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
       displayTitle: rawEv.category
         ? formatCategory(rawEv.category)
         : rawEv.displayTitle
-        ? formatCategory(rawEv.displayTitle)
-        : null,
+          ? formatCategory(rawEv.displayTitle)
+          : null,
     };
     const effMs = getEventEffectiveTimestamp(ev, coupleCreatedMs, safeAsOfMs);
     if (effMs <= safeAsOfMs) {
@@ -572,8 +571,8 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
   const startMs = !isNaN(coupleCreatedMs)
     ? coupleCreatedMs
     : sortedEntries.length > 0
-    ? sortedEntries[0].effectiveMs
-    : safeAsOfMs;
+      ? sortedEntries[0].effectiveMs
+      : safeAsOfMs;
 
   const totalElapsedDays = Math.max(
     0,
@@ -847,10 +846,10 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
       step.cumulativeCareEvents.length > 0
         ? resolveMvpFoundationUnits(step.cumulativeCareEvents, step.timeGrowthUnits)
         : resolveMvpFoundationUnits(
-            step.totalGrowthUnits,
-            step.careGrowthUnits,
-            step.timeGrowthUnits
-          );
+          step.totalGrowthUnits,
+          step.careGrowthUnits,
+          step.timeGrowthUnits
+        );
     const crossed = foundationThresholds.filter(
       (milestone) =>
         previousFoundationUnits < milestone.units &&
@@ -867,8 +866,8 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
         milestone.units === 24
           ? "The planted acorn has raised its first oak shoot."
           : milestone.units === 60
-          ? "The young oak has opened its first true leaves."
-          : "The MVP foundation is complete. Your young oak keeps collecting your shared moments.",
+            ? "The young oak has opened its first true leaves."
+            : "The MVP foundation is complete. Your young oak keeps collecting your shared moments.",
       displayTitle: null,
       highlightFeatureId: null,
       isFinal: false,

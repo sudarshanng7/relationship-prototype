@@ -519,15 +519,15 @@ export function resolvePlantInspectionCamera(
 
   const subphaseKey: EarlyLifeSubphaseKey =
     subphaseOrStage === "planted_acorn" ||
-    subphaseOrStage === "emerging_shoot" ||
-    subphaseOrStage === "small_seedling" ||
-    subphaseOrStage === "small_sapling"
+      subphaseOrStage === "emerging_shoot" ||
+      subphaseOrStage === "small_seedling" ||
+      subphaseOrStage === "small_sapling"
       ? subphaseOrStage
       : subphaseOrStage === "beginning"
-      ? "planted_acorn"
-      : subphaseOrStage === "tender_sapling"
-      ? "small_sapling"
-      : "small_seedling";
+        ? "planted_acorn"
+        : subphaseOrStage === "tender_sapling"
+          ? "small_sapling"
+          : "small_seedling";
 
   const data = EARLY_LIFE_PLANT_BOUNDS[subphaseKey];
   let zoom = data.fitZoom;
@@ -699,8 +699,8 @@ export function resolveMvpFoundationUnits(
       typeof timeOrRec === "number"
         ? timeOrRec
         : typeof careOrTime === "number"
-        ? careOrTime
-        : 0;
+          ? careOrTime
+          : 0;
     const supportingTime = resolveMvpSupportingTimeUnits(timeVal);
     return Math.min(
       MVP_FOUNDATION_COMPLETE_UNITS,
@@ -708,48 +708,6 @@ export function resolveMvpFoundationUnits(
     );
   }
 
-  // Case B: Object with event counts passed
-  if (typeof eventsOrTotal === "object" && eventsOrTotal !== null) {
-    const rawCare = resolveMvpRawCareUnits(eventsOrTotal);
-    const timeVal =
-      typeof timeOrRec === "number"
-        ? timeOrRec
-        : typeof careOrTime === "number"
-        ? careOrTime
-        : 0;
-    const supportingTime = resolveMvpSupportingTimeUnits(timeVal);
-    return Math.min(
-      MVP_FOUNDATION_COMPLETE_UNITS,
-      Math.max(0, rawCare + supportingTime)
-    );
-  }
-
-  // Case C: Legacy 3-number signature: (totalGrowthUnits, careGrowthUnits, timeGrowthUnits)
-  if (typeof careOrTime === "number" && typeof timeOrRec === "number") {
-    const rawCare = Math.max(0, careOrTime);
-    const supportingTime = resolveMvpSupportingTimeUnits(timeOrRec);
-    return Math.min(
-      MVP_FOUNDATION_COMPLETE_UNITS,
-      Math.max(0, rawCare + supportingTime)
-    );
-  }
-
-  // Case D: 2-number signature: (rawCareUnits, timeGrowthUnits)
-  if (typeof eventsOrTotal === "number" && typeof careOrTime === "number") {
-    const rawCare = Math.max(0, eventsOrTotal);
-    const supportingTime = resolveMvpSupportingTimeUnits(careOrTime);
-    return Math.min(
-      MVP_FOUNDATION_COMPLETE_UNITS,
-      Math.max(0, rawCare + supportingTime)
-    );
-  }
-
-  // Case E: Single total units number
-  if (typeof eventsOrTotal === "number") {
-    return Math.min(MVP_FOUNDATION_COMPLETE_UNITS, Math.max(0, eventsOrTotal));
-  }
-
-  return 0;
 }
 
 /**
@@ -1060,8 +1018,8 @@ export function resolveMvpFoundationMemoryMarkers(
       visualKind === "sapling_leaf"
         ? "tree"
         : visualKind === "light_mote"
-        ? "air"
-        : "ground";
+          ? "air"
+          : "ground";
 
     let x: number;
     let y: number;
