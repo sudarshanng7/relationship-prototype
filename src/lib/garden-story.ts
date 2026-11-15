@@ -683,7 +683,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
     if (isSharedTimestamp) {
       caption = "Several kinds of care found their place around this time.";
     } else if (event.kind === "reconnection") {
-      caption = "A moment of reconnection opened a blossom.";
+      caption = "A moment of reconnection opened a tender oak shoot.";
     } else if (event.kind === "positive_moment") {
       caption = "Shared care encouraged fresh growth.";
     } else {

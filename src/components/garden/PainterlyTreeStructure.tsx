@@ -25,6 +25,7 @@ import {
 import Svg, {
   Circle,
   Defs,
+  Ellipse,
   G,
   LinearGradient,
   Path,
@@ -40,10 +41,18 @@ import type {
   GardenStructuralPresentation,
   TreeCompositionPresetName,
 } from "@/lib/garden/world-types";
-import type { CanonicalStageKeyOrBeginning } from "@/lib/garden/stage-contracts";
+import type {
+  CanonicalStageKeyOrBeginning,
+  EarlyLifeSubphaseKey,
+} from "@/lib/garden/stage-contracts";
 import type { PainterlyCoupleDNA } from "@/lib/garden/couple-dna";
 import {
   CANONICAL_SCENE_BOUNDS,
+  isCanonicalBranchingAssetKey,
+  isCanonicalMatureAssetKey,
+  isCanonicalSaplingAssetKey,
+  resolveTreePresentationTransform,
+  STAGE_STRUCTURAL_ASSET_SLOTS,
   TREE_COMPOSITION_PRESETS,
 } from "@/lib/garden";
 import type { GeneratedGardenSVGScene } from "@/lib/garden-generator";
@@ -52,10 +61,16 @@ import type { GeneratedGardenSVGScene } from "@/lib/garden-generator";
 const OAK_MATURE_ASSET = require("../../../assets/garden/painterly/oak-structure-mature-alpha-v1.png");
 // Calibrated transparent intermediate branching oak (1585x992 alpha PNG)
 const OAK_BRANCHING_ASSET = require("../../../assets/garden/painterly/oak-structure-branching-alpha-v1.png");
+// Calibrated transparent small leafy oak sapling (1024x1536 alpha PNG)
+const OAK_SAPLING_ASSET = require("../../../assets/garden/painterly/oak-structure-sapling-alpha-v1.png");
+// Calibrated painterly oak foliage cluster proof (837x858 alpha PNG)
+const FOLIAGE_CLUSTER_ASSET = require("../../../assets/garden/painterly/foliage-oak-cluster-alpha-v1.png");
 
 export interface PainterlyTreeStructureProps {
   structuralAssetKey?: string | null;
   stageKey: CanonicalStageKeyOrBeginning;
+  totalGrowthUnits?: number;
+  subphaseKey?: EarlyLifeSubphaseKey;
   worldBounds?: BoundingBox2D;
   cameraTransform?: {
     scale?: number;
@@ -74,6 +89,7 @@ export interface PainterlyTreeStructureProps {
     rotation?: number;
   };
   showGuides?: boolean;
+  showFoliageProof?: boolean;
   coupleDNA?: PainterlyCoupleDNA;
   presentation?: GardenStructuralPresentation;
   scene?: GeneratedGardenSVGScene;
@@ -83,54 +99,101 @@ export interface PainterlyTreeStructureProps {
 export function PainterlyTreeStructure({
   structuralAssetKey,
   stageKey,
+  totalGrowthUnits,
+  subphaseKey,
   worldBounds = CANONICAL_SCENE_BOUNDS,
   cameraTransform,
   presentationMode = "full",
   theme = "light",
   atmosphereTone = "calm_light",
   reducedMotion = false,
-  cropPreset = "balanced_overview",
+  cropPreset = "middle_distance",
   calibrationTransform,
   showGuides = false,
+  showFoliageProof,
   coupleDNA,
   presentation,
   scene,
   style,
 }: PainterlyTreeStructureProps) {
   const gradientId = useId().replace(/:/g, "_");
+  const isDev =
+    typeof __DEV__ !== "undefined"
+      ? Boolean(__DEV__)
+      : process.env.NODE_ENV !== "production";
+
+  // Determine effective early-life subphase if applicable
+  const effectiveSubphase: EarlyLifeSubphaseKey | null =
+    subphaseKey ||
+    (stageKey === "beginning"
+      ? "planted_acorn"
+      : stageKey === "first_seedling"
+      ? (totalGrowthUnits ?? 0) <= 8
+        ? "emerging_shoot"
+        : "small_seedling"
+      : stageKey === "tender_sapling"
+      ? "small_sapling"
+      : null);
 
   // Determine whether this structure is eligible for the painterly mature oak asset
   const isMatureOakEligible =
     stageKey === "garden_in_bloom" ||
-    structuralAssetKey === "painterly-oak-mature-v1" ||
-    structuralAssetKey === "painterly-oak-structure-mature-v1";
+    isCanonicalMatureAssetKey(structuralAssetKey);
 
   // Determine whether this structure is eligible for the painterly branching oak asset
   const isBranchingOakEligible =
     stageKey === "branching_out" &&
-    (structuralAssetKey === "painterly-oak-branching-v1" ||
-      structuralAssetKey === "painterly-oak-structure-branching-v1");
+    isCanonicalBranchingAssetKey(structuralAssetKey);
 
-  // Active composition preset
-  const activePreset =
-    TREE_COMPOSITION_PRESETS[cropPreset] ||
-    TREE_COMPOSITION_PRESETS.balanced_overview;
+  const effectiveShowFoliageProof =
+    showFoliageProof !== undefined
+      ? showFoliageProof
+      : false;
 
-  const baseScale = activePreset.scale;
-  const userScale = calibrationTransform?.scale ?? 1.0;
-  const finalScale = baseScale * userScale;
+  // Consolidated single transform source shared with renderer and geometry resolver
+  const presentationTransform = resolveTreePresentationTransform({
+    cropPreset,
+    calibrationTransform,
+    coupleDNA,
+  });
 
-  // Anchor point: soil baseline at y = 441.0, trunk origin at x = 390.4
-  const pivotX = activePreset.centerOrigin.x;
-  const pivotY = activePreset.centerOrigin.y;
+  // Branching asset calibrated image placement derived dynamically from slot
+  const branchingSlot = STAGE_STRUCTURAL_ASSET_SLOTS.branching_out;
+  const branchingCal = branchingSlot?.calibrationTransform ?? {
+    scale: 0.504732,
+    translateX: 9.33,
+    translateY: -27.39,
+    rotation: 0,
+  };
+  const branchingWidth =
+    (branchingSlot?.sourceDimensions?.width ?? 1585) * (branchingCal.scale ?? 0.504732);
+  const branchingHeight =
+    (branchingSlot?.sourceDimensions?.height ?? 992) * (branchingCal.scale ?? 0.504732);
+  const branchingLeft = branchingCal.translateX ?? 9.33;
+  const branchingTop = branchingCal.translateY ?? -27.39;
 
-  const offsetX = (calibrationTransform?.x ?? 0) + (1 - finalScale) * pivotX;
-  const offsetY = (calibrationTransform?.y ?? 0) + (1 - finalScale) * pivotY;
-  const rotation = calibrationTransform?.rotation ?? 0;
+  // Small oak sapling asset calibrated image placement derived dynamically from slot
+  const saplingSlot = STAGE_STRUCTURAL_ASSET_SLOTS.tender_sapling;
+  const saplingCal = saplingSlot?.calibrationTransform ?? {
+    scale: 0.083389,
+    translateX: 349.54,
+    translateY: 314.08,
+    rotation: 0,
+  };
+  const saplingWidth =
+    (saplingSlot?.sourceDimensions?.width ?? 1024) * (saplingCal.scale ?? 0.083389);
+  const saplingHeight =
+    (saplingSlot?.sourceDimensions?.height ?? 1536) * (saplingCal.scale ?? 0.083389);
+  const saplingLeft = saplingCal.translateX ?? 349.54;
+  const saplingTop = saplingCal.translateY ?? 314.08;
 
-  // DNA structural variations (subtle organic lean and scale within bounds)
-  const dnaScaleMultiplier = coupleDNA?.structuralVariation?.scaleMultiplier ?? 1.0;
-  const dnaVerticalShift = coupleDNA?.structuralVariation?.verticalShiftPx ?? 0;
+  // Determine whether this structure is eligible for the painterly small sapling raster asset
+  const isSaplingRasterEligible =
+    (effectiveSubphase === "small_sapling" || stageKey === "tender_sapling") &&
+    (structuralAssetKey === "painterly-sapling-v1" ||
+      isCanonicalSaplingAssetKey(structuralAssetKey) ||
+      saplingSlot?.status === "development_preview" ||
+      saplingSlot?.status === "approved");
 
   return (
     <View
@@ -192,24 +255,218 @@ export function PainterlyTreeStructure({
       </Svg>
 
       {/* ------------------------------------------------------------- */}
-      {/* LAYER 4: TREE STRUCTURE (100% PHYSICALLY OPAQUE)              */}
-      {/* Either approved master ancient oak or honest young fallback    */}
+      {/* LAYER 4: TREE STRUCTURE & GROUNDING (SYNCHRONIZED TRANSFORM)   */}
+      {/* Localized contact shadows, 100% opaque wood, & moss overlap   */}
       {/* ------------------------------------------------------------- */}
       <View
         style={[
           styles.structureGroup,
           {
             transform: [
-              { translateX: offsetX },
-              { translateY: offsetY + dnaVerticalShift },
-              { scale: finalScale * dnaScaleMultiplier },
-              { rotate: `${rotation}deg` },
+              { translateX: presentationTransform.offsetX },
+              { translateY: presentationTransform.offsetY },
+              { scale: presentationTransform.totalScale },
+              { rotate: `${presentationTransform.rotation}deg` },
             ],
             transformOrigin: "0px 0px",
           },
         ]}
         pointerEvents="box-none"
       >
+        {/* ------------------------------------------------------------- */}
+        {/* LAYER 5: ORGANIC ROOT-CONTACT SHADOWS & LOCALIZED GROUNDING   */}
+        {/* Hugging individual root flares; shares presentation transform */}
+        {/* ------------------------------------------------------------- */}
+        <Svg
+          style={StyleSheet.absoluteFill}
+          viewBox="0 0 800 500"
+          pointerEvents="none"
+        >
+          <Defs>
+            <RadialGradient
+              id={`rootContactShadow_${gradientId}`}
+              cx="50%"
+              cy="50%"
+              r="50%"
+            >
+              <Stop offset="0%" stopColor="#121A0C" stopOpacity={0.48} />
+              <Stop offset="55%" stopColor="#1E2814" stopOpacity={0.24} />
+              <Stop offset="85%" stopColor="#2A371C" stopOpacity={0.06} />
+              <Stop offset="100%" stopColor="#2A371C" stopOpacity={0} />
+            </RadialGradient>
+            <RadialGradient
+              id={`woodlandGroundShadow_${gradientId}`}
+              cx="45%"
+              cy="48%"
+              r="48%"
+            >
+              <Stop offset="0%" stopColor="#17220E" stopOpacity={0.28} />
+              <Stop offset="60%" stopColor="#223016" stopOpacity={0.12} />
+              <Stop offset="100%" stopColor="#223016" stopOpacity={0} />
+            </RadialGradient>
+            <LinearGradient
+              id={`rootCreviceAO_${gradientId}`}
+              x1="0%"
+              y1="0%"
+              x2="0%"
+              y2="100%"
+            >
+              <Stop offset="0%" stopColor="#10180B" stopOpacity={0.10} />
+              <Stop offset="65%" stopColor="#10180B" stopOpacity={0.35} />
+              <Stop offset="100%" stopColor="#10180B" stopOpacity={0.55} />
+            </LinearGradient>
+          </Defs>
+
+          {/* Soft, localized ambient tree shadow (no broad horizontal dark band across clearing) */}
+          {effectiveSubphase === "planted_acorn" ? (
+            <Ellipse
+              cx={390.4}
+              cy={441.5}
+              rx={6.5}
+              ry={1.8}
+              fill={`url(#woodlandGroundShadow_${gradientId})`}
+              opacity={0.4}
+            />
+          ) : effectiveSubphase === "emerging_shoot" ? (
+            <Ellipse
+              cx={390.4}
+              cy={441.2}
+              rx={6.0}
+              ry={1.8}
+              fill={`url(#woodlandGroundShadow_${gradientId})`}
+              opacity={0.4}
+            />
+          ) : effectiveSubphase === "small_seedling" ? (
+            <Ellipse
+              cx={390.4}
+              cy={441.2}
+              rx={6.5}
+              ry={1.8}
+              fill={`url(#woodlandGroundShadow_${gradientId})`}
+              opacity={0.4}
+            />
+          ) : effectiveSubphase === "small_sapling" ? (
+            <Ellipse
+              cx={390.4}
+              cy={441.0}
+              rx={16.0}
+              ry={4.0}
+              fill={`url(#woodlandGroundShadow_${gradientId})`}
+              opacity={0.45}
+            />
+          ) : isBranchingOakEligible ? (
+            <Ellipse
+              cx={390.4}
+              cy={440.0}
+              rx={95}
+              ry={14}
+              fill={`url(#woodlandGroundShadow_${gradientId})`}
+              opacity={0.55}
+            />
+          ) : (
+            <Path
+              d="M 245 442 C 290 439, 350 440, 445 443 C 530 444, 555 450, 520 457 C 460 462, 330 459, 245 450 Z"
+              fill={`url(#woodlandGroundShadow_${gradientId})`}
+            />
+          )}
+
+          {/* Localized contact shadows under individual root tips, stems or seed */}
+          {effectiveSubphase === "planted_acorn" ? (
+            <G id="acorn-contact-shadow">
+              <Ellipse
+                cx={390.4}
+                cy={441.5}
+                rx={5.2}
+                ry={1.4}
+                fill={`url(#rootContactShadow_${gradientId})`}
+                opacity={0.6}
+              />
+            </G>
+          ) : effectiveSubphase === "emerging_shoot" ? (
+            <G id="shoot-contact-shadow">
+              <Ellipse
+                cx={390.4}
+                cy={441.2}
+                rx={4.8}
+                ry={1.4}
+                fill={`url(#rootContactShadow_${gradientId})`}
+                opacity={0.6}
+              />
+            </G>
+          ) : effectiveSubphase === "small_seedling" ? (
+            <G id="seedling-contact-shadow">
+              <Ellipse
+                cx={390.4}
+                cy={441.2}
+                rx={5.2}
+                ry={1.4}
+                fill={`url(#rootContactShadow_${gradientId})`}
+                opacity={0.6}
+              />
+            </G>
+          ) : effectiveSubphase === "small_sapling" ? (
+            <G id="sapling-contact-shadow">
+              <Ellipse
+                cx={390.4}
+                cy={441.0}
+                rx={9.5}
+                ry={2.5}
+                fill={`url(#rootContactShadow_${gradientId})`}
+                opacity={0.6}
+              />
+            </G>
+          ) : isBranchingOakEligible ? (
+            <G id="branching-root-contact-shadows">
+              {/* Root 1: Left distal root tip (x: 322-332, y: 435.5) */}
+              <Path
+                d="M 321 435.5 C 324 434.8, 330 434.8, 333 435.5 C 330 436.8, 324 436.8, 321 435.5 Z"
+                fill={`url(#rootContactShadow_${gradientId})`}
+              />
+              {/* Root 2: Left buttress tip (x: 348-355, y: 440.5) */}
+              <Path
+                d="M 347 440.5 C 350 439.6, 355 439.6, 357 440.5 C 354 441.8, 349 441.8, 347 440.5 Z"
+                fill={`url(#rootContactShadow_${gradientId})`}
+              />
+              {/* Root 3: Central collar base (x: 380-396, y: 439.5) */}
+              <Path
+                d="M 380 439.5 C 385 438.7, 395 438.7, 400 439.5 C 395 441.0, 385 441.0, 380 439.5 Z"
+                fill={`url(#rootContactShadow_${gradientId})`}
+              />
+              {/* Root 4: Right buttress tip (x: 417-423, y: 441.0) */}
+              <Path
+                d="M 416 441.0 C 419 440.2, 423 440.2, 425 441.0 C 423 442.2, 418 442.2, 416 441.0 Z"
+                fill={`url(#rootContactShadow_${gradientId})`}
+              />
+              {/* Root 5: Right middle root (x: 428-440, y: 438.5) */}
+              <Path
+                d="M 428 438.5 C 432 437.8, 439 437.8, 442 438.5 C 438 439.8, 431 439.8, 428 438.5 Z"
+                fill={`url(#rootContactShadow_${gradientId})`}
+              />
+              {/* Root 6: Right distal root tip (x: 452-466, y: 432.0) */}
+              <Path
+                d="M 452 432.0 C 456 431.2, 464 431.2, 467 432.0 C 463 433.2, 455 433.2, 452 432.0 Z"
+                fill={`url(#rootContactShadow_${gradientId})`}
+              />
+              {/* Subtle ambient crevice between buttresses */}
+              <Path
+                d="M 350 440.8 Q 370 441.6 390.4 441.0 T 422 441.2 Q 406 442.2 390.4 441.8 T 350 440.8 Z"
+                fill={`url(#rootCreviceAO_${gradientId})`}
+              />
+            </G>
+          ) : (
+            <G id="mature-root-contact-shadows">
+              <Path
+                d="M 255 444 C 290 440, 340 442, 390 443 C 440 444, 490 441, 525 445 C 500 454, 430 458, 385 457 C 330 456, 280 452, 255 444 Z"
+                fill={`url(#rootContactShadow_${gradientId})`}
+              />
+              <Path
+                d="M 320 443 Q 345 446 370 444 T 425 445 Q 460 447 485 444 Q 455 450 420 449 T 340 448 Z"
+                fill={`url(#rootCreviceAO_${gradientId})`}
+              />
+            </G>
+          )}
+        </Svg>
+
         {isMatureOakEligible ? (
           /* Master 2.5D Calibrated Ancient Oak (Standard React Native Image) */
           <RNImage
@@ -221,9 +478,379 @@ export function PainterlyTreeStructure({
           /* Calibrated 2.5D Intermediate Branching Oak (Standard React Native Image) */
           <RNImage
             source={OAK_BRANCHING_ASSET}
-            style={styles.branchingOakImage}
+            style={[
+              styles.branchingOakImage,
+              {
+                left: branchingLeft,
+                top: branchingTop,
+                width: branchingWidth,
+                height: branchingHeight,
+              },
+            ]}
             resizeMode="stretch"
           />
+        ) : isSaplingRasterEligible ? (
+          /* Calibrated 2.5D Small Oak Sapling Raster Asset */
+          <RNImage
+            source={OAK_SAPLING_ASSET}
+            style={[
+              styles.saplingOakImage,
+              {
+                left: saplingLeft,
+                top: saplingTop,
+                width: saplingWidth,
+                height: saplingHeight,
+              },
+            ]}
+            resizeMode="stretch"
+          />
+        ) : effectiveSubphase === "planted_acorn" ? (
+          /* Bounded Planted Acorn SVG rooted at (390.4, 441.0) */
+          <Svg
+            style={styles.proceduralSvg}
+            viewBox={`0 0 ${worldBounds.width} ${worldBounds.height}`}
+            pointerEvents="none"
+          >
+            <G id="planted-acorn-structure">
+              {/* Subterranean radicle tip entering earth at (390.4, 441.0) */}
+              <Path
+                d="M 390.4 440.8 C 390.8 441.8, 391.2 442.8, 391.0 443.5"
+                stroke="#D8C8A8"
+                strokeWidth={1.0}
+                strokeLinecap="round"
+                opacity={0.85}
+              />
+              {/* Acorn cupule (cap) on left */}
+              <Path
+                d="M 384.0 440.2 C 383.0 437.5, 385.5 435.0, 388.5 435.5 C 389.0 437.5, 388.5 440.0, 386.0 441.0 Z"
+                fill="#4A3520"
+              />
+              {/* Textured cupule scales */}
+              <Path
+                d="M 385.2 437.5 C 386.0 436.8, 387.2 437.0, 387.8 438.0"
+                stroke="#3A2718"
+                strokeWidth={0.8}
+                strokeLinecap="round"
+                fill="none"
+              />
+              {/* Acorn nut body on right */}
+              <Path
+                d="M 388.0 435.8 C 392.5 436.2, 396.0 438.5, 396.5 440.2 C 395.5 441.5, 391.0 441.6, 387.5 440.8 Z"
+                fill="#784E2A"
+              />
+              {/* Subtle gloss highlight on nut body */}
+              <Path
+                d="M 389.0 437.0 C 392.0 437.2, 394.5 438.5, 395.0 439.5"
+                stroke="#9C683B"
+                strokeWidth={0.8}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.75}
+              />
+            </G>
+          </Svg>
+        ) : effectiveSubphase === "emerging_shoot" ? (
+          /* Bounded Emerging Shoot SVG rising 25px from (390.4, 441.0) */
+          /* Hypogeal germination: Acorn settled in soil, cotyledons inside acorn, slender epicotyl with terminal bud & folded first true leaves */
+          <Svg
+            style={styles.proceduralSvg}
+            viewBox={`0 0 ${worldBounds.width} ${worldBounds.height}`}
+            pointerEvents="none"
+          >
+            <G id="emerging-shoot-structure">
+              {/* Acorn settled in soil at (390.4, 441.0) retaining cotyledons */}
+              {/* Acorn body */}
+              <Path
+                d="M 387.5 441.2 C 386.0 439.0, 388.5 437.0, 391.8 437.5 C 394.5 438.0, 396.0 440.0, 394.5 441.5 C 392.0 442.2, 389.0 442.0, 387.5 441.2 Z"
+                fill="#784E2A"
+              />
+              <Path
+                d="M 388.5 438.2 C 391.0 437.8, 393.5 438.8, 394.0 440.0 C 392.5 440.6, 390.0 440.2, 388.5 438.2 Z"
+                fill="#9C683B"
+                opacity={0.6}
+              />
+              {/* Acorn cupule cap on left */}
+              <Path
+                d="M 384.5 441.0 C 383.8 439.2, 385.0 437.5, 387.5 437.5 C 388.2 439.0, 388.0 440.8, 386.5 441.4 Z"
+                fill="#4A3520"
+              />
+              <Path
+                d="M 385.2 438.8 C 385.8 438.2, 386.8 438.5, 387.2 439.2"
+                stroke="#3A2718"
+                strokeWidth={0.7}
+                fill="none"
+              />
+
+              {/* Slender emerging epicotyl rising from acorn at (390.4, 441.0) to apex (390.4, 416.0) */}
+              {/* Lower epicotyl with reddish-woody seedling flush tint (#7E5434) */}
+              <Path
+                d="M 390.4 441.0 C 389.8 433.0, 391.0 426.0, 390.4 416.0"
+                stroke="#647E36"
+                strokeWidth={2.0}
+                strokeLinecap="round"
+                fill="none"
+              />
+              <Path
+                d="M 390.4 441.0 C 390.1 436.0, 390.6 431.0, 390.4 427.0"
+                stroke="#7E5434"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.8}
+              />
+              {/* Epicotyl highlight */}
+              <Path
+                d="M 390.1 438.0 C 389.7 432.0, 390.7 424.0, 390.2 417.0"
+                stroke="#9EBF58"
+                strokeWidth={0.8}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.75}
+              />
+
+              {/* Hypogeal terminal bud and miniature folded first true leaves at apex (390.4, 416.0) */}
+              {/* Compact terminal oak bud */}
+              <Path
+                d="M 390.4 416.5 C 389.5 415.0, 389.8 413.2, 390.4 412.0 C 391.0 413.2, 391.3 415.0, 390.4 416.5 Z"
+                fill="#7A5636"
+              />
+              {/* Left tiny folded first true leaf */}
+              <Path
+                d="M 390.2 415.5 C 387.2 414.2, 385.5 411.8, 386.8 409.8 C 388.8 410.5, 389.8 412.8, 390.2 415.5 Z"
+                fill="#6A864D"
+              />
+              {/* Right tiny folded first true leaf */}
+              <Path
+                d="M 390.6 415.5 C 393.6 414.0, 395.2 411.5, 394.0 409.5 C 392.0 410.2, 391.0 412.8, 390.6 415.5 Z"
+                fill="#7E9F45"
+              />
+              {/* Apical leaflet vein highlights */}
+              <Path
+                d="M 390.2 415.0 C 388.5 413.5, 387.5 411.8, 387.2 410.5"
+                stroke="#8EAF52"
+                strokeWidth={0.5}
+                fill="none"
+                opacity={0.7}
+              />
+              <Path
+                d="M 390.6 415.0 C 392.2 413.2, 393.2 411.8, 393.5 410.2"
+                stroke="#9EBF58"
+                strokeWidth={0.5}
+                fill="none"
+                opacity={0.7}
+              />
+            </G>
+          </Svg>
+        ) : effectiveSubphase === "small_seedling" ? (
+          /* Bounded Small Oak Seedling SVG rising 55px from (390.4, 441.0) */
+          <Svg
+            style={styles.proceduralSvg}
+            viewBox={`0 0 ${worldBounds.width} ${worldBounds.height}`}
+            pointerEvents="none"
+          >
+            <G id="small-seedling-structure">
+              {/* Slender green-woody stem rising from (390.4, 441.0) to (390.4, 386.0) */}
+              <Path
+                d="M 390.4 441.0 C 389.5 423.0, 391.2 405.0, 390.4 386.0"
+                stroke="#4E3629"
+                strokeWidth={2.8}
+                strokeLinecap="round"
+                fill="none"
+              />
+              <Path
+                d="M 390.4 425.0 C 390.8 412.0, 390.0 398.0, 390.4 386.0"
+                stroke="#586E32"
+                strokeWidth={2.0}
+                strokeLinecap="round"
+                fill="none"
+              />
+              {/* Stem highlight */}
+              <Path
+                d="M 390.1 435.0 C 390.5 420.0, 389.8 402.0, 390.2 387.0"
+                stroke="#788E48"
+                strokeWidth={0.9}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.7}
+              />
+              {/* Leaf 1: Lower left juvenile lobed leaf (node at 390.0, 422.0) */}
+              <Path
+                d="M 390.0 422.0 Q 384.0 420.0 378.0 418.0"
+                stroke="#586E32"
+                strokeWidth={1.2}
+                fill="none"
+              />
+              <Path
+                d="M 378.0 418.0 C 374.0 417.0, 372.0 413.0, 374.0 410.0 C 376.5 411.0, 378.0 413.5, 380.0 414.0 C 382.0 412.0, 385.0 413.5, 384.5 416.5 Z"
+                fill="#56723D"
+              />
+              {/* Leaf 2: Mid right juvenile lobed leaf (node at 390.5, 410.0) */}
+              <Path
+                d="M 390.5 410.0 Q 396.0 408.0 402.0 406.0"
+                stroke="#586E32"
+                strokeWidth={1.2}
+                fill="none"
+              />
+              <Path
+                d="M 402.0 406.0 C 406.0 405.0, 408.0 401.0, 406.0 398.0 C 403.5 399.0, 402.0 401.5, 400.0 402.0 C 398.0 400.0, 395.0 401.5, 395.5 404.5 Z"
+                fill="#6A864D"
+              />
+              {/* Leaf 3: Upper left juvenile leaf (node at 390.2, 398.0) */}
+              <Path
+                d="M 390.2 398.0 Q 385.0 394.0 380.0 391.0"
+                stroke="#586E32"
+                strokeWidth={1.1}
+                fill="none"
+              />
+              <Path
+                d="M 380.0 391.0 C 376.5 390.0, 375.0 386.5, 377.0 384.0 C 379.0 385.0, 380.5 387.0, 382.5 387.5 C 384.0 385.5, 387.0 387.0, 386.0 390.0 Z"
+                fill="#7E9F45"
+              />
+              {/* Leaf 4: Apical shoot at (390.4, 386.0) */}
+              <Path
+                d="M 390.4 386.0 C 388.0 382.0, 389.0 378.0, 391.0 379.0 C 392.5 381.0, 392.0 383.5, 390.4 386.0 Z"
+                fill="#92B555"
+              />
+              <Path
+                d="M 390.4 386.0 C 392.8 382.0, 394.5 380.0, 394.0 382.5 C 393.0 384.5, 391.8 385.5, 390.4 386.0 Z"
+                fill="#7E9F45"
+              />
+            </G>
+          </Svg>
+        ) : effectiveSubphase === "small_sapling" ? (
+          /* Bounded Small Leafy Sapling SVG rising 125px from (390.4, 441.0) */
+          /* Slender lightly woody stem, narrow root collar, modest juvenile oak leaves, zero mature buttress roots */
+          <Svg
+            style={styles.proceduralSvg}
+            viewBox={`0 0 ${worldBounds.width} ${worldBounds.height}`}
+            pointerEvents="none"
+          >
+            <G id="small-sapling-structure" accessibilityLabel="Small leafy sapling procedural fallback (Placeholder)">
+              {/* Narrow root collar entering soil at (390.4, 441.0) */}
+              <Path
+                d="M 387.2 441.0 C 387.8 438.5, 388.5 432.0, 388.8 422.0 L 392.0 422.0 C 392.3 432.0, 393.0 438.5, 393.6 441.0 Z"
+                fill="#4E3629"
+              />
+
+              {/* Slender lightly woody central stem with subtle organic curve from (390.4, 441.0) to (390.4, 324.0) */}
+              <Path
+                d="M 390.4 441.0 C 389.2 418.0, 391.6 392.0, 390.0 366.0 C 388.8 348.0, 391.0 334.0, 390.4 324.0"
+                stroke="#4E3629"
+                strokeWidth={3.6}
+                strokeLinecap="round"
+                fill="none"
+              />
+              <Path
+                d="M 390.4 430.0 C 389.4 412.0, 391.4 388.0, 390.0 364.0 C 388.9 346.0, 390.8 333.0, 390.4 324.0"
+                stroke="#5C4430"
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                fill="none"
+              />
+              {/* Bark highlight (chlorophyll undertone) */}
+              <Path
+                d="M 390.0 436.0 C 389.0 416.0, 391.2 390.0, 389.8 366.0 C 388.7 348.0, 390.7 334.0, 390.2 325.0"
+                stroke="#788E48"
+                strokeWidth={0.8}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.65}
+              />
+
+              {/* Twig 1: Lower-mid left lateral twig (emerges at 389.8, 388.0) */}
+              <Path
+                d="M 389.8 388.0 Q 380.0 382.0 372.0 377.0"
+                stroke="#5C4430"
+                strokeWidth={1.3}
+                strokeLinecap="round"
+                fill="none"
+              />
+              {/* Twig 1 Leaf A: juvenile lobed oak leaf at node (380.0, 382.0) */}
+              <Path
+                d="M 380.0 382.0 Q 374.0 384.5 369.0 388.0"
+                stroke="#586E32"
+                strokeWidth={1.0}
+                fill="none"
+              />
+              <Path
+                d="M 369.0 388.0 C 365.0 389.0, 362.5 386.0, 364.0 382.5 C 366.5 383.5, 368.0 385.5, 370.5 385.0 C 372.0 383.0, 375.0 384.5, 374.0 387.5 Z"
+                fill="#56723D"
+              />
+              {/* Twig 1 Leaf B: terminal juvenile lobed oak leaf at (372.0, 377.0) */}
+              <Path
+                d="M 372.0 377.0 C 367.0 375.5, 364.0 371.0, 366.5 368.0 C 369.5 369.0, 371.5 372.0, 374.0 372.5 C 376.0 370.0, 379.5 372.0, 378.0 375.5 Z"
+                fill="#6A864D"
+              />
+
+              {/* Twig 2: Mid-right lateral twig (emerges at 390.6, 365.0) */}
+              <Path
+                d="M 390.6 365.0 Q 401.0 358.0 411.0 352.0"
+                stroke="#5C4430"
+                strokeWidth={1.3}
+                strokeLinecap="round"
+                fill="none"
+              />
+              {/* Twig 2 Leaf A: juvenile leaf at mid-twig (402.0, 360.0) */}
+              <Path
+                d="M 402.0 360.0 Q 407.0 364.0 412.0 368.0"
+                stroke="#586E32"
+                strokeWidth={1.0}
+                fill="none"
+              />
+              <Path
+                d="M 412.0 368.0 C 416.0 369.0, 418.5 366.0, 417.0 362.5 C 414.5 363.5, 413.0 365.5, 410.5 365.0 C 409.0 363.0, 406.0 364.5, 407.0 367.5 Z"
+                fill="#56723D"
+              />
+              {/* Twig 2 Leaf B: terminal juvenile lobed oak leaf at (411.0, 352.0) */}
+              <Path
+                d="M 411.0 352.0 C 416.0 350.5, 419.0 346.0, 416.5 343.0 C 413.5 344.0, 411.5 347.0, 409.0 347.5 C 407.0 345.0, 403.5 347.0, 405.0 350.5 Z"
+                fill="#6A864D"
+              />
+
+              {/* Twig 3: Upper-left lateral twig (emerges at 390.0, 344.0) */}
+              <Path
+                d="M 390.0 344.0 Q 382.5 338.5 375.0 333.5"
+                stroke="#6B533E"
+                strokeWidth={1.1}
+                strokeLinecap="round"
+                fill="none"
+              />
+              {/* Twig 3 Leaf A: terminal juvenile leaf pointing outward */}
+              <Path
+                d="M 375.0 333.5 C 370.5 332.0, 368.0 328.0, 370.5 325.0 C 373.0 326.0, 374.5 328.5, 377.0 329.0 C 378.8 327.0, 381.8 328.8, 380.8 332.0 Z"
+                fill="#7E9F45"
+              />
+              {/* Twig 3 Leaf B: small leaf at node (381.0, 337.0) */}
+              <Path
+                d="M 381.0 337.0 C 377.0 339.5, 374.5 338.0, 375.5 335.0 C 377.5 335.5, 379.0 336.8, 381.0 337.0 Z"
+                fill="#8DB54C"
+              />
+
+              {/* Terminal Leader: Central upright apical cluster at (390.4, 324.0) to (390.4, 314.0) */}
+              <Path
+                d="M 390.4 324.0 L 390.4 319.0"
+                stroke="#6E8838"
+                strokeWidth={1.2}
+                strokeLinecap="round"
+                fill="none"
+              />
+              {/* Apical leaf 1: left young oak leaf */}
+              <Path
+                d="M 390.4 321.0 C 386.0 318.5, 385.0 314.0, 387.5 313.0 C 389.5 314.5, 389.8 317.5, 390.4 321.0 Z"
+                fill="#8DB54C"
+              />
+              {/* Apical leaf 2: center upright young leaf */}
+              <Path
+                d="M 390.4 319.0 C 388.5 315.0, 390.0 311.5, 391.5 312.0 C 392.5 314.5, 391.8 317.0, 390.4 319.0 Z"
+                fill="#9EC05C"
+              />
+              {/* Apical leaf 3: right young oak leaf */}
+              <Path
+                d="M 390.4 321.0 C 394.5 318.0, 396.0 314.0, 394.0 313.0 C 392.0 314.5, 391.2 317.5, 390.4 321.0 Z"
+                fill="#7E9F45"
+              />
+            </G>
+          </Svg>
         ) : (
           /* Honest Younger Procedural Structure (early stages or procedural fallback) */
           <Svg
@@ -307,100 +934,133 @@ export function PainterlyTreeStructure({
             </G>
           </Svg>
         )}
+
+        {/* Development-Only Painterly Foliage Cluster Proof */}
+        {/* Attached to verified branch anchor 'branch-scaffold-right-upper' (554.4, 103.8) */}
+        {/* Calibrated from baseline 554.4 - 59.4 (140px cluster) to 50x51 cluster to match branch thickness */}
+        {effectiveShowFoliageProof && (
+          <RNImage
+            source={FOLIAGE_CLUSTER_ASSET}
+            style={{
+              position: "absolute",
+              left: 554.4 - 59.4 + 35.4, // 554.4 - 24
+              top: 103.8 - 48,
+              width: 50,
+              height: 51,
+            }}
+            resizeMode="contain"
+          />
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* LAYER 6: FOREGROUND SOIL, MOSS & LEAF LITTER OVERLAP          */}
+        {/* Partially occludes only bottom 2-4px of root tips; shares transform */}
+        {/* ------------------------------------------------------------- */}
+        <Svg
+          style={StyleSheet.absoluteFill}
+          viewBox="0 0 800 500"
+          pointerEvents="none"
+        >
+          <G id="foreground-moss-overlap" opacity={0.92}>
+            {effectiveSubphase === "planted_acorn" ? (
+              <G id="acorn-soil-bedding">
+                <Path
+                  d="M 387.0 441.2 C 388.5 440.8, 392.0 440.8, 393.5 441.4 C 391.5 441.9, 388.8 441.8, 387.0 441.2 Z"
+                  fill="#3A2A1A"
+                  opacity={0.75}
+                />
+                <Circle cx={388.2} cy={441.8} r={0.7} fill="#241B13" opacity={0.8} />
+                <Circle cx={392.6} cy={441.6} r={0.6} fill="#241B13" opacity={0.8} />
+              </G>
+            ) : effectiveSubphase === "emerging_shoot" ||
+              effectiveSubphase === "small_seedling" ? (
+              <G id="seedling-soil-bedding">
+                <Path
+                  d="M 388.0 441.2 C 389.2 440.7, 391.6 440.7, 392.8 441.3 C 391.2 441.8, 389.5 441.7, 388.0 441.2 Z"
+                  fill="#241B13"
+                  opacity={0.8}
+                />
+                <Circle cx={389.0} cy={441.6} r={0.6} fill="#3E5228" opacity={0.8} />
+                <Circle cx={391.8} cy={441.5} r={0.7} fill="#241B13" opacity={0.7} />
+              </G>
+            ) : effectiveSubphase === "small_sapling" ? (
+              <G id="sapling-soil-bedding">
+                <Path
+                  d="M 386.2 441.2 C 388.0 440.6, 392.8 440.6, 394.6 441.2 C 392.5 441.8, 388.5 441.8, 386.2 441.2 Z"
+                  fill="#241B13"
+                  opacity={0.85}
+                />
+                <Circle cx={387.6} cy={441.6} r={0.7} fill="#241B13" opacity={0.7} />
+                <Circle cx={393.2} cy={441.5} r={0.6} fill="#3E5228" opacity={0.7} />
+              </G>
+            ) : isBranchingOakEligible ? (
+              <G id="branching-root-bedding">
+                {/* Center collar base preserves clean bark exposure. */}
+                {/* Natural woodland leaf-litter flakes collected in the shaded crevice */}
+                <Path
+                  d="M 374.2 440.6 C 376.5 439.8, 379.2 440.0, 380.8 441.2 C 378.2 441.9, 375.4 441.6, 374.2 440.6 Z"
+                  fill="#4A3724"
+                  opacity={0.85}
+                />
+                <Path
+                  d="M 377.5 441.4 C 379.2 440.8, 381.8 441.0, 383.0 442.0 C 381.0 442.5, 378.6 442.2, 377.5 441.4 Z"
+                  fill="#5C4430"
+                  opacity={0.80}
+                />
+
+                {/* Roots 2 & 5: Boldly exposed wood with subtle distal soil contact */}
+                <Path
+                  d="M 349.5 440.8 C 351.2 440.0, 353.8 440.0, 355.2 440.9 C 353.4 441.6, 350.8 441.6, 349.5 440.8 Z"
+                  fill="#241B13"
+                  opacity={0.80}
+                />
+                <Path
+                  d="M 439.2 438.8 C 440.6 438.2, 442.4 438.2, 443.4 438.9 C 442.0 439.5, 440.2 439.5, 439.2 438.8 Z"
+                  fill="#241B13"
+                  opacity={0.75}
+                />
+              </G>
+            ) : (
+              <G id="mature-root-bedding">
+                {/* Left root flare moss cushion */}
+                <Path
+                  d="M 268 446 C 275 442, 285 443, 296 445 C 304 444, 312 447, 318 448 C 308 450, 290 451, 268 446 Z"
+                  fill="#283319"
+                />
+                {/* Center-left root tuft */}
+                <Path
+                  d="M 335 446 C 342 443, 350 444, 358 447 C 352 449, 344 449, 335 446 Z"
+                  fill="#3E5228"
+                />
+                {/* Center-right soil overlap */}
+                <Path
+                  d="M 405 447 C 414 444, 424 445, 434 448 C 426 450, 416 450, 405 447 Z"
+                  fill="#283319"
+                />
+                {/* Far-right root tip gentle grass blades */}
+                <Path
+                  d="M 482 446 C 490 443, 498 444, 508 447 C 500 450, 492 450, 482 446 Z"
+                  fill="#3E5228"
+                />
+                {/* Gentle curved meadow blades bedding roots into clearing soil */}
+                <Path
+                  d="M 285 446 Q 288 442 287 439 M 345 447 Q 348 443 347 440 M 420 448 Q 423 444 425 441 M 495 447 Q 497 443 496 440"
+                  stroke="#526E38"
+                  strokeWidth={1.1}
+                  strokeLinecap="round"
+                  fill="none"
+                />
+              </G>
+            )}
+          </G>
+        </Svg>
       </View>
-
-      {/* ------------------------------------------------------------- */}
-      {/* LAYER 5: ORGANIC ROOT-CONTACT SHADOW                          */}
-      {/* Resting shadow hugging root flare: sourceEvent=null, non-selectable */}
-      {/* ------------------------------------------------------------- */}
-      <Svg
-        style={StyleSheet.absoluteFill}
-        viewBox={`0 0 ${worldBounds.width} ${worldBounds.height}`}
-        pointerEvents="none"
-      >
-        <Defs>
-          <RadialGradient
-            id={`rootContactShadow_${gradientId}`}
-            cx="48%"
-            cy="89%"
-            r="35%"
-          >
-            <Stop offset="0%" stopColor="#1B2414" stopOpacity={0.42} />
-            <Stop offset="45%" stopColor="#25311B" stopOpacity={0.24} />
-            <Stop offset="80%" stopColor="#303E23" stopOpacity={0.08} />
-            <Stop offset="100%" stopColor="#303E23" stopOpacity={0} />
-          </RadialGradient>
-          <LinearGradient
-            id={`rootAmbientOcclusion_${gradientId}`}
-            x1="0%"
-            y1="0%"
-            x2="0%"
-            y2="100%"
-          >
-            <Stop offset="0%" stopColor="#172010" stopOpacity={0} />
-            <Stop offset="70%" stopColor="#172010" stopOpacity={0.32} />
-            <Stop offset="100%" stopColor="#172010" stopOpacity={0.45} />
-          </LinearGradient>
-        </Defs>
-
-        {/* Ambient occlusion bed immediately beneath main root spread */}
-        <Path
-          d="M 255 444 C 290 440, 340 442, 390 443 C 440 444, 490 441, 525 445 C 500 454, 430 458, 385 457 C 330 456, 280 452, 255 444 Z"
-          fill={`url(#rootContactShadow_${gradientId})`}
-        />
-
-        {/* Organic contact crevices directly under buttress root forks */}
-        <Path
-          d="M 320 443 Q 345 446 370 444 T 425 445 Q 460 447 485 444 Q 455 450 420 449 T 340 448 Z"
-          fill={`url(#rootAmbientOcclusion_${gradientId})`}
-        />
-      </Svg>
-
-      {/* ------------------------------------------------------------- */}
-      {/* LAYER 6: FOREGROUND MOSS & GRASS OVERLAP                       */}
-      {/* Partially occludes lowest root tips: sourceEvent=null, non-selectable */}
-      {/* ------------------------------------------------------------- */}
-      <Svg
-        style={StyleSheet.absoluteFill}
-        viewBox={`0 0 ${worldBounds.width} ${worldBounds.height}`}
-        pointerEvents="none"
-      >
-        <G id="foreground-moss-overlap" opacity={0.88}>
-          {/* Left root flare moss cushion */}
-          <Path
-            d="M 268 446 C 275 442, 285 443, 296 445 C 304 444, 312 447, 318 448 C 308 450, 290 451, 268 446 Z"
-            fill="#455B32"
-          />
-          {/* Center-left root tuft */}
-          <Path
-            d="M 335 446 C 342 443, 350 444, 358 447 C 352 449, 344 449, 335 446 Z"
-            fill="#566F3E"
-          />
-          {/* Center-right soil overlap */}
-          <Path
-            d="M 405 447 C 414 444, 424 445, 434 448 C 426 450, 416 450, 405 447 Z"
-            fill="#455B32"
-          />
-          {/* Far-right root tip gentle grass blades */}
-          <Path
-            d="M 482 446 C 490 443, 498 444, 508 447 C 500 450, 492 450, 482 446 Z"
-            fill="#566F3E"
-          />
-          {/* Fine meadow blades bedding roots into clearing soil */}
-          <Path
-            d="M 285 446 L 288 440 L 291 446 M 345 447 L 348 441 L 351 447 M 420 448 L 423 442 L 426 448 M 495 447 L 497 442 L 500 447"
-            stroke="#638048"
-            strokeWidth={1.5}
-            strokeLinecap="round"
-          />
-        </G>
-      </Svg>
 
       {/* ------------------------------------------------------------- */}
       {/* LIGHTING & COLOR HARMONY: NON-DESTRUCTIVE CROSS-PLATFORM VEILS */}
       {/* Softens golden highlights, cool forest ambient, edge vignette */}
       {/* ------------------------------------------------------------- */}
-      {isMatureOakEligible && (
+      {(isMatureOakEligible || isBranchingOakEligible) && (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {/* Highlight softening: gentle daylight wash */}
           <View
@@ -559,10 +1219,10 @@ const styles = StyleSheet.create({
   },
   branchingOakImage: {
     position: "absolute",
-    left: 9.33,
-    top: -27.39,
-    width: 800,
-    height: 500.69,
+    opacity: 1.0, // 100% physically opaque structure
+  },
+  saplingOakImage: {
+    position: "absolute",
     opacity: 1.0, // 100% physically opaque structure
   },
   proceduralSvg: {

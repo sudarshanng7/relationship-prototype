@@ -14,6 +14,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useGardenData } from "@/lib/use-garden-data";
 import { getAmbienceLabel } from "@/lib/garden-generator";
 import { GardenVisualizer } from "@/components/garden/GardenVisualizer";
+import { GardenProgressSection } from "@/components/garden/GardenProgressSection";
 
 export interface GardenEntryCardProps {
   coupleId: string;
@@ -208,6 +209,13 @@ export function GardenEntryCard({
         >
           {secondaryLine}
         </Text>
+
+        {/* Compact gentle growth progress */}
+        <GardenProgressSection
+          compact={true}
+          totalGrowthUnits={totalGrowthUnits}
+          careEventsCount={careEvents?.length ?? 0}
+        />
       </View>
     </Pressable>
   );
@@ -240,7 +248,7 @@ const styles = StyleSheet.create({
     fontSize: tokens.typeScale.body,
   },
   artSection: {
-    height: 160,
+    height: 188,
     flexShrink: 0,
     position: "relative",
     overflow: "hidden",

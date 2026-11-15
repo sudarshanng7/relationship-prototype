@@ -38,6 +38,8 @@ import {
   getNextMemory,
   getPreviousMemory,
   resolveGardenWorldPresentation,
+  resolveLifecycleVisualPhase,
+  resolvePlantInspectionCamera,
 } from "@/lib/garden";
 import { GardenVisualizer } from "./GardenVisualizer";
 
@@ -127,17 +129,88 @@ export function GardenExplorer({
 
   // Horizontal scroll indicator state for scenic/memory strip
   const scrollViewRef = useRef<ScrollView>(null);
+  const regionBarRef = useRef<View>(null);
+  const scrollOffsetRef = useRef<number>(0);
+  const contentWidthRef = useRef<number>(0);
+  const containerWidthRef = useRef<number>(0);
+
   const [scrollState, setScrollState] = useState({
     canScrollLeft: false,
-    canScrollRight: true,
+    canScrollRight: false,
   });
+
+  const updateScrollAvailability = useCallback((offset: number, contentW: number, containerW: number) => {
+    const canLeft = offset > 8;
+    const canRight = offset + containerW < contentW - 8;
+    setScrollState((prev) => {
+      if (prev.canScrollLeft === canLeft && prev.canScrollRight === canRight) return prev;
+      return { canScrollLeft: canLeft, canScrollRight: canRight };
+    });
+  }, []);
 
   const handleScroll = useCallback((e: any) => {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    const canLeft = contentOffset.x > 6;
-    const canRight = contentOffset.x + layoutMeasurement.width < contentSize.width - 6;
-    setScrollState({ canScrollLeft: canLeft, canScrollRight: canRight });
-  }, []);
+    scrollOffsetRef.current = contentOffset.x;
+    contentWidthRef.current = contentSize.width;
+    containerWidthRef.current = layoutMeasurement.width;
+    updateScrollAvailability(contentOffset.x, contentSize.width, layoutMeasurement.width);
+  }, [updateScrollAvailability]);
+
+  const handleContentSizeChange = useCallback((w: number) => {
+    contentWidthRef.current = w;
+    updateScrollAvailability(scrollOffsetRef.current, w, containerWidthRef.current);
+  }, [updateScrollAvailability]);
+
+  const handleScrollViewLayout = useCallback((e: any) => {
+    const w = e.nativeEvent.layout.width;
+    containerWidthRef.current = w;
+    updateScrollAvailability(scrollOffsetRef.current, contentWidthRef.current, w);
+  }, [updateScrollAvailability]);
+
+  const handleScrollLeft = useCallback(() => {
+    const step = Math.max(140, (containerWidthRef.current || 300) * 0.6);
+    const target = Math.max(0, scrollOffsetRef.current - step);
+    scrollOffsetRef.current = target;
+    scrollViewRef.current?.scrollTo({ x: target, animated: !isReduceMotion });
+    updateScrollAvailability(target, contentWidthRef.current, containerWidthRef.current);
+  }, [isReduceMotion, updateScrollAvailability]);
+
+  const handleScrollRight = useCallback(() => {
+    const step = Math.max(140, (containerWidthRef.current || 300) * 0.6);
+    const maxScroll = Math.max(0, contentWidthRef.current - containerWidthRef.current);
+    const target = Math.min(maxScroll, scrollOffsetRef.current + step);
+    scrollOffsetRef.current = target;
+    scrollViewRef.current?.scrollTo({ x: target, animated: !isReduceMotion });
+    updateScrollAvailability(target, contentWidthRef.current, containerWidthRef.current);
+  }, [isReduceMotion, updateScrollAvailability]);
+
+  // Web wheel event translation for category strip (deltaY -> horizontal scroll without canvas zoom)
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const barEl = regionBarRef.current as any;
+    if (!barEl) return;
+    const domNode: HTMLElement | null = barEl.tagName ? barEl : (barEl._node ?? null);
+    if (!domNode?.addEventListener) return;
+
+    const onRegionWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && e.deltaY !== 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        const maxScroll = Math.max(0, contentWidthRef.current - containerWidthRef.current);
+        const nextX = Math.min(maxScroll, Math.max(0, scrollOffsetRef.current + e.deltaY));
+        scrollOffsetRef.current = nextX;
+        scrollViewRef.current?.scrollTo({ x: nextX, animated: false });
+        updateScrollAvailability(nextX, contentWidthRef.current, containerWidthRef.current);
+      } else {
+        e.stopPropagation();
+      }
+    };
+
+    domNode.addEventListener("wheel", onRegionWheel, { passive: false });
+    return () => {
+      domNode.removeEventListener("wheel", onRegionWheel);
+    };
+  }, [updateScrollAvailability]);
 
   // Gesture tracking refs
   const canvasRef = useRef<View>(null);
@@ -148,7 +221,7 @@ export function GardenExplorer({
   // Resolved presentation geometry of the world aligning camera and hit testing
   // with active structure scaling, offset, and couple DNA
   const presentationWorld = useMemo(() => {
-    return resolveGardenWorldPresentation(world);
+    return resolveGardenWorldPresentation(world, { cropPreset: "middle_distance" });
   }, [world]);
 
   // Canonical chronological collection of explorable earned memories
@@ -436,6 +509,30 @@ export function GardenExplorer({
     setCameraMode("overview");
   }, [viewport]);
 
+  // Inspect plant at permanent planting anchor without altering object world position or depth
+  const handleInspectPlant = useCallback(() => {
+    setCameraMode("explore");
+    setSelectedNode(null);
+    setSelectedMemoryIndex(-1);
+    const subphase = resolveLifecycleVisualPhase(
+      totalGrowthUnits ?? world.totalGrowthUnits ?? 0,
+      careEvents.length
+    );
+    const inspectCam = resolvePlantInspectionCamera(
+      subphase,
+      viewport,
+      zoomLimits.minZoom,
+      zoomLimits.maxZoom
+    );
+    setCameraState({
+      targetX: inspectCam.targetX,
+      targetY: inspectCam.targetY,
+      zoom: Math.min(zoomLimits.maxZoom, Math.max(zoomLimits.minZoom, inspectCam.zoom)),
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
+    });
+  }, [viewport, zoomLimits, totalGrowthUnits, world.totalGrowthUnits, careEvents.length]);
+
   // Filter available scenic regions
   const availableRegions = useMemo(() => {
     return ALL_REGIONS.filter((reg) => isScenicRegionAvailable(presentationWorld, reg.id));
@@ -460,12 +557,15 @@ export function GardenExplorer({
       setCameraMode("scenic_focus");
 
       // Auto-scroll pill into view
+      const targetX = Math.max(0, index * 95 - 40);
+      scrollOffsetRef.current = targetX;
       scrollViewRef.current?.scrollTo({
-        x: Math.max(0, index * 80 - 40),
-        animated: true,
+        x: targetX,
+        animated: !isReduceMotion,
       });
+      updateScrollAvailability(targetX, contentWidthRef.current, containerWidthRef.current);
     },
-    [presentationWorld, viewport, zoomLimits]
+    [presentationWorld, viewport, zoomLimits, isReduceMotion, updateScrollAvailability]
   );
 
   // Descriptive label for decorative / landscape nodes
@@ -558,21 +658,39 @@ export function GardenExplorer({
           </Text>
         </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.resetButton,
-            { backgroundColor: isLight ? "#FFFFFF" : "#2E2436", borderColor: cardBorder },
-            pressed && styles.buttonPressed,
-          ]}
-          onPress={handleResetView}
-          focusable={true}
-          accessibilityRole="button"
-          accessibilityLabel="Reset garden view"
-          accessibilityHint="Returns camera to fit entire garden"
-          hitSlop={8}
-        >
-          <Text style={[styles.resetLabel, { color: theme.primaryAccent }]}>Reset</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.resetButton,
+              { backgroundColor: isLight ? "#FFFFFF" : "#2E2436", borderColor: cardBorder },
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={handleInspectPlant}
+            focusable={true}
+            accessibilityRole="button"
+            accessibilityLabel="Inspect plant"
+            accessibilityHint="Zooms camera in to inspect the living plant at its permanent planting anchor"
+            hitSlop={8}
+          >
+            <Text style={[styles.resetLabel, { color: theme.primaryAccent }]}>Inspect</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.resetButton,
+              { backgroundColor: isLight ? "#FFFFFF" : "#2E2436", borderColor: cardBorder },
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={handleResetView}
+            focusable={true}
+            accessibilityRole="button"
+            accessibilityLabel="Reset garden view"
+            accessibilityHint="Returns camera to fit entire garden"
+            hitSlop={8}
+          >
+            <Text style={[styles.resetLabel, { color: theme.primaryAccent }]}>Reset</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* 2. Interactive SVG Canvas Surface */}
@@ -594,6 +712,7 @@ export function GardenExplorer({
           camera={cameraState}
           viewport={viewport}
           exploreMode={true}
+          cropPreset="middle_distance"
           highlightFeatureId={
             activeMemory?.legacyFeatureId ||
             selectedNode?.legacyFeatureId ||
@@ -674,14 +793,51 @@ export function GardenExplorer({
       </View>
 
       {/* 4. Scenic Region & Memory Focus Navigator */}
-      <View style={[styles.regionBar, { backgroundColor: overlayBg, borderColor: cardBorder }]}>
+      <View
+        ref={regionBarRef}
+        style={[styles.regionBar, { backgroundColor: overlayBg, borderColor: cardBorder }]}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderTerminationRequest={() => false}
+        onPointerDown={Platform.OS === "web" ? (e: any) => e.stopPropagation() : undefined}
+      >
+        {/* Left scroll navigation control */}
+        {scrollState.canScrollLeft && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.scrollButtonLeft,
+              {
+                backgroundColor: isLight
+                  ? "rgba(255, 255, 255, 0.96)"
+                  : "rgba(26, 20, 32, 0.96)",
+                borderColor: cardBorder,
+              },
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={handleScrollLeft}
+            focusable={true}
+            accessibilityRole="button"
+            accessibilityLabel="Scroll categories left"
+            accessibilityHint="Scrolls previous category pills into view"
+            hitSlop={8}
+          >
+            <Text style={[styles.scrollNavCue, { color: theme.primaryAccent }]}>‹</Text>
+          </Pressable>
+        )}
+
         <ScrollView
           ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           onScroll={handleScroll}
+          onContentSizeChange={handleContentSizeChange}
+          onLayout={handleScrollViewLayout}
           scrollEventThrottle={16}
-          contentContainerStyle={styles.regionScrollContent}
+          contentContainerStyle={[
+            styles.regionScrollContent,
+            scrollState.canScrollLeft && { paddingLeft: 34 },
+            scrollState.canScrollRight && { paddingRight: 34 },
+          ]}
         >
           {explorableMemories.length > 0 && (
             <Pressable
@@ -750,21 +906,28 @@ export function GardenExplorer({
           ))}
         </ScrollView>
 
-        {/* Right overflow indicator fade cue */}
+        {/* Right scroll navigation control */}
         {scrollState.canScrollRight && (
-          <View
-            style={[
-              styles.scrollFadeRight,
+          <Pressable
+            style={({ pressed }) => [
+              styles.scrollButtonRight,
               {
                 backgroundColor: isLight
-                  ? "rgba(255, 255, 255, 0.9)"
-                  : "rgba(26, 20, 32, 0.9)",
+                  ? "rgba(255, 255, 255, 0.96)"
+                  : "rgba(26, 20, 32, 0.96)",
+                borderColor: cardBorder,
               },
+              pressed && styles.buttonPressed,
             ]}
-            pointerEvents="none"
+            onPress={handleScrollRight}
+            focusable={true}
+            accessibilityRole="button"
+            accessibilityLabel="Scroll categories right"
+            accessibilityHint="Scrolls more category pills into view"
+            hitSlop={8}
           >
-            <Text style={[styles.scrollFadeCue, { color: theme.primaryAccent }]}>›</Text>
-          </View>
+            <Text style={[styles.scrollNavCue, { color: theme.primaryAccent }]}>›</Text>
+          </Pressable>
         )}
       </View>
 
@@ -1108,6 +1271,45 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     flexShrink: 0,
+  },
+  scrollButtonLeft: {
+    position: "absolute",
+    left: 4,
+    top: 6,
+    bottom: 6,
+    width: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  scrollButtonRight: {
+    position: "absolute",
+    right: 4,
+    top: 6,
+    bottom: 6,
+    width: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  scrollNavCue: {
+    fontSize: 20,
+    fontWeight: "700",
+    lineHeight: 22,
   },
   scrollFadeRight: {
     position: "absolute",

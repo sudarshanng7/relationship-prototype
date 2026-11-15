@@ -1223,7 +1223,7 @@ function createOrganicBlossomPetals(
 /**
  * Creates central midrib and restrained secondary veins for an organic leaf.
  */
-function createLeafVeinD(
+export function createLeafVeinD(
   bx: number,
   by: number,
   tx: number,
@@ -1269,6 +1269,81 @@ function createLeafVeinD(
   }
 
   return `${midrib} ${branches.join(" ")}`;
+}
+
+/**
+ * Generates an authentic lobed oak leaf silhouette (Quercus) with petiole,
+ * undulating rounded lateral lobes, sinuses, and terminal rounded lobe.
+ */
+export function createOakLobedLeafD(
+  bx: number,
+  by: number,
+  tx: number,
+  ty: number,
+  widthRatio: number = 0.36
+): string {
+  const dx = tx - bx;
+  const dy = ty - by;
+  const dist = Math.max(6, Math.hypot(dx, dy));
+  const ux = dx / dist;
+  const uy = dy / dist;
+  const px = -uy;
+  const py = ux;
+  const w = dist * widthRatio;
+
+  // Petiole stalk point
+  const p0x = bx + ux * (dist * 0.16);
+  const p0y = by + uy * (dist * 0.16);
+
+  // Lobe 1 (basal, right)
+  const l1x = bx + ux * (dist * 0.35) + px * (w * 0.62);
+  const l1y = by + uy * (dist * 0.35) + py * (w * 0.62);
+  // Sinus 1 (right)
+  const s1x = bx + ux * (dist * 0.48) + px * (w * 0.38);
+  const s1y = by + uy * (dist * 0.48) + py * (w * 0.38);
+  // Lobe 2 (broadest middle, right)
+  const l2x = bx + ux * (dist * 0.66) + px * (w * 0.98);
+  const l2y = by + uy * (dist * 0.66) + py * (w * 0.98);
+  // Sinus 2 (right)
+  const s2x = bx + ux * (dist * 0.79) + px * (w * 0.46);
+  const s2y = by + uy * (dist * 0.79) + py * (w * 0.46);
+  // Lobe 3 (upper, right)
+  const l3x = bx + ux * (dist * 0.90) + px * (w * 0.68);
+  const l3y = by + uy * (dist * 0.90) + py * (w * 0.68);
+
+  // Lobe 3 (upper, left)
+  const l3Lx = bx + ux * (dist * 0.90) - px * (w * 0.68);
+  const l3Ly = by + uy * (dist * 0.90) - py * (w * 0.68);
+  // Sinus 2 (left)
+  const s2Lx = bx + ux * (dist * 0.79) - px * (w * 0.46);
+  const s2Ly = by + uy * (dist * 0.79) - py * (w * 0.46);
+  // Lobe 2 (middle, left)
+  const l2Lx = bx + ux * (dist * 0.66) - px * (w * 0.98);
+  const l2Ly = by + uy * (dist * 0.66) - py * (w * 0.98);
+  // Sinus 1 (left)
+  const s1Lx = bx + ux * (dist * 0.48) - px * (w * 0.38);
+  const s1Ly = by + uy * (dist * 0.48) - py * (w * 0.38);
+  // Lobe 1 (basal, left)
+  const l1Lx = bx + ux * (dist * 0.35) - px * (w * 0.62);
+  const l1Ly = by + uy * (dist * 0.35) - py * (w * 0.62);
+
+  return [
+    `M ${bx.toFixed(1)},${by.toFixed(1)}`,
+    `L ${p0x.toFixed(1)},${p0y.toFixed(1)}`,
+    `Q ${(bx + ux * (dist * 0.22) + px * (w * 0.25)).toFixed(1)},${(by + uy * (dist * 0.22) + py * (w * 0.25)).toFixed(1)} ${l1x.toFixed(1)},${l1y.toFixed(1)}`,
+    `Q ${(bx + ux * (dist * 0.42) + px * (w * 0.6)).toFixed(1)},${(by + uy * (dist * 0.42) + py * (w * 0.6)).toFixed(1)} ${s1x.toFixed(1)},${s1y.toFixed(1)}`,
+    `Q ${(bx + ux * (dist * 0.56) + px * (w * 0.8)).toFixed(1)},${(by + uy * (dist * 0.56) + py * (w * 0.8)).toFixed(1)} ${l2x.toFixed(1)},${l2y.toFixed(1)}`,
+    `Q ${(bx + ux * (dist * 0.74) + px * (w * 0.8)).toFixed(1)},${(by + uy * (dist * 0.74) + py * (w * 0.8)).toFixed(1)} ${s2x.toFixed(1)},${s2y.toFixed(1)}`,
+    `Q ${(bx + ux * (dist * 0.85) + px * (w * 0.7)).toFixed(1)},${(by + uy * (dist * 0.85) + py * (w * 0.7)).toFixed(1)} ${l3x.toFixed(1)},${l3y.toFixed(1)}`,
+    `Q ${(bx + ux * (dist * 0.96) + px * (w * 0.35)).toFixed(1)},${(by + uy * (dist * 0.96) + py * (w * 0.35)).toFixed(1)} ${tx.toFixed(1)},${ty.toFixed(1)}`,
+    `Q ${(bx + ux * (dist * 0.96) - px * (w * 0.35)).toFixed(1)},${(by + uy * (dist * 0.96) - py * (w * 0.35)).toFixed(1)} ${l3Lx.toFixed(1)},${l3Ly.toFixed(1)}`,
+    `Q ${(bx + ux * (dist * 0.85) - px * (w * 0.7)).toFixed(1)},${(by + uy * (dist * 0.85) - py * (w * 0.7)).toFixed(1)} ${s2Lx.toFixed(1)},${s2Ly.toFixed(1)}`,
+    `Q ${(bx + ux * (dist * 0.74) - px * (w * 0.8)).toFixed(1)},${(by + uy * (dist * 0.74) - py * (w * 0.8)).toFixed(1)} ${l2Lx.toFixed(1)},${l2Ly.toFixed(1)}`,
+    `Q ${(bx + ux * (dist * 0.56) - px * (w * 0.8)).toFixed(1)},${(by + uy * (dist * 0.56) - py * (w * 0.8)).toFixed(1)} ${s1Lx.toFixed(1)},${s1Ly.toFixed(1)}`,
+    `Q ${(bx + ux * (dist * 0.42) - px * (w * 0.6)).toFixed(1)},${(by + uy * (dist * 0.42) - py * (w * 0.6)).toFixed(1)} ${l1Lx.toFixed(1)},${l1Ly.toFixed(1)}`,
+    `Q ${(bx + ux * (dist * 0.22) - px * (w * 0.25)).toFixed(1)},${(by + uy * (dist * 0.22) - py * (w * 0.25)).toFixed(1)} ${p0x.toFixed(1)},${p0y.toFixed(1)}`,
+    `Z`,
+  ].join(" ");
 }
 
 // ----------------------------------------------------
@@ -1441,6 +1516,7 @@ export interface HabitatDetailSVG {
   accentColor: string;
   stemPath?: string;
   compact?: boolean;
+  attachmentTarget?: "canopy" | "terrain";
 }
 
 export interface GeneratedGardenSVGScene {
@@ -1896,34 +1972,39 @@ function attachEarnedCareFeatures({
         { cx: 418, cy: 226 },
       ];
 
+  // Restrained, irregular undergrowth grouping near clearing around the tree:
+  // - Leaves breathing room immediately around trunk collar (x: 375-405, y: 314-322)
+  // - Small natural groups beside left and right root flanks (y: 326-346)
+  // - Staggered forward clearing scatter (y: 356-372)
+  // - Sparse foreground meadow cues maintaining depth layering (y: 412-424)
   const groundLifeAnchors = [
-    { cx: 242, cy: 420 },
-    { cx: 556, cy: 418 },
-    { cx: 276, cy: 426 },
-    { cx: 522, cy: 424 },
-    { cx: 314, cy: 428 },
-    { cx: 486, cy: 428 },
-    { cx: 218, cy: 416 },
-    { cx: 582, cy: 414 },
-    { cx: 348, cy: 430 },
-    { cx: 452, cy: 430 },
-    { cx: 262, cy: 414 },
-    { cx: 538, cy: 412 },
-    { cx: 294, cy: 422 },
-    { cx: 506, cy: 420 },
-    { cx: 330, cy: 424 },
-    { cx: 470, cy: 424 },
+    { cx: 326, cy: 328 }, // Left root flank
+    { cx: 454, cy: 328 }, // Right root flank
+    { cx: 338, cy: 336 }, // Left flank forward
+    { cx: 442, cy: 336 }, // Right flank forward
+    { cx: 312, cy: 332 }, // Left outer cluster
+    { cx: 470, cy: 332 }, // Right outer cluster
+    { cx: 348, cy: 346 }, // Left-center forward
+    { cx: 432, cy: 346 }, // Right-center forward
+    { cx: 362, cy: 356 }, // Forward clearing left
+    { cx: 422, cy: 358 }, // Forward clearing right
+    { cx: 382, cy: 368 }, // Forward clearing center-left
+    { cx: 404, cy: 372 }, // Forward clearing center-right
+    { cx: 258, cy: 412 }, // Sparse left meadow
+    { cx: 526, cy: 414 }, // Sparse right meadow
+    { cx: 288, cy: 424 }, // Sparse left-center meadow
+    { cx: 492, cy: 422 }, // Sparse right-center meadow
   ];
 
   const mossSoilAnchors = [
-    { cx: 356, cy: 432 },
-    { cx: 444, cy: 432 },
-    { cx: 332, cy: 435 },
-    { cx: 468, cy: 434 },
-    { cx: 374, cy: 429 },
-    { cx: 426, cy: 429 },
-    { cx: 310, cy: 436 },
-    { cx: 490, cy: 436 },
+    { cx: 336, cy: 332 },
+    { cx: 446, cy: 332 },
+    { cx: 322, cy: 338 },
+    { cx: 460, cy: 338 },
+    { cx: 352, cy: 345 },
+    { cx: 430, cy: 345 },
+    { cx: 308, cy: 330 },
+    { cx: 474, cy: 330 },
   ];
 
   const meadowFlowerPalettes = [
@@ -1998,7 +2079,7 @@ function attachEarnedCareFeatures({
       }
       foliageClusters.push({
         id,
-        d: createPointedLeafD(bx, by, tx, ty, 0.31),
+        d: createOakLobedLeafD(bx, by, tx, ty, 0.34),
         color: leafToneA,
         opacity: 0.95,
       });
@@ -2067,14 +2148,14 @@ function attachEarnedCareFeatures({
           leaves: [
             {
               id: `${id}-leaf-a`,
-              d: createPointedLeafD(stemTx, stemTy, l1Tx, l1Ty, 0.3),
+              d: createOakLobedLeafD(stemTx, stemTy, l1Tx, l1Ty, 0.34),
               color: leafToneA,
               veinD: createLeafVeinD(stemTx, stemTy, l1Tx, l1Ty, 2, -2, false),
               veinColor: palette.foliageVein,
             },
             {
               id: `${id}-leaf-b`,
-              d: createPointedLeafD(l2Bx, l2By, l2Tx, l2Ty, 0.3),
+              d: createOakLobedLeafD(l2Bx, l2By, l2Tx, l2Ty, 0.34),
               color: leafToneB,
               veinD: createLeafVeinD(l2Bx, l2By, l2Tx, l2Ty, -2, -2, false),
               veinColor: palette.foliageVein,
@@ -2103,14 +2184,14 @@ function attachEarnedCareFeatures({
           leaves: [
             {
               id: `${id}-leaf-a`,
-              d: createPointedLeafD(stemTx, stemTy, l1Tx, l1Ty, 0.32),
+              d: createOakLobedLeafD(stemTx, stemTy, l1Tx, l1Ty, 0.34),
               color: leafToneA,
               veinD: createLeafVeinD(stemTx, stemTy, l1Tx, l1Ty, 2, -2, false),
               veinColor: palette.foliageVein,
             },
             {
               id: `${id}-leaf-b`,
-              d: createPointedLeafD(twigForkTipX, twigForkTipY, l2Tx, l2Ty, 0.31),
+              d: createOakLobedLeafD(twigForkTipX, twigForkTipY, l2Tx, l2Ty, 0.34),
               color: leafToneB,
               veinD: createLeafVeinD(twigForkTipX, twigForkTipY, l2Tx, l2Ty, 2, -1, false),
               veinColor: palette.foliageVein,
@@ -2137,19 +2218,19 @@ function attachEarnedCareFeatures({
           leaves: [
             {
               id: `${id}-leaf-a`,
-              d: createPointedLeafD(stemTx, stemTy, l1Tx, l1Ty, 0.28),
+              d: createOakLobedLeafD(stemTx, stemTy, l1Tx, l1Ty, 0.32),
               color: leafToneA,
               veinD: createLeafVeinD(stemTx, stemTy, l1Tx, l1Ty, 1, -2, false),
               veinColor: palette.foliageVein,
             },
             {
               id: `${id}-leaf-b`,
-              d: createPointedLeafD(midX, midY, l2Tx, l2Ty, 0.29),
+              d: createOakLobedLeafD(midX, midY, l2Tx, l2Ty, 0.32),
               color: leafToneB,
             },
             {
               id: `${id}-leaf-c`,
-              d: createPointedLeafD(stemTx, stemTy, l3Tx, l3Ty, 0.28),
+              d: createOakLobedLeafD(stemTx, stemTy, l3Tx, l3Ty, 0.30),
               color: palette.accentLeaf,
             },
           ],
@@ -2460,6 +2541,7 @@ function attachEarnedCareFeatures({
               : palette.blossomCream,
           accentColor: palette.trunk,
           compact: true,
+          attachmentTarget: useCanopyEdge ? "canopy" : "terrain",
         });
       } else if (variant === "bird_perch") {
         const perchAnchors = [
@@ -2487,6 +2569,7 @@ function attachEarnedCareFeatures({
           accentColor: palette.blossomSecondary,
           stemPath: `M ${(cx - dir * 14).toFixed(1)},${(cy + 8).toFixed(1)} Q ${(cx - dir * 4).toFixed(1)},${(cy + 5).toFixed(1)} ${(cx + dir * 10).toFixed(1)},${(cy + 4).toFixed(1)}`,
           compact: true,
+          attachmentTarget: "canopy",
         });
       } else {
         // nest_material tucked on sturdy lower crown branch fork
@@ -2509,6 +2592,7 @@ function attachEarnedCareFeatures({
           secondaryColor: groundPalette.soilHighlight,
           accentColor: groundPalette.meadowTop,
           compact: true,
+          attachmentTarget: "canopy",
         });
       }
       continue;
@@ -2760,23 +2844,27 @@ function attachEarnedCareFeatures({
   // ----------------------------------------------------
   // 3. IMPORTANT DATES (Strictly derived from immutable event.id & couple DNA)
   // ----------------------------------------------------
+  // Restrained natural undergrowth grouping for important landmark dates:
+  // - Staggered Y in [334, 426] matching natural depth curve
+  // - Leaves breathing room around trunk collar (X: 375-405, Y: 314-322)
+  // - Clusters around left and right root flanks and forward meadow
   const baseLandmarkAnchors = [
-    { cx: 440, cy: 436, c1: palette.blossomPrimary, c2: palette.lightFoliage },
-    { cx: 388, cy: 442, c1: palette.blossomSecondary, c2: palette.accentLeaf },
-    { cx: 462, cy: 444, c1: palette.blossomPrimary, c2: palette.midFoliage },
-    { cx: 338, cy: 440, c1: palette.blossomSecondary, c2: palette.lightFoliage },
-    { cx: 415, cy: 446, c1: palette.blossomPrimary, c2: palette.accentLeaf },
-    { cx: 362, cy: 445, c1: palette.blossomSecondary, c2: palette.midFoliage },
-    { cx: 478, cy: 446, c1: palette.blossomPrimary, c2: palette.lightFoliage },
-    { cx: 325, cy: 442, c1: palette.blossomSecondary, c2: palette.accentLeaf },
-    { cx: 495, cy: 448, c1: palette.blossomPrimary, c2: palette.midFoliage },
-    { cx: 350, cy: 448, c1: palette.blossomSecondary, c2: palette.lightFoliage },
-    { cx: 305, cy: 443, c1: palette.blossomPrimary, c2: palette.accentLeaf },
-    { cx: 508, cy: 447, c1: palette.blossomSecondary, c2: palette.midFoliage },
-    { cx: 375, cy: 449, c1: palette.blossomPrimary, c2: palette.lightFoliage },
-    { cx: 430, cy: 449, c1: palette.blossomSecondary, c2: palette.accentLeaf },
-    { cx: 290, cy: 444, c1: palette.blossomPrimary, c2: palette.midFoliage },
-    { cx: 520, cy: 445, c1: palette.blossomSecondary, c2: palette.lightFoliage },
+    { cx: 330, cy: 334, c1: palette.blossomPrimary, c2: palette.lightFoliage },
+    { cx: 452, cy: 334, c1: palette.blossomSecondary, c2: palette.lightFoliage },
+    { cx: 316, cy: 340, c1: palette.blossomSecondary, c2: palette.accentLeaf },
+    { cx: 466, cy: 340, c1: palette.blossomPrimary, c2: palette.accentLeaf },
+    { cx: 344, cy: 348, c1: palette.blossomPrimary, c2: palette.midFoliage },
+    { cx: 438, cy: 348, c1: palette.blossomSecondary, c2: palette.midFoliage },
+    { cx: 358, cy: 360, c1: palette.blossomPrimary, c2: palette.lightFoliage },
+    { cx: 426, cy: 362, c1: palette.blossomSecondary, c2: palette.accentLeaf },
+    { cx: 372, cy: 374, c1: palette.blossomPrimary, c2: palette.midFoliage },
+    { cx: 412, cy: 376, c1: palette.blossomSecondary, c2: palette.lightFoliage },
+    { cx: 298, cy: 364, c1: palette.blossomPrimary, c2: palette.accentLeaf },
+    { cx: 486, cy: 366, c1: palette.blossomSecondary, c2: palette.midFoliage },
+    { cx: 272, cy: 416, c1: palette.blossomPrimary, c2: palette.lightFoliage },
+    { cx: 512, cy: 418, c1: palette.blossomSecondary, c2: palette.accentLeaf },
+    { cx: 336, cy: 424, c1: palette.blossomPrimary, c2: palette.midFoliage },
+    { cx: 468, cy: 426, c1: palette.blossomSecondary, c2: palette.lightFoliage },
   ];
 
   for (const event of impEvents) {
@@ -3411,46 +3499,42 @@ export function generateGardenSVGScene(
   // STAGE 2: TENDER SAPLING (16–35 units)
   // ==================================================
   else if (stage.key === "tender_sapling") {
-    const lean = dna.trunkLean;
-    const curve = dna.trunkCurvature;
-    const crownX = 400 + lean;
-    const midX = 398 + lean * 0.5 + curve;
-    const flareLeft = 388 - 2 * stageProgress + lean * 0.2;
-    const flareRight = 416 + 2 * stageProgress + lean * 0.2;
+    const lean = dna.trunkLean * 0.4;
+    const curve = dna.trunkCurvature * 0.4;
+    const collarCenter = 390.4;
+    const collarLeft = collarCenter - 3.4;
+    const collarRight = collarCenter + 3.4;
+    const apexX = collarCenter + lean;
+    const midX = collarCenter + lean * 0.5 + curve;
 
-    trunkPath = `M ${flareLeft.toFixed(1)},442 Q ${(midX - 6).toFixed(1)},375 ${(midX - 3).toFixed(1)},305 Q ${(crownX - 3).toFixed(1)},245 ${crownX.toFixed(1)},195 Q ${(crownX + 4).toFixed(1)},245 ${(midX + 9).toFixed(1)},305 Q ${(midX + 13).toFixed(1)},375 ${flareRight.toFixed(1)},442 Z`;
-    trunkHighlightPath = `M ${(flareLeft + 4).toFixed(1)},430 Q ${(midX - 3).toFixed(1)},375 ${midX.toFixed(1)},305 Q ${(crownX - 1).toFixed(1)},245 ${(crownX + 2).toFixed(1)},205`;
-    trunkShadowPath = `M ${(flareRight - 3).toFixed(1)},435 Q ${(midX + 9).toFixed(1)},375 ${(midX + 10).toFixed(1)},305 Q ${(crownX + 3).toFixed(1)},245 ${(crownX + 1).toFixed(1)},202`;
+    // Slender, lightly woody central stem with narrow root collar (no thick trunk or long exposed sideways roots)
+    trunkPath = `M ${collarLeft.toFixed(1)},441.0 Q ${(midX - 1.8).toFixed(1)},375 ${(midX - 1.2).toFixed(1)},335 Q ${(apexX - 0.9).toFixed(1)},324 ${apexX.toFixed(1)},318 Q ${(apexX + 0.9).toFixed(1)},324 ${(midX + 1.2).toFixed(1)},335 Q ${(midX + 1.8).toFixed(1)},375 ${collarRight.toFixed(1)},441.0 Z`;
+    trunkHighlightPath = `M ${(collarLeft + 1.2).toFixed(1)},438 Q ${(midX - 0.6).toFixed(1)},375 ${midX.toFixed(1)},335 Q ${(apexX - 0.3).toFixed(1)},324 ${apexX.toFixed(1)},319`;
+    trunkShadowPath = `M ${(collarRight - 0.8).toFixed(1)},439 Q ${(midX + 1.2).toFixed(1)},375 ${(midX + 1.0).toFixed(1)},335 Q ${(apexX + 0.6).toFixed(1)},324 ${(apexX + 0.4).toFixed(1)},319`;
 
+    // Slender collar entering soil - zero long horizontal root strokes
     rootPaths.push(
-      "M 388,438 Q 365,448 345,452",
-      "M 416,438 Q 438,448 458,452"
+      `M ${(collarLeft + 0.5).toFixed(1)},440.5 Q ${collarLeft.toFixed(1)},441.5 ${(collarLeft - 1.0).toFixed(1)},442.2`,
+      `M ${(collarRight - 0.5).toFixed(1)},440.5 Q ${collarRight.toFixed(1)},441.5 ${(collarRight + 1.0).toFixed(1)},442.2`
     );
 
     barkTexturePaths.push(
       {
         id: "sapling-bark-grain-1",
-        d: `M ${(flareLeft + 8).toFixed(1)},436 Q ${(midX - 2).toFixed(1)},375 ${(midX - 1).toFixed(1)},305 Q ${(crownX - 1).toFixed(1)},245 ${(crownX + 1).toFixed(1)},205`,
+        d: `M ${(collarLeft + 1.8).toFixed(1)},436 Q ${(midX - 0.3).toFixed(1)},375 ${(midX).toFixed(1)},335 Q ${(apexX).toFixed(1)},324 ${(apexX).toFixed(1)},319`,
         color: palette.trunkShadow,
-        opacity: 0.45,
-        strokeWidth: 1.2,
-      },
-      {
-        id: "sapling-bark-grain-2",
-        d: `M ${(flareLeft + 16).toFixed(1)},438 Q ${(midX + 4).toFixed(1)},375 ${(midX + 5).toFixed(1)},305 Q ${(crownX + 2).toFixed(1)},245 ${(crownX + 2).toFixed(1)},203`,
-        color: palette.trunkHighlight,
         opacity: 0.4,
-        strokeWidth: 1.0,
+        strokeWidth: 0.8,
       }
     );
 
-    // Branches visually enter and support foliage masses
+    // Fine lateral twigs with modest oak foliage
     branches.push(
-      "M 395,290 Q 355,265 315,245 Q 355,275 396,305 Z",
-      "M 405,255 Q 450,230 488,210 Q 448,242 404,270 Z"
+      `M ${(midX - 0.5).toFixed(1)},388 Q 380,382 372,377 Q 380,383 ${(midX - 0.2).toFixed(1)},389 Z`,
+      `M ${(midX + 0.5).toFixed(1)},365 Q 401,358 411,352 Q 401,359 ${(midX + 0.2).toFixed(1)},366 Z`
     );
     if (stageProgress >= 0.45) {
-      branches.push("M 398,225 Q 372,190 348,168 Q 375,198 400,232 Z");
+      branches.push(`M ${(midX - 0.3).toFixed(1)},344 Q 382,338 375,334 Q 382,339 ${(midX - 0.1).toFixed(1)},345 Z`);
     }
 
     const foliageScale =
@@ -3743,10 +3827,10 @@ export function generateGardenSVGScene(
       }
     );
 
-    // Base ground flora
+    // Base ground flora nestled beside root flanks
     groundDetails.push(
-      { id: "branching-flower-1", type: "flower", cx: 335, cy: 436, color: palette.blossomPrimary },
-      { id: "branching-flower-2", type: "flower", cx: 465, cy: 442, color: palette.blossomSecondary }
+      { id: "branching-flower-1", type: "flower", cx: 334, cy: 336, color: palette.blossomPrimary },
+      { id: "branching-flower-2", type: "flower", cx: 458, cy: 338, color: palette.blossomSecondary }
     );
   }
 
@@ -3996,17 +4080,18 @@ export function generateGardenSVGScene(
       }
     );
 
+    // Natural undergrowth grouping nestled beside root flanks and forward clearing
     groundDetails.push(
-      { id: "ground-flower-1", type: "flower", cx: 335, cy: 438, color: palette.blossomSecondary },
-      { id: "ground-flower-2", type: "flower", cx: 475, cy: 442, color: palette.blossomSecondary },
-      { id: "ground-flower-3", type: "flower", cx: 365, cy: 446, color: palette.blossomPrimary }
+      { id: "ground-flower-1", type: "flower", cx: 332, cy: 336, color: palette.blossomSecondary },
+      { id: "ground-flower-2", type: "flower", cx: 456, cy: 338, color: palette.blossomSecondary },
+      { id: "ground-flower-3", type: "flower", cx: 360, cy: 354, color: palette.blossomPrimary }
     );
     if (isFlourishing || totalGrowthUnits >= 76) {
       groundDetails.push({
         id: "ground-flower-4",
         type: "flower",
-        cx: 295,
-        cy: 444,
+        cx: 428,
+        cy: 356,
         color: palette.blossomSecondary,
       });
     }
@@ -4014,8 +4099,8 @@ export function generateGardenSVGScene(
       groundDetails.push({
         id: "ground-flower-5",
         type: "flower",
-        cx: 430,
-        cy: 450,
+        cx: 495,
+        cy: 420,
         color: palette.blossomPrimary,
       });
     }

@@ -27,7 +27,7 @@ import {
   View,
 } from "react-native";
 import Svg, { Circle, Line, Path, Rect, Text as SvgText } from "react-native-svg";
-import { Redirect, useRouter } from "expo-router";
+import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { tokens } from "@/components/couply-tokens";
 import { CouplyHeader, CouplyPage } from "@/components/CouplyUI";
 import { useTheme } from "@/context/ThemeContext";
@@ -55,6 +55,8 @@ import {
   resolveCanonicalStageKey,
   resolveGardenRenderPlan,
   resolveTreeStructurePlan,
+  resolvePreviewMilestoneProgress,
+  resolvePlantInspectionCamera,
 } from "@/lib/garden";
 import {
   type GardenCareEvent,
@@ -212,7 +214,7 @@ const SCENARIOS = {
     isResting: true,
   },
   completed_reconnection: {
-    label: "1 Reconnection Blossom",
+    label: "1 Reconnection Shoot",
     events: [
       {
         id: "qa-ev-rec-1",
@@ -306,16 +308,33 @@ export default function GardenVisualQARoute() {
   }
 
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    tab?: string;
+    subphase?: string;
+    camera?: string;
+    guides?: string;
+  }>();
   const { theme, effectiveTheme } = useTheme();
 
   // Top-level Navigation Mode
   const [activeTab, setActiveTab] = useState<
     "slots" | "simulation" | "early_life"
-  >("slots");
+  >(
+    params.tab === "early_life" || params.tab === "simulation" || params.tab === "slots"
+      ? params.tab
+      : "slots"
+  );
 
   // Early-Life Lifecycle Preview Interactive Controls
   const [earlyLifeSubphase, setEarlyLifeSubphase] =
-    useState<EarlyLifeSubphaseKey>("emerging_shoot");
+    useState<EarlyLifeSubphaseKey>(
+      params.subphase === "planted_acorn" ||
+        params.subphase === "emerging_shoot" ||
+        params.subphase === "small_seedling" ||
+        params.subphase === "small_sapling"
+        ? params.subphase
+        : "emerging_shoot"
+    );
   const [earlyLifeReducedMotion, setEarlyLifeReducedMotion] = useState(false);
   const [earlyLifeShowEarnedFeature, setEarlyLifeShowEarnedFeature] =
     useState(true);
@@ -324,9 +343,12 @@ export default function GardenVisualQARoute() {
   const [selectedSlotKey, setSelectedSlotKey] =
     useState<FoundationSlotKey>("branching_out");
   const [showSideBySide, setShowSideBySide] = useState(false);
-  const [showAlignmentGuides, setShowAlignmentGuides] = useState(true);
+  const [showAlignmentGuides, setShowAlignmentGuides] = useState(
+    params.guides !== undefined ? params.guides === "true" || params.guides === "1" : true
+  );
   const [showWoodlandBackplate, setShowWoodlandBackplate] = useState(true);
   const [showBotanicalOverlays, setShowBotanicalOverlays] = useState(true);
+  const [showFoliageProof, setShowFoliageProof] = useState(false);
   const [compositionPreset, setCompositionPreset] =
     useState<TreeCompositionPresetName>("balanced_overview");
 
@@ -417,9 +439,40 @@ export default function GardenVisualQARoute() {
     });
   }, [activeSlot]);
 
-  // Early-Life Lifecycle Subphase Derivation
-  const earlyLifeContract = EARLY_LIFE_SUBPHASE_CONTRACTS[earlyLifeSubphase];
+  // Early-Life Lifecycle Subphase Derivation & Simulated Progress
+  const [earlyLifeCameraMode, setEarlyLifeCameraMode] = useState<"overview" | "inspect">(
+    params.camera === "inspect" ? "inspect" : "overview"
+  );
+  const [simulatedUnits, setSimulatedUnits] = useState<number>(8.0);
+  const [useSimulatedGrowth, setUseSimulatedGrowth] = useState<boolean>(false);
+
+  const previewMilestone = useMemo(() => {
+    return resolvePreviewMilestoneProgress(
+      simulatedUnits,
+      earlyLifeShowEarnedFeature ? 1 : 0
+    );
+  }, [simulatedUnits, earlyLifeShowEarnedFeature]);
+
+  // When simulated growth is active, subphase is driven automatically by simulated units
+  const effectiveEarlyLifeSubphase: EarlyLifeSubphaseKey = useSimulatedGrowth
+    ? previewMilestone.subphaseKey
+    : earlyLifeSubphase;
+
+  const earlyLifeContract = EARLY_LIFE_SUBPHASE_CONTRACTS[effectiveEarlyLifeSubphase];
   const earlyLifeGrowth = useMemo(() => {
+    if (useSimulatedGrowth) {
+      const clamped = Math.max(0, Math.min(36, simulatedUnits));
+      return {
+        total: clamped,
+        care: earlyLifeShowEarnedFeature ? Math.min(clamped, 6) : 0,
+        time: earlyLifeShowEarnedFeature ? Math.max(0, clamped - 6) : clamped,
+        stageKey: effectiveEarlyLifeSubphase === "planted_acorn"
+          ? ("beginning" as const)
+          : effectiveEarlyLifeSubphase === "small_sapling"
+          ? ("tender_sapling" as const)
+          : ("first_seedling" as const),
+      };
+    }
     switch (earlyLifeSubphase) {
       case "planted_acorn":
         return { total: 0, care: 0, time: 0, stageKey: "beginning" as const };
@@ -430,6 +483,13 @@ export default function GardenVisualQARoute() {
           time: 2,
           stageKey: "first_seedling" as const,
         };
+      case "small_seedling":
+        return {
+          total: 14,
+          care: earlyLifeShowEarnedFeature ? 10 : 0,
+          time: 4,
+          stageKey: "first_seedling" as const,
+        };
       case "small_sapling":
         return {
           total: 24,
@@ -437,11 +497,34 @@ export default function GardenVisualQARoute() {
           time: 10,
           stageKey: "tender_sapling" as const,
         };
+      default:
+        return { total: 0, care: 0, time: 0, stageKey: "beginning" as const };
     }
-  }, [earlyLifeSubphase, earlyLifeShowEarnedFeature]);
+  }, [useSimulatedGrowth, simulatedUnits, earlyLifeSubphase, effectiveEarlyLifeSubphase, earlyLifeShowEarnedFeature]);
+
+  const earlyLifeCamera = useMemo(() => {
+    if (earlyLifeCameraMode === "inspect") {
+      const inspectData = resolvePlantInspectionCamera(
+        effectiveEarlyLifeSubphase,
+        activeViewport
+      );
+      return {
+        target: { x: inspectData.targetX, y: inspectData.targetY },
+        targetX: inspectData.targetX,
+        targetY: inspectData.targetY,
+        zoom: inspectData.zoom,
+      };
+    }
+    return {
+      target: { x: 400.0, y: 250.0 },
+      targetX: 400.0,
+      targetY: 250.0,
+      zoom: 1.0,
+    };
+  }, [earlyLifeCameraMode, effectiveEarlyLifeSubphase, activeViewport]);
 
   const earlyLifeFixtureEvents: GardenCareEvent[] = useMemo(() => {
-    if (!earlyLifeShowEarnedFeature || earlyLifeSubphase === "planted_acorn") {
+    if (!earlyLifeShowEarnedFeature || effectiveEarlyLifeSubphase === "planted_acorn") {
       return [];
     }
     return [
@@ -454,7 +537,7 @@ export default function GardenVisualQARoute() {
         displayTitle: "Morning Quiet Together",
       },
     ];
-  }, [earlyLifeShowEarnedFeature, earlyLifeSubphase]);
+  }, [earlyLifeShowEarnedFeature, effectiveEarlyLifeSubphase]);
 
   const earlyLifeWorld = useMemo(() => {
     const scene = generateGardenSVGScene(
@@ -481,6 +564,7 @@ export default function GardenVisualQARoute() {
   const EARLY_LIFE_SUBPHASES: EarlyLifeSubphaseKey[] = [
     "planted_acorn",
     "emerging_shoot",
+    "small_seedling",
     "small_sapling",
   ];
   const earlyLifeSubphaseIdx = EARLY_LIFE_SUBPHASES.indexOf(earlyLifeSubphase);
@@ -675,6 +759,14 @@ export default function GardenVisualQARoute() {
                 />
               </View>
 
+              <View style={styles.toggleRow}>
+                <Text style={styles.toggleLabel}>Painterly Foliage Cluster Proof:</Text>
+                <Switch
+                  value={showFoliageProof}
+                  onValueChange={setShowFoliageProof}
+                />
+              </View>
+
               {/* Crop Presets */}
               <Text style={[styles.statusLabel, { marginTop: 12, marginBottom: 4 }]}>
                 Composition Preset:
@@ -747,6 +839,7 @@ export default function GardenVisualQARoute() {
                       showWoodland={showWoodlandBackplate}
                       cropPreset={compositionPreset}
                       showGuides={showAlignmentGuides}
+                      showFoliageProof={showFoliageProof}
                     />
                   </View>
                 ) : (
@@ -1277,6 +1370,7 @@ export default function GardenVisualQARoute() {
                       hideOverlays={Boolean((scenario as any).hideOverlays)}
                       cropPreset={compositionPreset}
                       showGuides={showAlignmentGuides}
+                      showFoliageProof={showFoliageProof}
                     />
                   </View>
                 )}
@@ -1299,7 +1393,7 @@ export default function GardenVisualQARoute() {
               <View style={styles.pillRow}>
                 {EARLY_LIFE_SUBPHASES.map((spKey) => {
                   const spContract = EARLY_LIFE_SUBPHASE_CONTRACTS[spKey];
-                  const isSelected = earlyLifeSubphase === spKey;
+                  const isSelected = effectiveEarlyLifeSubphase === spKey;
                   return (
                     <Pressable
                       key={spKey}
@@ -1307,7 +1401,14 @@ export default function GardenVisualQARoute() {
                         styles.pill,
                         isSelected && styles.pillActive,
                       ]}
-                      onPress={() => setEarlyLifeSubphase(spKey)}
+                      onPress={() => {
+                        setUseSimulatedGrowth(false);
+                        setEarlyLifeSubphase(spKey);
+                        if (spKey === "planted_acorn") setSimulatedUnits(0);
+                        else if (spKey === "emerging_shoot") setSimulatedUnits(8);
+                        else if (spKey === "small_seedling") setSimulatedUnits(14);
+                        else setSimulatedUnits(24);
+                      }}
                     >
                       <Text
                         style={[
@@ -1320,6 +1421,166 @@ export default function GardenVisualQARoute() {
                     </Pressable>
                   );
                 })}
+              </View>
+            </View>
+
+            {/* Simulated Progress Control (Development Preview Only) */}
+            <View
+              style={[
+                styles.card,
+                {
+                  borderWidth: 1.5,
+                  borderColor: useSimulatedGrowth ? "#7C3AED" : theme.borderSoft,
+                  backgroundColor: useSimulatedGrowth
+                    ? isLight
+                      ? "#FAF5FF"
+                      : "#2E1A47"
+                    : theme.surface,
+                },
+              ]}
+            >
+              <View style={styles.cardHeaderRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.cardHeading, { color: useSimulatedGrowth ? "#7C3AED" : theme.primaryText }]}>
+                    SIMULATED PROGRESSION CONTROL (PREVIEW)
+                  </Text>
+                  <Text style={styles.cardSubtext}>
+                    Demonstrates: progress changes → threshold crossing → next visual state. Development preview only.
+                  </Text>
+                </View>
+                <Switch
+                  value={useSimulatedGrowth}
+                  onValueChange={setUseSimulatedGrowth}
+                  trackColor={{ false: "#767577", true: "#7C3AED" }}
+                />
+              </View>
+
+              {/* Status Row */}
+              <View
+                style={{
+                  marginTop: 10,
+                  padding: 10,
+                  borderRadius: 10,
+                  backgroundColor: isLight ? "#FFFFFF" : "#1F162B",
+                  borderWidth: 1,
+                  borderColor: theme.borderSoft,
+                }}
+              >
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: theme.primaryText }}>
+                    Units: {simulatedUnits.toFixed(1)}
+                  </Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#7C3AED" }}>
+                    {previewMilestone.intervalDisplayPercent}% toward {previewMilestone.nextMilestoneLabel || "Full Bloom"}
+                  </Text>
+                </View>
+
+                {/* Progress Bar */}
+                <View
+                  style={{
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: isLight ? "#E5E1E8" : "#372F3F",
+                    overflow: "hidden",
+                    marginVertical: 8,
+                    width: "100%",
+                  }}
+                >
+                  <View
+                    style={{
+                      height: "100%",
+                      borderRadius: 4,
+                      backgroundColor: "#7C3AED",
+                      width: `${Math.round(previewMilestone.intervalProgress * 100)}%`,
+                    }}
+                  />
+                </View>
+
+                <Text style={{ fontSize: 12, color: theme.secondaryText }}>
+                  Active visual subphase: <Text style={{ fontWeight: "600", color: theme.primaryText }}>{previewMilestone.label}</Text>
+                  {simulatedUnits === 8.0 && " • Exactly at shoot-to-seedling boundary"}
+                  {simulatedUnits === 16.0 && " • Exactly at seedling-to-sapling boundary"}
+                </Text>
+              </View>
+
+              {/* Threshold Crossing Simulation Presets */}
+              <Text style={[styles.toggleLabel, { marginTop: 12, marginBottom: 6 }]}>
+                Boundary Crossing Test Points:
+              </Text>
+              <View style={styles.pillRow}>
+                {[
+                  { label: "0.0 (Acorn)", val: 0.0 },
+                  { label: "4.0 (Shoot 50%)", val: 4.0 },
+                  { label: "8.0 (Shoot Bound)", val: 8.0 },
+                  { label: "8.1 (Seedling Start)", val: 8.1 },
+                  { label: "15.9 (Seedling 99%)", val: 15.9 },
+                  { label: "16.0 (Sapling Start)", val: 16.0 },
+                  { label: "24.0 (Sapling)", val: 24.0 },
+                ].map((pt) => {
+                  const isCur = Math.abs(simulatedUnits - pt.val) < 0.05 && useSimulatedGrowth;
+                  return (
+                    <Pressable
+                      key={pt.label}
+                      style={[
+                        styles.pill,
+                        isCur && styles.pillActive,
+                      ]}
+                      onPress={() => {
+                        setUseSimulatedGrowth(true);
+                        setSimulatedUnits(pt.val);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.pillText,
+                          isCur && styles.pillTextActive,
+                        ]}
+                      >
+                        {pt.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Stepper Fine Adjustment */}
+              <View style={[styles.pillRow, { marginTop: 8 }]}>
+                <Pressable
+                  style={styles.pill}
+                  onPress={() => {
+                    setUseSimulatedGrowth(true);
+                    setSimulatedUnits((u) => Math.max(0, parseFloat((u - 1.0).toFixed(1))));
+                  }}
+                >
+                  <Text style={styles.pillText}>-1.0</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.pill}
+                  onPress={() => {
+                    setUseSimulatedGrowth(true);
+                    setSimulatedUnits((u) => Math.max(0, parseFloat((u - 0.1).toFixed(1))));
+                  }}
+                >
+                  <Text style={styles.pillText}>-0.1</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.pill}
+                  onPress={() => {
+                    setUseSimulatedGrowth(true);
+                    setSimulatedUnits((u) => Math.min(36, parseFloat((u + 0.1).toFixed(1))));
+                  }}
+                >
+                  <Text style={styles.pillText}>+0.1</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.pill}
+                  onPress={() => {
+                    setUseSimulatedGrowth(true);
+                    setSimulatedUnits((u) => Math.min(36, parseFloat((u + 1.0).toFixed(1))));
+                  }}
+                >
+                  <Text style={styles.pillText}>+1.0</Text>
+                </Pressable>
               </View>
             </View>
 
@@ -1439,6 +1700,23 @@ export default function GardenVisualQARoute() {
                 />
               </View>
 
+              {/* Alignment Guides Toggle */}
+              <View style={[styles.toggleRow, { marginTop: 16 }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.toggleLabel}>Diagnostic Alignment Guides</Text>
+                  <Text style={styles.toggleDescription}>
+                    {showAlignmentGuides
+                      ? "ON: Showing centerline (x=390.4), ground baseline (y=441.0), and root pivot"
+                      : "OFF: Clean visual review without diagnostic lines or crosshairs"}
+                  </Text>
+                </View>
+                <Switch
+                  value={showAlignmentGuides}
+                  onValueChange={setShowAlignmentGuides}
+                  trackColor={{ false: "#767577", true: "#7C3AED" }}
+                />
+              </View>
+
               {earlyLifeShowEarnedFeature && earlyLifeSubphase !== "planted_acorn" && (
                 <View
                   style={{
@@ -1457,7 +1735,7 @@ export default function GardenVisualQARoute() {
                       color: isLight ? "#1D4ED8" : "#93C5FD",
                     }}
                   >
-                    🌸 SEPARATELY IDENTIFIED EARNED FEATURE FIXTURE
+                    🌿 SEPARATELY IDENTIFIED EARNED FEATURE FIXTURE (OAK LEAF FLUSH)
                   </Text>
                   <Text
                     style={{
@@ -1475,7 +1753,7 @@ export default function GardenVisualQARoute() {
                       marginTop: 2,
                     }}
                   >
-                    Attachment: Explicit canopy stem • Calyx & twig dynamic contact
+                    Attachment: Lateral stem node (391.0, 395.0) • Tender oak leaf flush / shoot (no flower/blossom)
                   </Text>
                   <Text
                     style={{
@@ -1498,7 +1776,64 @@ export default function GardenVisualQARoute() {
                   EARLY-LIFE LIVE CANVAS ({activeViewport.label})
                 </Text>
                 <Text style={styles.cardSubtext}>
-                  Soil y = 441.0 | Origin x = 390.4
+                  Anchor: (390.4, 316.7) | Preset: middle_distance
+                </Text>
+              </View>
+
+              {/* Camera Action Buttons: Inspect Plant & Reset View */}
+              <View style={[styles.pillRow, { marginBottom: 10 }]}>
+                <Pressable
+                  style={[
+                    styles.pill,
+                    earlyLifeCameraMode === "inspect" && styles.pillActive,
+                  ]}
+                  onPress={() => setEarlyLifeCameraMode("inspect")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Inspect plant"
+                  accessibilityHint="Zooms camera to inspect plant at permanent planting anchor without moving the object"
+                >
+                  <Text
+                    style={[
+                      styles.pillText,
+                      earlyLifeCameraMode === "inspect" && styles.pillTextActive,
+                    ]}
+                  >
+                    🔍 Inspect Plant (Zoom Camera)
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.pill,
+                    earlyLifeCameraMode === "overview" && styles.pillActive,
+                  ]}
+                  onPress={() => setEarlyLifeCameraMode("overview")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reset clearing view"
+                  accessibilityHint="Restores camera to approved middle-distance clearing overview"
+                >
+                  <Text
+                    style={[
+                      styles.pillText,
+                      earlyLifeCameraMode === "overview" && styles.pillTextActive,
+                    ]}
+                  >
+                    ↺ Reset (Clearing Overview)
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View
+                style={{
+                  marginBottom: 8,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 6,
+                  backgroundColor: isLight ? "#F3F4F6" : "#1F2937",
+                }}
+              >
+                <Text style={{ fontSize: 11, color: isLight ? "#4B5563" : "#9CA3AF" }}>
+                  Camera: {earlyLifeCameraMode === "inspect" ? `Inspect Mode (Zoom: ${earlyLifeCamera.zoom.toFixed(2)}x, Target: ${earlyLifeCamera.targetX.toFixed(1)}, ${earlyLifeCamera.targetY.toFixed(1)})` : "Clearing Overview (Zoom: 1.0x, middle_distance)"} • Anchor: (390.4, 316.68)
                 </Text>
               </View>
 
@@ -1528,8 +1863,10 @@ export default function GardenVisualQARoute() {
                   atmosphereTone="calm_light"
                   world={earlyLifeWorld}
                   style={{ flex: 1 }}
-                  cropPreset="focused_compact"
+                  cropPreset="middle_distance"
                   showGuides={showAlignmentGuides}
+                  exploreMode={earlyLifeCameraMode === "inspect"}
+                  camera={earlyLifeCamera}
                 />
               </View>
             </View>

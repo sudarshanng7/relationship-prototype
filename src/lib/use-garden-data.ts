@@ -298,7 +298,7 @@ export function useGardenData(coupleId: string | null) {
               (e) => e.kind === "reconnection"
             );
             if (hasReconnection) {
-              noticeText = "A new blossom has opened in your garden.";
+              noticeText = "A tender oak leaf flush has opened in your garden.";
             } else {
               const newPosItems = newItems.filter(
                 (e) => e.kind === "positive_moment"
@@ -374,7 +374,7 @@ export function useGardenData(coupleId: string | null) {
             timeMs,
             kind: "reconnection",
             headline: "Moment of reconnection",
-            subtext: "A new blossom opened after a moment of reconnection.",
+            subtext: "A tender oak leaf flush opened after a moment of reconnection.",
             timestamp: dateStr,
           });
         }

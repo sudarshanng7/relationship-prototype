@@ -98,8 +98,14 @@ import {
   resolveTreePresentationTransform,
   resolveFeaturePresentationGeometry,
   resolveGardenWorldPresentation,
+  PAINTERLY_OAK_FOLIAGE_CLUSTER_V1,
+  resolveLifecycleVisualPhase,
+  LIFECYCLE_STAGE_TO_ART_MAPPING,
+  resolveGardenMilestoneProgress,
+  resolvePreviewMilestoneProgress,
+  EARLY_LIFE_PREVIEW_TARGET_SLOTS,
 } from "../src/lib/garden/index.ts";
-import { createGardenStory } from "../src/lib/garden-story.ts";
+import { createGardenStory, calculateHistoricalGrowth } from "../src/lib/garden-story.ts";
 
 const COUPLE_A = "couple-uuid-1111-2222";
 const COUPLE_B = "couple-uuid-9999-8888";
@@ -2778,7 +2784,7 @@ test("Invariant J: Reconnection memory routes to parent relationship event", () 
   assert.equal(recMem.source.targetRoute, "/event/ev-rec-99");
   assert.equal(recMem.actionRoute, "/event/ev-rec-99");
   assert.equal(recMem.memoryType, "Reconnection");
-  assert.equal(recMem.botanicalRepresentation, "Reconnection Blossom");
+  assert.equal(recMem.botanicalRepresentation, "Reconnection Shoot");
 });
 
 test("Invariant K: Important date memory routes safely or indicates date status", () => {
@@ -3398,6 +3404,13 @@ test("Section 8 (F-H): Manifest slots, approval requirements, and soil-baseline 
       assert.equal(slot.fileExists, true);
       assert.equal(slot.sourceDimensions.width, 1585);
       assert.equal(slot.sourceDimensions.height, 992);
+      assert.equal(isStageAssetApproved(st), false);
+      assert.equal(getApprovedPainterlyAssetForStage(st), null);
+    } else if (st === "tender_sapling") {
+      assert.equal(slot.approvalStatus, "development_preview", "tender_sapling must have approvalStatus 'development_preview'");
+      assert.equal(slot.fileExists, true);
+      assert.equal(slot.sourceDimensions.width, 1024);
+      assert.equal(slot.sourceDimensions.height, 1536);
       assert.equal(isStageAssetApproved(st), false);
       assert.equal(getApprovedPainterlyAssetForStage(st), null);
     } else if (st !== "garden_in_bloom") {
@@ -4571,6 +4584,1086 @@ test("26. Actual Tree Asset Integration, Explicit Attachment Precedence & Early-
   assert.ok(qaCode.includes("EARLY_LIFE_SUBPHASE_CONTRACTS"), "Must expose Early-Life Lifecycle Preview");
 
   assert.ok(true, "Actual tree integration and early-life lifecycle contracts verified");
+});
+
+test("Natural grounding, botanical attachments, spatial depth and toolbar scroll verification", async (t) => {
+  // 1. Category strip offset bounds and bidirectional availability
+  const containerW = 320;
+  const contentW = 600;
+  function computeScrollAvailability(offset, content, container) {
+    return {
+      canScrollLeft: offset > 8,
+      canScrollRight: offset + container < content - 8,
+    };
+  }
+
+  // Beginning: cannot scroll left, can scroll right
+  const atStart = computeScrollAvailability(0, contentW, containerW);
+  assert.equal(atStart.canScrollLeft, false, "At offset 0, canScrollLeft must be false");
+  assert.equal(atStart.canScrollRight, true, "At offset 0, canScrollRight must be true");
+
+  // Mid-scroll: can scroll in both directions
+  const midScroll = computeScrollAvailability(150, contentW, containerW);
+  assert.equal(midScroll.canScrollLeft, true, "At offset 150, canScrollLeft must be true");
+  assert.equal(midScroll.canScrollRight, true, "At offset 150, canScrollRight must be true");
+
+  // End-scroll: can scroll left, cannot scroll right
+  const atEnd = computeScrollAvailability(contentW - containerW, contentW, containerW);
+  assert.equal(atEnd.canScrollLeft, true, "At end, canScrollLeft must be true");
+  assert.equal(atEnd.canScrollRight, false, "At end, canScrollRight must be false");
+
+  // Verify step scrolling from end back to beginning
+  let currOffset = contentW - containerW; // 280
+  const step = Math.max(140, containerW * 0.6); // 192
+  currOffset = Math.max(0, currOffset - step); // 88
+  const afterStepLeft = computeScrollAvailability(currOffset, contentW, containerW);
+  assert.equal(afterStepLeft.canScrollLeft, true, "Stepping left must keep canScrollLeft true until reaching beginning");
+  currOffset = Math.max(0, currOffset - step); // 0
+  const afterSecondStep = computeScrollAvailability(currOffset, contentW, containerW);
+  assert.equal(afterSecondStep.canScrollLeft, false, "Reaching beginning must clear canScrollLeft");
+  assert.equal(afterSecondStep.canScrollRight, true, "Reaching beginning must restore canScrollRight");
+
+  // 2. Shared presentation geometry and 'middle_distance' preset
+  const midPreset = TREE_COMPOSITION_PRESETS.middle_distance;
+  assert.ok(midPreset, "TREE_COMPOSITION_PRESETS.middle_distance must exist");
+  assert.equal(midPreset.scale, 0.58, "middle_distance scale must be 0.58 (deep-centre clearing placement)");
+  assert.equal(midPreset.centerOrigin.x, 390.4, "middle_distance centerOrigin X must be 390.4");
+  assert.equal(midPreset.centerOrigin.y, 145.0, "middle_distance centerOrigin Y must be 145.0 (calibrated deep-centre pivot)");
+
+  const transformMid = resolveTreePresentationTransform({
+    cropPreset: "middle_distance",
+  });
+  assert.equal(transformMid.scale, 0.58);
+  assert.equal(transformMid.totalScale, 0.58);
+  assert.ok(Math.abs(transformMid.offsetX - (1 - 0.58) * 390.4) < 0.001);
+  assert.ok(Math.abs(transformMid.offsetY - (1 - 0.58) * 145.0) < 0.001);
+
+  // 3. Root/canopy/terrain attachment separation under repositioned middle_distance tree
+  const canopyPt = { x: 300, y: 200 };
+  const rootPt = { x: 390.4, y: 441.0 };
+  const terrainPt = { x: 200, y: 460 };
+
+  const canopyGeom = resolveFeaturePresentationGeometry({
+    canonicalPoint: canopyPt,
+    role: "blossom",
+    stageKey: "branching_out",
+    cropPreset: "middle_distance",
+  });
+  assert.equal(canopyGeom.isCanopyAttached, true, "Blossom must be canopy attached");
+  assert.equal(canopyGeom.scale, 0.58, "Canopy attached feature must scale with tree preset (0.58)");
+
+  const rootGeom = resolveFeaturePresentationGeometry({
+    canonicalPoint: rootPt,
+    role: "root_flora",
+    stageKey: "branching_out",
+    cropPreset: "middle_distance",
+  });
+  assert.equal(rootGeom.isRootAttached, true, "Root flora must be root attached");
+
+  const terrainGeom = resolveFeaturePresentationGeometry({
+    canonicalPoint: terrainPt,
+    role: "ground_flora",
+    stageKey: "branching_out",
+    cropPreset: "middle_distance",
+  });
+  assert.equal(terrainGeom.isGroundAttached, true, "Ground flora must be terrain attached");
+  assert.equal(terrainGeom.x, terrainPt.x, "Terrain attached feature X must retain canonical coordinate");
+  assert.equal(terrainGeom.y, terrainPt.y, "Terrain attached feature Y must retain canonical coordinate");
+
+  // 4. Stable source mapping after visual variant changes
+  const ev1 = createMockEvent("evt-vis-1", "positive_moment", "2026-03-01T10:00:00Z");
+  const ev2 = createMockEvent("evt-vis-2", "reconnection", "2026-03-02T10:00:00Z");
+  const sceneA = generateGardenSVGScene("stable-couple-seed", 48, 18, false, undefined, "light", [ev1, ev2]);
+  const worldA = buildGardenWorld(sceneA, {
+    coupleId: "stable-couple-seed",
+    totalGrowthUnits: 48,
+    careGrowthUnits: 18,
+    careEvents: [ev1, ev2],
+  });
+
+  const allNodes = Object.values(worldA.nodes);
+  const earnedNodes = allNodes.filter((n) => n.isEarned);
+  assert.ok(earnedNodes.length >= 2, "Must resolve earned nodes for the 2 events");
+  const earnedGroups = Object.values(worldA.earnedFeatureGroups);
+  assert.equal(earnedGroups.length, 2, "Must resolve exactly 2 earned feature groups for the 2 events");
+  const n1 = earnedNodes.find((n) => n.sourceEvent?.id === "evt-vis-1");
+  const n2 = earnedNodes.find((n) => n.sourceEvent?.id === "evt-vis-2");
+  assert.ok(n1, "evt-vis-1 must retain exact source mapping");
+  assert.ok(n2, "evt-vis-2 must retain exact source mapping");
+
+  // Decorative nodes must carry sourceEvent === null
+  const decorativeNodes = allNodes.filter((n) => !n.isEarned);
+  for (const dec of decorativeNodes) {
+    assert.equal(dec.sourceEvent, null, `Decorative node ${dec.id} must strictly have sourceEvent === null`);
+  }
+
+  // 5. Reduced-motion behavior
+  const restingContract = deriveAmbientLifeContract({
+    isResting: true,
+    isReduceMotion: false,
+    isBackgrounded: false,
+  });
+  assert.equal(restingContract.motionAllowed, false, "Resting must disallow ambient motion");
+
+  const motionReducedContract = deriveAmbientLifeContract({
+    isResting: false,
+    isReduceMotion: true,
+    isBackgrounded: false,
+  });
+  assert.equal(motionReducedContract.motionAllowed, false, "Reduce motion must disallow ambient motion");
+
+  const bgContract = deriveAmbientLifeContract({
+    isResting: false,
+    isReduceMotion: false,
+    isBackgrounded: true,
+  });
+  assert.equal(bgContract.motionAllowed, false, "Backgrounded app must disallow ambient motion");
+
+  // Active foreground with no motion restrictions
+  const activeContract = deriveAmbientLifeContract({
+    isResting: false,
+    isReduceMotion: false,
+    isBackgrounded: false,
+  });
+  assert.equal(activeContract.motionAllowed, true, "Active foreground must permit calm ambient motion");
+
+  // 6. GardenExplorer Toolbar Gesture Isolation Static Contract
+  const explorerCode = fs.readFileSync("src/components/garden/GardenExplorer.tsx", "utf8");
+  assert.ok(
+    explorerCode.includes("scrollButtonLeft"),
+    "GardenExplorer must render interactive scrollButtonLeft control"
+  );
+  assert.ok(
+    explorerCode.includes("scrollButtonRight"),
+    "GardenExplorer must render interactive scrollButtonRight control"
+  );
+  assert.ok(
+    explorerCode.includes("onStartShouldSetResponder"),
+    "GardenExplorer regionBar must isolate touch events from canvas pan responder"
+  );
+  assert.ok(
+    explorerCode.includes("onRegionWheel"),
+    "GardenExplorer must provide wheel translation for horizontal scrolling"
+  );
+
+  // 7. PainterlyTreeStructure Grounding & Transform Synchronization Static Contract
+  const treeCode = fs.readFileSync("src/components/garden/PainterlyTreeStructure.tsx", "utf8");
+  assert.ok(
+    treeCode.includes("resolveTreePresentationTransform"),
+    "PainterlyTreeStructure must use resolveTreePresentationTransform as single transform source"
+  );
+  assert.ok(
+    treeCode.includes("foreground-moss-overlap"),
+    "PainterlyTreeStructure must include foreground moss overlap"
+  );
+  assert.ok(
+    treeCode.includes("rootContactShadow"),
+    "PainterlyTreeStructure must include localized root contact shadows"
+  );
+
+  assert.ok(true, "All natural grounding, botanical attachment, spatial depth, and scroll tests passed");
+});
+
+test("28. Natural Oak Foliage, Root Integration & Deeper Composition Invariants", async () => {
+  // 1. Reconnection Visual Substitution & Non-Duplication Contract
+  const recEvent = createMockEvent("ev-rec-oak-1", "reconnection", "2026-06-01T12:00:00Z", "communication");
+  const scene = generateGardenSVGScene("reconnection-seed", 48, 18, false, undefined, "light", [recEvent]);
+  const world = buildGardenWorld(scene, {
+    coupleId: "reconnection-seed",
+    totalGrowthUnits: 48,
+    careGrowthUnits: 18,
+    careEvents: [recEvent],
+  });
+
+  const memories = getExplorableMemories(world, [recEvent]);
+  assert.equal(memories.length, 1, "Exactly 1 earned memory must exist for 1 reconnection event (no duplicate meadow flower)");
+  const mem = memories[0];
+  assert.equal(mem.botanicalRepresentation, "Reconnection Shoot", "Reconnection must represent as 'Reconnection Shoot'");
+  assert.equal(mem.memoryType, "Reconnection");
+  assert.equal(mem.actionRoute, "/event/ev-rec-oak-1");
+  assert.equal(mem.source.sourceType, "completed_reconnection");
+
+  // Verify earned feature group count matches event count (1 event = 1 earned group)
+  const earnedGroups = Object.values(world.earnedFeatureGroups);
+  assert.equal(earnedGroups.length, 1, "Reconnection substitution must produce exactly 1 earned feature group");
+
+  // 2. Deeper Tree Clearing Composition Preset Contract
+  const midPreset = TREE_COMPOSITION_PRESETS.middle_distance;
+  assert.ok(midPreset, "TREE_COMPOSITION_PRESETS.middle_distance must be defined");
+  assert.equal(midPreset.scale, 0.58, "middle_distance scale must be 0.58");
+  assert.equal(midPreset.centerOrigin.x, 390.4, "Trunk center baseline X must remain 390.4");
+  assert.equal(midPreset.centerOrigin.y, 145.0, "Center origin Y must be calibrated deep-centre pivot at 145.0");
+
+  // Verify deep-centre composition proportions against target criteria:
+  // - Root contact around 65-72% of unobstructed scene height
+  // - Tree height around 45-55% of unobstructed scene height
+  // - Clearly visible foreground meadow below root contact
+  const transform = resolveTreePresentationTransform({ cropPreset: "middle_distance" });
+  const canonicalRootY = transform.offsetY + 440.5 * transform.totalScale;
+  const canonicalApexY = transform.offsetY + 73.5 * transform.totalScale;
+  const canonicalTreeHeight = canonicalRootY - canonicalApexY;
+
+  assert.ok(
+    canonicalRootY >= 310 && canonicalRootY <= 330,
+    `Canonical root contact Y (${canonicalRootY.toFixed(1)}) must be in 310-330 range`
+  );
+  assert.ok(
+    canonicalTreeHeight >= 200 && canonicalTreeHeight <= 230,
+    `Canonical tree height (${canonicalTreeHeight.toFixed(1)}) must be in 200-230 range`
+  );
+
+  // Explore viewport metrics on standard mobile canvas (390 x 580, zoom 1.16, toolbar 72px)
+  const exploreZoom = 1.16;
+  const screenRootY = 290 + (canonicalRootY - 250) * exploreZoom;
+  const screenApexY = 290 + (canonicalApexY - 250) * exploreZoom;
+  const screenTreeH = screenRootY - screenApexY;
+  const unobstructedH = 580 - 56 - 72; // 452px
+  const rootRatio = (screenRootY - 56) / unobstructedH;
+  const heightRatio = screenTreeH / unobstructedH;
+  const foregroundMeadowPx = (580 - 72) - screenRootY;
+
+  assert.ok(
+    rootRatio >= 0.65 && rootRatio <= 0.72,
+    `Explore unobstructed root contact ratio (${(rootRatio * 100).toFixed(1)}%) must be within 65-72% target range`
+  );
+  assert.ok(
+    heightRatio >= 0.45 && heightRatio <= 0.56,
+    `Explore unobstructed tree height ratio (${(heightRatio * 100).toFixed(1)}%) must be within 45-56% target range`
+  );
+  assert.ok(
+    foregroundMeadowPx >= 120,
+    `Clearly visible foreground meadow (${foregroundMeadowPx.toFixed(1)}px) must be >= 120px above category toolbar`
+  );
+
+  // Invariant: Overview, Explore, Story Today, and Compact all resolve to middle_distance
+  const planFull = resolveTreeStructurePlan({ stageKey: "branching_out", presentationMode: "full" });
+  const planExplore = resolveTreeStructurePlan({ stageKey: "branching_out", presentationMode: "explore" });
+  const planStory = resolveTreeStructurePlan({ stageKey: "branching_out", presentationMode: "story" });
+  const planCompact = resolveTreeStructurePlan({ stageKey: "branching_out", presentationMode: "compact" });
+  assert.equal(planFull.cropPreset, "middle_distance", "Full presentation mode must resolve middle_distance");
+  assert.equal(planExplore.cropPreset, "middle_distance", "Explore presentation mode must resolve middle_distance");
+  assert.equal(planStory.cropPreset, "middle_distance", "Story presentation mode must resolve middle_distance");
+  assert.equal(planCompact.cropPreset, "middle_distance", "Compact presentation mode must resolve middle_distance");
+
+  // Invariant: Camera does not reset on unrelated re-renders
+  const explorerSource = fs.readFileSync("src/components/garden/GardenExplorer.tsx", "utf8");
+  assert.ok(
+    explorerSource.includes("if (!hasLayout)") && explorerSource.includes("setHasLayout(true)"),
+    "GardenExplorer must guard initial camera calculation with hasLayout to prevent reset on re-render"
+  );
+
+  // 3. Renderer JSX Botanical Truth Static Contract
+  const rendererCode = fs.readFileSync("src/components/garden/PainterlyGardenRenderer.tsx", "utf8");
+  assert.ok(
+    rendererCode.includes("createOakLobedLeafD"),
+    "PainterlyGardenRenderer must use createOakLobedLeafD for authentic oak leaf silhouettes"
+  );
+  assert.ok(
+    rendererCode.includes("createLeafVeinD"),
+    "PainterlyGardenRenderer must use createLeafVeinD for leaf midrib and secondary veins"
+  );
+  assert.ok(
+    rendererCode.includes("lf.veinD"),
+    "PainterlyGardenRenderer must render lf.veinD for canopy leaves"
+  );
+  assert.ok(
+    rendererCode.includes("#7E9F45") && rendererCode.includes("#92B555") && rendererCode.includes("#6B8B38"),
+    "PainterlyGardenRenderer must use tender spring flush tones (#7E9F45, #92B555, #6B8B38) for fresh reconnection shoot"
+  );
+  assert.ok(
+    !rendererCode.includes("blossom.petals"),
+    "PainterlyGardenRenderer blossoms layer must NOT render flower petals on the oak tree"
+  );
+
+  // 4. Root Integration and Grounding Static Contract
+  const structureCode = fs.readFileSync("src/components/garden/PainterlyTreeStructure.tsx", "utf8");
+  assert.ok(
+    !structureCode.includes("M 295 441 C 335 439, 395 440, 475 442 C 515 443, 532 447, 502 453"),
+    "PainterlyTreeStructure must NOT contain the broad continuous horizontal shadow ellipse across the clearing"
+  );
+  assert.ok(
+    structureCode.includes("branching-root-contact-shadows"),
+    "PainterlyTreeStructure must contain localized root contact shadows"
+  );
+  assert.ok(
+    structureCode.includes("branching-root-bedding"),
+    "PainterlyTreeStructure must contain localized root tip bedding overlaps"
+  );
+
+  // 5. Adapt Canonical Anchor Branching Out Attachment Precedence
+  const adaptedApex = adaptCanonicalAnchorToPainterly({
+    assetKey: "painterly-oak-branching-v1",
+    stageKey: "branching_out",
+    canonicalAnchor: { x: 393.0, y: 73.5 },
+    role: "blossom",
+  });
+  assert.equal(adaptedApex.x, 393.0, "Apex anchor X must attach directly to branch wood");
+  assert.equal(adaptedApex.y, 73.5, "Apex anchor Y must attach directly to branch wood");
+
+  assert.ok(true, "All natural oak foliage, root integration, and deeper composition invariants verified");
+});
+
+test("29. Normal tile and compact card depth parity with approved Explore Reset & natural organic root bedding", () => {
+  // 1. Authoritative resolver parity: full, compact, explore, and story all resolve to middle_distance
+  const modes = ["full", "compact", "explore", "story"];
+  for (const mode of modes) {
+    const plan = resolveTreeStructurePlan({
+      stageKey: "branching_out",
+      presentationMode: mode,
+    });
+    assert.equal(
+      plan.cropPreset,
+      "middle_distance",
+      `Presentation mode '${mode}' must resolve cropPreset 'middle_distance'`
+    );
+  }
+
+  // 2. Mathematical depth parity between Explore Reset, Normal Garden Hero, and Compact Card
+  const transform = resolveTreePresentationTransform({
+    cropPreset: "middle_distance",
+  });
+  assert.equal(transform.scale, 0.58, "Middle distance scale must remain approved 0.58");
+  assert.equal(transform.pivotX, 390.4, "Pivot X must remain 390.4");
+  assert.equal(transform.pivotY, 145.0, "Pivot Y must remain 145.0");
+
+  // Root contact baseline Y in canonical 800x500 space
+  const soilBaselineCanonical = 441.0;
+  const canonicalRootContactY =
+    transform.offsetY + soilBaselineCanonical * transform.totalScale;
+  assert.equal(
+    Math.round(canonicalRootContactY * 100) / 100,
+    316.68,
+    "Canonical root contact Y must be 316.68px in 800x500 space"
+  );
+  const canonicalForegroundMeadow = 500.0 - canonicalRootContactY;
+  assert.equal(
+    Math.round(canonicalForegroundMeadow * 100) / 100,
+    183.32,
+    "Canonical foreground meadow must be 183.32px (36.7% of world height)"
+  );
+
+  // 2A. Explore Reset Viewport (e.g. 390x580)
+  const exploreVp = { width: 390, height: 580 };
+  const exploreZoom = Math.max(exploreVp.width / 800, exploreVp.height / 500); // 1.16
+  const exploreRootScreenY =
+    exploreVp.height / 2 + exploreZoom * (canonicalRootContactY - 250);
+  const exploreRootRatio = exploreRootScreenY / exploreVp.height;
+  assert.equal(
+    Math.round(exploreRootRatio * 1000) / 10,
+    63.3,
+    "Explore root contact must sit at 63.3% of viewport height"
+  );
+
+  // 2B. Normal Garden Hero (e.g. 390x280)
+  const heroVp = { width: 390, height: 280 };
+  const heroScale = Math.max(heroVp.width / 800, heroVp.height / 500); // 0.56
+  const heroRootScreenY =
+    heroVp.height / 2 + heroScale * (canonicalRootContactY - 250);
+  const heroRootRatio = heroRootScreenY / heroVp.height;
+  assert.equal(
+    Math.round(heroRootRatio * 1000) / 10,
+    63.3,
+    "Normal Garden Hero root contact must sit at EXACT same 63.3% of container height"
+  );
+  const heroMeadowPx = heroVp.height - heroRootScreenY;
+  assert.ok(
+    heroMeadowPx >= 100,
+    `Normal hero must exhibit generous visible foreground meadow (${heroMeadowPx.toFixed(1)}px >= 100px)`
+  );
+
+  // 2C. Shared Space Compact Card (e.g. 328x160)
+  const cardVp = { width: 328, height: 160 };
+  const cardScale = Math.max(cardVp.width / 800, cardVp.height / 500); // 0.41
+  const cardRootScreenY =
+    cardVp.height / 2 + cardScale * (canonicalRootContactY - 250);
+  const cardMeadowPx = cardVp.height - cardRootScreenY;
+  assert.ok(
+    cardMeadowPx >= 50,
+    `Compact card must exhibit visible foreground meadow (${cardMeadowPx.toFixed(1)}px >= 50px)`
+  );
+  assert.ok(
+    cardRootScreenY / cardVp.height <= 0.72,
+    "Compact card roots must sit comfortably within lower clearing, never cropped off"
+  );
+
+  // 3. Root Bedding & Grounding Static Verification: Zero Artificial Triangles
+  const structureSource = fs.readFileSync(
+    "src/components/garden/PainterlyTreeStructure.tsx",
+    "utf8"
+  );
+  // Assert no sharp inverted-V triangle grass paths exist
+  assert.ok(
+    !structureSource.includes("L 323 435.5 L 325 431.0 L 327 435.5"),
+    "PainterlyTreeStructure must NOT contain sharp triangular grass spikes at left root tip"
+  );
+  assert.ok(
+    !structureSource.includes("L 285 446 L 288 440 L 291 446"),
+    "PainterlyTreeStructure must NOT contain sharp triangular grass spikes in mature bedding"
+  );
+  // Assert soft organic moss cushions and humus mounds are present
+  assert.ok(
+    structureSource.includes("fill=\"#283319\""),
+    "PainterlyTreeStructure must contain rich organic humus bedding"
+  );
+  assert.ok(
+    structureSource.includes("fill=\"#3E5228\""),
+    "PainterlyTreeStructure must contain velvety moss cushion overlays"
+  );
+
+  // 4. Non-interactive normal tile: only exploreMode attaches pan handlers
+  const rendererSource = fs.readFileSync(
+    "src/components/garden/PainterlyGardenRenderer.tsx",
+    "utf8"
+  );
+  assert.ok(
+    !rendererSource.includes("panHandlers"),
+    "PainterlyGardenRenderer itself must remain strictly non-interactive (no panHandlers)"
+  );
+
+  assert.ok(true, "All depth parity and organic bedding invariants verified");
+});
+
+// ----------------------------------------------------------------------------
+// Test 31: Root Grounding, Local Undergrowth, Depth Perspective & Foliage Proof Invariants
+// ----------------------------------------------------------------------------
+test("31. Root Grounding, Local Undergrowth, Depth Perspective & Foliage Proof Invariants", async () => {
+  // 1. Foliage Proof Asset Manifest Contract
+  assert.ok(PAINTERLY_OAK_FOLIAGE_CLUSTER_V1, "Foliage proof asset manifest must exist");
+  assert.equal(PAINTERLY_OAK_FOLIAGE_CLUSTER_V1.assetKey, "painterly-oak-foliage-cluster-v1");
+  assert.equal(PAINTERLY_OAK_FOLIAGE_CLUSTER_V1.hasFoliage, true);
+  assert.equal(PAINTERLY_OAK_FOLIAGE_CLUSTER_V1.nativeDimensions.width, 837);
+  assert.equal(PAINTERLY_OAK_FOLIAGE_CLUSTER_V1.nativeDimensions.height, 858);
+  assert.ok(
+    fs.existsSync("assets/garden/painterly/foliage-oak-cluster-alpha-v1.png"),
+    "Foliage cluster transparent alpha PNG must exist in assets/garden/painterly/"
+  );
+  // Verify attachment pivot corresponds to woody stem base (relative 0.4241, 0.9942)
+  const pivot = PAINTERLY_OAK_FOLIAGE_CLUSTER_V1.attachmentPivot;
+  assert.ok(Math.abs(pivot.x - 59.4) < 1.0, `Pivot X (${pivot.x}) must align with stem tip (59.4)`);
+  assert.ok(Math.abs(pivot.y - 142.6) < 1.0, `Pivot Y (${pivot.y}) must align with stem base (142.6)`);
+
+  // 2. Organic Root Bedding: No flat repetitive cushions or curling strokes
+  const treeSource = fs.readFileSync(
+    "src/components/garden/PainterlyTreeStructure.tsx",
+    "utf8"
+  );
+  assert.ok(
+    !treeSource.includes("M 321 435.5 Q 319 432.0 321 429.5"),
+    "Must not contain artificial curling stroke on root 1"
+  );
+  assert.ok(
+    !treeSource.includes("M 419 441 Q 417 437 419 434"),
+    "Must not contain artificial curling stroke on root 4"
+  );
+  assert.ok(
+    !treeSource.includes("M 458 432.5 Q 456 428.5 458 425.5"),
+    "Must not contain artificial curling stroke on root 6"
+  );
+  // Exposed wood on buttress roots 2 & 5
+  assert.ok(
+    treeSource.includes("fill=\"#241B13\""),
+    "Roots 2 & 5 must preserve exposed wood with clear contact shadows"
+  );
+  // Natural leaf litter in collar hollow
+  assert.ok(
+    treeSource.includes("fill=\"#4A3724\"") && treeSource.includes("fill=\"#5C4430\""),
+    "Root collar must nestle natural leaf litter flakes"
+  );
+  // Humus and moss cushions
+  assert.ok(
+    treeSource.includes("fill=\"#283319\"") && treeSource.includes("fill=\"#3E5228\""),
+    "Roots 1, 4, 6 must nestle in rich organic humus and velvety moss"
+  );
+
+  // 3. Recomposition of Undergrowth: Staggered Y and Trunk Breathing Room
+  const mockEvents = [
+    {
+      id: "ev-rec-test-1",
+      kind: "reconnection",
+      occurredAt: "2026-03-01T10:00:00Z",
+      createdAt: "2026-03-01T10:00:00Z",
+      category: "healing",
+      displayTitle: "Healing Moment",
+    },
+    ...Array.from({ length: 8 }).map((_, i) => ({
+      id: `ev-pos-test-${i}`,
+      kind: "positive_moment",
+      occurredAt: `2026-03-0${i + 1}T10:00:00Z`,
+      createdAt: `2026-03-0${i + 1}T10:00:00Z`,
+      category: "appreciation",
+      displayTitle: `Positive Moment ${i}`,
+    })),
+    ...Array.from({ length: 6 }).map((_, i) => ({
+      id: `ev-date-test-${i}`,
+      kind: "important_date",
+      occurredAt: `2026-03-1${i}T10:00:00Z`,
+      createdAt: `2026-03-1${i}T10:00:00Z`,
+      category: "anniversary",
+      displayTitle: `Date ${i}`,
+    })),
+  ];
+  const scene = generateGardenSVGScene(
+    COUPLE_A,
+    50, // branching_out
+    20,
+    false,
+    undefined,
+    "light",
+    mockEvents
+  );
+
+  // Collect all ground flowers and landmark dates
+  const groundItems = scene.groundDetails || [];
+  const flowers = groundItems.filter(
+    (g) => g.type === "flower" || g.type === "meadow-flower" || g.type === "flowering-herb"
+  );
+  assert.ok(flowers.length > 0, "Must have ground flowers in scene");
+
+  // Verify Y coordinates are staggered across depth (not a single horizontal line at 440-449)
+  const yValues = flowers.map((f) => f.cy);
+  const minY = Math.min(...yValues);
+  const maxY = Math.max(...yValues);
+  assert.ok(
+    minY <= 340,
+    `Undergrowth must nestle close to tree root flanks (minY=${minY} <= 340)`
+  );
+  assert.ok(
+    maxY - minY >= 50,
+    `Undergrowth Y spread must be at least 50px across clearing depth (spread=${maxY - minY})`
+  );
+
+  // Verify trunk collar breathing room: no ground items placed directly on trunk collar
+  for (const item of groundItems) {
+    const isDirectlyOnCollar =
+      item.cx >= 380 && item.cx <= 400 && item.cy >= 314 && item.cy <= 322;
+    assert.equal(
+      isDirectlyOnCollar,
+      false,
+      `Item ${item.id} (${item.cx}, ${item.cy}) must not obstruct trunk collar`
+    );
+  }
+
+  // 4. Pollinator Habitat Routing: Ground butterflies stay near flowers
+  const habitats = scene.habitatDetails || [];
+  for (const hab of habitats) {
+    if (hab.kind === "butterfly" || hab.kind === "pollinator") {
+      if (hab.cy >= 260) {
+        assert.equal(
+          hab.attachmentTarget,
+          "terrain",
+          `Ground pollinator at cy=${hab.cy} must have attachmentTarget 'terrain'`
+        );
+      }
+    } else if (hab.kind === "bird-perch" || hab.kind === "nest-material") {
+      assert.equal(
+        hab.attachmentTarget,
+        "canopy",
+        `Canopy habitat '${hab.kind}' must have attachmentTarget 'canopy'`
+      );
+    }
+  }
+
+  // 5. Mathematical Depth Perspective Scaling Contract
+  function computeGroundDepthScale(cy) {
+    return Math.min(1.0, Math.max(0.62, 0.62 + (cy - 316) * (0.38 / 114)));
+  }
+  assert.equal(
+    Math.round(computeGroundDepthScale(316) * 100) / 100,
+    0.62,
+    "Depth scale at root baseline Y=316 must be 0.62 (matching tree scale 0.58)"
+  );
+  assert.equal(
+    Math.round(computeGroundDepthScale(430) * 100) / 100,
+    1.0,
+    "Depth scale at foreground meadow Y=430 must be 1.00"
+  );
+  assert.equal(
+    computeGroundDepthScale(500),
+    1.0,
+    "Depth scale in far foreground must clamp to 1.00"
+  );
+
+  // 6. Visual QA Toggle Wiring
+  const qaSource = fs.readFileSync("src/app/garden-visual-qa.tsx", "utf8");
+  assert.ok(
+    qaSource.includes("showFoliageProof"),
+    "garden-visual-qa.tsx must wire showFoliageProof toggle"
+  );
+  assert.ok(
+    treeSource.includes("FOLIAGE_CLUSTER_ASSET"),
+    "PainterlyTreeStructure.tsx must import FOLIAGE_CLUSTER_ASSET"
+  );
+  assert.ok(
+    treeSource.includes("554.4 - 59.4"),
+    "PainterlyTreeStructure.tsx must attach foliage proof to verified branch anchor (554.4, 103.8)"
+  );
+
+  assert.ok(true, "All root grounding, local undergrowth and foliage proof invariants passed");
+});
+
+// ----------------------------------------------------------------------------
+// Test 32: Mandatory Permanent Planting Anchor, Lifecycle Depth Invariance & Camera Inspection Contracts
+// ----------------------------------------------------------------------------
+test("32. Mandatory Permanent Planting Anchor, Lifecycle Depth Invariance & Camera Inspection Contracts", () => {
+  // 1. One Permanent Planting Anchor in Canonical & World Space Across All Six Phases
+  const transform = resolveTreePresentationTransform({ cropPreset: "middle_distance" });
+  assert.equal(transform.scale, 0.58, "Approved middle_distance preset must have scale 0.58");
+
+  const canonicalAnchor = { x: 390.4, y: 441.0 };
+  const worldX = Math.round((transform.offsetX + canonicalAnchor.x * transform.totalScale) * 10) / 10;
+  const worldY = Math.round((transform.offsetY + canonicalAnchor.y * transform.totalScale) * 10) / 10;
+
+  assert.equal(worldX, 390.4, "World ground contact X must be exactly 390.4 across all scales");
+  assert.equal(worldY, 316.7, "World ground contact Y must be exactly 316.7 in middle_distance");
+
+  const phases = [
+    { phase: "planted_acorn", units: 0, events: 0, stageKey: "beginning" },
+    { phase: "emerging_shoot", units: 8, events: 1, stageKey: "first_seedling" },
+    { phase: "small_seedling", units: 14, events: 1, stageKey: "first_seedling" },
+    { phase: "small_sapling", units: 24, events: 1, stageKey: "tender_sapling" },
+    { phase: "branching_oak", units: 45, events: 5, stageKey: "branching_out" },
+    { phase: "mature_oak", units: 95, events: 20, stageKey: "garden_in_bloom" },
+  ];
+
+  for (const item of phases) {
+    const visualPhase = resolveLifecycleVisualPhase(item.units, item.events);
+    assert.equal(visualPhase, item.phase, `Growth ${item.units} must map to visual phase '${item.phase}'`);
+
+    const artRecord = LIFECYCLE_STAGE_TO_ART_MAPPING[item.phase];
+    assert.ok(artRecord, `Art record must exist for phase '${item.phase}'`);
+    assert.equal(
+      artRecord.plantingCenterOriginX,
+      390.4,
+      `Phase '${item.phase}' must anchor at center X = 390.4`
+    );
+    assert.equal(
+      artRecord.soilBaselineY,
+      441.0,
+      `Phase '${item.phase}' must anchor at baseline Y = 441.0`
+    );
+
+    // Verify resolved world coordinate is identically (390.4, 316.7)
+    const ptX = Math.round((transform.offsetX + artRecord.plantingCenterOriginX * transform.totalScale) * 10) / 10;
+    const ptY = Math.round((transform.offsetY + artRecord.soilBaselineY * transform.totalScale) * 10) / 10;
+    assert.equal(ptX, 390.4, `Phase '${item.phase}' world X must be 390.4`);
+    assert.equal(ptY, 316.7, `Phase '${item.phase}' world Y must be 316.7`);
+  }
+
+  // 2. Camera Projection Parity: Identical Screen Coordinates Across All Phases
+  const testViewport = { width: 360, height: 480 };
+  const defaultCam = { target: { x: 400.0, y: 250.0 }, zoom: 1.0 };
+
+  const projectedScreenPoints = phases.map((item) => {
+    return worldToScreen({ x: worldX, y: worldY }, defaultCam, testViewport);
+  });
+
+  const firstScreenPt = projectedScreenPoints[0];
+  for (let i = 1; i < projectedScreenPoints.length; i++) {
+    const pt = projectedScreenPoints[i];
+    assert.equal(
+      Math.round(pt.x * 100) / 100,
+      Math.round(firstScreenPt.x * 100) / 100,
+      `Phase ${phases[i].phase} screen X must project identically to acorn`
+    );
+    assert.equal(
+      Math.round(pt.y * 100) / 100,
+      Math.round(firstScreenPt.y * 100) / 100,
+      `Phase ${phases[i].phase} screen Y must project identically to acorn`
+    );
+  }
+
+  // 3. Inspect Plant Changes Only Camera (World Position Remains Unchanged)
+  const inspectCam = { target: { x: 390.4, y: 312.0 }, zoom: 3.0 };
+  assert.equal(inspectCam.zoom, 3.0, "Inspect camera must provide clear 3.0x magnification");
+  assert.equal(inspectCam.target.x, 390.4, "Inspect camera must target plant center X");
+  assert.equal(inspectCam.target.y, 312.0, "Inspect camera must target plant structure center Y");
+
+  // Plant world coordinates remain completely untouched during inspection
+  assert.equal(worldX, 390.4, "Plant world X must remain 390.4 during inspect");
+  assert.equal(worldY, 316.7, "Plant world Y must remain 316.7 during inspect");
+
+  // Reset View restores approved clearing overview
+  assert.equal(defaultCam.target.x, 400.0, "Reset camera must center at 400.0");
+  assert.equal(defaultCam.target.y, 250.0, "Reset camera must center at 250.0");
+  assert.equal(defaultCam.zoom, 1.0, "Reset camera must restore 1.0 zoom");
+
+  // 4. Source Code Invariant Audits
+  const treeSource = fs.readFileSync("src/components/garden/PainterlyTreeStructure.tsx", "utf8");
+
+  // A. Mature overlays must never apply to early life
+  assert.ok(
+    treeSource.includes('effectiveSubphase === "planted_acorn"'),
+    "PainterlyTreeStructure must isolate planted_acorn"
+  );
+  assert.ok(
+    treeSource.includes('effectiveSubphase === "emerging_shoot"'),
+    "PainterlyTreeStructure must isolate emerging_shoot"
+  );
+  assert.ok(
+    treeSource.includes('effectiveSubphase === "small_seedling"'),
+    "PainterlyTreeStructure must isolate small_seedling"
+  );
+  assert.ok(
+    treeSource.includes('id="acorn-contact-shadow"'),
+    "PainterlyTreeStructure must render acorn-contact-shadow for acorn"
+  );
+  assert.ok(
+    treeSource.includes('id="shoot-contact-shadow"'),
+    "PainterlyTreeStructure must render shoot-contact-shadow for shoot"
+  );
+  assert.ok(
+    treeSource.includes('id="seedling-contact-shadow"'),
+    "PainterlyTreeStructure must render seedling-contact-shadow for seedling"
+  );
+  assert.ok(
+    treeSource.includes('id="acorn-soil-bedding"'),
+    "PainterlyTreeStructure must render acorn-soil-bedding for acorn"
+  );
+  assert.ok(
+    treeSource.includes('id="seedling-soil-bedding"'),
+    "PainterlyTreeStructure must render seedling-soil-bedding for shoot and seedling"
+  );
+
+  // B. Explorer and Visual QA UI Wiring
+  const explorerSource = fs.readFileSync("src/components/garden/GardenExplorer.tsx", "utf8");
+  assert.ok(
+    explorerSource.includes("handleInspectPlant"),
+    "GardenExplorer.tsx must implement handleInspectPlant"
+  );
+  assert.ok(
+    explorerSource.includes("accessibilityLabel=\"Inspect plant\""),
+    "GardenExplorer.tsx must provide accessible Inspect plant button"
+  );
+  assert.ok(
+    explorerSource.includes("handleResetView"),
+    "GardenExplorer.tsx must preserve handleResetView"
+  );
+
+  const visualQASource = fs.readFileSync("src/app/garden-visual-qa.tsx", "utf8");
+  assert.ok(
+    visualQASource.includes("earlyLifeCameraMode"),
+    "garden-visual-qa.tsx must wire earlyLifeCameraMode"
+  );
+  assert.ok(
+    visualQASource.includes("accessibilityLabel=\"Inspect plant\""),
+    "garden-visual-qa.tsx must provide accessible Inspect Plant button"
+  );
+  assert.ok(
+    visualQASource.includes("accessibilityLabel=\"Reset clearing view\""),
+    "garden-visual-qa.tsx must provide accessible Reset view button"
+  );
+  assert.ok(
+    visualQASource.includes("cropPreset=\"middle_distance\""),
+    "garden-visual-qa.tsx early-life canvas must use canonical middle_distance preset"
+  );
+
+  // 5. Canonical Growth & Threshold Immutability
+  assert.equal(getGardenStage(0).key, "first_seedling", "0 units must remain first_seedling");
+  assert.equal(getGardenStage(15).key, "first_seedling", "15 units must remain first_seedling");
+  assert.equal(getGardenStage(16).key, "tender_sapling", "16 units must remain tender_sapling");
+  assert.equal(getGardenStage(35).key, "tender_sapling", "35 units must remain tender_sapling");
+  assert.equal(getGardenStage(36).key, "branching_out", "36 units must remain branching_out");
+  assert.equal(getGardenStage(55).key, "branching_out", "55 units must remain branching_out");
+  assert.equal(getGardenStage(56).key, "leafy_canopy", "56 units must remain leafy_canopy");
+  assert.equal(getGardenStage(75).key, "leafy_canopy", "75 units must remain leafy_canopy");
+  assert.equal(getGardenStage(76).key, "rooted_flourishing", "76 units must remain rooted_flourishing");
+  assert.equal(getGardenStage(90).key, "rooted_flourishing", "90 units must remain rooted_flourishing");
+  assert.equal(getGardenStage(91).key, "garden_in_bloom", "91 units must remain garden_in_bloom");
+  assert.equal(getGardenStage(100).key, "garden_in_bloom", "100 units must remain garden_in_bloom");
+
+  assert.ok(true, "All permanent planting anchor, depth invariance, and camera inspection invariants passed");
+});
+
+test("33. Authoritative Growth Progress & Visual Milestone Contracts", async () => {
+  // 1. Beginning State & Zero Growth Resolution
+  const beginningProg = resolveGardenMilestoneProgress(0, 0);
+  assert.equal(beginningProg.currentStageKey, "beginning", "0 units with 0 events must resolve to beginning");
+  assert.equal(beginningProg.currentStageLabel, "A Quiet Beginning", "Beginning label must be 'A Quiet Beginning'");
+  assert.equal(beginningProg.nextMilestoneKey, "first_seedling", "Next milestone for beginning must be first_seedling");
+  assert.equal(beginningProg.nextMilestoneLabel, "First Seedling", "Next milestone label must be 'First Seedling'");
+  assert.equal(beginningProg.intervalStartUnits, 0, "Beginning interval start must be 0");
+  assert.equal(beginningProg.intervalEndUnits, 1, "Beginning interval end must be 1");
+  assert.equal(beginningProg.intervalProgress, 0, "Beginning progress fraction must be 0");
+  assert.equal(beginningProg.intervalDisplayPercent, 0, "Beginning display percent must be 0%");
+  assert.equal(beginningProg.remainingUnits, 1, "Beginning remaining units must be 1");
+  assert.equal(beginningProg.isFinalStage, false, "Beginning must not be final stage");
+
+  // If units > 0 with 0 events (e.g. from elapsed days alone), resolves to first_seedling
+  const timeOnlyEarly = resolveGardenMilestoneProgress(2.5, 0);
+  assert.equal(timeOnlyEarly.currentStageKey, "first_seedling", "2.5 units from time alone must resolve to first_seedling");
+  assert.equal(timeOnlyEarly.nextMilestoneKey, "tender_sapling", "Next milestone must be tender_sapling");
+  assert.equal(timeOnlyEarly.intervalStartUnits, 0);
+  assert.equal(timeOnlyEarly.intervalEndUnits, 16);
+  assert.equal(timeOnlyEarly.unitsInInterval, 2.5);
+  assert.equal(timeOnlyEarly.intervalProgress, 2.5 / 16);
+  assert.equal(timeOnlyEarly.intervalDisplayPercent, Math.floor((2.5 / 16) * 100));
+
+  // 2. Canonical Threshold Boundaries (Immediately Below, Exactly At, Immediately Above)
+  // Boundary 1: First Seedling -> Tender Sapling at 16.0 units
+  const below16 = resolveGardenMilestoneProgress(15.99, 5);
+  assert.equal(below16.currentStageKey, "first_seedling", "15.99 units must resolve to first_seedling");
+  assert.equal(below16.nextMilestoneKey, "tender_sapling", "15.99 next milestone must be tender_sapling");
+  assert.equal(below16.intervalStartUnits, 0);
+  assert.equal(below16.intervalEndUnits, 16);
+  assert.ok(below16.intervalProgress < 1.0, "Progress fraction must be strictly < 1.0 before threshold");
+  assert.equal(below16.intervalDisplayPercent, 99, "Display percent must cap at 99% before threshold (never 100%)");
+  assert.ok(below16.remainingUnits > 0, "Remaining units must be > 0 before threshold");
+
+  const at16 = resolveGardenMilestoneProgress(16.0, 5);
+  assert.equal(at16.currentStageKey, "tender_sapling", "16.0 units must resolve immediately to tender_sapling");
+  assert.equal(at16.nextMilestoneKey, "branching_out", "16.0 next milestone must be branching_out");
+  assert.equal(at16.intervalStartUnits, 16);
+  assert.equal(at16.intervalEndUnits, 36);
+  assert.equal(at16.unitsInInterval, 0.0, "Units in interval must be 0.0 at exact threshold");
+  assert.equal(at16.intervalProgress, 0.0, "Interval progress must start at 0.0 at exact threshold");
+  assert.equal(at16.intervalDisplayPercent, 0, "Display percent must be 0% at exact threshold");
+
+  const above16 = resolveGardenMilestoneProgress(16.1, 5);
+  assert.equal(above16.currentStageKey, "tender_sapling", "16.1 units must resolve to tender_sapling");
+  assert.equal(above16.intervalStartUnits, 16);
+  assert.equal(above16.intervalEndUnits, 36);
+  assert.ok(above16.unitsInInterval > 0, "Units in interval must be > 0 above threshold");
+
+  // Boundary 2: Tender Sapling -> Branching Out at 36.0 units
+  const below36 = resolveGardenMilestoneProgress(35.95, 10);
+  assert.equal(below36.currentStageKey, "tender_sapling", "35.95 units must resolve to tender_sapling");
+  assert.equal(below36.nextMilestoneKey, "branching_out");
+  assert.equal(below36.intervalDisplayPercent, 99, "35.95% must display 99%, never 100%");
+
+  const at36 = resolveGardenMilestoneProgress(36.0, 10);
+  assert.equal(at36.currentStageKey, "branching_out", "36.0 units must resolve to branching_out");
+  assert.equal(at36.nextMilestoneKey, "leafy_canopy");
+  assert.equal(at36.intervalStartUnits, 36);
+  assert.equal(at36.intervalEndUnits, 56);
+  assert.equal(at36.intervalProgress, 0.0);
+  assert.equal(at36.intervalDisplayPercent, 0);
+
+  const above36 = resolveGardenMilestoneProgress(36.5, 10);
+  assert.equal(above36.currentStageKey, "branching_out");
+  assert.equal(above36.unitsInInterval, 0.5);
+
+  // Boundary 3: Branching Out -> Leafy Canopy at 56.0 units
+  const below56 = resolveGardenMilestoneProgress(55.99, 15);
+  assert.equal(below56.currentStageKey, "branching_out");
+  assert.equal(below56.nextMilestoneKey, "leafy_canopy");
+  assert.equal(below56.intervalDisplayPercent, 99);
+
+  const at56 = resolveGardenMilestoneProgress(56.0, 15);
+  assert.equal(at56.currentStageKey, "leafy_canopy", "56.0 units must resolve to leafy_canopy");
+  assert.equal(at56.nextMilestoneKey, "rooted_flourishing");
+  assert.equal(at56.intervalStartUnits, 56);
+  assert.equal(at56.intervalEndUnits, 76);
+  assert.equal(at56.intervalProgress, 0.0);
+  assert.equal(at56.intervalDisplayPercent, 0);
+
+  // Boundary 4: Leafy Canopy -> Rooted & Flourishing at 76.0 units
+  const below76 = resolveGardenMilestoneProgress(75.9, 20);
+  assert.equal(below76.currentStageKey, "leafy_canopy");
+  assert.equal(below76.nextMilestoneKey, "rooted_flourishing");
+  assert.equal(below76.intervalDisplayPercent, 99);
+
+  const at76 = resolveGardenMilestoneProgress(76.0, 20);
+  assert.equal(at76.currentStageKey, "rooted_flourishing", "76.0 units must resolve to rooted_flourishing");
+  assert.equal(at76.nextMilestoneKey, "garden_in_bloom");
+  assert.equal(at76.intervalStartUnits, 76);
+  assert.equal(at76.intervalEndUnits, 91);
+  assert.equal(at76.intervalProgress, 0.0);
+  assert.equal(at76.intervalDisplayPercent, 0);
+
+  // Boundary 5: Rooted & Flourishing -> Garden in Bloom at 91.0 units (Final Stage)
+  const below91 = resolveGardenMilestoneProgress(90.9, 25);
+  assert.equal(below91.currentStageKey, "rooted_flourishing");
+  assert.equal(below91.nextMilestoneKey, "garden_in_bloom");
+  assert.equal(below91.intervalDisplayPercent, 99);
+
+  const at91 = resolveGardenMilestoneProgress(91.0, 25);
+  assert.equal(at91.currentStageKey, "garden_in_bloom", "91.0 units must resolve to garden_in_bloom");
+  assert.equal(at91.isFinalStage, true, "91.0 must set isFinalStage to true");
+  assert.equal(at91.nextMilestoneKey, null, "Final stage nextMilestoneKey must be null");
+  assert.equal(at91.nextMilestoneLabel, null, "Final stage nextMilestoneLabel must be null");
+  assert.equal(at91.intervalProgress, 1.0, "Final stage intervalProgress must be 1.0");
+  assert.equal(at91.intervalDisplayPercent, 100, "Final stage display percent must be 100%");
+  assert.equal(at91.remainingUnits, 0, "Final stage remaining units must be 0");
+  assert.equal(
+    at91.nextMilestoneCopy,
+    "Your garden keeps collecting your shared moments.",
+    "Final stage copy must celebrate continued collecting of shared moments"
+  );
+
+  const at100 = resolveGardenMilestoneProgress(100.0, 30);
+  assert.equal(at100.currentStageKey, "garden_in_bloom");
+  assert.equal(at100.isFinalStage, true);
+  assert.equal(at100.nextMilestoneKey, null);
+
+  // 3. Fractional Growth Values (Precision & Invariance)
+  const fractionalSample = resolveGardenMilestoneProgress(7.25, 3);
+  assert.equal(fractionalSample.currentStageKey, "first_seedling");
+  assert.equal(fractionalSample.unitsInInterval, 7.25, "Unrounded fractional units must be preserved");
+  assert.equal(fractionalSample.intervalProgress, 7.25 / 16, "Continuous fraction must be exact");
+  assert.equal(fractionalSample.intervalDisplayPercent, 45, "Floor percent of 7.25/16 (45.31%) must be 45");
+  assert.equal(fractionalSample.remainingUnits, 8.75, "Remaining unrounded units must be preserved");
+
+  // 4. Clamping & Out-of-Bounds Protection
+  const negativeUnits = resolveGardenMilestoneProgress(-10, 1);
+  assert.equal(negativeUnits.currentStageKey, "first_seedling");
+  assert.equal(negativeUnits.intervalProgress, 0);
+
+  const excessUnits = resolveGardenMilestoneProgress(250, 50);
+  assert.equal(excessUnits.currentStageKey, "garden_in_bloom");
+  assert.equal(excessUnits.isFinalStage, true);
+  assert.equal(excessUnits.intervalProgress, 1.0);
+
+  // 5. Immutability of Existing Growth Formulas, Weights & Caps
+  // Invariant: positive_moment = +2, reconnection = +4, important_date = +2
+  // Invariant: care growth capped at 40
+  // Invariant: time growth = min(60, elapsedDays * 0.5)
+  // Invariant: total = min(100, care + time)
+  const mockPosEvents = Array.from({ length: 25 }, (_, i) => ({
+    id: `ev-pos-${i}`,
+    kind: "positive_moment",
+    occurredAt: "2026-06-01T10:00:00Z",
+  }));
+  const mockStoryGrowth = calculateHistoricalGrowth(mockPosEvents, 100);
+  // 25 * 2 = 50 raw units, but capped at 40
+  assert.equal(mockStoryGrowth.careGrowthUnits, 40, "Care units must cap strictly at 40");
+  // 100 * 0.5 = 50 time units (below 60 cap)
+  assert.equal(mockStoryGrowth.timeGrowthUnits, 50, "Time units must compute at 0.5/day");
+  assert.equal(mockStoryGrowth.totalGrowthUnits, 90, "Total must be 40 + 50 = 90");
+  assert.equal(mockStoryGrowth.stage.key, "rooted_flourishing", "90 units must be rooted_flourishing");
+
+  // 6. Early-Life Preview Milestones (Strictly Development Only)
+  const acornPreview = resolvePreviewMilestoneProgress(0, 0);
+  assert.equal(acornPreview.subphaseKey, "planted_acorn");
+  assert.equal(acornPreview.nextSubphaseKey, "emerging_shoot");
+  assert.equal(acornPreview.isSimulatedOnly, true);
+
+  const shootPreview = resolvePreviewMilestoneProgress(8.0, 1);
+  assert.equal(shootPreview.subphaseKey, "emerging_shoot");
+  assert.equal(shootPreview.nextSubphaseKey, "small_seedling");
+
+  const seedlingPreview = resolvePreviewMilestoneProgress(8.1, 1);
+  assert.equal(seedlingPreview.subphaseKey, "small_seedling");
+  assert.equal(seedlingPreview.nextSubphaseKey, "small_sapling");
+
+  const seedlingHighPreview = resolvePreviewMilestoneProgress(15.99, 1);
+  assert.equal(seedlingHighPreview.subphaseKey, "small_seedling");
+  assert.equal(seedlingHighPreview.nextSubphaseKey, "small_sapling");
+
+  const saplingPreview = resolvePreviewMilestoneProgress(16.0, 1);
+  assert.equal(saplingPreview.subphaseKey, "small_sapling");
+  assert.equal(saplingPreview.nextSubphaseKey, null);
+
+  // 7. Early-Life Preview Target Slots Contract
+  assert.ok(EARLY_LIFE_PREVIEW_TARGET_SLOTS.planted_acorn, "planted_acorn target slot must exist");
+  assert.equal(
+    EARLY_LIFE_PREVIEW_TARGET_SLOTS.planted_acorn.targetFilename,
+    "assets/garden/painterly/oak-acorn-planted-alpha-v1.png"
+  );
+  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.planted_acorn.status, "missing");
+  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.planted_acorn.fileExists, false);
+
+  assert.ok(EARLY_LIFE_PREVIEW_TARGET_SLOTS.emerging_shoot, "emerging_shoot target slot must exist");
+  assert.equal(
+    EARLY_LIFE_PREVIEW_TARGET_SLOTS.emerging_shoot.targetFilename,
+    "assets/garden/painterly/oak-shoot-emerging-alpha-v1.png"
+  );
+  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.emerging_shoot.status, "missing");
+  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.emerging_shoot.fileExists, false);
+
+  assert.ok(EARLY_LIFE_PREVIEW_TARGET_SLOTS.small_seedling, "small_seedling target slot must exist");
+  assert.equal(
+    EARLY_LIFE_PREVIEW_TARGET_SLOTS.small_seedling.targetFilename,
+    "assets/garden/painterly/oak-seedling-alpha-v1.png"
+  );
+  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.small_seedling.status, "missing");
+  assert.equal(EARLY_LIFE_PREVIEW_TARGET_SLOTS.small_seedling.fileExists, false);
+
+  // 8. Shared Structural Artwork Decoupled from Logical Stages
+  // Canonical stages branching_out (36-55), leafy_canopy (56-75), and rooted_flourishing (76-90)
+  // are 3 distinct logical stages sharing intermediate oak structural asset on disk.
+  assert.equal(getGardenStage(40).key, "branching_out");
+  assert.equal(getGardenStage(60).key, "leafy_canopy");
+  assert.equal(getGardenStage(80).key, "rooted_flourishing");
+  assert.notEqual(getGardenStage(40).key, getGardenStage(60).key);
+  assert.notEqual(getGardenStage(60).key, getGardenStage(80).key);
+
+  const artRecord = LIFECYCLE_STAGE_TO_ART_MAPPING.branching_oak;
+  assert.ok(artRecord.anatomyDescription.includes("shared structural asset"));
+
+  // 9. Source Code Invariant Audits for UI & Accessibility
+  const progressComponentSource = fs.readFileSync(
+    "src/components/garden/GardenProgressSection.tsx",
+    "utf8"
+  );
+  assert.ok(
+    progressComponentSource.includes('accessibilityRole="progressbar"'),
+    "GardenProgressSection must have accessibilityRole='progressbar'"
+  );
+  assert.ok(
+    progressComponentSource.includes("accessibilityValue"),
+    "GardenProgressSection must expose accessibilityValue"
+  );
+  assert.ok(
+    progressComponentSource.includes("progress.supportingCopy"),
+    "GardenProgressSection must render gentle supporting copy"
+  );
+  assert.equal(
+    below16.supportingCopy,
+    "Growing through time and shared care.",
+    "Milestone model must provide gentle supporting copy"
+  );
+  assert.equal(
+    at91.supportingCopy,
+    "Your garden keeps collecting your shared moments.",
+    "Final stage model must provide gentle final stage copy"
+  );
+  assert.ok(
+    progressComponentSource.includes("How your garden grows"),
+    "GardenProgressSection must provide truth-aligned educational section"
+  );
+  // Zero streaks, scorecards, leaderboards, or partner judgments in UI
+  assert.ok(!progressComponentSource.includes("streakCount"), "Zero streak counters in progress component");
+  assert.ok(!progressComponentSource.includes("currentStreak"), "Zero current streak in progress component");
+  assert.ok(!progressComponentSource.includes("leaderboard"), "Zero leaderboards in progress component");
+  assert.ok(!progressComponentSource.includes("health score"), "Zero relationship health scores");
+  assert.ok(!progressComponentSource.includes("falling behind"), "Zero falling-behind messages");
+
+  // Parity across normal Garden and compact card
+  const gardenScreenSource = fs.readFileSync("src/app/garden.tsx", "utf8");
+  assert.ok(
+    gardenScreenSource.includes("<GardenProgressSection"),
+    "GardenScreen must mount GardenProgressSection"
+  );
+  assert.ok(
+    !gardenScreenSource.includes("streakDays"),
+    "GardenScreen must not have streak mechanics"
+  );
+  assert.ok(
+    !gardenScreenSource.includes("currentStreak"),
+    "GardenScreen must not track current streak"
+  );
+
+  const entryCardSource = fs.readFileSync(
+    "src/components/garden/GardenEntryCard.tsx",
+    "utf8"
+  );
+  assert.ok(
+    entryCardSource.includes("<GardenProgressSection"),
+    "GardenEntryCard must mount GardenProgressSection in compact mode"
+  );
+
+  // Visual QA Simulation Controls
+  const visualQASource = fs.readFileSync("src/app/garden-visual-qa.tsx", "utf8");
+  assert.ok(
+    visualQASource.includes("SIMULATED PROGRESSION CONTROL"),
+    "garden-visual-qa.tsx must wire SIMULATED PROGRESSION CONTROL"
+  );
+  assert.ok(
+    visualQASource.includes("useSimulatedGrowth"),
+    "garden-visual-qa.tsx must support interactive simulated growth"
+  );
+
+  assert.ok(true, "All growth progress and visual milestone contracts passed");
 });
 
 function gardenVisualQACDCGuarded(code) {

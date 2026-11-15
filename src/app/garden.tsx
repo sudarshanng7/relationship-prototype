@@ -37,6 +37,7 @@ import {
 } from "@/lib/garden-story";
 import { GardenStoryPlayer } from "@/components/garden/GardenStoryPlayer";
 import { GardenExplorer } from "@/components/garden/GardenExplorer";
+import { GardenProgressSection } from "@/components/garden/GardenProgressSection";
 
 export default function GardenScreen() {
   const router = useRouter();
@@ -602,6 +603,14 @@ export default function GardenScreen() {
                 </Text>
               </View>
             </View>
+          )}
+
+          {/* SECTION 1.5 — Gentle Growth & Milestone Progress */}
+          {!isPlayingStory && !isExploring && (
+            <GardenProgressSection
+              totalGrowthUnits={effectiveTotalGrowthUnits}
+              careEventsCount={effectiveCareEvents.length}
+            />
           )}
 
           {/* SECTION 2 — Recent Growth Reflection (Only when eligible event exists) */}

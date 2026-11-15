@@ -679,6 +679,7 @@ export interface ResolveTreeStructurePlanInput {
   rendererMode?: GardenRendererMode;
   availableAssets?: readonly string[];
   presentationMode?: "full" | "compact" | "explore" | "story";
+  cropPreset?: TreeCompositionPresetName;
   assetRegistry?: Record<GardenStageKey | "beginning", StageStructuralAssetSlot>;
   allowDevelopmentPreview?: boolean;
 }
@@ -725,7 +726,8 @@ export type TreeCompositionPresetName =
   | "balanced_overview"
   | "focused_compact"
   | "explore_world"
-  | "story_frame";
+  | "story_frame"
+  | "middle_distance";
 
 export interface TreeCompositionPreset {
   name: TreeCompositionPresetName;

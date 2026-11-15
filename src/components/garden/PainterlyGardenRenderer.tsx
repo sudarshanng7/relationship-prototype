@@ -42,6 +42,8 @@ import {
   type GardenCareSignals,
   type GeneratedGardenSVGScene,
   generateGardenSVGScene,
+  createOakLobedLeafD,
+  createLeafVeinD,
 } from "@/lib/garden-generator";
 import {
   type Camera2D,
@@ -58,6 +60,8 @@ import {
   derivePainterlyCoupleDNA,
   getGardenRendererMode,
   getGardenStructuralPresentation,
+  isCanonicalBranchingAssetKey,
+  isCanonicalMatureAssetKey,
   resolveCanonicalStageKey,
   resolveFeatureBoundsFromScene,
   resolveGardenRenderPlan,
@@ -75,6 +79,16 @@ import { PainterlyTreeStructure } from "./PainterlyTreeStructure";
 // Production bundled painterly raster assets
 const BACKPLATE_ASSET = require("../../../assets/garden/painterly/woodland-backplate-light-v1.png");
 
+// Authentic woodland oak palette and tender spring reconnection flush tones
+const OAK_FOLIAGE_PALETTE = {
+  mutedWoodlandPrimary: "#56723D",
+  mutedWoodlandTender: "#6A864D",
+  mutedWoodlandDeep: "#435B2E",
+  springFlushPrimary: "#7E9F45",
+  springFlushTender: "#92B555",
+  springFlushYoung: "#6B8B38",
+};
+
 export interface PainterlyGardenRendererProps
   extends ProceduralGardenRendererProps {
   rendererMode?: GardenRendererMode;
@@ -84,6 +98,7 @@ export interface PainterlyGardenRendererProps
   showWoodland?: boolean;
   cropPreset?: TreeCompositionPresetName;
   showGuides?: boolean;
+  showFoliageProof?: boolean;
   calibrationTransform?: {
     x?: number;
     y?: number;
@@ -113,8 +128,9 @@ export function PainterlyGardenRenderer({
   presentation: presentationProp,
   hideOverlays = false,
   showWoodland = true,
-  cropPreset,
+  cropPreset = "middle_distance",
   showGuides = false,
+  showFoliageProof,
   calibrationTransform,
 }: PainterlyGardenRendererProps) {
   const sceneId = useId().replace(/:/g, "_");
@@ -125,7 +141,7 @@ export function PainterlyGardenRenderer({
   const [isBackgrounded, setIsBackgrounded] = useState(false);
   const [containerViewport, setContainerViewport] = useState<Viewport>({
     width: compact ? 360 : 800,
-    height: compact ? 160 : 500,
+    height: compact ? 188 : 500,
   });
 
   useEffect(() => {
@@ -154,7 +170,10 @@ export function PainterlyGardenRenderer({
   }, [totalGrowthUnits, careEvents]);
 
   const activeMode = modeProp ?? getGardenRendererMode();
-  const isDev = typeof __DEV__ !== "undefined" ? Boolean(__DEV__) : false;
+  const isDev =
+    typeof __DEV__ !== "undefined"
+      ? Boolean(__DEV__)
+      : process.env.NODE_ENV !== "production";
 
   const renderPlan: GardenRenderPlan = useMemo(() => {
     return resolveGardenRenderPlan({
@@ -323,7 +342,9 @@ export function PainterlyGardenRenderer({
         attachmentTarget = "canopy";
       } else {
         role = "creature";
-        attachmentTarget = habitatMatch.cy >= 435 ? "terrain" : "canopy";
+        attachmentTarget =
+          (habitatMatch as any).attachmentTarget ??
+          (habitatMatch.cy < 260 ? "canopy" : "terrain");
       }
     }
 
@@ -370,31 +391,21 @@ export function PainterlyGardenRenderer({
       { translateX: -camX },
       { translateY: -camY },
     ];
-  } else if (compact) {
-    // Focused compact crop preset: [90, 710] x [20, 475]
-    const scale = Math.max(
-      activeViewport.width / 620,
-      activeViewport.height / 455
-    );
-    transformMatrix = [
-      { translateX: activeViewport.width / 2 },
-      { translateY: activeViewport.height / 2 },
-      { scale },
-      { translateX: -400 },
-      { translateY: -247.5 },
-    ];
   } else {
-    // Full structure cover preset: [0, 800] x [0, 500]
+    // Both full tile and compact card share the canonical [0, 800] x [0, 500] coordinate space.
+    // In compact mode, centering on (400, 210) provides perfectly balanced top/bottom margins (46px each)
+    // so the entire crown and roots are visible without clipping.
     const scale = Math.max(
       activeViewport.width / 800,
       activeViewport.height / 500
     );
+    const targetY = compact ? 210 : 250;
     transformMatrix = [
       { translateX: activeViewport.width / 2 },
       { translateY: activeViewport.height / 2 },
       { scale },
       { translateX: -400 },
-      { translateY: -250 },
+      { translateY: -targetY },
     ];
   }
 
@@ -434,11 +445,12 @@ export function PainterlyGardenRenderer({
     const canopy: typeof habitats = [];
     const ground: typeof habitats = [];
     for (const hab of habitats) {
-      if (
+      const isCanopy =
+        hab.attachmentTarget === "canopy" ||
         hab.kind === "bird-perch" ||
         hab.kind === "nest-material" ||
-        hab.cy < 420
-      ) {
+        hab.cy < 260;
+      if (isCanopy) {
         canopy.push(hab);
       } else {
         ground.push(hab);
@@ -457,7 +469,17 @@ export function PainterlyGardenRenderer({
       ? "rgba(30, 25, 45, 0.15)"
       : null;
 
-  const isMatureOakStructure = renderPlan.structureRenderer === "painterly_asset";
+  const isMatureOakStructure =
+    renderPlan.structureRenderer === "painterly_asset" &&
+    isCanonicalMatureAssetKey(renderPlan.structureAssetKey);
+  const isBranchingOakStructure =
+    renderPlan.structureRenderer === "painterly_asset" &&
+    isCanonicalBranchingAssetKey(renderPlan.structureAssetKey);
+
+  const effectiveShowFoliageProof =
+    showFoliageProof !== undefined
+      ? showFoliageProof
+      : false;
 
   return (
     <View
@@ -546,9 +568,11 @@ export function PainterlyGardenRenderer({
           <PainterlyTreeStructure
             structuralAssetKey={renderPlan.structureAssetKey}
             stageKey={stageKey}
+            totalGrowthUnits={totalGrowthUnits}
             worldBounds={CANONICAL_SCENE_BOUNDS}
             cropPreset={cropPreset}
             showGuides={showGuides}
+            showFoliageProof={effectiveShowFoliageProof}
             calibrationTransform={calibrationTransform}
             coupleDNA={coupleDNA}
             presentation={presentation}
@@ -633,36 +657,109 @@ export function PainterlyGardenRenderer({
                         strokeWidth={1.2}
                         fill="none"
                       />
-                      {item.florets?.map((fl, fIdx) => (
-                        <Circle
-                          key={`${item.id}-f-${fIdx}`}
-                          cx={fl.cx}
-                          cy={fl.cy}
-                          r={fl.r}
-                          fill={fl.petalColor}
-                          opacity={0.95}
-                        />
-                      ))}
+                      {item.florets?.map((fl, fIdx) => {
+                        const petalCount = 5;
+                        const pr = Math.max(1.3, fl.r * 0.62);
+                        return (
+                          <G key={`${item.id}-f-${fIdx}`}>
+                            {Array.from({ length: petalCount }).map((_, pIdx) => {
+                              const angle = (pIdx * 2 * Math.PI) / petalCount - Math.PI / 2;
+                              const px = fl.cx + Math.cos(angle) * (fl.r * 0.52);
+                              const py = fl.cy + Math.sin(angle) * (fl.r * 0.52);
+                              return (
+                                <Circle
+                                  key={`p-${pIdx}`}
+                                  cx={px}
+                                  cy={py}
+                                  r={pr}
+                                  fill={fl.petalColor}
+                                  opacity={0.94}
+                                />
+                              );
+                            })}
+                            <Circle
+                              cx={fl.cx}
+                              cy={fl.cy}
+                              r={Math.max(0.7, fl.r * 0.32)}
+                              fill="#FDE68A"
+                              opacity={0.96}
+                            />
+                          </G>
+                        );
+                      })}
                     </G>
                   );
                 }
                 if (item.cx && item.cy && item.color) {
+                  // Depth perspective scaling: plants near deep-centre tree (cy ~316)
+                  // scale to ~62%, matching the tree's scale (0.58), while foreground
+                  // meadow plants (cy ~430+) scale up to 100%.
+                  const depthScale = Math.min(
+                    1.0,
+                    Math.max(0.62, 0.62 + (item.cy - 316) * (0.38 / 114))
+                  );
+                  const stemH = 7.0 * depthScale;
+                  const stemPath = `M ${item.cx.toFixed(1)},${(item.cy + stemH).toFixed(1)} Q ${(item.cx + 0.8 * depthScale).toFixed(1)},${(item.cy + stemH * 0.5).toFixed(1)} ${item.cx.toFixed(1)},${item.cy.toFixed(1)}`;
+                  const fr = (item.rx || 2.4) * depthScale;
+                  const pr = Math.max(0.9, fr * 0.60);
+                  const petalCount = 5;
+                  const basalW = 2.5 * depthScale;
+                  const basalH = 1.0 * depthScale;
                   return (
-                    <Circle
-                      key={item.id}
-                      cx={item.cx}
-                      cy={item.cy}
-                      r={item.rx || 2.5}
-                      fill={item.color}
-                      opacity={0.88}
-                    />
+                    <G key={item.id}>
+                      {/* Rooted meadow stem into soil */}
+                      <Path
+                        d={stemPath}
+                        stroke="#455B32"
+                        strokeWidth={Math.max(0.8, 1.1 * depthScale)}
+                        fill="none"
+                      />
+                      {/* Basal foliage leaflets */}
+                      <Path
+                        d={`M ${(item.cx - basalW).toFixed(1)},${(item.cy + stemH - basalH).toFixed(1)} Q ${(item.cx - basalW * 2).toFixed(1)},${(item.cy + stemH - basalH * 3).toFixed(1)} ${(item.cx - basalW * 0.4).toFixed(1)},${(item.cy + stemH - basalH * 2).toFixed(1)} Z`}
+                        fill="#546E3A"
+                        opacity={0.9}
+                      />
+                      <Path
+                        d={`M ${(item.cx + basalW).toFixed(1)},${(item.cy + stemH - basalH).toFixed(1)} Q ${(item.cx + basalW * 2).toFixed(1)},${(item.cy + stemH - basalH * 3).toFixed(1)} ${(item.cx + basalW * 0.4).toFixed(1)},${(item.cy + stemH - basalH * 2).toFixed(1)} Z`}
+                        fill="#455B32"
+                        opacity={0.9}
+                      />
+                      {/* Multi-petal floret */}
+                      {Array.from({ length: petalCount }).map((_, pIdx) => {
+                        const angle = (pIdx * 2 * Math.PI) / petalCount - Math.PI / 2;
+                        const px = item.cx! + Math.cos(angle) * (fr * 0.5);
+                        const py = item.cy! + Math.sin(angle) * (fr * 0.5);
+                        return (
+                          <Circle
+                            key={`p-${pIdx}`}
+                            cx={px}
+                            cy={py}
+                            r={pr}
+                            fill={item.color}
+                            opacity={0.92}
+                          />
+                        );
+                      })}
+                      <Circle
+                        cx={item.cx}
+                        cy={item.cy}
+                        r={Math.max(0.5, fr * 0.3)}
+                        fill="#FDE68A"
+                        opacity={0.95}
+                      />
+                    </G>
                   );
                 }
                 return null;
               })}
               {/* Ground habitats (butterflies, meadow pollinators) */}
               {groundHabitats.map((hab) => {
-                const s = hab.scale || 1.0;
+                const habDepth = Math.min(
+                  1.0,
+                  Math.max(0.68, 0.68 + (hab.cy - 316) * (0.32 / 114))
+                );
+                const s = (hab.scale || 1.0) * habDepth;
                 const dir = hab.flip ? -1 : 1;
                 return (
                   <G key={hab.id}>
@@ -690,49 +787,58 @@ export function PainterlyGardenRenderer({
               id="canopy-presentation-group"
               transform={`translate(${presentationTransform.offsetX.toFixed(2)}, ${presentationTransform.offsetY.toFixed(2)}) scale(${presentationTransform.totalScale.toFixed(4)})`}
             >
-              {/* 3B. Earned Reconnection Blossoms & Positive Moments */}
+              {/* 3B. Earned Reconnection Shoots (Fresh spring oak leaf flush) */}
               <G id="blossoms-layer">
               {scene.blossoms.map((blossom) => {
-                let dx = 0;
-                let dy = 0;
-                if (isMatureOakStructure) {
-                  const adapted = adaptCanonicalAnchorToPainterly({
-                    assetKey: renderPlan.structureAssetKey || "painterly-oak-mature-v1",
-                    stageKey: "garden_in_bloom",
+                let adapted = { x: blossom.cx, y: blossom.cy };
+                if (isMatureOakStructure || isBranchingOakStructure) {
+                  adapted = adaptCanonicalAnchorToPainterly({
+                    assetKey: renderPlan.structureAssetKey || (isBranchingOakStructure ? "painterly-oak-branching-v1" : "painterly-oak-mature-v1"),
+                    stageKey,
                     canonicalAnchor: { x: blossom.cx, y: blossom.cy },
                     role: "blossom",
                   });
-                  dx = adapted.x - blossom.cx;
-                  dy = adapted.y - blossom.cy;
+                }
+                const dx = adapted.x - blossom.cx;
+                const dy = adapted.y - blossom.cy;
+
+                // When foliage proof is displayed, suppress placeholder SVG at branch-scaffold-right-upper (554.4, 103.8)
+                if (
+                  effectiveShowFoliageProof &&
+                  Math.hypot(adapted.x - 554.4, adapted.y - 103.8) < 14
+                ) {
+                  return null;
                 }
 
                 const bx = blossom.cx;
                 const by = blossom.cy;
                 const r = blossom.r;
 
-                // Physical woody support twig terminating directly on visible branch geometry
-                const targetBranchX = blossom.branchAnchor?.x ?? (bx >= 400 ? bx - 6 : bx + 6);
-                const targetBranchY = blossom.branchAnchor?.y ?? (by + r + 8);
-                const midX = (bx + targetBranchX) / 2 + (bx >= 400 ? -1.5 : 1.5);
-                const midY = (by + targetBranchY) / 2;
-                const twigPath = `M ${bx.toFixed(1)},${(by + r * 0.2).toFixed(1)} Q ${midX.toFixed(1)},${midY.toFixed(1)} ${targetBranchX.toFixed(1)},${targetBranchY.toFixed(1)}`;
+                // Shoot emerges directly from branch wood surface
+                const dir = bx >= 400 ? 1 : -1;
+                const shootHeadX = bx + dir * 3.5;
+                const shootHeadY = by - 7.5;
+                const twigPath = `M ${bx.toFixed(1)},${by.toFixed(1)} Q ${(bx + dir * 1.5).toFixed(1)},${(by - 4).toFixed(1)} ${shootHeadX.toFixed(1)},${shootHeadY.toFixed(1)}`;
 
-                // Floral sepal calyx hugging the blossom base and oriented toward the branch wood
-                const tdx = targetBranchX - bx;
-                const tdy = targetBranchY - by;
-                const tdist = Math.sqrt(tdx * tdx + tdy * tdy) || 1;
-                const unx = tdx / tdist;
-                const uny = tdy / tdist;
-                const upx = -uny;
-                const upy = unx;
-                const sepalSpread = r * 0.55;
-                const calyxTipX = bx + unx * (r + 2.5);
-                const calyxTipY = by + uny * (r + 2.5);
-                const calyxLeftX = bx - upx * sepalSpread;
-                const calyxLeftY = by - upy * sepalSpread;
-                const calyxRightX = bx + upx * sepalSpread;
-                const calyxRightY = by + upy * sepalSpread;
-                const calyxPath = `M ${calyxLeftX.toFixed(1)},${calyxLeftY.toFixed(1)} Q ${bx.toFixed(1)},${by.toFixed(1)} ${calyxRightX.toFixed(1)},${calyxRightY.toFixed(1)} L ${calyxTipX.toFixed(1)},${calyxTipY.toFixed(1)} Z`;
+                // Tender spring leaf flush: 3 young lobed oak leaves in authentic muted woodland greens
+                // #56723D, #6A864D, #435B2E
+                // Leaf 1: Main upright shoot leaf (#56723D)
+                const l1Tx = shootHeadX + dir * 3;
+                const l1Ty = shootHeadY - Math.max(13, r * 1.7);
+                const leaf1D = createOakLobedLeafD(shootHeadX, shootHeadY, l1Tx, l1Ty, 0.35);
+                const vein1D = createLeafVeinD(shootHeadX, shootHeadY, l1Tx, l1Ty, dir * 1, -1, false);
+
+                // Leaf 2: Lateral leaf (#6A864D)
+                const l2Tx = shootHeadX - dir * Math.max(10, r * 1.3);
+                const l2Ty = shootHeadY - Math.max(7, r * 0.9);
+                const leaf2D = createOakLobedLeafD(shootHeadX, shootHeadY, l2Tx, l2Ty, 0.35);
+                const vein2D = createLeafVeinD(shootHeadX, shootHeadY, l2Tx, l2Ty, -dir * 1, -1, false);
+
+                // Leaf 3: Opposite spreading leaf (#435B2E)
+                const l3Tx = shootHeadX + dir * Math.max(12, r * 1.5);
+                const l3Ty = shootHeadY - Math.max(4, r * 0.6);
+                const leaf3D = createOakLobedLeafD(shootHeadX, shootHeadY, l3Tx, l3Ty, 0.32);
+                const vein3D = createLeafVeinD(shootHeadX, shootHeadY, l3Tx, l3Ty, dir * 1, 0, false);
 
                 return (
                   <G
@@ -743,7 +849,7 @@ export function PainterlyGardenRenderer({
                         : undefined
                     }
                   >
-                    {/* Structural woody support twig */}
+                    {/* Woody support twig connecting directly out from branch wood */}
                     <Path
                       d={twigPath}
                       stroke={scene.palette.trunk || "#4E3629"}
@@ -752,43 +858,59 @@ export function PainterlyGardenRenderer({
                       fill="none"
                     />
 
-                    {/* Floral sepal calyx */}
-                    <Path
-                      d={calyxPath}
-                      fill="#3B5323"
+                    {/* Vegetative terminal bud scale / bark collar embedded on branch wood surface */}
+                    <Ellipse
+                      cx={bx}
+                      cy={by}
+                      rx={2.2}
+                      ry={1.5}
+                      fill="#3D2817"
                       opacity={0.95}
                     />
 
-                    {blossom.petals ? (
-                      blossom.petals.map((petal, pIdx) => (
-                        <Path
-                          key={`${blossom.id}-p-${pIdx}`}
-                          d={petal.d}
-                          fill={petal.fill}
-                          opacity={petal.opacity}
-                        />
-                      ))
-                    ) : (
-                      <Circle
-                        cx={blossom.cx}
-                        cy={blossom.cy}
-                        r={blossom.r}
-                        fill={blossom.color}
-                      />
-                    )}
-                    <Circle
-                      cx={blossom.cx}
-                      cy={blossom.cy}
-                      r={blossom.centerRadius || Math.max(1.8, blossom.r * 0.32)}
-                      fill={blossom.centerColor || scene.palette.blossomCenter}
+                    {/* Leaf 2 (Lateral leaf #6A864D) */}
+                    <Path
+                      d={leaf2D}
+                      fill="#6A864D"
                       opacity={0.92}
                     />
-                    <Circle
-                      cx={blossom.cx - blossom.r * 0.08}
-                      cy={blossom.cy - blossom.r * 0.08}
-                      r={Math.max(0.8, blossom.r * 0.12)}
-                      fill={blossom.highlightColor || scene.palette.blossomCream}
-                      opacity={0.45}
+                    <Path
+                      d={vein2D}
+                      stroke="#384B24"
+                      strokeWidth={0.6}
+                      strokeLinecap="round"
+                      fill="none"
+                      opacity={0.8}
+                    />
+
+                    {/* Leaf 3 (Lateral leaf #435B2E) */}
+                    <Path
+                      d={leaf3D}
+                      fill="#435B2E"
+                      opacity={0.92}
+                    />
+                    <Path
+                      d={vein3D}
+                      stroke="#2C3D1E"
+                      strokeWidth={0.6}
+                      strokeLinecap="round"
+                      fill="none"
+                      opacity={0.8}
+                    />
+
+                    {/* Leaf 1 (Main upright shoot leaf #56723D) */}
+                    <Path
+                      d={leaf1D}
+                      fill="#56723D"
+                      opacity={0.96}
+                    />
+                    <Path
+                      d={vein1D}
+                      stroke="#384B24"
+                      strokeWidth={0.6}
+                      strokeLinecap="round"
+                      fill="none"
+                      opacity={0.85}
                     />
                   </G>
                 );
@@ -800,18 +922,31 @@ export function PainterlyGardenRenderer({
               {canopyAccents.map((detail) => {
                 let dx = 0;
                 let dy = 0;
-                if (isMatureOakStructure) {
+                let adaptedX = 0;
+                let adaptedY = 0;
+                if (isMatureOakStructure || isBranchingOakStructure) {
                   const firstPt = detail.buds?.[0] || detail.berries?.[0];
                   if (firstPt) {
                     const adapted = adaptCanonicalAnchorToPainterly({
-                      assetKey: renderPlan.structureAssetKey || "painterly-oak-mature-v1",
-                      stageKey: "garden_in_bloom",
+                      assetKey: renderPlan.structureAssetKey || (isBranchingOakStructure ? "painterly-oak-branching-v1" : "painterly-oak-mature-v1"),
+                      stageKey,
                       canonicalAnchor: { x: firstPt.cx, y: firstPt.cy },
                       role: "foliage_shoot",
                     });
                     dx = adapted.x - firstPt.cx;
                     dy = adapted.y - firstPt.cy;
+                    adaptedX = adapted.x;
+                    adaptedY = adapted.y;
                   }
+                }
+
+                // When foliage proof is displayed, suppress placeholder SVG at branch-scaffold-right-upper (554.4, 103.8)
+                if (
+                  effectiveShowFoliageProof &&
+                  adaptedX > 0 &&
+                  Math.hypot(adaptedX - 554.4, adaptedY - 103.8) < 14
+                ) {
+                  return null;
                 }
 
                 return (
@@ -833,32 +968,82 @@ export function PainterlyGardenRenderer({
                       />
                     )}
                     {detail.leaves?.map((lf) => (
-                      <Path
-                        key={lf.id}
-                        d={lf.d}
-                        fill={lf.color}
-                        opacity={0.94}
-                      />
+                      <G key={lf.id}>
+                        <Path
+                          d={lf.d}
+                          fill={lf.color}
+                          opacity={0.94}
+                        />
+                        {lf.veinD && (
+                          <Path
+                            d={lf.veinD}
+                            stroke={lf.veinColor || "#384E25"}
+                            strokeWidth={0.8}
+                            strokeLinecap="round"
+                            fill="none"
+                            opacity={0.85}
+                          />
+                        )}
+                      </G>
                     ))}
-                    {detail.buds?.map((bd) => (
-                      <Ellipse
-                        key={bd.id}
-                        cx={bd.cx}
-                        cy={bd.cy}
-                        rx={bd.rx}
-                        ry={bd.ry}
-                        fill={bd.budColor}
-                      />
-                    ))}
-                    {detail.berries?.map((br) => (
-                      <Circle
-                        key={br.id}
-                        cx={br.cx}
-                        cy={br.cy}
-                        r={br.rx || 2.5}
-                        fill={br.color}
-                      />
-                    ))}
+                    {detail.buds?.map((bd) => {
+                      const budBase = bd.cy + bd.ry * 0.4;
+                      const budTip = bd.cy - bd.ry * 1.1;
+                      const budLeft = bd.cx - bd.rx;
+                      const budRight = bd.cx + bd.rx;
+                      const budPath = `M ${budLeft.toFixed(1)},${budBase.toFixed(1)} Q ${bd.cx.toFixed(1)},${bd.cy.toFixed(1)} ${budLeft.toFixed(1)},${budTip.toFixed(1)} Q ${bd.cx.toFixed(1)},${(budTip - 1).toFixed(1)} ${budRight.toFixed(1)},${budTip.toFixed(1)} Q ${bd.cx.toFixed(1)},${bd.cy.toFixed(1)} ${budRight.toFixed(1)},${budBase.toFixed(1)} Z`;
+                      return (
+                        <G key={bd.id}>
+                          <Ellipse
+                            cx={bd.cx}
+                            cy={budBase}
+                            rx={bd.rx * 0.9}
+                            ry={bd.ry * 0.45}
+                            fill="#3B281B"
+                            opacity={0.9}
+                          />
+                          <Path
+                            d={budPath}
+                            fill={bd.budColor || "#5C4A32"}
+                            opacity={0.95}
+                          />
+                          <Path
+                            d={`M ${(bd.cx - bd.rx * 0.4).toFixed(1)},${bd.cy.toFixed(1)} Q ${bd.cx.toFixed(1)},${(bd.cy - bd.ry * 0.5).toFixed(1)} ${(bd.cx + bd.rx * 0.4).toFixed(1)},${bd.cy.toFixed(1)}`}
+                            stroke="#7D6646"
+                            strokeWidth={0.6}
+                            fill="none"
+                            opacity={0.7}
+                          />
+                        </G>
+                      );
+                    })}
+                    {detail.berries?.map((br) => {
+                      const r = br.rx || 2.5;
+                      const cupuleW = r * 1.25;
+                      const cupuleH = r * 0.8;
+                      const nutH = r * 1.5;
+                      return (
+                        <G key={br.id}>
+                          <Path
+                            d={`M ${(br.cx - r).toFixed(1)},${br.cy.toFixed(1)} C ${(br.cx - r).toFixed(1)},${(br.cy + nutH * 0.7).toFixed(1)} ${(br.cx - r * 0.3).toFixed(1)},${(br.cy + nutH).toFixed(1)} ${br.cx.toFixed(1)},${(br.cy + nutH).toFixed(1)} C ${(br.cx + r * 0.3).toFixed(1)},${(br.cy + nutH).toFixed(1)} ${(br.cx + r).toFixed(1)},${(br.cy + nutH * 0.7).toFixed(1)} ${(br.cx + r).toFixed(1)},${br.cy.toFixed(1)} Z`}
+                            fill={br.color || "#685038"}
+                            opacity={0.95}
+                          />
+                          <Path
+                            d={`M ${(br.cx - cupuleW).toFixed(1)},${br.cy.toFixed(1)} C ${(br.cx - cupuleW).toFixed(1)},${(br.cy - cupuleH).toFixed(1)} ${(br.cx + cupuleW).toFixed(1)},${(br.cy - cupuleH).toFixed(1)} ${(br.cx + cupuleW).toFixed(1)},${br.cy.toFixed(1)} Z`}
+                            fill="#463525"
+                            opacity={0.95}
+                          />
+                          <Path
+                            d={`M ${(br.cx - cupuleW * 0.7).toFixed(1)},${(br.cy - cupuleH * 0.3).toFixed(1)} Q ${br.cx.toFixed(1)},${(br.cy - cupuleH * 0.6).toFixed(1)} ${(br.cx + cupuleW * 0.7).toFixed(1)},${(br.cy - cupuleH * 0.3).toFixed(1)}`}
+                            stroke="#2C1F16"
+                            strokeWidth={0.6}
+                            fill="none"
+                            opacity={0.8}
+                          />
+                        </G>
+                      );
+                    })}
                   </G>
                 );
               })}
@@ -1003,7 +1188,7 @@ export function PainterlyGardenRenderer({
 const styles = StyleSheet.create({
   compactContainer: {
     width: "100%",
-    height: 160,
+    height: 188,
     overflow: "hidden",
     position: "relative",
   },

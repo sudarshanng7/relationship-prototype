@@ -111,15 +111,9 @@ export function resolveTreeStructurePlan(
   const registry = input.assetRegistry ?? STAGE_STRUCTURAL_ASSET_SLOTS;
   const slot = registry[stageKey];
 
-  // Pure crop preset selection based on presentation mode
-  let cropPreset: TreeCompositionPresetName = "balanced_overview";
-  if (presentationMode === "compact") {
-    cropPreset = "focused_compact";
-  } else if (presentationMode === "explore") {
-    cropPreset = "explore_world";
-  } else if (presentationMode === "story") {
-    cropPreset = "story_frame";
-  }
+  // Pure crop preset selection based on presentation mode (canonical default is middle_distance)
+  const cropPreset: TreeCompositionPresetName =
+    input.cropPreset ?? "middle_distance";
 
   const soilBaseline = slot?.soilBaseline ?? 441.0;
 
@@ -339,8 +333,8 @@ export function resolveTreePresentationTransform(options?: {
   coupleDNA?: PainterlyCoupleDNA;
 }): TreePresentationTransform {
   const activePreset =
-    TREE_COMPOSITION_PRESETS[options?.cropPreset || "balanced_overview"] ||
-    TREE_COMPOSITION_PRESETS.balanced_overview;
+    TREE_COMPOSITION_PRESETS[options?.cropPreset || "middle_distance"] ||
+    TREE_COMPOSITION_PRESETS.middle_distance;
 
   const baseScale = activePreset.scale;
   const userScale = options?.calibrationTransform?.scale ?? 1.0;

@@ -807,31 +807,115 @@ export const PAINTERLY_OAK_BRANCHING_V1: BotanicalAssetManifest = {
       direction: "center",
       surface: "wood",
       validity: "valid_on_wood",
-      compatibleRoles: ["branch_attachment", "creature", "woody_shoot"],
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
+      requiredSupportingAsset: null,
+    },
+    {
+      id: "branch-crown-high-left",
+      label: "Crown Apex High Left",
+      worldPoint: { x: 375.8, y: 73.6 },
+      nativePixelPoint: { x: 726, y: 200 },
+      scenicRegion: "crown",
+      direction: "left",
+      surface: "wood",
+      validity: "valid_on_wood",
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
+      requiredSupportingAsset: null,
+    },
+    {
+      id: "branch-crown-mid-center",
+      label: "Crown Mid Center Stem",
+      worldPoint: { x: 393.9, y: 129.1 },
+      nativePixelPoint: { x: 762, y: 310 },
+      scenicRegion: "crown",
+      direction: "center",
+      surface: "wood",
+      validity: "valid_on_wood",
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
+      requiredSupportingAsset: null,
+    },
+    {
+      id: "branch-crown-mid-left",
+      label: "Crown Mid Left Branch",
+      worldPoint: { x: 364.7, y: 129.1 },
+      nativePixelPoint: { x: 704, y: 310 },
+      scenicRegion: "crown",
+      direction: "left",
+      surface: "wood",
+      validity: "valid_on_wood",
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
       requiredSupportingAsset: null,
     },
     {
       id: "branch-scaffold-left-tip",
       label: "Primary Left Scaffold Limb Tip",
-      worldPoint: { x: 146.6, y: 190.6 },
+      worldPoint: { x: 146.6, y: 190.7 },
       nativePixelPoint: { x: 272, y: 432 },
       scenicRegion: "left_canopy",
       direction: "left",
       surface: "wood",
       validity: "valid_on_wood",
-      compatibleRoles: ["branch_attachment", "creature", "woody_shoot"],
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
+      requiredSupportingAsset: null,
+    },
+    {
+      id: "branch-scaffold-left-mid",
+      label: "Primary Left Scaffold Limb Mid",
+      worldPoint: { x: 230.4, y: 190.7 },
+      nativePixelPoint: { x: 438, y: 432 },
+      scenicRegion: "left_canopy",
+      direction: "left",
+      surface: "wood",
+      validity: "valid_on_wood",
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
+      requiredSupportingAsset: null,
+    },
+    {
+      id: "branch-scaffold-left-lower",
+      label: "Primary Left Scaffold Limb Base",
+      worldPoint: { x: 273.8, y: 190.7 },
+      nativePixelPoint: { x: 524, y: 432 },
+      scenicRegion: "left_canopy",
+      direction: "left",
+      surface: "wood",
+      validity: "valid_on_wood",
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
       requiredSupportingAsset: null,
     },
     {
       id: "branch-scaffold-left-upper",
       label: "Left Upper Secondary Branch",
-      worldPoint: { x: 221.3, y: 129.1 },
-      nativePixelPoint: { x: 420, y: 310 },
+      worldPoint: { x: 253.1, y: 129.1 },
+      nativePixelPoint: { x: 483, y: 310 },
       scenicRegion: "left_canopy",
       direction: "left",
       surface: "wood",
       validity: "valid_on_wood",
-      compatibleRoles: ["branch_attachment", "creature", "woody_shoot"],
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
+      requiredSupportingAsset: null,
+    },
+    {
+      id: "branch-left-upper-high",
+      label: "Left Upper High Twig",
+      worldPoint: { x: 263.7, y: 103.8 },
+      nativePixelPoint: { x: 504, y: 260 },
+      scenicRegion: "left_canopy",
+      direction: "left",
+      surface: "wood",
+      validity: "valid_on_wood",
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
+      requiredSupportingAsset: null,
+    },
+    {
+      id: "branch-left-upper-sub-twig",
+      label: "Left Upper Sub-Twig",
+      worldPoint: { x: 239.0, y: 103.8 },
+      nativePixelPoint: { x: 455, y: 260 },
+      scenicRegion: "left_canopy",
+      direction: "left",
+      surface: "wood",
+      validity: "valid_on_wood",
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
       requiredSupportingAsset: null,
     },
     {
@@ -843,7 +927,43 @@ export const PAINTERLY_OAK_BRANCHING_V1: BotanicalAssetManifest = {
       direction: "right",
       surface: "wood",
       validity: "valid_on_wood",
-      compatibleRoles: ["branch_attachment", "creature", "woody_shoot"],
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
+      requiredSupportingAsset: null,
+    },
+    {
+      id: "branch-scaffold-right-outer",
+      label: "Primary Right Scaffold Limb Outer",
+      worldPoint: { x: 643.8, y: 190.7 },
+      nativePixelPoint: { x: 1257, y: 432 },
+      scenicRegion: "right_canopy",
+      direction: "right",
+      surface: "wood",
+      validity: "valid_on_wood",
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
+      requiredSupportingAsset: null,
+    },
+    {
+      id: "branch-scaffold-right-lower",
+      label: "Primary Right Scaffold Limb Lower",
+      worldPoint: { x: 579.7, y: 190.7 },
+      nativePixelPoint: { x: 1130, y: 432 },
+      scenicRegion: "right_canopy",
+      direction: "right",
+      surface: "wood",
+      validity: "valid_on_wood",
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
+      requiredSupportingAsset: null,
+    },
+    {
+      id: "branch-scaffold-right-fork",
+      label: "Primary Right Scaffold Limb Base",
+      worldPoint: { x: 471.7, y: 190.7 },
+      nativePixelPoint: { x: 916, y: 432 },
+      scenicRegion: "right_canopy",
+      direction: "right",
+      surface: "wood",
+      validity: "valid_on_wood",
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
       requiredSupportingAsset: null,
     },
     {
@@ -855,7 +975,31 @@ export const PAINTERLY_OAK_BRANCHING_V1: BotanicalAssetManifest = {
       direction: "right",
       surface: "wood",
       validity: "valid_on_wood",
-      compatibleRoles: ["branch_attachment", "creature", "woody_shoot"],
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
+      requiredSupportingAsset: null,
+    },
+    {
+      id: "branch-right-upper-outer",
+      label: "Right Upper Outer Branch",
+      worldPoint: { x: 586.7, y: 103.8 },
+      nativePixelPoint: { x: 1144, y: 260 },
+      scenicRegion: "right_canopy",
+      direction: "right",
+      surface: "wood",
+      validity: "valid_on_wood",
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
+      requiredSupportingAsset: null,
+    },
+    {
+      id: "branch-right-upper-mid",
+      label: "Right Upper Mid Limb",
+      worldPoint: { x: 503.5, y: 129.1 },
+      nativePixelPoint: { x: 979, y: 310 },
+      scenicRegion: "right_canopy",
+      direction: "right",
+      surface: "wood",
+      validity: "valid_on_wood",
+      compatibleRoles: ["branch_attachment", "creature", "woody_shoot", "blossom", "foliage_shoot"],
       requiredSupportingAsset: null,
     },
     {
@@ -890,6 +1034,42 @@ export const PAINTERLY_OAK_BRANCHING_V1: BotanicalAssetManifest = {
 export const PAINTERLY_OAK_STRUCTURE_BRANCHING_V1: BotanicalAssetManifest = {
   ...PAINTERLY_OAK_BRANCHING_V1,
   assetKey: "painterly-oak-structure-branching-v1",
+};
+
+/**
+ * Calibrated manifest record for the painterly 2.5D oak foliage cluster proof.
+ * High-resolution alpha cutout with natural lobed leaves and woody twig base.
+ */
+export const PAINTERLY_OAK_FOLIAGE_CLUSTER_V1: BotanicalAssetManifest = {
+  assetKey: "painterly-oak-foliage-cluster-v1",
+  version: "1.0.0",
+  botanicalFamily: "broadleaf_woodland",
+  variant: "oak_foliage_cluster_painterly",
+  hasFoliage: true,
+  supportedStages: ["branching_out", "leafy_canopy", "flowering", "garden_in_bloom"],
+  localBounds: {
+    minX: 0,
+    minY: 0,
+    maxX: 140,
+    maxY: 143.5,
+    width: 140,
+    height: 143.5,
+  },
+  attachmentPivot: { x: 59.4, y: 142.6 }, // Relative anchor: (0.4241, 0.9942)
+  depthLayer: 15,
+  detailLevelVariants: {
+    high: "assets/garden/painterly/foliage-oak-cluster-alpha-v1.png",
+  },
+  licensingProvenance: {
+    source: "raster_painterly",
+    author: "Purple Garden Studio / DeepMind",
+    notes: "Calibrated 2.5D painterly oak foliage proof asset with lobed leaves, deep shadow, and woody petiole attachment point",
+  },
+  nativeDimensions: {
+    width: 837,
+    height: 858,
+  },
+  approvalStatus: "development_preview",
 };
 
 /**
@@ -999,21 +1179,27 @@ export const STAGE_STRUCTURAL_ASSET_SLOTS: Record<
     stageKey: "tender_sapling",
     eligibleStage: "tender_sapling",
     assetKey: "painterly-sapling-v1",
-    filePath: null,
+    filePath: "assets/garden/painterly/oak-structure-sapling-alpha-v1.png",
     targetFilename: "assets/garden/painterly/oak-structure-sapling-alpha-v1.png",
     role: "intermediate",
-    status: "missing",
-    approvalStatus: "missing",
-    fileExists: false,
-    availability: false,
-    sourceDimensions: { width: 1586, height: 992 },
-    expectedSourceDimensions: { width: 1586, height: 992 },
+    status: "development_preview",
+    approvalStatus: "development_preview",
+    fileExists: true,
+    availability: true,
+    sourceDimensions: { width: 1024, height: 1536 },
+    expectedSourceDimensions: { width: 1024, height: 1536 },
     alphaRequirement: true,
     requiresTransparentBackground: true,
-    structuralBounds: { minX: 340, minY: 290, maxX: 460, maxY: 450, width: 120, height: 160 },
-    rootBounds: { minX: 360, minY: 430, maxX: 440, maxY: 450, width: 80, height: 20 },
-    rootFlareBounds: { minX: 360, minY: 430, maxX: 440, maxY: 450, width: 80, height: 20 },
+    structuralBounds: { minX: 352.8, minY: 316.2, maxX: 430.8, maxY: 441.0, width: 78.0, height: 124.8 },
+    rootBounds: { minX: 386.0, minY: 438.0, maxX: 395.0, maxY: 441.0, width: 9.0, height: 3.0 },
+    rootFlareBounds: { minX: 386.0, minY: 438.0, maxX: 395.0, maxY: 441.0, width: 9.0, height: 3.0 },
     soilBaseline: 441.0,
+    calibrationTransform: {
+      scale: 0.083389,
+      translateX: 349.54,
+      translateY: 314.08,
+      rotation: 0,
+    },
     branchAttachmentZones: [],
     branchAttachmentAnchors: [],
     futureFoliageRegions: [],
@@ -1234,6 +1420,12 @@ export const STAGE_STRUCTURAL_ASSET_SLOTS: Record<
     rootBounds: { minX: 264.8, minY: 410.0, maxX: 516.5, maxY: 488.4, width: 251.7, height: 78.4 },
     rootFlareBounds: { minX: 264.8, minY: 410.0, maxX: 516.5, maxY: 488.4, width: 251.7, height: 78.4 },
     soilBaseline: 441.0,
+    calibrationTransform: {
+      scale: 1.0,
+      translateX: 0.0,
+      translateY: 0.0,
+      rotation: 0,
+    },
     branchAttachmentZones: PAINTERLY_OAK_STRUCTURE_MATURE_V1.branchAnchors || [],
     branchAttachmentAnchors: PAINTERLY_OAK_STRUCTURE_MATURE_V1.branchAnchors || [],
     futureFoliageRegions: PAINTERLY_OAK_STRUCTURE_MATURE_V1.futureFoliageRegions || [],
@@ -1278,6 +1470,41 @@ export const THREE_ASSET_FOUNDATION_SLOTS = {
   beginning: STAGE_STRUCTURAL_ASSET_SLOTS.beginning,
   branching_out: STAGE_STRUCTURAL_ASSET_SLOTS.branching_out,
   mature: STAGE_STRUCTURAL_ASSET_SLOTS.garden_in_bloom,
+} as const;
+
+/**
+ * Separate Target Slots for Early-Life Lifecycle Visual Phases (Development Preview).
+ * Reconciled safely with manifest contracts without breaking existing references.
+ * All marked MISSING as no raster assets currently exist on disk.
+ */
+export const EARLY_LIFE_PREVIEW_TARGET_SLOTS = {
+  planted_acorn: {
+    slotKey: "planted_acorn",
+    assetKey: "painterly-oak-acorn-planted-v1",
+    targetFilename: "assets/garden/painterly/oak-acorn-planted-alpha-v1.png",
+    status: "missing" as const,
+    approvalStatus: "missing" as const,
+    fileExists: false,
+    description: "Planted acorn in woodland soil",
+  },
+  emerging_shoot: {
+    slotKey: "emerging_shoot",
+    assetKey: "painterly-oak-shoot-emerging-v1",
+    targetFilename: "assets/garden/painterly/oak-shoot-emerging-alpha-v1.png",
+    status: "missing" as const,
+    approvalStatus: "missing" as const,
+    fileExists: false,
+    description: "Emerging oak shoot hypocotyl and cotyledons",
+  },
+  small_seedling: {
+    slotKey: "small_seedling",
+    assetKey: "painterly-oak-seedling-v1",
+    targetFilename: "assets/garden/painterly/oak-seedling-alpha-v1.png",
+    status: "missing" as const,
+    approvalStatus: "missing" as const,
+    fileExists: false,
+    description: "Small oak seedling with juvenile lobed leaves",
+  },
 } as const;
 
 /**
@@ -1464,7 +1691,36 @@ export const TREE_COMPOSITION_PRESETS: Record<
     description: "Cinematic playback frame centered on chronological event milestone highlights",
     allowsExplorationGestures: false,
   },
+  middle_distance: {
+    name: "middle_distance",
+    label: "Middle Distance",
+    cropBounds: { minX: 0.0, minY: 0.0, maxX: 800.0, maxY: 500.0, width: 800.0, height: 500.0 },
+    scale: 0.58,
+    centerOrigin: { x: 390.4, y: 145.0 },
+    description: "Deep-centre clearing composition with prominent woodland framing and generous open foreground meadow",
+    allowsExplorationGestures: true,
+  },
 };
+
+export const CANONICAL_SAPLING_ASSET_KEY = "painterly-sapling-v1";
+export const CANONICAL_BRANCHING_ASSET_KEY = "painterly-oak-branching-v1";
+export const CANONICAL_MATURE_ASSET_KEY = "painterly-oak-mature-v1";
+
+export function isCanonicalSaplingAssetKey(key: string | null | undefined): boolean {
+  return (
+    key === "painterly-sapling-v1" ||
+    key === "painterly-oak-sapling-v1" ||
+    key === "painterly-oak-structure-sapling-v1"
+  );
+}
+
+export function isCanonicalBranchingAssetKey(key: string | null | undefined): boolean {
+  return key === "painterly-oak-branching-v1" || key === "painterly-oak-structure-branching-v1";
+}
+
+export function isCanonicalMatureAssetKey(key: string | null | undefined): boolean {
+  return key === "painterly-oak-mature-v1" || key === "painterly-oak-structure-mature-v1";
+}
 
 /**
  * Retrieves the StageStructuralAssetSlot for a given stage.
@@ -1635,6 +1891,27 @@ export function adaptCanonicalAnchorToPainterly(
         return {
           x: 393.0,
           y: 235.1,
+        };
+      }
+    }
+
+    // Canopy shoots, blossoms and foliage: attach directly onto visible branching oak limbs
+    if (role === "blossom" || role === "foliage_shoot" || role === "woody_shoot") {
+      const anchors = PAINTERLY_OAK_BRANCHING_V1.branchAnchors || [];
+      let closestAnchor = null;
+      let minDistance = Infinity;
+      for (const bAnchor of anchors) {
+        const d = Math.hypot(bAnchor.worldPoint.x - canonicalAnchor.x, bAnchor.worldPoint.y - canonicalAnchor.y);
+        if (d < minDistance) {
+          minDistance = d;
+          closestAnchor = bAnchor;
+        }
+      }
+      if (closestAnchor && minDistance <= 85) {
+        // Direct snap 100% to wood surface: no floating in empty air
+        return {
+          x: closestAnchor.worldPoint.x,
+          y: closestAnchor.worldPoint.y,
         };
       }
     }

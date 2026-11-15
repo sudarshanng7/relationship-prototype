@@ -38,6 +38,7 @@ export interface ExplorableMemoryItem {
   memoryType: "Shared Good Moment" | "Reconnection" | "Important Date";
   botanicalRepresentation:
     | "Shared Moment Growth"
+    | "Reconnection Shoot"
     | "Reconnection Blossom"
     | "Important-Date Landmark";
   displayHeadline: string;
@@ -94,6 +95,7 @@ export function getExplorableMemories(
     memoryType: "Shared Good Moment" | "Reconnection" | "Important Date";
     botanicalRepresentation:
       | "Shared Moment Growth"
+      | "Reconnection Shoot"
       | "Reconnection Blossom"
       | "Important-Date Landmark";
     displayHeadline: string;
@@ -159,6 +161,7 @@ export function getExplorableMemories(
     let memoryType: "Shared Good Moment" | "Reconnection" | "Important Date";
     let botanicalRepresentation:
       | "Shared Moment Growth"
+      | "Reconnection Shoot"
       | "Reconnection Blossom"
       | "Important-Date Landmark";
     let explanatoryCopy: string;
@@ -166,7 +169,7 @@ export function getExplorableMemories(
 
     if (source.sourceType === "completed_reconnection") {
       memoryType = "Reconnection";
-      botanicalRepresentation = "Reconnection Blossom";
+      botanicalRepresentation = "Reconnection Shoot";
       explanatoryCopy = "Grown from a moment reconnected through understanding.";
       actionLabel = "View reconnection";
     } else if (source.sourceType === "important_date") {
