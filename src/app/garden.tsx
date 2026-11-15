@@ -165,7 +165,9 @@ export default function GardenScreen() {
   const effectiveCareEvents = garden.careEvents;
   const foundationStage = resolveMvpFoundationPresentation(
     effectiveTotalGrowthUnits,
-    effectiveCareEvents.length
+    effectiveCareEvents.length,
+    effectiveCareGrowthUnits,
+    effectiveTimeGrowthUnits
   );
   const effectiveCareSignals = garden.careSignals;
   const effectiveSeedString = garden.seedString || resolvedCoupleId || "couple-seed-default";
@@ -615,6 +617,8 @@ export default function GardenScreen() {
             <GardenProgressSection
               totalGrowthUnits={effectiveTotalGrowthUnits}
               careEventsCount={effectiveCareEvents.length}
+              careGrowthUnits={effectiveCareGrowthUnits}
+              timeGrowthUnits={effectiveTimeGrowthUnits}
             />
           )}
 

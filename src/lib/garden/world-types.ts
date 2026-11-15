@@ -198,6 +198,7 @@ interface BaseGardenNode {
   isCanopyAttached?: boolean;
   isGroundAttached?: boolean;
   isRootAttached?: boolean;
+  mvpMemoryVisualKind?: "sapling_leaf" | "moss" | "woodland_leaf" | "acorn" | "light_mote";
 }
 
 export interface WorldRootNode extends BaseGardenNode {

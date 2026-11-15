@@ -104,6 +104,8 @@ import {
   resolveGardenMilestoneProgress,
   resolveMvpFoundationPresentation,
   resolveMvpFoundationProgress,
+  resolveMvpFoundationUnits,
+  resolveMvpFoundationMemoryMarkers,
   resolvePreviewMilestoneProgress,
   EARLY_LIFE_PREVIEW_TARGET_SLOTS,
 } from "../src/lib/garden/index.ts";
@@ -5562,6 +5564,28 @@ test("33. Authoritative Growth Progress & Visual Milestone Contracts", async () 
   assert.equal(mvpComplete.currentStageLabel, "Small Oak Seedling");
   assert.equal(mvpComplete.isFinalStage, true);
   assert.equal(mvpComplete.intervalDisplayPercent, 100);
+
+  // Time supports but can never complete the 36-unit MVP foundation alone.
+  assert.equal(resolveMvpFoundationUnits(60, 0, 60), 12);
+  const timeSupported = resolveMvpFoundationProgress(60, 0, 0, 60);
+  assert.equal(timeSupported.currentStageLabel, "Emerging Oak Shoot");
+  assert.equal(timeSupported.isFinalStage, false);
+  assert.equal(timeSupported.intervalDisplayPercent, 33);
+  assert.equal(resolveMvpFoundationUnits(64, 24, 40), 36);
+
+  // Visual variety is random-looking but deterministic per couple and event.
+  const memoryFixtures = Array.from({ length: 12 }, (_, index) => ({
+    id: `memory-${index}`,
+    kind: index % 3 === 0 ? "reconnection" : index % 3 === 1 ? "important_date" : "positive_moment",
+    occurredAt: `2026-01-${String(index + 1).padStart(2, "0")}T10:00:00Z`,
+  }));
+  const markersA = resolveMvpFoundationMemoryMarkers(memoryFixtures, "couple-a", 24);
+  const markersARepeat = resolveMvpFoundationMemoryMarkers(memoryFixtures, "couple-a", 24);
+  const markersB = resolveMvpFoundationMemoryMarkers(memoryFixtures, "couple-b", 24);
+  assert.deepEqual(markersA, markersARepeat, "Same couple history must reproduce exactly");
+  assert.notDeepEqual(markersA, markersB, "Different couples must receive unique arrangements");
+  assert.ok(markersA.some((marker) => marker.visualKind === "sapling_leaf"));
+  assert.ok(new Set(markersA.map((marker) => marker.visualKind)).size >= 3);
 
   const painterlyRendererSource = fs.readFileSync(
     "src/components/garden/PainterlyGardenRenderer.tsx",

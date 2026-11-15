@@ -599,6 +599,34 @@ export interface MvpFoundationPresentation {
   foundationProgress: number;
 }
 
+export const MVP_FOUNDATION_TIME_CAP = 12;
+export const MVP_FOUNDATION_COMPLETE_UNITS = 36;
+
+/**
+ * Foundation growth gives elapsed time a gentle supporting role without
+ * allowing an inactive garden to finish by age alone. At least 24 of the 36
+ * units must therefore come from eligible shared-care activity.
+ */
+export function resolveMvpFoundationUnits(
+  totalGrowthUnits: number,
+  careGrowthUnits?: number,
+  timeGrowthUnits?: number
+): number {
+  if (
+    typeof careGrowthUnits !== "number" ||
+    typeof timeGrowthUnits !== "number"
+  ) {
+    return Math.max(0, Math.min(MVP_FOUNDATION_COMPLETE_UNITS, totalGrowthUnits));
+  }
+  return Math.max(
+    0,
+    Math.min(
+      MVP_FOUNDATION_COMPLETE_UNITS,
+      careGrowthUnits + Math.min(MVP_FOUNDATION_TIME_CAP, timeGrowthUnits)
+    )
+  );
+}
+
 /**
  * The production MVP intentionally tells only the first three frames of the
  * oak journey. Canonical growth data is retained for compatibility and future
@@ -606,9 +634,15 @@ export interface MvpFoundationPresentation {
  */
 export function resolveMvpFoundationPresentation(
   totalGrowthUnits: number,
-  careEventsCount = 0
+  careEventsCount = 0,
+  careGrowthUnits?: number,
+  timeGrowthUnits?: number
 ): MvpFoundationPresentation {
-  const units = Math.max(0, totalGrowthUnits);
+  const units = resolveMvpFoundationUnits(
+    totalGrowthUnits,
+    careGrowthUnits,
+    timeGrowthUnits
+  );
   const foundationProgress = Math.max(0, Math.min(1, units / 36));
 
   if (units < 8) {
@@ -646,13 +680,21 @@ export function resolveMvpFoundationPresentation(
 /** Gentle progress for the bounded three-frame MVP foundation journey. */
 export function resolveMvpFoundationProgress(
   totalGrowthUnits: number,
-  careEventsCount = 0
+  careEventsCount = 0,
+  careGrowthUnits?: number,
+  timeGrowthUnits?: number
 ): GardenMilestoneProgress {
   const presentation = resolveMvpFoundationPresentation(
     totalGrowthUnits,
-    careEventsCount
+    careEventsCount,
+    careGrowthUnits,
+    timeGrowthUnits
   );
-  const units = Math.max(0, totalGrowthUnits);
+  const units = resolveMvpFoundationUnits(
+    totalGrowthUnits,
+    careGrowthUnits,
+    timeGrowthUnits
+  );
 
   if (presentation.subphaseKey === "planted_acorn") {
     const progress = Math.max(0, Math.min(1, units / 8));
@@ -739,6 +781,10 @@ export interface MvpFoundationMemoryMarker {
   index: number;
   x: number;
   y: number;
+  visualKind: "sapling_leaf" | "moss" | "woodland_leaf" | "acorn" | "light_mote";
+  attachment: "tree" | "ground" | "air";
+  rotation: number;
+  scale: number;
 }
 
 /**
@@ -746,7 +792,9 @@ export interface MvpFoundationMemoryMarker {
  * Explore hit regions and Story. It replaces mature-tree perennials during MVP.
  */
 export function resolveMvpFoundationMemoryMarkers(
-  careEvents: GardenCareEvent[]
+  careEvents: GardenCareEvent[],
+  seedString = "purple-garden-couple-seed",
+  totalGrowthUnits = 0
 ): MvpFoundationMemoryMarker[] {
   const ordered = [...careEvents].sort((a, b) => {
     const aTime = new Date(a.occurredAt || a.createdAt || "").getTime() || 0;
@@ -754,16 +802,54 @@ export function resolveMvpFoundationMemoryMarkers(
     return aTime !== bTime ? aTime - bTime : a.id.localeCompare(b.id);
   });
 
+  const stableHash = (value: string) => {
+    let hash = 2166136261;
+    for (let i = 0; i < value.length; i += 1) {
+      hash ^= value.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  };
+  const foundationUnits = Math.max(0, totalGrowthUnits);
+  const treeSlots = [
+    { x: 383.8, y: 300.5 }, { x: 397.2, y: 296.8 },
+    { x: 381.4, y: 307.2 }, { x: 399.1, y: 305.1 },
+    { x: 387.0, y: 289.8 }, { x: 394.5, y: 286.8 },
+    { x: 386.5, y: 312.0 }, { x: 396.0, y: 311.0 },
+  ];
+  const baseKinds = ["moss", "woodland_leaf", "acorn", "light_mote"] as const;
+
   return ordered.map((event, index) => {
-    const angle = index * 2.399963229728653;
+    const hash = stableHash(`${seedString}|${event.kind}|${event.id}`);
+    const canUseTree = foundationUnits >= 20;
+    // Once the seedling exists, guarantee at least one event-backed leaf so
+    // the tree itself visibly participates in memory history. Remaining
+    // events keep their seeded, couple-specific variety.
+    const visualKind = canUseTree && (index === 0 || hash % 5 < 2)
+      ? "sapling_leaf"
+      : baseKinds[hash % baseKinds.length];
+    const attachment = visualKind === "sapling_leaf"
+      ? "tree"
+      : visualKind === "light_mote"
+      ? "air"
+      : "ground";
+    const angle = index * 2.399963229728653 + ((hash % 628) / 100);
     const ring = 24 + Math.floor(index / 8) * 11 + (index % 8) * 1.15;
+    const treeSlot = treeSlots[(hash + index) % treeSlots.length];
+    const groundX = 390.4 + Math.cos(angle) * ring * 1.65;
+    const groundY = 333 + Math.sin(angle) * ring * 0.52 + Math.floor(index / 8) * 2;
+    const airY = 296 + ((hash >>> 8) % 28);
     return {
       semanticKey: `${event.kind}:${event.id}`,
       sourceId: event.id,
       kind: event.kind,
       index,
-      x: Math.round((390.4 + Math.cos(angle) * ring * 1.65) * 10) / 10,
-      y: Math.round((333 + Math.sin(angle) * ring * 0.52 + Math.floor(index / 8) * 2) * 10) / 10,
+      x: Math.round((visualKind === "sapling_leaf" ? treeSlot.x : groundX) * 10) / 10,
+      y: Math.round((visualKind === "sapling_leaf" ? treeSlot.y : visualKind === "light_mote" ? airY : groundY) * 10) / 10,
+      visualKind,
+      attachment,
+      rotation: (hash % 71) - 35,
+      scale: Math.round((0.82 + ((hash >>> 12) % 35) / 100) * 100) / 100,
     };
   });
 }

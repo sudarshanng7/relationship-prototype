@@ -76,7 +76,7 @@ import {
   type ProceduralGardenRendererProps,
 } from "./ProceduralGardenRenderer";
 import { PainterlyTreeStructure } from "./PainterlyTreeStructure";
-import { resolveMvpFoundationPresentation } from "@/lib/garden/stage-contracts";
+import { resolveMvpFoundationPresentation, resolveMvpFoundationUnits } from "@/lib/garden/stage-contracts";
 import { resolveMvpFoundationMemoryMarkers } from "@/lib/garden/stage-contracts";
 
 // Production bundled painterly raster assets
@@ -176,16 +176,22 @@ export function PainterlyGardenRenderer({
     () =>
       resolveMvpFoundationPresentation(
         totalGrowthUnits,
-        careEvents?.length ?? 0
+        careEvents?.length ?? 0,
+        careGrowthUnits,
+        timeGrowthUnits
       ),
-    [totalGrowthUnits, careEvents]
+    [totalGrowthUnits, careGrowthUnits, timeGrowthUnits, careEvents]
+  );
+  const mvpFoundationUnits = useMemo(
+    () => resolveMvpFoundationUnits(totalGrowthUnits, careGrowthUnits, timeGrowthUnits),
+    [totalGrowthUnits, careGrowthUnits, timeGrowthUnits]
   );
   // Future canopy, habitat and mature-tree layers remain implemented but are
   // intentionally withheld from the bounded three-frame MVP journey.
   const showFutureCanopyLayers = false;
   const foundationMemoryMarkers = useMemo(
-    () => resolveMvpFoundationMemoryMarkers(careEvents ?? []),
-    [careEvents]
+    () => resolveMvpFoundationMemoryMarkers(careEvents ?? [], seedString, mvpFoundationUnits),
+    [careEvents, seedString, mvpFoundationUnits]
   );
 
   const activeMode = modeProp ?? getGardenRendererMode();
@@ -821,7 +827,7 @@ export function PainterlyGardenRenderer({
             {/* MVP event history: one deterministic memory marker per authorized event. */}
             <G id="mvp-foundation-memory-markers">
               {foundationMemoryMarkers.map((marker) => {
-                if (marker.kind === "important_date") {
+                if (marker.visualKind === "acorn") {
                   return (
                     <G key={marker.semanticKey}>
                       <Ellipse
@@ -843,24 +849,43 @@ export function PainterlyGardenRenderer({
                   );
                 }
 
-                if (marker.kind === "reconnection") {
+                if (marker.visualKind === "sapling_leaf") {
+                  return (
+                    <G
+                      key={marker.semanticKey}
+                      transform={`rotate(${marker.rotation} ${marker.x} ${marker.y})`}
+                    >
+                      <Path
+                        d={`M ${marker.x},${marker.y + 2} C ${marker.x - 2},${marker.y} ${marker.x - 7},${marker.y - 1} ${marker.x - 6},${marker.y - 5} C ${marker.x - 4},${marker.y - 4} ${marker.x - 3},${marker.y - 9} ${marker.x},${marker.y - 8} C ${marker.x + 3},${marker.y - 9} ${marker.x + 4},${marker.y - 4} ${marker.x + 6},${marker.y - 5} C ${marker.x + 7},${marker.y - 1} ${marker.x + 2},${marker.y} ${marker.x},${marker.y + 2} Z`}
+                        fill="#83A956"
+                        stroke="#B6CB7D"
+                        strokeWidth={0.65}
+                      />
+                      <Path
+                        d={`M ${marker.x},${marker.y + 3} L ${marker.x},${marker.y - 7}`}
+                        stroke="#49673A"
+                        strokeWidth={0.7}
+                      />
+                    </G>
+                  );
+                }
+
+                if (marker.visualKind === "moss") {
                   return (
                     <G key={marker.semanticKey}>
-                      <Circle
-                        cx={marker.x}
-                        cy={marker.y - 2}
-                        r={8}
-                        fill="#D7B96B"
-                        opacity={0.12}
-                      />
-                      <Path
-                        d={`M ${marker.x},${marker.y + 2} Q ${marker.x - 7},${marker.y - 1} ${marker.x - 6},${marker.y - 7} Q ${marker.x - 1},${marker.y - 7} ${marker.x},${marker.y + 2} Z`}
-                        fill="#789553"
-                      />
-                      <Path
-                        d={`M ${marker.x},${marker.y + 2} Q ${marker.x + 7},${marker.y - 1} ${marker.x + 6},${marker.y - 7} Q ${marker.x + 1},${marker.y - 7} ${marker.x},${marker.y + 2} Z`}
-                        fill="#93AD63"
-                      />
+                      <Ellipse cx={marker.x} cy={marker.y + 1} rx={6.5 * marker.scale} ry={2.4 * marker.scale} fill="#263A27" opacity={0.32} />
+                      <Circle cx={marker.x - 2.8} cy={marker.y - 1.4} r={3.2 * marker.scale} fill="#66824B" />
+                      <Circle cx={marker.x + 2.3} cy={marker.y - 1.1} r={3.7 * marker.scale} fill="#789657" />
+                      <Circle cx={marker.x} cy={marker.y - 3.1} r={2.6 * marker.scale} fill="#91AA62" />
+                    </G>
+                  );
+                }
+
+                if (marker.visualKind === "light_mote") {
+                  return (
+                    <G key={marker.semanticKey}>
+                      <Circle cx={marker.x} cy={marker.y} r={6 * marker.scale} fill="#E9D88C" opacity={0.08} />
+                      <Circle cx={marker.x} cy={marker.y} r={1.8 * marker.scale} fill="#E6D07A" opacity={0.82} />
                     </G>
                   );
                 }
@@ -868,14 +893,14 @@ export function PainterlyGardenRenderer({
                 return (
                   <G key={marker.semanticKey}>
                     <Path
-                      d={`M ${marker.x},${marker.y + 3} C ${marker.x - 6},${marker.y} ${marker.x - 6},${marker.y - 7} ${marker.x},${marker.y - 9} C ${marker.x + 6},${marker.y - 6} ${marker.x + 5},${marker.y} ${marker.x},${marker.y + 3} Z`}
-                      fill="#6F8C50"
-                      stroke="#9EB476"
+                      d={`M ${marker.x - 1},${marker.y + 2} C ${marker.x - 7},${marker.y} ${marker.x - 8},${marker.y - 5} ${marker.x - 2},${marker.y - 7} C ${marker.x + 5},${marker.y - 5} ${marker.x + 6},${marker.y} ${marker.x - 1},${marker.y + 2} Z`}
+                      fill="#927B4E"
+                      stroke="#B7A36D"
                       strokeWidth={0.7}
                     />
                     <Path
-                      d={`M ${marker.x},${marker.y + 2} L ${marker.x},${marker.y - 7}`}
-                      stroke="#405C35"
+                      d={`M ${marker.x - 1},${marker.y + 1} L ${marker.x - 2},${marker.y - 6}`}
+                      stroke="#5F5137"
                       strokeWidth={0.7}
                     />
                   </G>

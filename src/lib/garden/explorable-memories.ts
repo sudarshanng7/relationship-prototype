@@ -43,7 +43,12 @@ export interface ExplorableMemoryItem {
     | "Important-Date Landmark"
     | "Foundation Memory Leaf"
     | "Foundation Reconnection Pair"
-    | "Foundation Date Acorn";
+    | "Foundation Date Acorn"
+    | "Sapling Memory Leaf"
+    | "Memory Moss"
+    | "Woodland Memory Leaf"
+    | "Memory Acorn"
+    | "Memory Light";
   displayHeadline: string;
   displayDateLabel: string;
   explanatoryCopy: string;
@@ -103,7 +108,12 @@ export function getExplorableMemories(
       | "Important-Date Landmark"
       | "Foundation Memory Leaf"
       | "Foundation Reconnection Pair"
-      | "Foundation Date Acorn";
+      | "Foundation Date Acorn"
+      | "Sapling Memory Leaf"
+      | "Memory Moss"
+      | "Woodland Memory Leaf"
+      | "Memory Acorn"
+      | "Memory Light";
     displayHeadline: string;
     displayDateLabel: string;
     explanatoryCopy: string;
@@ -172,11 +182,37 @@ export function getExplorableMemories(
       | "Important-Date Landmark"
       | "Foundation Memory Leaf"
       | "Foundation Reconnection Pair"
-      | "Foundation Date Acorn";
+      | "Foundation Date Acorn"
+      | "Sapling Memory Leaf"
+      | "Memory Moss"
+      | "Woodland Memory Leaf"
+      | "Memory Acorn"
+      | "Memory Light";
     let explanatoryCopy: string;
     let actionLabel: string;
 
-    if (source.sourceType === "completed_reconnection") {
+    const visualKind = primaryNode?.mvpMemoryVisualKind;
+    if (visualKind) {
+      const visualCopy = {
+        sapling_leaf: ["Sapling Memory Leaf", "A new oak leaf carrying this moment on your young tree."],
+        moss: ["Memory Moss", "A soft patch of moss grown from this shared moment."],
+        woodland_leaf: ["Woodland Memory Leaf", "A woodland leaf holding this moment in the clearing."],
+        acorn: ["Memory Acorn", "A warm acorn preserving this moment in your garden."],
+        light_mote: ["Memory Light", "A small woodland light marking this moment in your shared history."],
+      } as const;
+      botanicalRepresentation = visualCopy[visualKind][0];
+      explanatoryCopy = visualCopy[visualKind][1];
+      if (source.sourceType === "completed_reconnection") {
+        memoryType = "Reconnection";
+        actionLabel = "View reconnection";
+      } else if (source.sourceType === "important_date") {
+        memoryType = "Important Date";
+        actionLabel = "View important date";
+      } else {
+        memoryType = "Shared Good Moment";
+        actionLabel = "Open moment";
+      }
+    } else if (source.sourceType === "completed_reconnection") {
       memoryType = "Reconnection";
       botanicalRepresentation = "Foundation Reconnection Pair";
       explanatoryCopy = "A paired leaf marker grown from a moment of reconnection.";

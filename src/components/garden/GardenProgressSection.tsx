@@ -24,11 +24,13 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
-import { resolveMvpFoundationProgress, type GardenMilestoneProgress } from "@/lib/garden/stage-contracts";
+import { resolveMvpFoundationProgress, resolveMvpFoundationUnits, type GardenMilestoneProgress } from "@/lib/garden/stage-contracts";
 
 export interface GardenProgressSectionProps {
   totalGrowthUnits: number;
   careEventsCount?: number;
+  careGrowthUnits?: number;
+  timeGrowthUnits?: number;
   compact?: boolean;
   style?: StyleProp<ViewStyle>;
 }
@@ -36,6 +38,8 @@ export interface GardenProgressSectionProps {
 export function GardenProgressSection({
   totalGrowthUnits,
   careEventsCount = 0,
+  careGrowthUnits,
+  timeGrowthUnits,
   compact = false,
   style,
 }: GardenProgressSectionProps) {
@@ -47,8 +51,21 @@ export function GardenProgressSection({
 
   // Derive pure milestone progress model
   const progress: GardenMilestoneProgress = useMemo(() => {
-    return resolveMvpFoundationProgress(totalGrowthUnits, careEventsCount);
-  }, [totalGrowthUnits, careEventsCount]);
+    return resolveMvpFoundationProgress(
+      totalGrowthUnits,
+      careEventsCount,
+      careGrowthUnits,
+      timeGrowthUnits
+    );
+  }, [totalGrowthUnits, careEventsCount, careGrowthUnits, timeGrowthUnits]);
+  const foundationUnits = resolveMvpFoundationUnits(
+    totalGrowthUnits,
+    careGrowthUnits,
+    timeGrowthUnits
+  );
+  const supportedTimeUnits = Math.min(12, Math.max(0, timeGrowthUnits ?? 0));
+  const currentLevel = foundationUnits < 8 ? 1 : foundationUnits < 20 ? 2 : 3;
+  const unitSummary = `${foundationUnits.toFixed(1)} / 36 foundation units`;
 
   // Reduced motion listener
   useEffect(() => {
@@ -163,6 +180,9 @@ export function GardenProgressSection({
         >
           {progress.supportingCopy}
         </Text>
+        <Text style={[styles.compactDetail, { color: theme.mutedText }]} numberOfLines={1}>
+          Level {currentLevel} of 3 · {unitSummary}
+        </Text>
       </View>
     );
   }
@@ -241,6 +261,22 @@ export function GardenProgressSection({
         </Animated.View>
       </View>
 
+      <View style={styles.levelDetailRow}>
+        <Text style={[styles.levelDetailText, { color: theme.secondaryText }]}>
+          Level {currentLevel} of 3 · {unitSummary}
+        </Text>
+        {!progress.isFinalStage && (
+          <Text style={[styles.levelDetailText, { color: theme.secondaryText }]}>
+            {progress.remainingUnits.toFixed(1)} units to next growth
+          </Text>
+        )}
+      </View>
+      {typeof careGrowthUnits === "number" && typeof timeGrowthUnits === "number" && (
+        <Text style={[styles.unitBreakdown, { color: theme.mutedText }]}>
+          Shared care {careGrowthUnits.toFixed(1)} · Time support {supportedTimeUnits.toFixed(1)} / 12
+        </Text>
+      )}
+
       {/* Interval Bounds Subtext */}
       {!progress.isFinalStage ? (
         <View style={styles.boundsRow} accessible={false}>
@@ -313,7 +349,7 @@ export function GardenProgressSection({
               <Text style={[styles.bulletDot, { color: theme.primaryAccent }]}>•</Text>
               <Text style={[styles.bulletText, { color: theme.secondaryText }]}>
                 <Text style={{ fontWeight: "600", color: theme.primaryText }}>Care contribution: </Text>
-                Shared activities contribute up to 40 units of garden development. Beyond 40 units, all new moments continue to appear as permanent flowers, foliage, and memories in your tree.
+                Shared activities contribute up to 40 units. Every eligible moment also becomes a stable, explorable part of your unique garden.
               </Text>
             </View>
 
@@ -321,12 +357,12 @@ export function GardenProgressSection({
               <Text style={[styles.bulletDot, { color: theme.primaryAccent }]}>•</Text>
               <Text style={[styles.bulletText, { color: theme.secondaryText }]}>
                 <Text style={{ fontWeight: "600", color: theme.primaryText }}>Steady time: </Text>
-                Time together gently nurtures your tree, adding 0.5 units per elapsed day (up to 60 units).
+                Time adds 0.5 units per elapsed day, but supports at most 12 of the 36 MVP foundation units. Time alone cannot complete the foundation.
               </Text>
             </View>
 
             <Text style={[styles.explanationOutro, { color: theme.mutedText }]}>
-              Together, care and shared time nurture the garden toward its 100-unit full bloom. There are no daily obligations or partner comparisons.
+              The MVP foundation completes at 36 units. At least 24 must come from shared care; there are no daily obligations or partner comparisons.
             </Text>
           </View>
         )}
@@ -373,6 +409,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 4,
     opacity: 0.9,
+  },
+  compactDetail: {
+    fontSize: 10,
+    marginTop: 2,
   },
 
   // Standard full styles
@@ -461,6 +501,19 @@ const styles = StyleSheet.create({
   completedNote: {
     fontSize: 12,
     fontStyle: "italic",
+    marginTop: 4,
+  },
+  levelDetailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+    marginTop: 7,
+  },
+  levelDetailText: {
+    fontSize: 11,
+  },
+  unitBreakdown: {
+    fontSize: 10,
     marginTop: 4,
   },
   explanationSection: {

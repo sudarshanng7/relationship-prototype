@@ -335,9 +335,9 @@ test("9. Important dates reveal their exact landmark identity", () => {
 // ----------------------------------------------------------------------------
 // Test 10: Stage transitions caused only by time receive explicit steps
 // ----------------------------------------------------------------------------
-test("10. Foundation milestones crossed by time receive explicit bounded steps", () => {
-  // Couple created Jan 1, event occurs in March. The long interval crosses
-  // both bounded MVP thresholds without exposing later full-tree chapters.
+test("10. Time can reveal the shoot milestone but cannot complete the foundation alone", () => {
+  // Couple created Jan 1, event occurs in March. Time support caps at 12
+  // foundation units, so this history may reach the shoot but not the seedling.
   const evMarch = createMockEvent("ev-march", "positive_moment", "2026-03-15T10:00:00Z");
 
   const snapshot = {
@@ -354,19 +354,13 @@ test("10. Foundation milestones crossed by time receive explicit bounded steps",
     (s) => s.eventKind === "stage_transition" && s.addedEventKey === null
   );
 
-  assert.deepEqual(milestoneSteps.map((s) => s.totalGrowthUnits), [8, 20]);
-  assert.deepEqual(milestoneSteps.map((s) => s.chapterTitle), [
-    "Emerging Oak Shoot",
-    "Small Oak Seedling",
-  ]);
+  assert.deepEqual(milestoneSteps.map((s) => s.totalGrowthUnits), [8]);
+  assert.deepEqual(milestoneSteps.map((s) => s.chapterTitle), ["Emerging Oak Shoot"]);
   assert.equal(
     milestoneSteps[0].caption,
     "The planted acorn has raised its first oak shoot."
   );
-  assert.equal(
-    milestoneSteps[1].caption,
-    "The young oak has opened its first true leaves."
-  );
+  assert.ok(!story.steps.some((s) => s.chapterTitle === "Small Oak Seedling"));
 });
 
 // ----------------------------------------------------------------------------

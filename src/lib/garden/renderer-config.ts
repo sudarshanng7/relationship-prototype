@@ -20,6 +20,7 @@ import {
   isPainterlyAvailableForStage,
   resolveCanonicalStageKey,
   resolveMvpFoundationMemoryMarkers,
+  resolveMvpFoundationUnits,
 } from "./stage-contracts";
 import type { GardenCareEvent } from "../garden-generator";
 import type {
@@ -686,7 +687,15 @@ export function resolveGardenWorldPresentation(
       occurredAt: group.sourceEvent.authoritativeTimestamp || "",
       createdAt: group.sourceEvent.authoritativeTimestamp || null,
     }));
-    const markers = resolveMvpFoundationMemoryMarkers(markerEvents);
+    const markers = resolveMvpFoundationMemoryMarkers(
+      markerEvents,
+      world.seedString,
+      resolveMvpFoundationUnits(
+        world.totalGrowthUnits,
+        world.careGrowthUnits,
+        world.timeGrowthUnits
+      )
+    );
 
     for (const marker of markers) {
       const group = world.earnedFeatureGroups[marker.semanticKey];
@@ -705,11 +714,12 @@ export function resolveGardenWorldPresentation(
           width: 16,
           height: 16,
         },
-        attachmentTarget: "terrain",
-        scenicRegion: "root_grove",
-        isCanopyAttached: false,
-        isGroundAttached: true,
+        attachmentTarget: marker.attachment === "tree" ? "canopy" : "terrain",
+        scenicRegion: marker.attachment === "tree" ? "crown" : "root_grove",
+        isCanopyAttached: marker.attachment === "tree",
+        isGroundAttached: marker.attachment === "ground",
         isRootAttached: false,
+        mvpMemoryVisualKind: marker.visualKind,
       };
     }
   }

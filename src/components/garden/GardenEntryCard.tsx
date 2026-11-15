@@ -86,7 +86,9 @@ export function GardenEntryCard({
   const ambienceLabel = getAmbienceLabel(stage.key, isResting);
   const foundationStage = resolveMvpFoundationPresentation(
     totalGrowthUnits,
-    careEvents?.length ?? 0
+    careEvents?.length ?? 0,
+    careGrowthUnits,
+    timeGrowthUnits
   );
 
   // Clear, truth-aligned editorial lines
@@ -220,6 +222,8 @@ export function GardenEntryCard({
           compact={true}
           totalGrowthUnits={totalGrowthUnits}
           careEventsCount={careEvents?.length ?? 0}
+          careGrowthUnits={careGrowthUnits}
+          timeGrowthUnits={timeGrowthUnits}
         />
       </View>
     </Pressable>

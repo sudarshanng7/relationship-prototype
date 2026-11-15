@@ -9,7 +9,7 @@ import {
   stableEventHash,
 } from "./garden-generator";
 import { formatCategory, getCanonicalEventHeading } from "./event-heading";
-import { resolveMvpFoundationPresentation } from "./garden/stage-contracts";
+import { resolveMvpFoundationPresentation, resolveMvpFoundationUnits } from "./garden/stage-contracts";
 
 export { formatCategory, getCanonicalEventHeading };
 
@@ -242,7 +242,9 @@ export function getStoryProgressViewModel(
   } else {
     stageTitle = resolveMvpFoundationPresentation(
       step.totalGrowthUnits,
-      step.cumulativeCareEvents.length
+      step.cumulativeCareEvents.length,
+      step.careGrowthUnits,
+      step.timeGrowthUnits
     ).label;
   }
 
@@ -839,10 +841,15 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
   ] as const;
 
   for (const step of withoutFutureMilestones) {
+    const currentFoundationUnits = resolveMvpFoundationUnits(
+      step.totalGrowthUnits,
+      step.careGrowthUnits,
+      step.timeGrowthUnits
+    );
     const crossed = foundationThresholds.filter(
       (milestone) =>
         previousFoundationUnits < milestone.units &&
-        step.totalGrowthUnits >= milestone.units
+        currentFoundationUnits >= milestone.units
     );
     const milestoneSteps = crossed.map<InterimStep>((milestone) => ({
       ...step,
@@ -861,9 +868,9 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
       // Freeze the milestone frame at its visual threshold. Without this,
       // a long gap between visits could make both milestone frames render the
       // latest plant and visually skip the emerging-shoot chapter.
-      timeGrowthUnits: Math.min(step.timeGrowthUnits, milestone.units),
+      timeGrowthUnits: Math.min(step.timeGrowthUnits, 12, milestone.units),
       careGrowthUnits:
-        milestone.units - Math.min(step.timeGrowthUnits, milestone.units),
+        milestone.units - Math.min(step.timeGrowthUnits, 12, milestone.units),
       totalGrowthUnits: milestone.units,
       stage: getGardenStage(milestone.units),
     }));
@@ -875,7 +882,7 @@ export function createGardenStory(snapshot: GardenStorySnapshot): GardenStory {
     mvpAlignedSteps.push(step, ...milestoneSteps);
     previousFoundationUnits = Math.max(
       previousFoundationUnits,
-      step.totalGrowthUnits
+      currentFoundationUnits
     );
   }
 
