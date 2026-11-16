@@ -3,13 +3,14 @@ import {
   CouplyPrimaryButton,
   CouplyQuietButton,
 } from "@/components/CouplyUI";
-import { ThemeColors, useTheme } from "@/context/ThemeContext";
+import { ThemeColors, useTheme, EffectiveTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -89,9 +90,13 @@ function normalizeTags(rawTags: string[]): string[] {
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { theme } = useTheme();
+  const { theme, effectiveTheme } = useTheme();
   const { refreshIdentity } = useUserIdentity();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const logoSource =
+    effectiveTheme === "light"
+      ? require("../../assets/images/logo-horizontal.png")
+      : require("../../assets/images/logo-horizontal-dark.png");
   const scrollViewRef = useRef<ScrollView>(null);
   const isMountedRef = useRef(true);
 
@@ -557,10 +562,12 @@ export default function OnboardingScreen() {
           <View style={styles.column}>
             {/* Header Brand Area */}
             <View style={styles.headerContainer}>
-              <View style={styles.logoRow}>
-                <Text style={styles.logoHeart}>♡</Text>
-                <Text style={styles.brandTitle}>Purple Garden</Text>
-              </View>
+              <Image
+                source={logoSource}
+                style={styles.logo}
+                resizeMode="contain"
+                accessibilityLabel="Purple Garden"
+              />
               <Text style={styles.brandSubtitle}>
                 A quieter place to tend to what matters between you.
               </Text>
@@ -1269,24 +1276,11 @@ const createStyles = (theme: ThemeColors) =>
     /* Brand Header */
     headerContainer: {
       alignItems: "center",
-      gap: 6,
-      paddingVertical: 8,
+      marginBottom: 24,
     },
-    logoRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    logoHeart: {
-      fontSize: 26,
-      color: theme.primaryAccent,
-      lineHeight: 30,
-    },
-    brandTitle: {
-      fontSize: 28,
-      fontWeight: "700",
-      color: theme.primaryText,
-      letterSpacing: -0.4,
+    logo: {
+      width: 240,
+      height: 72,
     },
     brandSubtitle: {
       fontSize: 14.5,
