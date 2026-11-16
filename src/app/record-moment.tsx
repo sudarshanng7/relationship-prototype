@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -16,10 +16,15 @@ import {
   CouplyQuietButton,
   CouplySectionCard,
 } from "@/components/CouplyUI";
+import { RepairMemorySuggestion } from "@/components/RepairMemorySuggestion";
 import { tokens } from "@/components/couply-tokens";
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
+import {
+  RepairMemoryCandidate,
+  findRepairMemoryCandidates,
+} from "@/lib/repair-memory";
 
 type EventType = "positive" | "friction";
 type Visibility = "mine" | "ours";
@@ -76,6 +81,13 @@ export default function RecordMomentScreen() {
   const { partnerRef, coupleId: contextCoupleId } = useUserIdentity();
   const [coupleId, setCoupleId] = useState<string | null>(contextCoupleId);
 
+  // Repair memory state: set after a friction is saved, before navigation
+  const [savedFrictionId, setSavedFrictionId] = useState<string | null>(null);
+  const [savedFrictionVisibility, setSavedFrictionVisibility] = useState<Visibility>("mine");
+  const [repairCandidates, setRepairCandidates] = useState<RepairMemoryCandidate[]>([]);
+  const [candidateLookupDone, setCandidateLookupDone] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
   useEffect(() => {
     if (contextCoupleId && !coupleId) {
       setCoupleId(contextCoupleId);
@@ -130,6 +142,8 @@ export default function RecordMomentScreen() {
       router.replace("/");
       return;
     }
+
+    setCurrentUserId(user.id);
 
     const { data, error } = await supabase
       .from("couple_members")
@@ -232,6 +246,37 @@ export default function RecordMomentScreen() {
         throw new Error("Moment could not be created.");
       }
 
+      // Rule 1: Save first — navigation happens AFTER.
+      // For shared friction moments, check for prior repair memory candidates.
+      // This check must NEVER block registration (errors are silently ignored).
+      if (eventType === "friction" && finalVisibility === "ours" && coupleId && currentUserId) {
+        setSavedFrictionId(eventId as string);
+        setSavedFrictionVisibility(finalVisibility);
+        setCandidateLookupDone(false);
+
+        // Async lookup — does not block UI
+        findRepairMemoryCandidates({
+          currentEventId: eventId as string,
+          currentCategory: category || null,
+          coupleId,
+          currentUserId,
+        })
+          .then((result) => {
+            setRepairCandidates(result.candidates);
+          })
+          .catch(() => {
+            setRepairCandidates([]);
+          })
+          .finally(() => {
+            setCandidateLookupDone(true);
+          });
+
+        // Clear saving state; navigation deferred until suggestion dismissed
+        setSaving(false);
+        setStatus("");
+        return;
+      }
+
       router.replace({
         pathname: "/event/[id]",
         params: { id: eventId, scope: finalVisibility },
@@ -257,6 +302,75 @@ export default function RecordMomentScreen() {
       router.replace(isSharedMomentMode ? "/events?scope=ours" : "/home");
     }
   };
+
+  // Navigate to the saved event (called after suggestion is dismissed)
+  function navigateToSavedEvent() {
+    if (savedFrictionId) {
+      router.replace({
+        pathname: "/event/[id]",
+        params: { id: savedFrictionId, scope: savedFrictionVisibility },
+      });
+    }
+  }
+
+  // Show suggestion screen once the friction has been saved and lookup is done
+  const showSuggestion =
+    savedFrictionId !== null &&
+    candidateLookupDone &&
+    repairCandidates.length > 0 &&
+    currentUserId !== null &&
+    coupleId !== null;
+
+  // If suggestion screen is active, show a minimal confirmation + suggestion
+  if (showSuggestion && savedFrictionId && currentUserId && coupleId) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.column}>
+            <CouplyHeader
+              title="Moment recorded"
+              subtitle="Your moment has been saved."
+              style={styles.headerCouply}
+            />
+            {/* Confirmation that moment was recorded */}
+            <CouplySectionCard style={{ marginBottom: 4, gap: 4 }}>
+              <Text style={{ fontSize: 14, color: theme.secondaryText, lineHeight: 20 }}>
+                ✓ Your friction moment has been saved and your repair loop is open.
+              </Text>
+            </CouplySectionCard>
+
+            {/* Optional suggestion — does not block registration */}
+            <RepairMemorySuggestion
+              currentEventId={savedFrictionId}
+              coupleId={coupleId}
+              userId={currentUserId}
+              candidates={repairCandidates}
+              onShowCandidate={() => navigateToSavedEvent()}
+              onDismiss={() => navigateToSavedEvent()}
+            />
+
+            <CouplyQuietButton
+              label="Go to repair loop"
+              onPress={navigateToSavedEvent}
+              style={{ marginTop: 8 }}
+              accessibilityLabel="Go to the repair loop for this moment"
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // If saved but lookup still running (or no candidates) — navigate automatically
+  if (savedFrictionId !== null && candidateLookupDone && repairCandidates.length === 0) {
+    navigateToSavedEvent();
+    return null;
+  }
 
   const saveButtonLabel = saving
     ? "Saving..."

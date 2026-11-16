@@ -7,6 +7,8 @@ import {
   CouplySectionCard,
   CouplyStatusPill,
 } from "@/components/CouplyUI";
+import { WhatHelpedBefore } from "@/components/WhatHelpedBefore";
+import { HelpfulnessQuestion } from "@/components/HelpfulnessQuestion";
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
@@ -21,6 +23,11 @@ import {
   TAKEAWAY_TAG_LABELS,
   useRepairWorkflow,
 } from "@/lib/use-repair-workflow";
+import {
+  RepairMemoryCandidate,
+  RelationRecord,
+  fetchRelationDecisions,
+} from "@/lib/repair-memory";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -102,9 +109,41 @@ export default function EventDetailScreen() {
   const [isEditingReflection, setIsEditingReflection] = useState(false);
   const [reflectionInput, setReflectionInput] = useState("");
 
+  // Repair memory state: deferred candidate (from "Maybe later" or passed-in state)
+  const [repairMemoryCandidate, setRepairMemoryCandidate] =
+    useState<RepairMemoryCandidate | null>(null);
+  const [showWhatHelpedBefore, setShowWhatHelpedBefore] = useState(false);
+  const [showHelpfulnessQuestion, setShowHelpfulnessQuestion] = useState(false);
+  const [repairMemoryDismissed, setRepairMemoryDismissed] = useState(false);
+  const { coupleId } = useUserIdentity();
+
   useEffect(() => {
     loadEvent();
   }, [eventId]);
+
+  // Load existing repair memory decisions for this event (deferred candidates)
+  useEffect(() => {
+    if (!eventId || !currentUserId) return;
+    fetchRelationDecisions({ currentEventId: eventId, userId: currentUserId })
+      .then((decisions) => {
+        const deferred = decisions.find((d) => d.decision === "deferred" || d.decision === "related" || d.decision === "somewhat_related");
+        if (deferred && !repairMemoryDismissed) {
+          // Build a minimal candidate record from the stored decision so we can show WhatHelpedBefore
+          // The actual event data is fetched inside WhatHelpedBefore via the candidate eventId
+          setRepairMemoryCandidate({
+            eventId: deferred.priorEventId,
+            category: "",
+            createdAt: deferred.createdAt,
+            reconnectedAt: deferred.updatedAt,
+            repairDurationLabel: "",
+            repairDurationMs: 0,
+            sharedTopic: null,
+            isCreatedByCurrentUser: deferred.userId === currentUserId,
+          });
+        }
+      })
+      .catch(() => {/* non-blocking */});
+  }, [eventId, currentUserId, repairMemoryDismissed]);
 
   async function loadEvent() {
     if (!eventId) {
@@ -465,6 +504,21 @@ export default function EventDetailScreen() {
                     </Text>
                   </View>
                 )}
+
+              {/* Helpfulness question after reconnection: shown only when user had a repair memory
+                   link. HelpfulnessQuestion checks the persisted answer on mount and renders null
+                   if already answered — so refresh and remount cannot reopen it. */}
+              {repairWorkflow.derivedStage === "reconnected" &&
+                repairMemoryCandidate !== null &&
+                currentUserId !== null &&
+                eventId !== undefined && (
+                  <HelpfulnessQuestion
+                    currentEventId={eventId}
+                    priorEventId={repairMemoryCandidate.eventId}
+                    userId={currentUserId}
+                    onComplete={() => setShowHelpfulnessQuestion(false)}
+                  />
+                )}
             </View>
           </CouplySectionCard>
 
@@ -557,6 +611,106 @@ export default function EventDetailScreen() {
                   There is no rush. Each person can respond in their own time.
                 </Text>
               </View>
+
+              {/* Optional "What Helped Before" card — shown if user has a deferred/related decision */}
+              {repairMemoryCandidate &&
+                !showWhatHelpedBefore &&
+                !repairMemoryDismissed &&
+                event?.status !== "reconnected" &&
+                currentUserId &&
+                coupleId && (
+                  <CouplySectionCard
+                    variant="lilac"
+                    style={{ marginBottom: 4, gap: 8 }}
+                  >
+                    <Text
+                      style={[
+                        styles.journeyOverline,
+                        { color: theme.primaryAccent },
+                      ]}
+                    >
+                      WHAT HELPED BEFORE
+                    </Text>
+                    <Text
+                      style={[
+                        styles.journeySupportingText,
+                        { color: theme.primaryText },
+                      ]}
+                    >
+                      You linked a previous experience. Would you like to revisit
+                      what helped?
+                    </Text>
+                    <Pressable
+                      style={({ pressed }) => [
+                        {
+                          backgroundColor: theme.primaryAccent,
+                          borderRadius: 12,
+                          paddingVertical: 11,
+                          paddingHorizontal: 14,
+                          alignItems: "center" as const,
+                          minHeight: 44,
+                          opacity: pressed ? 0.75 : 1,
+                        },
+                      ]}
+                      onPress={() => setShowWhatHelpedBefore(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Show what helped before"
+                    >
+                      <Text
+                        style={{
+                          color: theme.primaryActionText,
+                          fontSize: 14,
+                          fontWeight: "600",
+                        }}
+                      >
+                        Show what helped before
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => ({
+                        minHeight: 44,
+                        alignItems: "center" as const,
+                        justifyContent: "center" as const,
+                        opacity: pressed ? 0.65 : 1,
+                      })}
+                      onPress={() => setRepairMemoryDismissed(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Dismiss repair memory suggestion"
+                    >
+                      <Text
+                        style={{ color: theme.mutedText, fontSize: 13.5 }}
+                      >
+                        Not now
+                      </Text>
+                    </Pressable>
+                  </CouplySectionCard>
+                )}
+
+              {showWhatHelpedBefore &&
+                repairMemoryCandidate &&
+                currentUserId &&
+                coupleId &&
+                eventId && (
+                  <WhatHelpedBefore
+                    currentEventId={eventId}
+                    coupleId={coupleId}
+                    userId={currentUserId}
+                    candidate={repairMemoryCandidate}
+                    onAction={(action) => {
+                      if (action === "not_related") {
+                        setShowWhatHelpedBefore(false);
+                        setRepairMemoryDismissed(true);
+                        setRepairMemoryCandidate(null);
+                      } else {
+                        setShowWhatHelpedBefore(false);
+                      }
+                    }}
+                    onNotRelated={() => {
+                      setRepairMemoryDismissed(true);
+                      setRepairMemoryCandidate(null);
+                    }}
+                  />
+                )}
 
               {/* Action Error / Success Feedback */}
               {repairWorkflow.actionError ? (
@@ -1354,6 +1508,10 @@ export default function EventDetailScreen() {
                                         takeawayTag,
                                         takeawayNote,
                                       );
+                                      // If user had a repair memory link, show helpfulness question
+                                      if (repairMemoryCandidate !== null) {
+                                        setShowHelpfulnessQuestion(true);
+                                      }
                                     }}
                                     accessibilityLabel="Complete reconnection"
                                   />
