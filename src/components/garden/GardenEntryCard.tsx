@@ -223,6 +223,8 @@ export function GardenEntryCard({
           careEventsCount={careEvents?.length ?? 0}
           careGrowthUnits={careGrowthUnits}
           timeGrowthUnits={timeGrowthUnits}
+          careEvents={careEvents}
+          foundationCalculation={garden.foundationCalculation}
         />
       </View>
     </Pressable>

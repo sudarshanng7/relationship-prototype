@@ -1372,18 +1372,18 @@ export function ProceduralGardenRenderer({
               />
             ))}
 
-          {/* Gentle temporary aura around newly revealed botanical feature during story playback */}
+          {/* Restrained feature highlight indicator during story or explore playback */}
           {highlightCoord && (
             <G id="story-reveal-halo">
               <Circle
                 cx={highlightCoord.cx}
                 cy={highlightCoord.cy}
-                r={Math.max(16, highlightCoord.r * 1.8)}
+                r={Math.min(7.0, Math.max(3.5, highlightCoord.r))}
                 stroke={scene.palette.blossomCenter || "#D4AF37"}
-                strokeWidth={1.5}
-                strokeDasharray="3,3"
+                strokeWidth={0.8}
+                strokeDasharray="2,2"
                 fill={scene.palette.blossomSecondary || "#FFFFFF"}
-                fillOpacity={0.22}
+                fillOpacity={0.03}
                 opacity={0.85}
               />
             </G>

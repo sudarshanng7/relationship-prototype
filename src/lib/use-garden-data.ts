@@ -11,6 +11,10 @@ import {
   getPositiveLatestSubtext,
   resolvePositiveFeatureFamily,
 } from "@/lib/garden-generator";
+import {
+  calculateAuthoritativeFoundation,
+  type AuthoritativeFoundationCalculation,
+} from "@/lib/garden/stage-contracts";
 
 export type { GardenCareEvent };
 
@@ -41,10 +45,13 @@ export interface GardenDataState {
   newGrowthNotice: string | null;
   latestEvent: LatestGardenEvent | null;
   createdAt: string | null;
+  foundationCalculation: AuthoritativeFoundationCalculation;
 }
 
 const GENERIC_ERROR_MESSAGE =
   "Your garden could not be prepared just now. Nothing has been changed. You can return to Our Space and try again later.";
+
+const INITIAL_FOUNDATION = calculateAuthoritativeFoundation(0, 0);
 
 const INITIAL_STATE: GardenDataState = {
   loading: true,
@@ -70,6 +77,7 @@ const INITIAL_STATE: GardenDataState = {
   newGrowthNotice: null,
   latestEvent: null,
   createdAt: null,
+  foundationCalculation: INITIAL_FOUNDATION,
 };
 
 function normalizeTimestamp(
@@ -242,41 +250,28 @@ export function useGardenData(coupleId: string | null) {
         });
 
         // ------------------------------------------------
-        // CALCULATIONS
+        // AUTHORITATIVE 100-POINT FOUNDATION CALCULATION
         // ------------------------------------------------
-
-        // Time units: min(60, elapsedUtcDays * 0.5)
         const couplesCreatedAt = coupleData?.created_at ?? null;
         const nowMs = Date.now();
-        const createdMs = couplesCreatedAt
-          ? new Date(couplesCreatedAt).getTime()
-          : nowMs;
-        const elapsedDays = Math.max(
-          0,
-          Math.floor((nowMs - createdMs) / (1000 * 60 * 60 * 24))
+
+        const foundationCalc = calculateAuthoritativeFoundation(
+          careEvents,
+          couplesCreatedAt,
+          nowIso
         );
-        const timeGrowthUnits = Math.min(60, elapsedDays * 0.5);
+
+        const elapsedDays = foundationCalc.elapsedDays;
+        const timeGrowthUnits = foundationCalc.supportingTimeContribution;
+        const careGrowthUnits = foundationCalc.rawCareContribution;
+        const totalGrowthUnits = foundationCalc.totalFoundationProgress;
+        const stage = getGardenStage(totalGrowthUnits);
 
         // Care counts
-        const posCount = positiveEvents?.length ?? 0;
-        const recCount = reconnectedEvents?.length ?? 0;
-        const impCount = importantDates?.length ?? 0;
-        const totalCareEventsCount = posCount + recCount + impCount;
-
-        // Care units:
-        // - positive shared moment: 2
-        // - completed reconnection: 4
-        // - important date: 2
-        // - overall care contribution remains capped at 40
-        const rawCareUnits = posCount * 2 + recCount * 4 + impCount * 2;
-        const careGrowthUnits = Math.min(40, rawCareUnits);
-
-        // Total units: min(100, timeGrowthUnits + careGrowthUnits)
-        const totalGrowthUnits = Math.min(
-          100,
-          timeGrowthUnits + careGrowthUnits
-        );
-        const stage = getGardenStage(totalGrowthUnits);
+        const posCount = foundationCalc.eligiblePositiveMoments;
+        const recCount = foundationCalc.completedReconnections;
+        const impCount = foundationCalc.importantDates;
+        const totalCareEventsCount = foundationCalc.totalUniqueEvents;
 
         // ------------------------------------------------
         // NEW GROWTH ACKNOWLEDGEMENT (PARTS 8, 16, 17)
@@ -454,6 +449,7 @@ export function useGardenData(coupleId: string | null) {
               : prev.newGrowthNotice,
             latestEvent,
             createdAt: couplesCreatedAt,
+            foundationCalculation: foundationCalc,
           }));
         }
       } catch (err: any) {

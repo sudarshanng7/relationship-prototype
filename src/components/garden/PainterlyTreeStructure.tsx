@@ -56,7 +56,11 @@ import {
   STAGE_STRUCTURAL_ASSET_SLOTS,
   TREE_COMPOSITION_PRESETS,
 } from "@/lib/garden";
-import type { GeneratedGardenSVGScene } from "@/lib/garden-generator";
+import {
+  createLeafVeinD,
+  createOakLobedLeafD,
+  type GeneratedGardenSVGScene,
+} from "@/lib/garden-generator";
 
 // Master calibrated transparent ancient oak (1586x992 alpha PNG)
 const OAK_MATURE_ASSET = require("../../../assets/garden/painterly/oak-structure-mature-alpha-v1.png");
@@ -738,36 +742,41 @@ export function PainterlyTreeStructure({
                 opacity={0.75}
               />
 
-              {/* Hypogeal terminal bud and miniature folded first true leaves at apex (390.4, 416.0) */}
+              {/* Hypogeal terminal bud and miniature authentic lobed oak leaves at apex (390.4, 416.0) */}
               {/* Compact terminal oak bud */}
               <Path
                 d="M 390.4 416.5 C 389.5 415.0, 389.8 413.2, 390.4 412.0 C 391.0 413.2, 391.3 415.0, 390.4 416.5 Z"
                 fill="#7A5636"
               />
-              {/* Left tiny folded first true leaf */}
+              {/* Left tiny juvenile lobed oak leaf */}
               <Path
-                d="M 390.2 415.5 C 387.2 414.2, 385.5 411.8, 386.8 409.8 C 388.8 410.5, 389.8 412.8, 390.2 415.5 Z"
+                d={createOakLobedLeafD(390.2, 415.5, 384.5, 408.0, 0.32)}
                 fill="#6A864D"
+                stroke="#4C6534"
+                strokeWidth={0.35}
               />
-              {/* Right tiny folded first true leaf */}
               <Path
-                d="M 390.6 415.5 C 393.6 414.0, 395.2 411.5, 394.0 409.5 C 392.0 410.2, 391.0 412.8, 390.6 415.5 Z"
-                fill="#7E9F45"
-              />
-              {/* Apical leaflet vein highlights */}
-              <Path
-                d="M 390.2 415.0 C 388.5 413.5, 387.5 411.8, 387.2 410.5"
+                d={createLeafVeinD(390.2, 415.5, 384.5, 408.0, -1, 1, false)}
                 stroke="#8EAF52"
-                strokeWidth={0.5}
+                strokeWidth={0.45}
+                strokeLinecap="round"
                 fill="none"
-                opacity={0.7}
+                opacity={0.8}
+              />
+              {/* Right tiny juvenile lobed oak leaf */}
+              <Path
+                d={createOakLobedLeafD(390.6, 415.5, 396.0, 408.0, 0.32)}
+                fill="#7E9F45"
+                stroke="#597330"
+                strokeWidth={0.35}
               />
               <Path
-                d="M 390.6 415.0 C 392.2 413.2, 393.2 411.8, 393.5 410.2"
+                d={createLeafVeinD(390.6, 415.5, 396.0, 408.0, 1, 1, false)}
                 stroke="#9EBF58"
-                strokeWidth={0.5}
+                strokeWidth={0.45}
+                strokeLinecap="round"
                 fill="none"
-                opacity={0.7}
+                opacity={0.8}
               />
             </G>
           </Svg>
@@ -803,47 +812,103 @@ export function PainterlyTreeStructure({
                 fill="none"
                 opacity={0.7}
               />
-              {/* Leaf 1: Lower left juvenile lobed leaf (node at 390.0, 422.0) */}
+              {/* Leaf 1: Lower left juvenile lobed oak leaf (stem node at 390.0, 422.0) */}
               <Path
-                d="M 390.0 422.0 Q 384.0 420.0 378.0 418.0"
-                stroke="#586E32"
-                strokeWidth={1.2}
+                d="M 390.0 422.0 Q 384.0 420.5 380.0 419.0"
+                stroke="#4B3A26"
+                strokeWidth={0.9}
+                strokeLinecap="round"
                 fill="none"
               />
               <Path
-                d="M 378.0 418.0 C 374.0 417.0, 372.0 413.0, 374.0 410.0 C 376.5 411.0, 378.0 413.5, 380.0 414.0 C 382.0 412.0, 385.0 413.5, 384.5 416.5 Z"
+                d={createOakLobedLeafD(380.0, 419.0, 366.0, 414.0, 0.35)}
                 fill="#56723D"
+                stroke="#3E5629"
+                strokeWidth={0.4}
               />
-              {/* Leaf 2: Mid right juvenile lobed leaf (node at 390.5, 410.0) */}
               <Path
-                d="M 390.5 410.0 Q 396.0 408.0 402.0 406.0"
-                stroke="#586E32"
-                strokeWidth={1.2}
+                d={createLeafVeinD(380.0, 419.0, 366.0, 414.0, -1, 1, false)}
+                stroke="#8EAF52"
+                strokeWidth={0.45}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.85}
+              />
+
+              {/* Leaf 2: Mid right juvenile lobed oak leaf (stem node at 390.5, 410.0) */}
+              <Path
+                d="M 390.5 410.0 Q 396.0 408.5 400.0 407.0"
+                stroke="#4B3A26"
+                strokeWidth={0.9}
+                strokeLinecap="round"
                 fill="none"
               />
               <Path
-                d="M 402.0 406.0 C 406.0 405.0, 408.0 401.0, 406.0 398.0 C 403.5 399.0, 402.0 401.5, 400.0 402.0 C 398.0 400.0, 395.0 401.5, 395.5 404.5 Z"
+                d={createOakLobedLeafD(400.0, 407.0, 414.0, 402.0, 0.35)}
                 fill="#6A864D"
+                stroke="#4D6734"
+                strokeWidth={0.4}
               />
-              {/* Leaf 3: Upper left juvenile leaf (node at 390.2, 398.0) */}
               <Path
-                d="M 390.2 398.0 Q 385.0 394.0 380.0 391.0"
-                stroke="#586E32"
-                strokeWidth={1.1}
+                d={createLeafVeinD(400.0, 407.0, 414.0, 402.0, 1, -1, false)}
+                stroke="#9EBF58"
+                strokeWidth={0.45}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.85}
+              />
+
+              {/* Leaf 3: Upper left juvenile lobed oak leaf (stem node at 390.2, 398.0) */}
+              <Path
+                d="M 390.2 398.0 Q 386.0 395.0 382.0 393.0"
+                stroke="#4B3A26"
+                strokeWidth={0.8}
+                strokeLinecap="round"
                 fill="none"
               />
               <Path
-                d="M 380.0 391.0 C 376.5 390.0, 375.0 386.5, 377.0 384.0 C 379.0 385.0, 380.5 387.0, 382.5 387.5 C 384.0 385.5, 387.0 387.0, 386.0 390.0 Z"
+                d={createOakLobedLeafD(382.0, 393.0, 369.0, 387.0, 0.34)}
                 fill="#7E9F45"
-              />
-              {/* Leaf 4: Apical shoot at (390.4, 386.0) */}
-              <Path
-                d="M 390.4 386.0 C 388.0 382.0, 389.0 378.0, 391.0 379.0 C 392.5 381.0, 392.0 383.5, 390.4 386.0 Z"
-                fill="#92B555"
+                stroke="#597330"
+                strokeWidth={0.38}
               />
               <Path
-                d="M 390.4 386.0 C 392.8 382.0, 394.5 380.0, 394.0 382.5 C 393.0 384.5, 391.8 385.5, 390.4 386.0 Z"
+                d={createLeafVeinD(382.0, 393.0, 369.0, 387.0, -1, 1, false)}
+                stroke="#A6C964"
+                strokeWidth={0.45}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.85}
+              />
+
+              {/* Leaf 4: Apical juvenile shoot leaf pair at (390.4, 386.0) */}
+              <Path
+                d={createOakLobedLeafD(390.4, 386.0, 383.0, 376.0, 0.32)}
+                fill="#8DB54C"
+                stroke="#638531"
+                strokeWidth={0.35}
+              />
+              <Path
+                d={createLeafVeinD(390.4, 386.0, 383.0, 376.0, -1, 0, false)}
+                stroke="#B5D973"
+                strokeWidth={0.4}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.8}
+              />
+              <Path
+                d={createOakLobedLeafD(390.4, 386.0, 397.0, 376.0, 0.32)}
                 fill="#7E9F45"
+                stroke="#597330"
+                strokeWidth={0.35}
+              />
+              <Path
+                d={createLeafVeinD(390.4, 386.0, 397.0, 376.0, 1, 0, false)}
+                stroke="#A6C964"
+                strokeWidth={0.4}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.8}
               />
             </G>
           </Svg>
@@ -899,17 +964,37 @@ export function PainterlyTreeStructure({
               <Path
                 d="M 380.0 382.0 Q 374.0 384.5 369.0 388.0"
                 stroke="#586E32"
-                strokeWidth={1.0}
+                strokeWidth={0.9}
                 fill="none"
               />
               <Path
-                d="M 369.0 388.0 C 365.0 389.0, 362.5 386.0, 364.0 382.5 C 366.5 383.5, 368.0 385.5, 370.5 385.0 C 372.0 383.0, 375.0 384.5, 374.0 387.5 Z"
+                d={createOakLobedLeafD(369.0, 388.0, 356.0, 393.0, 0.35)}
                 fill="#56723D"
+                stroke="#3E5629"
+                strokeWidth={0.35}
+              />
+              <Path
+                d={createLeafVeinD(369.0, 388.0, 356.0, 393.0, -1, 1, false)}
+                stroke="#8EAF52"
+                strokeWidth={0.4}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.8}
               />
               {/* Twig 1 Leaf B: terminal juvenile lobed oak leaf at (372.0, 377.0) */}
               <Path
-                d="M 372.0 377.0 C 367.0 375.5, 364.0 371.0, 366.5 368.0 C 369.5 369.0, 371.5 372.0, 374.0 372.5 C 376.0 370.0, 379.5 372.0, 378.0 375.5 Z"
+                d={createOakLobedLeafD(372.0, 377.0, 359.0, 370.0, 0.35)}
                 fill="#6A864D"
+                stroke="#4D6734"
+                strokeWidth={0.35}
+              />
+              <Path
+                d={createLeafVeinD(372.0, 377.0, 359.0, 370.0, -1, 1, false)}
+                stroke="#9EBF58"
+                strokeWidth={0.4}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.8}
               />
 
               {/* Twig 2: Mid-right lateral twig (emerges at 390.6, 365.0) */}
@@ -924,17 +1009,37 @@ export function PainterlyTreeStructure({
               <Path
                 d="M 402.0 360.0 Q 407.0 364.0 412.0 368.0"
                 stroke="#586E32"
-                strokeWidth={1.0}
+                strokeWidth={0.9}
                 fill="none"
               />
               <Path
-                d="M 412.0 368.0 C 416.0 369.0, 418.5 366.0, 417.0 362.5 C 414.5 363.5, 413.0 365.5, 410.5 365.0 C 409.0 363.0, 406.0 364.5, 407.0 367.5 Z"
+                d={createOakLobedLeafD(412.0, 368.0, 425.0, 374.0, 0.35)}
                 fill="#56723D"
+                stroke="#3E5629"
+                strokeWidth={0.35}
+              />
+              <Path
+                d={createLeafVeinD(412.0, 368.0, 425.0, 374.0, 1, 1, false)}
+                stroke="#8EAF52"
+                strokeWidth={0.4}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.8}
               />
               {/* Twig 2 Leaf B: terminal juvenile lobed oak leaf at (411.0, 352.0) */}
               <Path
-                d="M 411.0 352.0 C 416.0 350.5, 419.0 346.0, 416.5 343.0 C 413.5 344.0, 411.5 347.0, 409.0 347.5 C 407.0 345.0, 403.5 347.0, 405.0 350.5 Z"
+                d={createOakLobedLeafD(411.0, 352.0, 424.0, 345.0, 0.35)}
                 fill="#6A864D"
+                stroke="#4D6734"
+                strokeWidth={0.35}
+              />
+              <Path
+                d={createLeafVeinD(411.0, 352.0, 424.0, 345.0, 1, -1, false)}
+                stroke="#9EBF58"
+                strokeWidth={0.4}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.8}
               />
 
               {/* Twig 3: Upper-left lateral twig (emerges at 390.0, 344.0) */}
@@ -947,13 +1052,33 @@ export function PainterlyTreeStructure({
               />
               {/* Twig 3 Leaf A: terminal juvenile leaf pointing outward */}
               <Path
-                d="M 375.0 333.5 C 370.5 332.0, 368.0 328.0, 370.5 325.0 C 373.0 326.0, 374.5 328.5, 377.0 329.0 C 378.8 327.0, 381.8 328.8, 380.8 332.0 Z"
+                d={createOakLobedLeafD(375.0, 333.5, 363.0, 325.0, 0.34)}
                 fill="#7E9F45"
+                stroke="#597330"
+                strokeWidth={0.35}
+              />
+              <Path
+                d={createLeafVeinD(375.0, 333.5, 363.0, 325.0, -1, 1, false)}
+                stroke="#A6C964"
+                strokeWidth={0.4}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.8}
               />
               {/* Twig 3 Leaf B: small leaf at node (381.0, 337.0) */}
               <Path
-                d="M 381.0 337.0 C 377.0 339.5, 374.5 338.0, 375.5 335.0 C 377.5 335.5, 379.0 336.8, 381.0 337.0 Z"
+                d={createOakLobedLeafD(381.0, 337.0, 371.0, 334.0, 0.32)}
                 fill="#8DB54C"
+                stroke="#638531"
+                strokeWidth={0.32}
+              />
+              <Path
+                d={createLeafVeinD(381.0, 337.0, 371.0, 334.0, -1, 0, false)}
+                stroke="#B5D973"
+                strokeWidth={0.38}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.8}
               />
 
               {/* Terminal Leader: Central upright apical cluster at (390.4, 324.0) to (390.4, 314.0) */}
@@ -966,18 +1091,48 @@ export function PainterlyTreeStructure({
               />
               {/* Apical leaf 1: left young oak leaf */}
               <Path
-                d="M 390.4 321.0 C 386.0 318.5, 385.0 314.0, 387.5 313.0 C 389.5 314.5, 389.8 317.5, 390.4 321.0 Z"
+                d={createOakLobedLeafD(390.4, 321.0, 383.0, 312.0, 0.30)}
                 fill="#8DB54C"
+                stroke="#638531"
+                strokeWidth={0.32}
+              />
+              <Path
+                d={createLeafVeinD(390.4, 321.0, 383.0, 312.0, -1, 0, false)}
+                stroke="#B5D973"
+                strokeWidth={0.38}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.8}
               />
               {/* Apical leaf 2: center upright young leaf */}
               <Path
-                d="M 390.4 319.0 C 388.5 315.0, 390.0 311.5, 391.5 312.0 C 392.5 314.5, 391.8 317.0, 390.4 319.0 Z"
+                d={createOakLobedLeafD(390.4, 319.0, 390.4, 308.0, 0.30)}
                 fill="#9EC05C"
+                stroke="#6E8838"
+                strokeWidth={0.32}
+              />
+              <Path
+                d={createLeafVeinD(390.4, 319.0, 390.4, 308.0, 0, -1, false)}
+                stroke="#C6E57E"
+                strokeWidth={0.38}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.8}
               />
               {/* Apical leaf 3: right young oak leaf */}
               <Path
-                d="M 390.4 321.0 C 394.5 318.0, 396.0 314.0, 394.0 313.0 C 392.0 314.5, 391.2 317.5, 390.4 321.0 Z"
+                d={createOakLobedLeafD(390.4, 321.0, 398.0, 312.0, 0.30)}
                 fill="#7E9F45"
+                stroke="#597330"
+                strokeWidth={0.32}
+              />
+              <Path
+                d={createLeafVeinD(390.4, 321.0, 398.0, 312.0, 1, 0, false)}
+                stroke="#A6C964"
+                strokeWidth={0.38}
+                strokeLinecap="round"
+                fill="none"
+                opacity={0.8}
               />
             </G>
           </Svg>

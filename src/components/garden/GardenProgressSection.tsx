@@ -25,26 +25,31 @@ import {
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import {
+  calculateAuthoritativeFoundation,
   resolveMvpFoundationProgress,
-  resolveMvpFoundationPresentation,
+  type AuthoritativeFoundationCalculation,
   type GardenMilestoneProgress,
-  type MvpFoundationPresentation,
+  type GardenCareEvent,
 } from "@/lib/garden/stage-contracts";
 
 export interface GardenProgressSectionProps {
-  totalGrowthUnits: number;
+  totalGrowthUnits?: number;
   careEventsCount?: number;
   careGrowthUnits?: number;
   timeGrowthUnits?: number;
+  careEvents?: GardenCareEvent[];
+  foundationCalculation?: AuthoritativeFoundationCalculation;
   compact?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
 export function GardenProgressSection({
-  totalGrowthUnits,
+  totalGrowthUnits = 0,
   careEventsCount = 0,
   careGrowthUnits,
   timeGrowthUnits,
+  careEvents,
+  foundationCalculation: calcProp,
   compact = false,
   style,
 }: GardenProgressSectionProps) {
@@ -54,24 +59,36 @@ export function GardenProgressSection({
   const [isReducedMotion, setIsReducedMotion] = useState(false);
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
-  // Derive pure 100-unit MVP presentation & milestone progress model
-  const presentation: MvpFoundationPresentation = useMemo(() => {
-    return resolveMvpFoundationPresentation(
+  // Authoritative pure typed 100-point calculation
+  const calc: AuthoritativeFoundationCalculation = useMemo(() => {
+    if (calcProp) return calcProp;
+    if (careEvents && careEvents.length > 0) {
+      return calculateAuthoritativeFoundation(
+        careEvents,
+        typeof timeGrowthUnits === "number" ? timeGrowthUnits / 0.5 : 0,
+        null
+      );
+    }
+    return calculateAuthoritativeFoundation(
       totalGrowthUnits,
+      typeof timeGrowthUnits === "number" ? timeGrowthUnits / 0.5 : 0,
+      null,
       careGrowthUnits,
       timeGrowthUnits
     );
-  }, [totalGrowthUnits, careGrowthUnits, timeGrowthUnits]);
+  }, [calcProp, careEvents, totalGrowthUnits, careGrowthUnits, timeGrowthUnits]);
 
   const progress: GardenMilestoneProgress = useMemo(() => {
     return resolveMvpFoundationProgress(
-      totalGrowthUnits,
+      careEvents && careEvents.length > 0 ? careEvents : totalGrowthUnits,
       careGrowthUnits,
       timeGrowthUnits
     );
-  }, [totalGrowthUnits, careGrowthUnits, timeGrowthUnits]);
+  }, [careEvents, totalGrowthUnits, careGrowthUnits, timeGrowthUnits]);
 
-  const levelHeading = `${presentation.levelLabel} · ${presentation.label}`;
+  const levelHeading = `${calc.levelLabel} · ${calc.currentStage}`;
+  const overallPercent = calc.overallDisplayPercent;
+  const progressRatio = Math.max(0, Math.min(1, calc.totalFoundationProgress / 100));
 
   // Reduced motion listener
   useEffect(() => {
@@ -89,19 +106,19 @@ export function GardenProgressSection({
   }, []);
 
   // Smooth progress bar fill animation (disabled under reduced motion)
-  const animatedProgress = useRef(new Animated.Value(progress.intervalProgress)).current;
+  const animatedProgress = useRef(new Animated.Value(progressRatio)).current;
 
   useEffect(() => {
     if (isReducedMotion) {
-      animatedProgress.setValue(progress.intervalProgress);
+      animatedProgress.setValue(progressRatio);
     } else {
       Animated.timing(animatedProgress, {
-        toValue: progress.intervalProgress,
+        toValue: progressRatio,
         duration: 350,
         useNativeDriver: false,
       }).start();
     }
-  }, [progress.intervalProgress, isReducedMotion]);
+  }, [progressRatio, isReducedMotion]);
 
   const animatedWidth = animatedProgress.interpolate({
     inputRange: [0, 1],
@@ -115,15 +132,20 @@ export function GardenProgressSection({
   const fillHighlight = isLight ? "#C9DCC4" : "#D5E8D0";
   const pillBg = isLight ? "#EFF5EE" : isDim ? "#2D3932" : "#223029";
   const botanicalBorder = isLight ? "#D5E1D4" : isDim ? "#45564B" : "#35463B";
+  const markerColor = isLight ? "rgba(255, 255, 255, 0.65)" : "rgba(255, 255, 255, 0.35)";
   const infoCardBg = isLight ? "#FAF7FC" : isDim ? "#251D2D" : "#1A1521";
 
-  const accessibilityValueText = progress.isFinalStage
-    ? `100 percent, ${levelHeading} reached`
-    : `${progress.intervalDisplayPercent} percent progress toward ${progress.nextMilestoneLabel}`;
+  const nextDevMessage = calc.isFoundationComplete
+    ? "Foundation Complete"
+    : `Next: ${calc.nextMilestoneLabel}`;
 
-  const accessibilityLabel = progress.isFinalStage
-    ? `Garden milestone progress: ${levelHeading} reached. Your garden keeps collecting your shared moments.`
-    : `Garden milestone progress: ${levelHeading}. Next growth: ${progress.nextMilestoneLabel}, ${progress.intervalDisplayPercent} percent toward next development.`;
+  const accessibilityValueText = calc.isFoundationComplete
+    ? `100 percent, ${levelHeading} reached. Foundation Complete.`
+    : `${overallPercent} percent overall progress. ${levelHeading}. ${nextDevMessage}`;
+
+  const accessibilityLabel = calc.isFoundationComplete
+    ? `Garden growth progress: ${levelHeading} reached. Foundation complete. Your garden keeps collecting your shared moments.`
+    : `Garden growth progress: ${levelHeading}. ${overallPercent} percent overall progress. ${nextDevMessage}.`;
 
   // --------------------------------------------------------------------------
   // COMPACT VARIANT (For Our Space GardenEntryCard)
@@ -138,7 +160,7 @@ export function GardenProgressSection({
         accessibilityValue={{
           min: 0,
           max: 100,
-          now: progress.intervalDisplayPercent,
+          now: overallPercent,
           text: accessibilityValueText,
         }}
       >
@@ -149,25 +171,32 @@ export function GardenProgressSection({
           >
             {levelHeading}
           </Text>
-          {!progress.isFinalStage && (
-            <Text
-              style={[styles.compactPercent, { color: theme.secondaryText }]}
-              accessibilityLabel={`${progress.intervalDisplayPercent} percent toward next development`}
-            >
-              {progress.intervalDisplayPercent}%
-            </Text>
-          )}
+          <Text
+            style={[styles.compactPercent, { color: theme.secondaryText }]}
+            accessibilityLabel={`${overallPercent} percent overall progress`}
+          >
+            {overallPercent}%
+          </Text>
         </View>
 
-        {/* Progress Bar Track */}
+        {/* Progress Bar Track with 24% and 60% threshold markers */}
         <View style={[styles.compactTrack, { backgroundColor: trackBg }]}>
+          {/* Subtle visual threshold markers at 24% and 60% */}
+          <View
+            style={[styles.thresholdMarker, { left: "24%", backgroundColor: markerColor }]}
+            pointerEvents="none"
+          />
+          <View
+            style={[styles.thresholdMarker, { left: "60%", backgroundColor: markerColor }]}
+            pointerEvents="none"
+          />
           <Animated.View
             style={[
               styles.compactFill,
               {
                 backgroundColor: fillBg,
                 width: isReducedMotion
-                  ? `${Math.round(progress.intervalProgress * 100)}%`
+                  ? `${Math.round(progressRatio * 100)}%`
                   : (animatedWidth as any),
               },
             ]}
@@ -180,9 +209,7 @@ export function GardenProgressSection({
           style={[styles.compactCaption, { color: theme.secondaryText }]}
           numberOfLines={1}
         >
-          {progress.isFinalStage
-            ? "Foundation Complete"
-            : `Next growth: ${progress.nextMilestoneLabel}`}
+          {nextDevMessage}
         </Text>
       </View>
     );
@@ -207,7 +234,7 @@ export function GardenProgressSection({
       accessibilityValue={{
         min: 0,
         max: 100,
-        now: progress.intervalDisplayPercent,
+        now: overallPercent,
         text: accessibilityValueText,
       }}
     >
@@ -224,36 +251,41 @@ export function GardenProgressSection({
             style={[styles.supportingCopy, { color: theme.secondaryText }]}
             numberOfLines={1}
           >
-            {progress.isFinalStage
-              ? "Foundation Complete"
-              : `Next growth: ${progress.nextMilestoneLabel}`}
+            {nextDevMessage}
           </Text>
         </View>
 
-        {!progress.isFinalStage && (
-          <View
-            style={[styles.percentBadge, { backgroundColor: pillBg, borderColor: botanicalBorder }]}
-            accessible={false}
-          >
-            <Text style={[styles.percentText, { color: fillBg }]}>
-              {progress.intervalDisplayPercent}%
-            </Text>
-          </View>
-        )}
+        <View
+          style={[styles.percentBadge, { backgroundColor: pillBg, borderColor: botanicalBorder }]}
+          accessible={false}
+        >
+          <Text style={[styles.percentText, { color: fillBg }]}>
+            {overallPercent}%
+          </Text>
+        </View>
       </View>
 
-      {/* Progress Bar Track */}
+      {/* Progress Bar Track with 24% and 60% threshold markers */}
       <View
         style={[styles.track, { backgroundColor: trackBg }]}
         accessible={false}
       >
+        {/* Subtle visual threshold markers at 24% and 60% */}
+        <View
+          style={[styles.thresholdMarker, { left: "24%", backgroundColor: markerColor }]}
+          pointerEvents="none"
+        />
+        <View
+          style={[styles.thresholdMarker, { left: "60%", backgroundColor: markerColor }]}
+          pointerEvents="none"
+        />
         <Animated.View
           style={[
             styles.fill,
             {
               backgroundColor: fillBg,
               width: isReducedMotion
-                ? `${Math.round(progress.intervalProgress * 100)}%`
+                ? `${Math.round(progressRatio * 100)}%`
                 : (animatedWidth as any),
             },
           ]}
@@ -263,7 +295,7 @@ export function GardenProgressSection({
         </Animated.View>
       </View>
 
-      {/* Concise "How your garden grows" Educational Section */}
+      {/* Pressable disclosure row: "How your garden grows" */}
       <View style={[styles.explanationSection, { borderTopColor: theme.borderSoft }]}>
         <Pressable
           onPress={() => setIsExplanationOpen((prev) => !prev)}
@@ -272,8 +304,8 @@ export function GardenProgressSection({
           accessibilityLabel="How your garden grows"
           accessibilityHint={
             isExplanationOpen
-              ? "Collapses the garden growth explanation"
-              : "Expands an explanation of eligible activities and time contributions"
+              ? "Collapses the garden growth breakdown"
+              : "Expands the live calculation and breakdown of shared care"
           }
           accessibilityState={{ expanded: isExplanationOpen }}
         >
@@ -291,40 +323,114 @@ export function GardenProgressSection({
               {progress.supportingCopy}
             </Text>
 
-            <View style={styles.bulletItem}>
-              <Text style={[styles.bulletDot, { color: theme.primaryAccent }]}>•</Text>
-              <Text style={[styles.bulletText, { color: theme.secondaryText }]}>
-                <Text style={{ fontWeight: "600", color: theme.primaryText }}>Shared moments: </Text>
-                Appreciations, affection, and moments of gratitude add 2 units of growth.
-              </Text>
-            </View>
+            {/* Dynamic Couple Growth Breakdown */}
+            <View style={styles.breakdownCard}>
+              <View style={styles.breakdownRow}>
+                <Text style={[styles.breakdownLabel, { color: theme.secondaryText }]}>
+                  Registered memories
+                </Text>
+                <Text style={[styles.breakdownValue, { color: theme.primaryText }]}>
+                  {calc.totalRegisteredEvents}
+                </Text>
+              </View>
 
-            <View style={styles.bulletItem}>
-              <Text style={[styles.bulletDot, { color: theme.primaryAccent }]}>•</Text>
-              <Text style={[styles.bulletText, { color: theme.secondaryText }]}>
-                <Text style={{ fontWeight: "600", color: theme.primaryText }}>Reconnections: </Text>
-                Working through friction and completing a reconnection adds 4 units of growth.
-              </Text>
-            </View>
+              <View style={styles.breakdownRow}>
+                <Text style={[styles.breakdownLabel, { color: theme.secondaryText }]}>
+                  Unique eligible records
+                </Text>
+                <Text style={[styles.breakdownValue, { color: theme.primaryText }]}>
+                  {calc.totalUniqueEvents}
+                </Text>
+              </View>
 
-            <View style={styles.bulletItem}>
-              <Text style={[styles.bulletDot, { color: theme.primaryAccent }]}>•</Text>
-              <Text style={[styles.bulletText, { color: theme.secondaryText }]}>
-                <Text style={{ fontWeight: "600", color: theme.primaryText }}>Important dates: </Text>
-                Anniversaries and saved dates add 2 units of growth.
-              </Text>
-            </View>
+              <View style={styles.breakdownRow}>
+                <Text style={[styles.breakdownLabel, { color: theme.secondaryText }]}>
+                  Current development
+                </Text>
+                <Text style={[styles.breakdownValue, { color: theme.primaryText }]}>
+                  {calc.levelLabel} · {calc.currentStage}
+                </Text>
+              </View>
 
-            <View style={styles.bulletItem}>
-              <Text style={[styles.bulletDot, { color: theme.primaryAccent }]}>•</Text>
-              <Text style={[styles.bulletText, { color: theme.secondaryText }]}>
-                <Text style={{ fontWeight: "600", color: theme.primaryText }}>Steady time: </Text>
-                Time adds 0.5 units per elapsed day, but supports at most 20 of the 100 MVP foundation units. Time alone cannot complete the journey.
-              </Text>
+              <View style={styles.breakdownRow}>
+                <Text style={[styles.breakdownLabel, { color: theme.secondaryText }]}>
+                  Shared moments ({calc.eligiblePositiveMoments} × 2)
+                </Text>
+                <Text style={[styles.breakdownValue, { color: theme.primaryText }]}>
+                  +{calc.eligiblePositiveMoments * 2} growth
+                </Text>
+              </View>
+
+              <View style={styles.breakdownRow}>
+                <Text style={[styles.breakdownLabel, { color: theme.secondaryText }]}>
+                  Completed reconnections ({calc.completedReconnections} × 4)
+                </Text>
+                <Text style={[styles.breakdownValue, { color: theme.primaryText }]}>
+                  +{calc.completedReconnections * 4} growth
+                </Text>
+              </View>
+
+              <View style={styles.breakdownRow}>
+                <Text style={[styles.breakdownLabel, { color: theme.secondaryText }]}>
+                  Important dates ({calc.importantDates} × 2)
+                </Text>
+                <Text style={[styles.breakdownValue, { color: theme.primaryText }]}>
+                  +{calc.importantDates * 2} growth
+                </Text>
+              </View>
+
+              <View style={styles.breakdownRow}>
+                <Text style={[styles.breakdownLabel, { color: theme.secondaryText }]}>
+                  Supporting time ({calc.elapsedDays} elapsed days)
+                </Text>
+                <Text style={[styles.breakdownValue, { color: theme.primaryText }]}>
+                  +{calc.supportingTimeContribution.toFixed(1)} / 20.0 max
+                </Text>
+              </View>
+
+              <View style={styles.breakdownRow}>
+                <Text style={[styles.breakdownLabel, { color: theme.mutedText }]}>
+                  Ineligible or non-growth records
+                </Text>
+                <Text style={[styles.breakdownValue, { color: theme.mutedText }]}>
+                  {calc.excludedOrIneligibleEvents}
+                </Text>
+              </View>
+
+              <View style={[styles.breakdownDivider, { backgroundColor: theme.borderSoft }]} />
+
+              <View style={styles.breakdownRow}>
+                <Text style={[styles.breakdownLabelBold, { color: theme.primaryText }]}>
+                  Total foundation progress
+                </Text>
+                <Text style={[styles.breakdownValueBold, { color: fillBg }]}>
+                  {calc.totalFoundationProgress.toFixed(1)} / 100 ({overallPercent}%)
+                </Text>
+              </View>
+
+              {!calc.isFoundationComplete ? (
+                <View style={styles.breakdownRow}>
+                  <Text style={[styles.breakdownLabel, { color: theme.secondaryText }]}>
+                    Progress to next development
+                  </Text>
+                  <Text style={[styles.breakdownValue, { color: theme.secondaryText }]}>
+                    {calc.pointsUntilNextThreshold.toFixed(1)} units until {calc.nextMilestoneLabel}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.breakdownRow}>
+                  <Text style={[styles.breakdownLabelBold, { color: fillBg }]}>
+                    Foundation Complete
+                  </Text>
+                  <Text style={[styles.breakdownValue, { color: theme.secondaryText }]}>
+                    Shared care continues to flourish
+                  </Text>
+                </View>
+              )}
             </View>
 
             <Text style={[styles.explanationOutro, { color: theme.mutedText }]}>
-              At least 80 units must come from meaningful shared care. There are no daily streaks or score comparisons.
+              At least 80 points come from meaningful shared care. There are no daily streaks, scores, or partner comparisons.
             </Text>
           </View>
         )}
@@ -522,6 +628,44 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flex: 1,
     lineHeight: 17,
+  },
+  thresholdMarker: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 1.5,
+    zIndex: 2,
+  },
+  breakdownCard: {
+    marginVertical: 10,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: "rgba(0,0,0,0.03)",
+  },
+  breakdownRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginVertical: 3,
+  },
+  breakdownLabel: {
+    fontSize: 12,
+  },
+  breakdownValue: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  breakdownDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 6,
+  },
+  breakdownLabelBold: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  breakdownValueBold: {
+    fontSize: 13,
+    fontWeight: "700",
   },
   explanationOutro: {
     fontSize: 11,

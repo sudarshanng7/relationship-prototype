@@ -518,31 +518,174 @@ export function resolveNodeAtWorldCoordinate(
   return null;
 }
 
+export type GardenInputMode = "mouse" | "touch";
+
+/**
+ * Screen-space interaction hit tolerances (in physical screen points/pixels, NOT world units):
+ * - Mouse / trackpad: 12 screen pixels default (acceptable range 10–14px)
+ * - Touch: 22 screen points default (ensuring an approximately 44-point accessible target)
+ */
+export const DEFAULT_MOUSE_HIT_SLOP_PX = 12;
+export const DEFAULT_TOUCH_HIT_SLOP_PT = 22;
+
+export interface GardenScreenHitOptions {
+  inputMode?: GardenInputMode;
+  hitSlop?: number;
+  hitSlopScreen?: number;
+  viewBoxScale?: number;
+}
+
+/**
+ * Resolves the effective screen-space hit tolerance.
+ * Does NOT infer tolerance from world-space zoom; hit slop remains constant on screen.
+ */
+export function resolveHitTolerance(
+  optionsOrSlop?: number | GardenScreenHitOptions
+): number {
+  if (typeof optionsOrSlop === "number") {
+    return optionsOrSlop;
+  }
+  if (optionsOrSlop && typeof optionsOrSlop === "object") {
+    const explicitSlop =
+      typeof optionsOrSlop.hitSlop === "number"
+        ? optionsOrSlop.hitSlop
+        : optionsOrSlop.hitSlopScreen;
+    if (typeof explicitSlop === "number") {
+      return explicitSlop;
+    }
+    if (optionsOrSlop.inputMode === "mouse") {
+      return DEFAULT_MOUSE_HIT_SLOP_PX;
+    }
+    if (optionsOrSlop.inputMode === "touch") {
+      return DEFAULT_TOUCH_HIT_SLOP_PT;
+    }
+  }
+  return DEFAULT_TOUCH_HIT_SLOP_PT;
+}
+
 /**
  * Resolves the topmost eligible node at a screen pixel coordinate.
  *
- * HIT-SLOP SCALING CONTRACT:
- * Hit slop is defined in physical screen points (default 22pt) to ensure accessible touch targets.
- * In world space, hit slop scales inversely with zoom:
- *   hitSlopWorld = hitSlopScreen / effectiveZoomAndViewBoxScale
- * This ensures the accessible touch target remains approximately constant on the user's screen
- * across minimum, middle, and maximum zoom levels.
+ * SCREEN-SPACE HIT TESTING CONTRACT:
+ * 1. Screen-space projection: visual bounds and anchor points are projected to screen coordinates.
+ * 2. Distinct Input Tolerances:
+ *    - Mouse / trackpad: 12 screen pixels default (range 10–14px).
+ *    - Touch: 22 screen points default (~44pt accessible touch target).
+ *    - Independent of camera zoom level.
+ * 3. Distance-First Candidate Selection Order:
+ *    a. Filter to visible candidates whose screen-space hit region contains the pointer (distanceToGeometry <= hitTolerance).
+ *    b. Across every eligible candidate, select the candidate with the smallest distance to its actual rendered visual geometry.
+ *    c. If distances are genuinely equal or within tiny floating-point tolerance (<= 0.01px), select the visually topmost candidate by depthLayer/render order.
+ *    d. Use interaction class only as a final deterministic tie-breaker after distance and visual depth.
+ *    (An earned memory must never defeat a closer decorative or botanical feature merely because its interaction class is higher.)
+ * 4. Empty terrain returns null (never selects a distant fallback node).
  */
 export function resolveNodeAtScreenCoordinate(
   screenPoint: Point2D,
   world: GardenWorld,
   camera: Camera2D | GardenCameraState,
   viewport: Viewport,
-  hitSlopScreen: number = 22,
+  hitSlopOrOptions?: number | GardenScreenHitOptions,
   viewBoxScale: number = 1.0
 ): GardenNode | null {
   const cam: Camera2D = "targetX" in camera
     ? { target: { x: camera.targetX, y: camera.targetY }, zoom: camera.zoom }
     : camera;
-  const worldPt = screenToWorld(screenPoint, cam, viewport);
-  const effectiveScale = Math.max(0.001, cam.zoom * viewBoxScale);
-  const hitSlopWorld = hitSlopScreen / effectiveScale;
-  return resolveNodeAtWorldCoordinate(worldPt, world, hitSlopWorld);
+
+  const hitTolerance = resolveHitTolerance(hitSlopOrOptions);
+
+  const candidateNodes: GardenNode[] = [];
+  const seenIds = new Set<string>();
+
+  for (const node of Object.values(world.nodes)) {
+    if (
+      !node ||
+      node.role === "world_root" ||
+      node.id === "terrain-root" ||
+      node.id === "tree-root" ||
+      node.id === "ground-flora-root" ||
+      node.id === "habitat-root" ||
+      seenIds.has(node.id)
+    ) {
+      continue;
+    }
+    seenIds.add(node.id);
+    candidateNodes.push(node);
+  }
+
+  interface QualifyingHit {
+    node: GardenNode;
+    interactionClass: number;
+    distanceToGeometry: number;
+    distanceToCenter: number;
+    depthLayer: number;
+  }
+
+  const qualifyingHits: QualifyingHit[] = [];
+
+  for (const node of candidateNodes) {
+    const screenVisual = projectBoundsToScreen(node.worldBounds, cam, viewport);
+
+    const dx = screenPoint.x < screenVisual.minX
+      ? screenVisual.minX - screenPoint.x
+      : screenPoint.x > screenVisual.maxX
+        ? screenPoint.x - screenVisual.maxX
+        : 0;
+
+    const dy = screenPoint.y < screenVisual.minY
+      ? screenVisual.minY - screenPoint.y
+      : screenPoint.y > screenVisual.maxY
+        ? screenPoint.y - screenVisual.maxY
+        : 0;
+
+    const distanceToGeometry = Math.hypot(dx, dy);
+
+    if (distanceToGeometry <= hitTolerance) {
+      const centerX = (screenVisual.minX + screenVisual.maxX) / 2;
+      const centerY = (screenVisual.minY + screenVisual.maxY) / 2;
+      const distanceToCenter = Math.hypot(screenPoint.x - centerX, screenPoint.y - centerY);
+
+      qualifyingHits.push({
+        node,
+        interactionClass: getNodeInteractionClass(node),
+        distanceToGeometry,
+        distanceToCenter,
+        depthLayer: node.depthLayer ?? 0,
+      });
+    }
+  }
+
+  if (qualifyingHits.length === 0) {
+    return null;
+  }
+
+  qualifyingHits.sort((a, b) => {
+    // 1. Distance to actual rendered visual geometry dominates
+    const distDiff = a.distanceToGeometry - b.distanceToGeometry;
+    if (Math.abs(distDiff) > 0.01) {
+      return distDiff;
+    }
+
+    // 2. Visually topmost candidate by depthLayer / render order
+    if (a.depthLayer !== b.depthLayer) {
+      return b.depthLayer - a.depthLayer;
+    }
+
+    // 3. Interaction class tie-breaker (earned memory > fauna > decorative)
+    if (a.interactionClass !== b.interactionClass) {
+      return b.interactionClass - a.interactionClass;
+    }
+
+    // 4. Closer center, then stable deterministic node ID
+    const centerDiff = a.distanceToCenter - b.distanceToCenter;
+    if (Math.abs(centerDiff) > 0.01) {
+      return centerDiff;
+    }
+
+    return a.node.id.localeCompare(b.node.id);
+  });
+
+  return qualifyingHits[0].node;
 }
 
 /**

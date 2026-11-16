@@ -30,6 +30,8 @@ import {
   focusScenicRegion,
   focusFeatureBounds,
   resolveNodeAtScreenCoordinate,
+  type GardenInputMode,
+  type GardenScreenHitOptions,
   isScenicRegionAvailable,
   CANONICAL_DRAG_THRESHOLD_PX,
   getExplorableMemories,
@@ -40,6 +42,7 @@ import {
   resolveGardenWorldPresentation,
   resolveLifecycleVisualPhase,
   resolvePlantInspectionCamera,
+  calculateAuthoritativeFoundation,
 } from "@/lib/garden";
 import { GardenVisualizer } from "./GardenVisualizer";
 
@@ -56,6 +59,7 @@ export interface GardenExplorerProps {
   careSignals?: GardenCareSignals;
   careEvents?: GardenCareEvent[];
   initialFeatureId?: string | null;
+  initialCameraMode?: GardenCameraMode;
   onClose: () => void;
 }
 
@@ -87,14 +91,17 @@ export function GardenExplorer({
   careSignals,
   careEvents = [],
   initialFeatureId = null,
+  initialCameraMode,
   onClose,
 }: GardenExplorerProps) {
   const router = useRouter();
   const [viewport, setViewport] = useState<Viewport>({ width: 360, height: 480 });
   const [hasLayout, setHasLayout] = useState(false);
 
-  // Camera Mode: "overview" | "explore" | "memory_focus" | "scenic_focus" | "future_first_person"
-  const [cameraMode, setCameraMode] = useState<GardenCameraMode>("overview");
+  // Camera Mode: "overview" | "explore" | "memory_focus" | "scenic_focus" | "future_first_person" | "plant_focus"
+  const [cameraMode, setCameraMode] = useState<GardenCameraMode>(
+    initialCameraMode ?? "overview"
+  );
 
   // Accessible reduced-motion preference
   const [isReduceMotion, setIsReduceMotion] = useState(false);
@@ -249,16 +256,42 @@ export function GardenExplorer({
         setViewport(nextVp);
         if (!hasLayout) {
           setHasLayout(true);
-          const initialCam = createCameraFromFitStrategy(
-            CANONICAL_SCENE_BOUNDS,
-            nextVp,
-            "viewport_cover"
-          );
-          setCameraState(initialCam);
+          if (initialCameraMode === "plant_focus") {
+            const subphase = calculateAuthoritativeFoundation(
+              careEvents.length > 0 ? careEvents : (totalGrowthUnits ?? world.totalGrowthUnits ?? 0)
+            ).subphaseKey;
+            const initialLimits = calculateZoomBounds(
+              CANONICAL_SCENE_BOUNDS,
+              nextVp,
+              0,
+              "viewport_cover"
+            );
+            const inspectCam = resolvePlantInspectionCamera(
+              subphase,
+              nextVp,
+              initialLimits.minZoom,
+              initialLimits.maxZoom
+            );
+            setCameraState({
+              targetX: inspectCam.targetX,
+              targetY: inspectCam.targetY,
+              zoom: Math.min(initialLimits.maxZoom, Math.max(initialLimits.minZoom, inspectCam.zoom)),
+              viewportWidth: nextVp.width,
+              viewportHeight: nextVp.height,
+            });
+            setCameraMode("plant_focus");
+          } else {
+            const initialCam = createCameraFromFitStrategy(
+              CANONICAL_SCENE_BOUNDS,
+              nextVp,
+              "viewport_cover"
+            );
+            setCameraState(initialCam);
+          }
         }
       }
     },
-    [hasLayout]
+    [hasLayout, initialCameraMode, totalGrowthUnits, world.totalGrowthUnits, careEvents.length]
   );
 
   // Memory focus helper
@@ -352,15 +385,53 @@ export function GardenExplorer({
     zoomLimits,
   ]);
 
+  /**
+   * Resolves interaction input mode ("mouse" vs "touch") from a UI interaction event.
+   * If pointer type is unavailable, uses a documented conservative fallback appropriate to the platform.
+   */
+  const resolveInputMode = useCallback((nativeEvent?: any): GardenInputMode => {
+    if (nativeEvent) {
+      const pointerType = nativeEvent.pointerType;
+      if (pointerType === "mouse") return "mouse";
+      if (pointerType === "touch" || pointerType === "pen") return "touch";
+
+      const type = nativeEvent.type;
+      if (typeof type === "string") {
+        if (type.startsWith("mouse")) return "mouse";
+        if (type.startsWith("touch")) return "touch";
+      }
+
+      if (nativeEvent.touches?.length > 0 || nativeEvent.changedTouches?.length > 0) {
+        return "touch";
+      }
+    }
+
+    // Conservative platform fallback:
+    // On web, if running on a fine pointer device (desktop browser with mouse/trackpad), default to "mouse".
+    // On mobile touch platforms (iOS, Android), default to "touch" to ensure accessible targets.
+    if (Platform.OS === "web") {
+      if (
+        typeof window !== "undefined" &&
+        window.matchMedia &&
+        window.matchMedia("(pointer: fine)").matches
+      ) {
+        return "mouse";
+      }
+      return "mouse";
+    }
+    return "touch";
+  }, []);
+
   // Screen tap handler (distinguishing drags from taps via canonical threshold)
   const handleScreenTap = useCallback(
-    (screenX: number, screenY: number) => {
+    (screenX: number, screenY: number, inputMode?: GardenInputMode) => {
+      const mode = inputMode ?? resolveInputMode();
       const hitNode = resolveNodeAtScreenCoordinate(
         { x: screenX, y: screenY },
         presentationWorld,
         cameraStateRef.current,
         viewport,
-        22
+        { inputMode: mode }
       );
       setSelectedNode(hitNode);
       if (hitNode?.isEarned) {
@@ -385,7 +456,7 @@ export function GardenExplorer({
         setCameraMode("explore");
       }
     },
-    [presentationWorld, viewport, explorableMemories]
+    [presentationWorld, viewport, explorableMemories, resolveInputMode]
   );
 
   // PanResponder for mobile 1-finger pan and pointer drag with unified threshold
@@ -420,7 +491,8 @@ export function GardenExplorer({
           if (!isDraggingRef.current && dist < CANONICAL_DRAG_THRESHOLD_PX) {
             const locX = e.nativeEvent.locationX;
             const locY = e.nativeEvent.locationY;
-            handleScreenTap(locX, locY);
+            const inputMode = resolveInputMode(e.nativeEvent);
+            handleScreenTap(locX, locY, inputMode);
           }
           dragStartCamera.current = null;
           isDraggingRef.current = false;
@@ -512,15 +584,18 @@ export function GardenExplorer({
     setCameraMode("overview");
   }, [viewport]);
 
-  // Inspect plant at permanent planting anchor without altering object world position or depth
-  const handleInspectPlant = useCallback(() => {
-    setCameraMode("explore");
+  // Focus camera on plant at permanent planting anchor without altering object world position or depth
+  const handleFocusPlant = useCallback(() => {
     setSelectedNode(null);
     setSelectedMemoryIndex(-1);
-    const subphase = resolveLifecycleVisualPhase(
-      totalGrowthUnits ?? world.totalGrowthUnits ?? 0,
-      careEvents.length
-    );
+    if (cameraMode === "plant_focus") {
+      handleResetView();
+      return;
+    }
+    setCameraMode("plant_focus");
+    const subphase = calculateAuthoritativeFoundation(
+      careEvents.length > 0 ? careEvents : (totalGrowthUnits ?? world.totalGrowthUnits ?? 0)
+    ).subphaseKey;
     const inspectCam = resolvePlantInspectionCamera(
       subphase,
       viewport,
@@ -534,7 +609,8 @@ export function GardenExplorer({
       viewportWidth: viewport.width,
       viewportHeight: viewport.height,
     });
-  }, [viewport, zoomLimits, totalGrowthUnits, world.totalGrowthUnits, careEvents.length]);
+  }, [cameraMode, handleResetView, viewport, zoomLimits, totalGrowthUnits, world.totalGrowthUnits, careEvents.length]);
+  const handleInspectPlant = handleFocusPlant;
 
   // Filter available scenic regions
   const availableRegions = useMemo(() => {
@@ -668,14 +744,19 @@ export function GardenExplorer({
               { backgroundColor: isLight ? "#FFFFFF" : "#2E2436", borderColor: cardBorder },
               pressed && styles.buttonPressed,
             ]}
-            onPress={handleInspectPlant}
+            onPress={handleFocusPlant}
             focusable={true}
             accessibilityRole="button"
-            accessibilityLabel="Inspect plant"
-            accessibilityHint="Zooms camera in to inspect the living plant at its permanent planting anchor"
+            accessibilityLabel={
+              cameraMode === "plant_focus"
+                ? "Return camera to the clearing overview"
+                : "Focus camera on your plant"
+            }
             hitSlop={8}
           >
-            <Text style={[styles.resetLabel, { color: theme.primaryAccent }]}>Inspect</Text>
+            <Text style={[styles.resetLabel, { color: theme.primaryAccent }]}>
+              {cameraMode === "plant_focus" ? "Back to Overview" : "Focus Plant"}
+            </Text>
           </Pressable>
 
           <Pressable
@@ -687,8 +768,7 @@ export function GardenExplorer({
             onPress={handleResetView}
             focusable={true}
             accessibilityRole="button"
-            accessibilityLabel="Reset garden view"
-            accessibilityHint="Returns camera to fit entire garden"
+            accessibilityLabel="Reset garden camera"
             hitSlop={8}
           >
             <Text style={[styles.resetLabel, { color: theme.primaryAccent }]}>Reset</Text>

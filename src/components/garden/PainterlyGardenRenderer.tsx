@@ -175,7 +175,11 @@ export function PainterlyGardenRenderer({
   const mvpFoundationPresentation = useMemo(
     () =>
       resolveMvpFoundationPresentation(
-        careEvents && careEvents.length > 0 ? careEvents : totalGrowthUnits,
+        typeof totalGrowthUnits === "number"
+          ? totalGrowthUnits
+          : careEvents && careEvents.length > 0
+          ? careEvents
+          : 0,
         careGrowthUnits,
         timeGrowthUnits
       ),
@@ -184,7 +188,11 @@ export function PainterlyGardenRenderer({
   const mvpFoundationUnits = useMemo(
     () =>
       resolveMvpFoundationUnits(
-        careEvents && careEvents.length > 0 ? careEvents : totalGrowthUnits,
+        typeof totalGrowthUnits === "number"
+          ? totalGrowthUnits
+          : careEvents && careEvents.length > 0
+          ? careEvents
+          : 0,
         careGrowthUnits,
         timeGrowthUnits
       ),
@@ -342,7 +350,24 @@ export function PainterlyGardenRenderer({
       )
     );
     if (foundationMarker) {
-      return { cx: foundationMarker.x, cy: foundationMarker.y, r: 8 };
+      let kind: "oak_leaf" | "acorn" | "moss" | "flower" | "light_mote" | "generic" = "generic";
+      if (foundationMarker.visualKind === "sapling_leaf" || foundationMarker.visualKind === "woodland_leaf") {
+        kind = "oak_leaf";
+      } else if (foundationMarker.visualKind === "acorn") {
+        kind = "acorn";
+      } else if (foundationMarker.visualKind === "moss") {
+        kind = "moss";
+      } else if (foundationMarker.visualKind === "light_mote") {
+        kind = "light_mote";
+      }
+      return {
+        cx: foundationMarker.x,
+        cy: foundationMarker.y,
+        r: Math.min(7.0, Math.max(3.5, 3.8 * foundationMarker.scale)),
+        kind,
+        rotation: foundationMarker.rotation,
+        scale: foundationMarker.scale,
+      };
     }
     const baseBounds = resolveFeatureBoundsFromScene(scene, highlightFeatureId);
     if (!baseBounds) return null;
@@ -351,6 +376,7 @@ export function PainterlyGardenRenderer({
     let role = "blossom";
     let attachmentTarget: "canopy" | "root" | "terrain" | undefined;
     let variant: string | undefined;
+    let kind: "oak_leaf" | "acorn" | "moss" | "flower" | "light_mote" | "generic" = "generic";
 
     const blossomMatch = scene.blossoms?.find((b) => isMatchingFeatureId(b.id, highlightFeatureId));
     const canopyMatch = scene.canopyDetails?.find((c) => isMatchingFeatureId(c.id, highlightFeatureId));
@@ -360,19 +386,23 @@ export function PainterlyGardenRenderer({
     if (blossomMatch) {
       role = "blossom";
       attachmentTarget = "canopy";
+      kind = "flower";
     } else if (canopyMatch) {
       role = "foliage_shoot";
       attachmentTarget = "canopy";
       variant = (canopyMatch as any).variant;
+      kind = "oak_leaf";
     } else if (groundMatch) {
       if (groundMatch.type === "moss") {
         role = "root_flora";
         attachmentTarget = "root";
         variant = "moss_cushion";
+        kind = "moss";
       } else {
         role = "ground_flora";
         attachmentTarget = "terrain";
         variant = (groundMatch as any).variant;
+        kind = "flower";
       }
     } else if (habitatMatch) {
       if (habitatMatch.kind === "bird-perch" || habitatMatch.kind === "nest-material") {
@@ -384,6 +414,13 @@ export function PainterlyGardenRenderer({
           (habitatMatch as any).attachmentTarget ??
           (habitatMatch.cy < 260 ? "canopy" : "terrain");
       }
+      kind = "generic";
+    } else if (highlightFeatureId.includes("leaf") || highlightFeatureId.includes("shoot")) {
+      kind = "oak_leaf";
+    } else if (highlightFeatureId.includes("moss")) {
+      kind = "moss";
+    } else if (highlightFeatureId.includes("stone") || highlightFeatureId.includes("acorn")) {
+      kind = "acorn";
     }
 
     const geom = resolveFeaturePresentationGeometry({
@@ -401,7 +438,9 @@ export function PainterlyGardenRenderer({
     return {
       cx: geom.x,
       cy: geom.y,
-      r: baseBounds.r * geom.scale,
+      r: Math.min(7.0, Math.max(3.5, baseBounds.r * geom.scale)),
+      kind,
+      scale: geom.scale,
     };
   }, [
     scene,
@@ -932,7 +971,7 @@ export function PainterlyGardenRenderer({
                   .filter((lm) => mvpFoundationUnits >= lm.minUnitsToReveal)
                   .map((lm) => (
                     <G key={lm.id}>
-                      <Circle cx={lm.x} cy={lm.y} r={lm.r * 2.8} fill="#EBD998" opacity={0.06 * lm.intensity} />
+                      <Circle cx={lm.x} cy={lm.y} r={lm.r * 1.5} fill="#EBD998" opacity={0.2} />
                       <Circle cx={lm.x} cy={lm.y} r={lm.r} fill="#EEDCA2" opacity={0.75 * lm.intensity} />
                     </G>
                   ))}
@@ -974,6 +1013,10 @@ export function PainterlyGardenRenderer({
                   const tone = leafPalette[Math.abs(Math.round(marker.scale * 100)) % leafPalette.length];
                   const mx = marker.x;
                   const my = marker.y;
+                  const tipY = my - 5.5 * marker.scale;
+                  const leafD = createOakLobedLeafD(mx, my, mx, tipY, 0.35);
+                  const veinD = createLeafVeinD(mx, my, mx, tipY, 0, -1, false);
+
                   return (
                     <G
                       key={marker.semanticKey}
@@ -981,30 +1024,35 @@ export function PainterlyGardenRenderer({
                     >
                       {/* Short petiole connecting twig node to leaf blade base */}
                       <Path
-                        d={`M ${mx},${my} L ${mx},${my - 1.0}`}
+                        d={`M ${mx},${my} L ${mx},${my - 1.0 * marker.scale}`}
                         stroke="#4B3A26"
-                        strokeWidth={0.32}
+                        strokeWidth={0.35}
                         strokeLinecap="round"
                       />
-                      {/* Realistic juvenile English oak leaf blade (~4.8px wide x 4.2px high, shallow rounded lobes) */}
+                      {/* Authentic juvenile English oak lobed leaf silhouette with petiole & rounded lobes */}
                       <Path
-                        d={`M ${mx},${my - 1.0}
-                           C ${mx - 1.2},${my - 1.4} ${mx - 2.2},${my - 2.0} ${mx - 2.0},${my - 2.8}
-                           C ${mx - 1.5},${my - 3.4} ${mx - 2.4},${my - 4.0} ${mx - 1.8},${my - 4.6}
-                           C ${mx - 1.0},${my - 5.0} ${mx - 0.4},${my - 4.9} ${mx},${my - 5.2}
-                           C ${mx + 0.4},${my - 4.9} ${mx + 1.0},${my - 5.0} ${mx + 1.8},${my - 4.6}
-                           C ${mx + 2.4},${my - 4.0} ${mx + 1.5},${my - 3.4} ${mx + 2.0},${my - 2.8}
-                           C ${mx + 2.2},${my - 2.0} ${mx + 1.2},${my - 1.4} ${mx},${my - 1.0} Z`}
+                        d={leafD}
                         fill={tone.fill}
                         stroke={tone.stroke}
-                        strokeWidth={0.28}
+                        strokeWidth={0.3}
                       />
                       {/* Fine central vein */}
                       <Path
-                        d={`M ${mx},${my - 1.0} L ${mx},${my - 4.8}`}
+                        d={veinD}
                         stroke={tone.vein}
+                        strokeWidth={0.28}
+                        strokeLinecap="round"
+                        fill="none"
+                        opacity={0.85}
+                      />
+                      {/* Restrained memory accent (subtle golden vein highlight) */}
+                      <Path
+                        d={`M ${mx},${my - 1.2 * marker.scale} L ${mx},${my - 4.2 * marker.scale}`}
+                        stroke="#F5DF9E"
                         strokeWidth={0.22}
                         strokeLinecap="round"
+                        fill="none"
+                        opacity={0.7}
                       />
                     </G>
                   );
@@ -1024,27 +1072,52 @@ export function PainterlyGardenRenderer({
                 if (marker.visualKind === "light_mote") {
                   return (
                     <G key={marker.semanticKey}>
-                      <Circle cx={marker.x} cy={marker.y} r={6 * marker.scale} fill="#E9D88C" opacity={0.08} />
-                      <Circle cx={marker.x} cy={marker.y} r={1.8 * marker.scale} fill="#E6D07A" opacity={0.82} />
+                      <Circle cx={marker.x} cy={marker.y} r={2.8 * marker.scale} fill="#EBD998" opacity={0.25} />
+                      <Circle cx={marker.x} cy={marker.y} r={1.6 * marker.scale} fill="#FFF2B2" opacity={0.88} />
                     </G>
                   );
                 }
 
-                return (
-                  <G key={marker.semanticKey}>
-                    <Path
-                      d={`M ${marker.x - 1},${marker.y + 2} C ${marker.x - 7},${marker.y} ${marker.x - 8},${marker.y - 5} ${marker.x - 2},${marker.y - 7} C ${marker.x + 5},${marker.y - 5} ${marker.x + 6},${marker.y} ${marker.x - 1},${marker.y + 2} Z`}
-                      fill="#927B4E"
-                      stroke="#B7A36D"
-                      strokeWidth={0.7}
-                    />
-                    <Path
-                      d={`M ${marker.x - 1},${marker.y + 1} L ${marker.x - 2},${marker.y - 6}`}
-                      stroke="#5F5137"
-                      strokeWidth={0.7}
-                    />
-                  </G>
-                );
+                if (marker.visualKind === "woodland_leaf") {
+                  const mx = marker.x;
+                  const my = marker.y;
+                  const tipY = my - 4.8 * marker.scale;
+                  const leafD = createOakLobedLeafD(mx, my, mx, tipY, 0.35);
+                  const veinD = createLeafVeinD(mx, my, mx, tipY, 0, -1, false);
+
+                  return (
+                    <G
+                      key={marker.semanticKey}
+                      transform={`rotate(${marker.rotation} ${mx} ${my})`}
+                    >
+                      {/* Short petiole */}
+                      <Path
+                        d={`M ${mx},${my} L ${mx},${my - 0.9 * marker.scale}`}
+                        stroke="#4E3B27"
+                        strokeWidth={0.32}
+                        strokeLinecap="round"
+                      />
+                      {/* Fallen English oak leaf with shallow rounded lobes in warm earth tone */}
+                      <Path
+                        d={leafD}
+                        fill="#8A7348"
+                        stroke="#5C4B2E"
+                        strokeWidth={0.28}
+                      />
+                      {/* Fine central vein */}
+                      <Path
+                        d={veinD}
+                        stroke="#5A4729"
+                        strokeWidth={0.24}
+                        strokeLinecap="round"
+                        fill="none"
+                        opacity={0.8}
+                      />
+                    </G>
+                  );
+                }
+
+                return null;
               })}
             </G>
 
@@ -1410,20 +1483,108 @@ export function PainterlyGardenRenderer({
             )}
             </G>}
 
-            {/* 3G. Accessible Highlight Ring / Halo */}
+            {/* 3G. Feature-Specific Tightly Fitted Selection Indicator */}
             {highlightCoord && (
               <G id="painterly-story-reveal-halo">
-                <Circle
-                  cx={highlightCoord.cx}
-                  cy={highlightCoord.cy}
-                  r={Math.max(16, highlightCoord.r * 1.8)}
-                  stroke={scene.palette.blossomCenter || "#D4AF37"}
-                  strokeWidth={1.5}
-                  strokeDasharray="3,3"
-                  fill={scene.palette.blossomSecondary || "#FFFFFF"}
-                  fillOpacity={0.22}
-                  opacity={0.85}
-                />
+                {highlightCoord.kind === "oak_leaf" ? (
+                  <G transform={highlightCoord.rotation !== undefined ? `rotate(${highlightCoord.rotation} ${highlightCoord.cx} ${highlightCoord.cy})` : undefined}>
+                    {/* Subtle outline tightly fitted to leaf blade (max 2-3px beyond leaf bounds) */}
+                    <Path
+                      d={createOakLobedLeafD(
+                        highlightCoord.cx,
+                        highlightCoord.cy,
+                        highlightCoord.cx,
+                        highlightCoord.cy - 6.2 * (highlightCoord.scale ?? 1.0),
+                        0.40
+                      )}
+                      stroke="#E6C875"
+                      strokeWidth={0.8}
+                      strokeDasharray="2,2"
+                      fill="none"
+                      opacity={0.85}
+                    />
+                    {/* Golden central vein accent */}
+                    <Path
+                      d={`M ${highlightCoord.cx},${highlightCoord.cy} L ${highlightCoord.cx},${(highlightCoord.cy - 5.5 * (highlightCoord.scale ?? 1.0)).toFixed(1)}`}
+                      stroke="#FFE899"
+                      strokeWidth={0.6}
+                      strokeLinecap="round"
+                      fill="none"
+                      opacity={0.9}
+                    />
+                  </G>
+                ) : highlightCoord.kind === "acorn" ? (
+                  /* Tight contour / ellipse for acorn or stone (max 2-3px beyond bounds) */
+                  <Ellipse
+                    cx={highlightCoord.cx}
+                    cy={highlightCoord.cy}
+                    rx={Math.min(7.0, 5.6 * (highlightCoord.scale ?? 1.0))}
+                    ry={Math.min(5.0, 3.8 * (highlightCoord.scale ?? 1.0))}
+                    stroke="#E6C875"
+                    strokeWidth={0.8}
+                    strokeDasharray="2,2"
+                    fill="#FFFFFF"
+                    fillOpacity={0.03}
+                    opacity={0.85}
+                  />
+                ) : highlightCoord.kind === "moss" ? (
+                  /* Subtle edge/cushion contour following moss cushion */
+                  <Ellipse
+                    cx={highlightCoord.cx}
+                    cy={highlightCoord.cy}
+                    rx={Math.min(8.0, 6.8 * (highlightCoord.scale ?? 1.0))}
+                    ry={Math.min(4.5, 3.2 * (highlightCoord.scale ?? 1.0))}
+                    stroke="#C4D882"
+                    strokeWidth={0.8}
+                    strokeDasharray="2,2"
+                    fill="#FFFFFF"
+                    fillOpacity={0.03}
+                    opacity={0.85}
+                  />
+                ) : highlightCoord.kind === "flower" ? (
+                  /* Restrained glow following flower head (no large circular disc) */
+                  <Circle
+                    cx={highlightCoord.cx}
+                    cy={highlightCoord.cy}
+                    r={Math.min(6.5, Math.max(3.5, highlightCoord.r))}
+                    stroke="#F5D061"
+                    strokeWidth={0.8}
+                    strokeDasharray="2,2"
+                    fill="#FFFFFF"
+                    fillOpacity={0.03}
+                    opacity={0.85}
+                  />
+                ) : highlightCoord.kind === "light_mote" ? (
+                  /* Slight brightness change only */
+                  <Circle
+                    cx={highlightCoord.cx}
+                    cy={highlightCoord.cy}
+                    r={Math.min(3.2, 2.2 * (highlightCoord.scale ?? 1.0))}
+                    stroke="#FFF8D6"
+                    strokeWidth={0.8}
+                    fill="#FFF8D6"
+                    fillOpacity={0.04}
+                    opacity={0.95}
+                  />
+                ) : (
+                  /* Generic Fallback Indicator:
+                     - Centred on exact rendered feature
+                     - Maximum radius 7 screen pixels (max diameter 14px)
+                     - Fill opacity <= 0.04
+                     - Thin stroke <= 1px
+                  */
+                  <Circle
+                    cx={highlightCoord.cx}
+                    cy={highlightCoord.cy}
+                    r={Math.min(7.0, Math.max(3.5, highlightCoord.r))}
+                    stroke={scene.palette.blossomCenter || "#E6C875"}
+                    strokeWidth={0.8}
+                    strokeDasharray="2,2"
+                    fill={scene.palette.blossomSecondary || "#FFFFFF"}
+                    fillOpacity={0.03}
+                    opacity={0.85}
+                  />
+                )}
               </G>
             )}
           </Svg>

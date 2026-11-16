@@ -62,6 +62,7 @@ import {
   resolveTreeStructurePlan,
   resolvePreviewMilestoneProgress,
   resolvePlantInspectionCamera,
+  calculateAuthoritativeFoundation,
 } from "@/lib/garden";
 import {
   type GardenCareEvent,
@@ -75,9 +76,9 @@ const BACKPLATE_ASSET = require("../../assets/garden/painterly/woodland-backplat
 
 const EARLY_LIFE_PREVIEW_UNITS: Record<EarlyLifeSubphaseKey, number> = {
   planted_acorn: 0,
-  emerging_shoot: 8,
-  small_seedling: 14,
-  small_sapling: 24,
+  emerging_shoot: 30,
+  small_seedling: 64,
+  small_sapling: 100,
 };
 
 // Realistic deterministic in-memory fixtures
@@ -153,13 +154,14 @@ const FOUNDATION_SLOT_CONFIGS: Record<
 
 const SCENARIOS = {
   zero_events: {
-    label: "Zero Events",
+    label: "Zero Events (Level 1 · 0/100)",
     events: [] as GardenCareEvent[],
     signals: { positiveMoments: 0, reconnections: 0, importantDates: 0 },
+    elapsedDays: 0,
     isResting: false,
   },
   one_good_moment: {
-    label: "1 Good Moment",
+    label: "1 Good Moment (Level 1 · 4/100)",
     events: [
       {
         id: "qa-ev-pos-1",
@@ -171,10 +173,11 @@ const SCENARIOS = {
       },
     ],
     signals: { positiveMoments: 1, reconnections: 0, importantDates: 0 },
+    elapsedDays: 4,
     isResting: false,
   },
   multiple_good_moments: {
-    label: "5 Good Moments",
+    label: "5 Good Moments (Level 1 · 18/100)",
     events: [
       {
         id: "qa-ev-pos-1",
@@ -218,12 +221,232 @@ const SCENARIOS = {
       },
     ],
     signals: { positiveMoments: 5, reconnections: 0, importantDates: 0 },
+    elapsedDays: 16,
+    isResting: false,
+  },
+  mvp_level_2_shoot: {
+    label: "MVP Level 2 Shoot (30/100 · 14 Care, 16 Time)",
+    events: [
+      {
+        id: "qa-l2-pos-1",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-06-01T10:00:00Z",
+        createdAt: "2026-06-01T10:00:00Z",
+        category: "appreciation",
+        displayTitle: "Morning Coffee on the Porch",
+      },
+      {
+        id: "qa-l2-pos-2",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-06-08T15:30:00Z",
+        createdAt: "2026-06-08T15:30:00Z",
+        category: "quality_time",
+        displayTitle: "Quiet Walk in the Woods",
+      },
+      {
+        id: "qa-l2-pos-3",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-06-15T19:00:00Z",
+        createdAt: "2026-06-15T19:00:00Z",
+        category: "affection",
+        displayTitle: "A Hug When It Was Needed",
+      },
+      {
+        id: "qa-l2-pos-4",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-06-22T12:00:00Z",
+        createdAt: "2026-06-22T12:00:00Z",
+        category: "support",
+        displayTitle: "Making Soup for Sick Partner",
+      },
+      {
+        id: "qa-l2-pos-5",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-06-29T20:30:00Z",
+        createdAt: "2026-06-29T20:30:00Z",
+        category: "playfulness",
+        displayTitle: "Dancing in the Kitchen",
+      },
+      {
+        id: "qa-l2-rec-1",
+        kind: "reconnection" as const,
+        occurredAt: "2026-07-04T16:00:00Z",
+        createdAt: "2026-07-04T16:00:00Z",
+        reconnected_at: "2026-07-04T16:00:00Z",
+        status: "reconnected",
+        category: "communication",
+        displayTitle: "Listening With Openness",
+      },
+    ],
+    signals: { positiveMoments: 5, reconnections: 1, importantDates: 0 },
+    elapsedDays: 32,
+    isResting: false,
+  },
+  mvp_level_3_seedling: {
+    label: "MVP Level 3 Seedling (64/100 · 44 Care, 20 Time)",
+    events: [
+      {
+        id: "qa-l3-pos-1",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-05-15T09:00:00Z",
+        createdAt: "2026-05-15T09:00:00Z",
+        category: "appreciation",
+        displayTitle: "Morning Coffee on the Porch",
+      },
+      {
+        id: "qa-l3-pos-2",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-05-20T14:30:00Z",
+        createdAt: "2026-05-20T14:30:00Z",
+        category: "quality_time",
+        displayTitle: "Woodland Walk Among Ferns",
+      },
+      {
+        id: "qa-l3-pos-3",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-05-25T18:00:00Z",
+        createdAt: "2026-05-25T18:00:00Z",
+        category: "affection",
+        displayTitle: "A Gentle Embrace",
+      },
+      {
+        id: "qa-l3-pos-4",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-05-30T12:00:00Z",
+        createdAt: "2026-05-30T12:00:00Z",
+        category: "support",
+        displayTitle: "Cooking Nourishing Soup",
+      },
+      {
+        id: "qa-l3-pos-5",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-06-04T20:00:00Z",
+        createdAt: "2026-06-04T20:00:00Z",
+        category: "playfulness",
+        displayTitle: "Dancing in the Kitchen",
+      },
+      {
+        id: "qa-l3-pos-6",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-06-09T08:30:00Z",
+        createdAt: "2026-06-09T08:30:00Z",
+        category: "appreciation",
+        displayTitle: "Handwritten Note on Desk",
+      },
+      {
+        id: "qa-l3-pos-7",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-06-14T21:30:00Z",
+        createdAt: "2026-06-14T21:30:00Z",
+        category: "quality_time",
+        displayTitle: "Porch Stargazing",
+      },
+      {
+        id: "qa-l3-pos-8",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-06-19T11:00:00Z",
+        createdAt: "2026-06-19T11:00:00Z",
+        category: "affection",
+        displayTitle: "Holding Hands on the Drive",
+      },
+      {
+        id: "qa-l3-pos-9",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-06-24T16:00:00Z",
+        createdAt: "2026-06-24T16:00:00Z",
+        category: "support",
+        displayTitle: "Running Errands in the Rain",
+      },
+      {
+        id: "qa-l3-pos-10",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-06-29T17:30:00Z",
+        createdAt: "2026-06-29T17:30:00Z",
+        category: "playfulness",
+        displayTitle: "Silly Bookstore Scavenger Hunt",
+      },
+      {
+        id: "qa-l3-pos-11",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-07-04T10:00:00Z",
+        createdAt: "2026-07-04T10:00:00Z",
+        category: "appreciation",
+        displayTitle: "Complimenting Thoughtfulness",
+      },
+      {
+        id: "qa-l3-pos-12",
+        kind: "positive_moment" as const,
+        occurredAt: "2026-07-09T15:00:00Z",
+        createdAt: "2026-07-09T15:00:00Z",
+        category: "quality_time",
+        displayTitle: "Quiet Afternoon Reading",
+      },
+      {
+        id: "qa-l3-rec-1",
+        kind: "reconnection" as const,
+        occurredAt: "2026-05-28T16:00:00Z",
+        createdAt: "2026-05-28T16:00:00Z",
+        reconnected_at: "2026-05-28T16:00:00Z",
+        status: "reconnected",
+        category: "communication",
+        displayTitle: "Listening With Openness",
+      },
+      {
+        id: "qa-l3-rec-2",
+        kind: "reconnection" as const,
+        occurredAt: "2026-06-12T18:00:00Z",
+        createdAt: "2026-06-12T18:00:00Z",
+        reconnected_at: "2026-06-12T18:00:00Z",
+        status: "reconnected",
+        category: "forgiveness",
+        displayTitle: "Clearing the Misunderstanding",
+      },
+      {
+        id: "qa-l3-rec-3",
+        kind: "reconnection" as const,
+        occurredAt: "2026-06-26T20:00:00Z",
+        createdAt: "2026-06-26T20:00:00Z",
+        reconnected_at: "2026-06-26T20:00:00Z",
+        status: "reconnected",
+        category: "space",
+        displayTitle: "Gentle Check-in After Space",
+      },
+      {
+        id: "qa-l3-rec-4",
+        kind: "reconnection" as const,
+        occurredAt: "2026-07-07T14:00:00Z",
+        createdAt: "2026-07-07T14:00:00Z",
+        reconnected_at: "2026-07-07T14:00:00Z",
+        status: "reconnected",
+        category: "intimacy",
+        displayTitle: "Honest Vulnerability Shared",
+      },
+      {
+        id: "qa-l3-date-1",
+        kind: "important_date" as const,
+        occurredAt: "2026-05-18T10:00:00Z",
+        createdAt: "2026-05-18T10:00:00Z",
+        category: "anniversary",
+        displayTitle: "First Meeting Anniversary",
+      },
+      {
+        id: "qa-l3-date-2",
+        kind: "important_date" as const,
+        occurredAt: "2026-06-21T09:00:00Z",
+        createdAt: "2026-06-21T09:00:00Z",
+        category: "celebration",
+        displayTitle: "Summer Solstice Clearing Walk",
+      },
+    ],
+    signals: { positiveMoments: 12, reconnections: 4, importantDates: 2 },
+    elapsedDays: 40,
     isResting: false,
   },
   unresolved_friction: {
     label: "Unresolved Friction (Resting)",
     events: [] as GardenCareEvent[],
     signals: { positiveMoments: 0, reconnections: 0, importantDates: 0 },
+    elapsedDays: 20,
     isResting: true,
   },
   completed_reconnection: {
@@ -234,11 +457,14 @@ const SCENARIOS = {
         kind: "reconnection" as const,
         occurredAt: "2026-07-04T16:00:00Z",
         createdAt: "2026-07-04T16:00:00Z",
+        reconnected_at: "2026-07-04T16:00:00Z",
+        status: "reconnected",
         category: "communication",
         displayTitle: "Listening With Openness",
       },
     ],
     signals: { positiveMoments: 0, reconnections: 1, importantDates: 0 },
+    elapsedDays: 12,
     isResting: false,
   },
   important_date: {
@@ -254,6 +480,7 @@ const SCENARIOS = {
       },
     ],
     signals: { positiveMoments: 0, reconnections: 0, importantDates: 1 },
+    elapsedDays: 20,
     isResting: false,
   },
   mixed_history: {
@@ -272,6 +499,8 @@ const SCENARIOS = {
         kind: "reconnection" as const,
         occurredAt: "2026-06-01T14:00:00Z",
         createdAt: "2026-06-01T14:00:00Z",
+        reconnected_at: "2026-06-01T14:00:00Z",
+        status: "reconnected",
         category: "communication",
         displayTitle: "Healing Conversation",
       },
@@ -293,6 +522,7 @@ const SCENARIOS = {
       },
     ],
     signals: { positiveMoments: 6, reconnections: 2, importantDates: 1 },
+    elapsedDays: 28,
     isResting: false,
     hideOverlays: false,
   },
@@ -300,6 +530,7 @@ const SCENARIOS = {
     label: "Structure Calibration (No Overlays)",
     events: [] as GardenCareEvent[],
     signals: { positiveMoments: 0, reconnections: 0, importantDates: 0 },
+    elapsedDays: 0,
     isResting: false,
     hideOverlays: true,
   },
@@ -323,6 +554,8 @@ export default function GardenVisualQARoute() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     tab?: string;
+    stage?: string;
+    couple?: string;
     subphase?: string;
     camera?: string;
     guides?: string;
@@ -374,7 +607,17 @@ export default function GardenVisualQARoute() {
 
   // Simulation Lab Interactive Controls
   const [stageKey, setStageKey] =
-    useState<CanonicalStageKeyOrBeginning>("branching_out");
+    useState<CanonicalStageKeyOrBeginning>(
+      params.stage === "beginning" ||
+      params.stage === "first_seedling" ||
+      params.stage === "tender_sapling" ||
+      params.stage === "branching_out" ||
+      params.stage === "leafy_canopy" ||
+      params.stage === "rooted_flourishing" ||
+      params.stage === "garden_in_bloom"
+        ? (params.stage as CanonicalStageKeyOrBeginning)
+        : "branching_out"
+    );
   const [rendererMode, setRendererMode] =
     useState<GardenRendererMode>("painterly_when_eligible");
   const [tone, setTone] = useState<GardenAtmosphereTone>("calm_light");
@@ -396,48 +639,100 @@ export default function GardenVisualQARoute() {
   const activeViewport = VIEWPORT_PRESETS[selectedViewportIdx];
   const activeSlot = FOUNDATION_SLOT_CONFIGS[selectedSlotKey];
 
-  // Derive canonical growth units matching the selected stage for simulation mode
-  const growth = useMemo(() => {
+  // Authoritative Foundation Calculation for the active scenario
+  const scenarioFoundation = useMemo(() => {
+    return calculateAuthoritativeFoundation(
+      scenario.events,
+      (scenario as any).elapsedDays ?? 0
+    );
+  }, [scenario]);
+
+  // Default canonical stage growth parameters strictly enforcing supportingTimeContribution <= 20
+  const stageDefaultGrowth = useMemo(() => {
     switch (stageKey) {
       case "beginning":
         return { total: 0, care: 0, time: 0 };
       case "first_seedling":
-        return { total: 8, care: 3, time: 5 };
+        return { total: 8, care: 4, time: 4 };
       case "tender_sapling":
-        return { total: 24, care: 8, time: 16 };
+        return { total: 24, care: 12, time: 12 };
       case "branching_out":
-        return { total: 44, care: 14, time: 30 };
+        return { total: 44, care: 24, time: 20 };
       case "leafy_canopy":
-        return { total: 64, care: 22, time: 42 };
+        return { total: 64, care: 44, time: 20 };
       case "rooted_flourishing":
-        return { total: 82, care: 34, time: 48 };
+        return { total: 82, care: 62, time: 20 };
       case "garden_in_bloom":
       default:
-        return { total: 100, care: 40, time: 60 };
+        return { total: 100, care: 80, time: 20 };
     }
   }, [stageKey]);
+
+  // True if a scenario is explicitly requested or active
+  const isScenarioActive =
+    params.scenario !== undefined ||
+    scenarioKey === "mvp_level_2_shoot" ||
+    scenarioKey === "mvp_level_3_seedling" ||
+    scenario.events.length > 0;
+
+  const growth = useMemo(() => {
+    if (isScenarioActive) {
+      return {
+        total: scenarioFoundation.totalFoundationProgress,
+        care: scenarioFoundation.rawCareContribution,
+        time: scenarioFoundation.supportingTimeContribution,
+      };
+    }
+    return stageDefaultGrowth;
+  }, [isScenarioActive, scenarioFoundation, stageDefaultGrowth]);
+
+  const authoritativeFoundation = useMemo(() => {
+    if (isScenarioActive) {
+      return scenarioFoundation;
+    }
+    return calculateAuthoritativeFoundation(growth.total, growth.care, growth.time);
+  }, [isScenarioActive, scenarioFoundation, growth]);
+
+  // Diagnostic audit: detect if legacy query param stage conflicts with authoritative MVP foundation
+  const legacyStageConflict = useMemo(() => {
+    if (!params.stage) return null;
+    const requestedLegacy = params.stage as CanonicalStageKeyOrBeginning;
+    const calculatedLegacy = getGardenStage(authoritativeFoundation.totalFoundationProgress).key;
+    if (requestedLegacy !== calculatedLegacy) {
+      return {
+        requested: requestedLegacy,
+        calculatedLegacy,
+        totalUnits: authoritativeFoundation.totalFoundationProgress,
+        mvpStage: authoritativeFoundation.currentStage,
+        mvpLevel: authoritativeFoundation.currentLevel,
+      };
+    }
+    return null;
+  }, [params.stage, authoritativeFoundation]);
 
   // Compute live render plan for simulation
   const simulationRenderPlan = useMemo(() => {
     return resolveGardenRenderPlan({
-      stageKey,
+      stageKey: getGardenStage(growth.total).key,
       rendererMode,
       availableAssets: [
         "painterly-oak-mature-v1",
         "painterly-oak-structure-mature-v1",
       ],
     });
-  }, [stageKey, rendererMode]);
+  }, [growth.total, rendererMode]);
 
   // Compute presentation parameters for simulation
   const presentation: GardenStructuralPresentation = useMemo(() => {
-    return getGardenStructuralPresentation(tone, stageKey, effectiveTheme);
-  }, [tone, stageKey, effectiveTheme]);
+    return getGardenStructuralPresentation(tone, getGardenStage(growth.total).key, effectiveTheme);
+  }, [tone, growth.total, effectiveTheme]);
 
   // Compute GardenWorld for Explore mode
   const world: GardenWorld = useMemo(() => {
+    const coupleSeed = params.couple || FIXTURE_SEED;
+    const coupleId = params.couple || FIXTURE_COUPLE_ID;
     const scene = generateGardenSVGScene(
-      FIXTURE_SEED,
+      coupleSeed,
       growth.total,
       growth.care,
       scenario.isResting,
@@ -446,8 +741,8 @@ export default function GardenVisualQARoute() {
       scenario.events
     );
     return buildGardenWorld(scene, {
-      coupleId: FIXTURE_COUPLE_ID,
-      seedString: FIXTURE_SEED,
+      coupleId,
+      seedString: coupleSeed,
       totalGrowthUnits: growth.total,
       careGrowthUnits: growth.care,
       timeGrowthUnits: growth.time,
@@ -456,7 +751,7 @@ export default function GardenVisualQARoute() {
       careEvents: scenario.events,
       careSignals: scenario.signals,
     });
-  }, [growth, scenario, effectiveTheme]);
+  }, [growth, scenario, effectiveTheme, params.couple]);
 
   // Tree structure plan for the selected foundation slot
   const slotStructurePlan = useMemo(() => {
@@ -500,45 +795,27 @@ export default function GardenVisualQARoute() {
   const earlyLifeGrowth = useMemo(() => {
     if (useSimulatedGrowth) {
       const clamped = Math.max(0, Math.min(100, simulatedUnits));
+      const calc = calculateAuthoritativeFoundation(clamped);
       return {
-        total: clamped,
-        care: earlyLifeShowEarnedFeature ? Math.min(clamped, 6) : 0,
-        time: earlyLifeShowEarnedFeature ? Math.max(0, clamped - 6) : clamped,
-        stageKey: effectiveEarlyLifeSubphase === "planted_acorn"
-          ? ("beginning" as const)
-          : effectiveEarlyLifeSubphase === "small_sapling"
-          ? ("tender_sapling" as const)
-          : ("first_seedling" as const),
+        total: calc.totalFoundationProgress,
+        care: earlyLifeShowEarnedFeature ? calc.rawCareContribution : 0,
+        time: earlyLifeShowEarnedFeature
+          ? calc.supportingTimeContribution
+          : Math.min(20, calc.totalFoundationProgress),
+        stageKey: getGardenStage(calc.totalFoundationProgress).key,
       };
     }
-    switch (earlyLifeSubphase) {
-      case "planted_acorn":
-        return { total: 0, care: 0, time: 0, stageKey: "beginning" as const };
-      case "emerging_shoot":
-        return {
-          total: 8,
-          care: earlyLifeShowEarnedFeature ? 6 : 0,
-          time: 2,
-          stageKey: "first_seedling" as const,
-        };
-      case "small_seedling":
-        return {
-          total: 14,
-          care: earlyLifeShowEarnedFeature ? 10 : 0,
-          time: 4,
-          stageKey: "first_seedling" as const,
-        };
-      case "small_sapling":
-        return {
-          total: 24,
-          care: earlyLifeShowEarnedFeature ? 14 : 0,
-          time: 10,
-          stageKey: "tender_sapling" as const,
-        };
-      default:
-        return { total: 0, care: 0, time: 0, stageKey: "beginning" as const };
-    }
-  }, [useSimulatedGrowth, simulatedUnits, earlyLifeSubphase, effectiveEarlyLifeSubphase, earlyLifeShowEarnedFeature]);
+    const targetUnits = EARLY_LIFE_PREVIEW_UNITS[earlyLifeSubphase];
+    const calc = calculateAuthoritativeFoundation(targetUnits);
+    return {
+      total: calc.totalFoundationProgress,
+      care: earlyLifeShowEarnedFeature ? calc.rawCareContribution : 0,
+      time: earlyLifeShowEarnedFeature
+        ? calc.supportingTimeContribution
+        : Math.min(20, calc.totalFoundationProgress),
+      stageKey: getGardenStage(calc.totalFoundationProgress).key,
+    };
+  }, [useSimulatedGrowth, simulatedUnits, earlyLifeSubphase, earlyLifeShowEarnedFeature]);
 
   const earlyLifeCamera = useMemo(() => {
     if (earlyLifeCameraMode === "inspect") {
@@ -931,7 +1208,7 @@ export default function GardenVisualQARoute() {
                 {activeSlot.status === "approved" || activeSlot.status === "development_preview" ? (
                   <View style={{ flex: 1, position: "relative" }}>
                     <GardenVisualizer
-                      seedString={FIXTURE_SEED}
+                      seedString={params.couple || FIXTURE_SEED}
                       totalGrowthUnits={activeSlot.stageKey === "branching_out" ? 42 : 100}
                       careGrowthUnits={activeSlot.stageKey === "branching_out" ? 18 : 40}
                       timeGrowthUnits={activeSlot.stageKey === "branching_out" ? 24 : 60}
@@ -1234,34 +1511,71 @@ export default function GardenVisualQARoute() {
             >
               <Text style={styles.cardHeading}>ACTIVE SIMULATION PLAN</Text>
               <View style={styles.statusGrid}>
-                <Text style={styles.statusLabel}>Canonical Stage:</Text>
-                <Text style={styles.statusValue}>{stageKey}</Text>
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Authoritative Progress:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
+                  {authoritativeFoundation.totalFoundationProgress.toFixed(1)} / 100 ({authoritativeFoundation.overallDisplayPercent}%)
+                </Text>
 
-                <Text style={styles.statusLabel}>Environment Renderer:</Text>
-                <Text style={styles.statusValue}>
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>MVP Visual Stage:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
+                  {authoritativeFoundation.levelLabel} · {authoritativeFoundation.currentStage} ({authoritativeFoundation.subphaseKey})
+                </Text>
+
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Care / Time Breakdown:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
+                  Care: {authoritativeFoundation.rawCareContribution.toFixed(1)} | Time: {authoritativeFoundation.supportingTimeContribution.toFixed(1)} (max 20)
+                </Text>
+
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Underlying Legacy Stage:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>{stageKey} (diagnostic only)</Text>
+
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Environment Renderer:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
                   {simulationRenderPlan.environmentRenderer}
                 </Text>
 
-                <Text style={styles.statusLabel}>Structure Renderer:</Text>
-                <Text style={styles.statusValue}>
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Structure Renderer:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
                   {simulationRenderPlan.structureRenderer === "painterly_asset"
                     ? "painterly_living_tree"
                     : "procedural (honest fallback)"}
                 </Text>
 
-                <Text style={styles.statusLabel}>Fallback Reason:</Text>
-                <Text style={styles.statusValue}>
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Fallback Reason:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
                   {simulationRenderPlan.fallbackReason ??
                     "None (verified painterly asset active)"}
                 </Text>
 
-                <Text style={styles.statusLabel}>Structure Scale / Opacity:</Text>
-                <Text style={styles.statusValue}>
+                <Text style={[styles.statusLabel, { color: isLight ? "#6B7280" : "#C4B5D0" }]}>Structure Scale / Opacity:</Text>
+                <Text style={[styles.statusValue, { color: isLight ? "#1F2937" : "#F7F1FA" }]}>
                   {presentation.structureScale.toFixed(2)}x /{" "}
                   {(presentation.structureOpacity * 100).toFixed(0)}%
                 </Text>
               </View>
             </View>
+
+            {legacyStageConflict && (
+              <View
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: isLight ? "#FFFBEB" : "#38290E",
+                    borderColor: "#D97706",
+                    borderWidth: 1.5,
+                  },
+                ]}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "700", color: "#B45309", marginBottom: 4 }}>
+                  ⚠️ DIAGNOSTIC NOTICE: LEGACY STAGE OVERRIDE REJECTED
+                </Text>
+                <Text style={{ fontSize: 12, color: theme.primaryText, lineHeight: 18 }}>
+                  Query parameter stage='{legacyStageConflict.requested}' conflicts with authoritative progress{" "}
+                  {legacyStageConflict.totalUnits.toFixed(1)} units ({legacyStageConflict.mvpStage}, Level {legacyStageConflict.mvpLevel} of 3).{" "}
+                  Authoritative calculateAuthoritativeFoundation takes strict precedence for MVP visual rendering.
+                </Text>
+              </View>
+            )}
 
             {/* Stage Selector */}
             <View style={styles.card}>
@@ -1428,7 +1742,7 @@ export default function GardenVisualQARoute() {
             {/* Simulation Preview */}
             <View style={styles.artworkSection}>
               <Text style={styles.artworkSectionTitle}>
-                SIMULATION PREVIEW ({stageKey.toUpperCase()})
+                SIMULATION PREVIEW · {authoritativeFoundation.levelLabel.toUpperCase()} · {authoritativeFoundation.currentStage.toUpperCase()} ({authoritativeFoundation.totalFoundationProgress.toFixed(1)}/100)
               </Text>
               <View
                 style={[
@@ -1451,25 +1765,32 @@ export default function GardenVisualQARoute() {
                     theme={theme}
                     isLight={isLight}
                     isDim={effectiveTheme === "dim"}
-                    seedString={FIXTURE_SEED}
+                    seedString={params.couple || FIXTURE_SEED}
                     totalGrowthUnits={growth.total}
                     careGrowthUnits={growth.care}
                     timeGrowthUnits={growth.time}
                     isResting={scenario.isResting}
                     careSignals={scenario.signals}
                     careEvents={scenario.events}
+                    initialCameraMode={
+                      params.camera === "focus" || params.camera === "inspect"
+                        ? "plant_focus"
+                        : undefined
+                    }
                     initialFeatureId={
-                      params.initialFeature ||
-                      (scenario.events[0]
-                        ? getCareFeatureId(scenario.events[0].kind, scenario.events[0].id)
-                        : null)
+                      params.initialFeature === "none" || params.initialFeature === "null"
+                        ? null
+                        : params.initialFeature ||
+                          (scenario.events[0]
+                            ? getCareFeatureId(scenario.events[0].kind, scenario.events[0].id)
+                            : null)
                     }
                     onClose={() => setPresentationMode("full")}
                   />
                 ) : (
                   <View style={{ flex: 1, position: "relative" }}>
                     <GardenVisualizer
-                      seedString={FIXTURE_SEED}
+                      seedString={params.couple || FIXTURE_SEED}
                       totalGrowthUnits={growth.total}
                       careGrowthUnits={growth.care}
                       timeGrowthUnits={growth.time}

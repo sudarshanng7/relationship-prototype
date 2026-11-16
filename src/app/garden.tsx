@@ -620,6 +620,8 @@ export default function GardenScreen() {
               careEventsCount={effectiveCareEvents.length}
               careGrowthUnits={effectiveCareGrowthUnits}
               timeGrowthUnits={effectiveTimeGrowthUnits}
+              careEvents={effectiveCareEvents}
+              foundationCalculation={garden.foundationCalculation}
             />
           )}
 

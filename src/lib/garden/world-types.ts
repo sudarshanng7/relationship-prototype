@@ -165,6 +165,7 @@ export interface GardenMemorySource {
 export type GardenCameraMode =
   | "overview"
   | "explore"
+  | "plant_focus"
   | "memory_focus"
   | "scenic_focus"
   | "future_first_person";

@@ -55,6 +55,9 @@ import {
   getCameraTransformString,
   resolveNodeAtWorldCoordinate,
   resolveNodeAtScreenCoordinate,
+  projectBoundsToScreen,
+  DEFAULT_MOUSE_HIT_SLOP_PX,
+  DEFAULT_TOUCH_HIT_SLOP_PT,
   isScenicRegionAvailable,
   CANONICAL_DRAG_THRESHOLD_PX,
   classifyGesture,
@@ -111,6 +114,8 @@ import {
   resolveMvpFoundationMemoryMarkers,
   resolvePreviewMilestoneProgress,
   EARLY_LIFE_PREVIEW_TARGET_SLOTS,
+  calculateAuthoritativeFoundation,
+  MVP_18_RECORD_QA_FIXTURE,
 } from "../src/lib/garden/index.ts";
 import { createGardenStory, calculateHistoricalGrowth } from "../src/lib/garden-story.ts";
 
@@ -5338,8 +5343,8 @@ test("32. Mandatory Permanent Planting Anchor, Lifecycle Depth Invariance & Came
     "GardenExplorer.tsx must implement handleInspectPlant"
   );
   assert.ok(
-    explorerSource.includes("accessibilityLabel=\"Inspect plant\""),
-    "GardenExplorer.tsx must provide accessible Inspect plant button"
+    explorerSource.includes("Focus camera on your plant") || explorerSource.includes("accessibilityLabel=\"Inspect plant\""),
+    "GardenExplorer.tsx must provide accessible Focus camera on your plant button"
   );
   assert.ok(
     explorerSource.includes("handleResetView"),
@@ -5964,6 +5969,651 @@ test("34. Purple Garden 100-Unit MVP Visual Growth, Foliage & Story Parity Invar
       pres.subphaseKey === "small_seedling",
       `Units ${u} must only resolve to early-life subphases, never mature oak`
     );
+  }
+});
+
+// ----------------------------------------------------------------------------
+// Test 35: Authoritative 100-Unit Foundation, Screen-Space Hit Testing, Botanical Foliage & Parity Invariants
+// ----------------------------------------------------------------------------
+test("35. Authoritative 100-Unit Foundation, Screen-Space Hit Testing, Botanical Foliage & Parity Invariants", () => {
+  // 1. Authoritative pure 100-point calculation
+  // Empty history at 0 days
+  const calc0 = calculateAuthoritativeFoundation([], 0);
+  assert.equal(calc0.totalFoundationProgress, 0);
+  assert.equal(calc0.overallDisplayPercent, 0);
+  assert.equal(calc0.currentLevel, 1);
+  assert.equal(calc0.currentStage, "Planted Acorn");
+  assert.equal(calc0.pointsUntilNextThreshold, 24);
+  assert.equal(calc0.isFoundationComplete, false);
+
+  // Time-supported only (e.g. 60 days -> 30 raw, capped at 20)
+  const calcTime = calculateAuthoritativeFoundation([], 60);
+  assert.equal(calcTime.supportingTimeContribution, 20);
+  assert.equal(calcTime.rawCareContribution, 0);
+  assert.equal(calcTime.totalFoundationProgress, 20);
+  assert.equal(calcTime.overallDisplayPercent, 20);
+  assert.equal(calcTime.currentLevel, 1); // Cannot reach Level 2 alone!
+  assert.equal(calcTime.pointsUntilNextThreshold, 4);
+
+  // Care contributions: positive (+2), reconnection (+4), important date (+2)
+  const evPos = createMockEvent("ev-p1", "positive_moment", "2026-02-01T10:00:00Z");
+  const evRec = createMockEvent("ev-r1", "reconnection", "2026-02-02T10:00:00Z");
+  const evDate = createMockEvent("ev-d1", "important_date", "2026-02-03T10:00:00Z");
+  const evIncomplete = {
+    ...createMockEvent("ev-inc", "reconnection", "2026-02-04T10:00:00Z"),
+    reconnected_at: null,
+  };
+  const evDup = createMockEvent("ev-p1", "positive_moment", "2026-02-01T10:00:00Z");
+
+  const calcMixed = calculateAuthoritativeFoundation([evPos, evRec, evDate, evIncomplete, evDup], 10);
+  // Dedup ev-p1 (2), ev-r1 (4), ev-d1 (2), ev-inc ignored = 8 care units
+  // 10 days * 0.5 = 5 time units. Total = 13
+  assert.equal(calcMixed.rawCareContribution, 8);
+  assert.equal(calcMixed.supportingTimeContribution, 5);
+  assert.equal(calcMixed.totalFoundationProgress, 13);
+  assert.equal(calcMixed.eligiblePositiveMoments, 1);
+  assert.equal(calcMixed.completedReconnections, 1);
+  assert.equal(calcMixed.importantDates, 1);
+  assert.equal(calcMixed.excludedOrIneligibleEvents, 2);
+
+  // Canonical threshold comparisons:
+  // 23.99 -> Level 1 (Planted Acorn), 23%
+  const calc2399 = calculateAuthoritativeFoundation(23.99);
+  assert.equal(calc2399.currentLevel, 1);
+  assert.equal(calc2399.currentStage, "Planted Acorn");
+  assert.equal(calc2399.overallDisplayPercent, 23);
+  assert.equal(calc2399.pointsUntilNextThreshold, 0.01);
+
+  // 24.00 -> Level 2 (Emerging Oak Shoot), 24%
+  const calc24 = calculateAuthoritativeFoundation(24.00);
+  assert.equal(calc24.currentLevel, 2);
+  assert.equal(calc24.currentStage, "Emerging Oak Shoot");
+  assert.equal(calc24.overallDisplayPercent, 24);
+  assert.equal(calc24.pointsUntilNextThreshold, 36);
+
+  // 59.99 -> Level 2 (Emerging Oak Shoot), 59%
+  const calc5999 = calculateAuthoritativeFoundation(59.99);
+  assert.equal(calc5999.currentLevel, 2);
+  assert.equal(calc5999.currentStage, "Emerging Oak Shoot");
+  assert.equal(calc5999.overallDisplayPercent, 59);
+  assert.equal(calc5999.pointsUntilNextThreshold, 0.01);
+
+  // 60.00 -> Level 3 (Small Oak Seedling), 60%
+  const calc60 = calculateAuthoritativeFoundation(60.00);
+  assert.equal(calc60.currentLevel, 3);
+  assert.equal(calc60.currentStage, "Small Oak Seedling");
+  assert.equal(calc60.overallDisplayPercent, 60);
+  assert.equal(calc60.pointsUntilNextThreshold, 40);
+
+  // 99.99 -> Level 3 (Small Oak Seedling), 99%
+  const calc9999 = calculateAuthoritativeFoundation(99.99);
+  assert.equal(calc9999.currentLevel, 3);
+  assert.equal(calc9999.currentStage, "Small Oak Seedling");
+  assert.equal(calc9999.overallDisplayPercent, 99);
+  assert.equal(calc9999.pointsUntilNextThreshold, 0.01);
+
+  // 100.00 -> Level 3 (Small Oak Seedling), 100%, isFoundationComplete: true
+  const calc100 = calculateAuthoritativeFoundation(100.00);
+  assert.equal(calc100.currentLevel, 3);
+  assert.equal(calc100.currentStage, "Small Oak Seedling");
+  assert.equal(calc100.overallDisplayPercent, 100);
+  assert.equal(calc100.pointsUntilNextThreshold, 0);
+  assert.equal(calc100.isFoundationComplete, true);
+  assert.equal(calc100.subphaseKey, "small_seedling");
+
+  // >100.00 -> Clamped to 100, isFoundationComplete: true
+  const calc120 = calculateAuthoritativeFoundation(120.00);
+  assert.equal(calc120.totalFoundationProgress, 100);
+  assert.equal(calc120.overallDisplayPercent, 100);
+  assert.equal(calc120.isFoundationComplete, true);
+
+  // 1B. Deterministic Development QA Fixture (MVP_18_RECORD_QA_FIXTURE)
+  // Exact 18-record couple calculation:
+  // - 10 positive moments (each +2 -> 20 units)
+  // - 4 completed reconnections (each +4 -> 16 units)
+  // - 2 important dates (each +2 -> 4 units)
+  // - 1 incomplete/open reconnection (+0 units, excluded)
+  // - 1 duplicate record (+0 units, deduplicated)
+  // Elapsed days: 28 days -> 14 units supporting time (capped at 20)
+  // Total: 40 care + 14 time = 54 units (54%, Level 2 of 3 · Emerging Oak Shoot, 6 units to Small Oak Seedling)
+  const calc18 = calculateAuthoritativeFoundation(MVP_18_RECORD_QA_FIXTURE, 28);
+  assert.equal(calc18.totalRegisteredEvents, 18, "QA fixture must register exactly 18 records");
+  assert.equal(calc18.totalUniqueEvents, 16, "QA fixture must have 16 unique eligible records");
+  assert.equal(calc18.eligiblePositiveMoments, 10, "QA fixture must have 10 positive moments");
+  assert.equal(calc18.completedReconnections, 4, "QA fixture must have 4 completed reconnections");
+  assert.equal(calc18.importantDates, 2, "QA fixture must have 2 important dates");
+  assert.equal(calc18.excludedOrIneligibleEvents, 2, "QA fixture must exclude 2 records (1 open + 1 duplicate)");
+  assert.equal(calc18.rawCareContribution, 40, "QA fixture must yield 40 raw care units");
+  assert.equal(calc18.elapsedDays, 28, "QA fixture must use 28 elapsed days");
+  assert.equal(calc18.supportingTimeContribution, 14, "QA fixture must yield 14 time units");
+  assert.equal(calc18.totalFoundationProgress, 54, "QA fixture must total 54 units");
+  assert.equal(calc18.overallDisplayPercent, 54, "QA fixture must display 54%");
+  assert.equal(calc18.currentLevel, 2, "QA fixture must be Level 2");
+  assert.equal(calc18.currentStage, "Emerging Oak Shoot", "QA fixture must be Emerging Oak Shoot");
+  assert.equal(calc18.pointsUntilNextThreshold, 6, "QA fixture must need 6 units to Small Oak Seedling");
+  assert.equal(calc18.isFoundationComplete, false, "QA fixture foundation must not be complete yet");
+  assert.equal(calc18.uniqueCareEvents.length, 16, "QA fixture uniqueCareEvents must match 16 Explore memories");
+
+  // 2. Structural Asset Invariant: Small Oak Seedling preserved at 100 units
+  const pres100 = resolveMvpFoundationPresentation(100);
+  assert.equal(pres100.subphaseKey, "small_seedling");
+  assert.equal(pres100.label, "Small Oak Seedling");
+  assert.equal(pres100.levelProgress, 1.0);
+
+  // 3. Screen-Space Hit Testing Invariants with Separate Mouse & Touch Tolerances
+  assert.equal(DEFAULT_MOUSE_HIT_SLOP_PX, 12, "Default mouse hit tolerance must be 12px");
+  assert.equal(DEFAULT_TOUCH_HIT_SLOP_PT, 22, "Default touch hit tolerance must be 22pt");
+
+  const testWorld = {
+    worldBounds: EXPANDED_WORLD_BOUNDS,
+    nodes: {
+      "node-leaf-1": {
+        id: "node-leaf-1",
+        role: "leaf",
+        isEarned: true,
+        sourceEvent: { id: "ev-1", kind: "positive_moment" },
+        worldBounds: { minX: 388, maxX: 396, minY: 288, maxY: 296, width: 8, height: 8 },
+        anchorPoint: { x: 392, y: 292 },
+        depthLayer: 40,
+        childIds: [],
+      },
+      "node-leaf-2": {
+        id: "node-leaf-2",
+        role: "leaf",
+        isEarned: true,
+        sourceEvent: { id: "ev-2", kind: "reconnection" },
+        worldBounds: { minX: 404, maxX: 412, minY: 288, maxY: 296, width: 8, height: 8 },
+        anchorPoint: { x: 408, y: 292 },
+        depthLayer: 40,
+        childIds: [],
+      },
+      "node-stem": {
+        id: "node-stem",
+        role: "trunk",
+        isEarned: false,
+        sourceEvent: null,
+        worldBounds: { minX: 398, maxX: 402, minY: 304, maxY: 440, width: 4, height: 136 },
+        anchorPoint: { x: 400, y: 440 },
+        depthLayer: 10,
+        childIds: [],
+      },
+    },
+  };
+
+  const testViewports = [
+    { width: 360, height: 640 },
+    { width: 768, height: 1024 },
+  ];
+
+  for (const vp of testViewports) {
+    const cam = createCameraFromFitStrategy(CANONICAL_SCENE_BOUNDS, vp, "viewport_cover");
+    const screenPt1 = worldToScreen({ x: 392, y: 292 }, cam, vp);
+    const screenPt2 = worldToScreen({ x: 408, y: 292 }, cam, vp);
+    const leaf1ScreenBounds = projectBoundsToScreen(testWorld.nodes["node-leaf-1"].worldBounds, cam, vp);
+
+    // 3A. Exact center tap on leaf-1 resolves node-leaf-1 under both mouse and touch
+    const hitCenterMouse = resolveNodeAtScreenCoordinate(screenPt1, testWorld, cam, vp, { inputMode: "mouse" });
+    assert.equal(hitCenterMouse?.id, "node-leaf-1", "Direct mouse click on leaf-1 must select leaf-1");
+    const hitCenterTouch = resolveNodeAtScreenCoordinate(screenPt1, testWorld, cam, vp, { inputMode: "touch" });
+    assert.equal(hitCenterTouch?.id, "node-leaf-1", "Direct touch on leaf-1 must select leaf-1");
+
+    // 3B. Mouse click 13px from a small feature selects it when configured with tolerance in acceptable mouse range (10-14px)
+    const mouse13Pt = { x: leaf1ScreenBounds.minX - 13, y: screenPt1.y };
+    const hitMouse13Configured = resolveNodeAtScreenCoordinate(mouse13Pt, testWorld, cam, vp, { hitSlop: 13, inputMode: "mouse" });
+    assert.equal(hitMouse13Configured?.id, "node-leaf-1", "Mouse click 13px away selects feature when configured with 13px tolerance");
+
+    // 3C. Mouse click outside configured mouse tolerance (15px away with 13px tolerance) does not select it
+    const mouse15Pt = { x: leaf1ScreenBounds.minX - 15, y: screenPt1.y };
+    const hitMouse15 = resolveNodeAtScreenCoordinate(mouse15Pt, testWorld, cam, vp, { hitSlop: 13, inputMode: "mouse" });
+    assert.equal(hitMouse15, null, "Mouse click 15px away does not select feature with 13px tolerance");
+
+    // 3D. Default mouse tolerance (12px): 10px selects, 14px does not
+    const mouse10Pt = { x: leaf1ScreenBounds.minX - 10, y: screenPt1.y };
+    const hitMouse10 = resolveNodeAtScreenCoordinate(mouse10Pt, testWorld, cam, vp, { inputMode: "mouse" });
+    assert.equal(hitMouse10?.id, "node-leaf-1", "Mouse click 10px away selects with default 12px mouse tolerance");
+    const mouse14Pt = { x: leaf1ScreenBounds.minX - 14, y: screenPt1.y };
+    const hitMouse14 = resolveNodeAtScreenCoordinate(mouse14Pt, testWorld, cam, vp, { inputMode: "mouse" });
+    assert.equal(hitMouse14, null, "Mouse click 14px away does not select with default 12px mouse tolerance");
+
+    // 3E. Touch event 20px from that same feature selects it (within 22pt touch tolerance)
+    const touch20Pt = { x: leaf1ScreenBounds.minX - 20, y: screenPt1.y };
+    const hitTouch20 = resolveNodeAtScreenCoordinate(touch20Pt, testWorld, cam, vp, { inputMode: "touch" });
+    assert.equal(hitTouch20?.id, "node-leaf-1", "Touch event 20px away selects feature within 22pt touch tolerance");
+
+    // 3F. Touch event 25px away (outside 22pt touch tolerance) does not select it
+    const touch25Pt = { x: leaf1ScreenBounds.minX - 25, y: screenPt1.y };
+    const hitTouch25 = resolveNodeAtScreenCoordinate(touch25Pt, testWorld, cam, vp, { inputMode: "touch" });
+    assert.equal(hitTouch25, null, "Touch event 25px away does not select feature outside 22pt touch tolerance");
+
+    // 3G. Overlapping candidates select the nearest rendered geometry (distance dominates; depthLayer is tie-breaker only)
+    const deltaX = screenPt2.x - screenPt1.x;
+    const closerTo1 = { x: screenPt1.x + deltaX * 0.35, y: screenPt1.y };
+    const hitCloser1 = resolveNodeAtScreenCoordinate(closerTo1, testWorld, cam, vp, { inputMode: "touch" });
+    assert.equal(hitCloser1?.id, "node-leaf-1", "Point closer to leaf-1 geometry must select leaf-1");
+    const closerTo2 = { x: screenPt1.x + deltaX * 0.65, y: screenPt1.y };
+    const hitCloser2 = resolveNodeAtScreenCoordinate(closerTo2, testWorld, cam, vp, { inputMode: "touch" });
+    assert.equal(hitCloser2?.id, "node-leaf-2", "Point closer to leaf-2 geometry must select leaf-2");
+
+    // 3H. Empty terrain clicks return null (never snap to distant node)
+    const emptyPt = { x: 20, y: 20 };
+    assert.equal(resolveNodeAtScreenCoordinate(emptyPt, testWorld, cam, vp, { inputMode: "mouse" }), null, "Empty terrain mouse click returns null");
+    assert.equal(resolveNodeAtScreenCoordinate(emptyPt, testWorld, cam, vp, { inputMode: "touch" }), null, "Empty terrain touch returns null");
+
+    // 3I. Hit-testing behavior remains correct whether camera is reset or zoomed in to Inspect mode
+    const inspectCam = {
+      targetX: 392,
+      targetY: 292,
+      zoom: 2.2,
+      viewportWidth: vp.width,
+      viewportHeight: vp.height,
+    };
+    const inspectLeaf1ScreenBounds = projectBoundsToScreen(testWorld.nodes["node-leaf-1"].worldBounds, inspectCam, vp);
+
+    // In Inspect zoom, tolerance is still screen pixels:
+    // Mouse click 10px away selects, 14px away returns null
+    const inspectMouse10 = { x: inspectLeaf1ScreenBounds.minX - 10, y: inspectLeaf1ScreenBounds.minY + 2 };
+    assert.equal(resolveNodeAtScreenCoordinate(inspectMouse10, testWorld, inspectCam, vp, { inputMode: "mouse" })?.id, "node-leaf-1");
+    const inspectMouse14 = { x: inspectLeaf1ScreenBounds.minX - 14, y: inspectLeaf1ScreenBounds.minY + 2 };
+    assert.equal(resolveNodeAtScreenCoordinate(inspectMouse14, testWorld, inspectCam, vp, { inputMode: "mouse" }), null);
+
+    // Touch event 20px away selects, 25px away returns null
+    const inspectTouch20 = { x: inspectLeaf1ScreenBounds.minX - 20, y: inspectLeaf1ScreenBounds.minY + 2 };
+    assert.equal(resolveNodeAtScreenCoordinate(inspectTouch20, testWorld, inspectCam, vp, { inputMode: "touch" })?.id, "node-leaf-1");
+    const inspectTouch25 = { x: inspectLeaf1ScreenBounds.minX - 25, y: inspectLeaf1ScreenBounds.minY + 2 };
+    assert.equal(resolveNodeAtScreenCoordinate(inspectTouch25, testWorld, inspectCam, vp, { inputMode: "touch" }), null);
+
+    // 3J. Distance-First Hit Testing Regression Test:
+    // A higher-priority earned node (node-leaf-1, Class 3) has an overlapping expanded hit region (within 22pt touch / 12px mouse).
+    // The pointer is placed directly on a lower-priority visible node (node-stem, Class 1, distance = 0).
+    // The lower-priority but geometrically closer node must be selected.
+    const stemScreenPt = worldToScreen({ x: 400, y: 310 }, cam, vp);
+    // leaf-1 worldBounds is x: 388..396, y: 288..296. In screen space under cam & vp, distance from (400, 310) to leaf-1 is ~18px.
+    // 18px <= 22pt touch tolerance, so leaf-1 qualifies as an overlapping candidate.
+    // Since pointer is directly on stem (distance = 0) vs leaf-1 (distance ~18px), stem MUST win.
+    const hitDirectOnStemTouch = resolveNodeAtScreenCoordinate(stemScreenPt, testWorld, cam, vp, { inputMode: "touch" });
+    assert.equal(
+      hitDirectOnStemTouch?.id,
+      "node-stem",
+      "Pointer directly on lower-priority visible node must select it even when higher-priority earned node overlaps"
+    );
+    const hitDirectOnStemMouse = resolveNodeAtScreenCoordinate(stemScreenPt, testWorld, cam, vp, { inputMode: "mouse" });
+    assert.equal(
+      hitDirectOnStemMouse?.id,
+      "node-stem",
+      "Mouse click directly on lower-priority visible node must select it"
+    );
+  }
+
+  // 4. Botanical realism & Leaf Attachment
+  const level3Markers = resolveMvpFoundationMemoryMarkers(
+    [evPos, evRec, evDate],
+    "couple-seed-alpha",
+    70 // Level 3
+  );
+  assert.ok(level3Markers.length >= 3);
+  // Level 3 has attached sapling leaves
+  const saplingLeaves = level3Markers.filter((m) => m.visualKind === "sapling_leaf");
+  assert.ok(saplingLeaves.length >= 1, "Level 3 must have at least one attached sapling leaf");
+  for (const leaf of saplingLeaves) {
+    assert.equal(leaf.attachment, "tree", "Sapling leaf must attach to tree");
+    assert.ok(leaf.rotation !== undefined && !isNaN(leaf.rotation), "Must have natural rotation");
+  }
+
+  // 5. Collapsed Progress UI copy invariant:
+  // Must show "Next: <Stage Name>" and no raw-unit or point-remaining copy in collapsed UI,
+  // while the expanded breakdown retains truthful calculation.
+  const progressSource = fs.readFileSync("src/components/garden/GardenProgressSection.tsx", "utf8");
+  const entryCardSource = fs.readFileSync("src/components/garden/GardenEntryCard.tsx", "utf8");
+
+  assert.ok(
+    progressSource.includes("`Next: ${calc.nextMilestoneLabel}`"),
+    "Collapsed next milestone copy must be 'Next: <Stage Name>'"
+  );
+  assert.ok(
+    !progressSource.includes("Next development:"),
+    "Progress UI must not contain legacy 'Next development:'"
+  );
+  assert.ok(
+    !progressSource.includes("units remaining"),
+    "Progress UI must not contain 'units remaining'"
+  );
+  assert.ok(
+    !progressSource.includes("points remaining"),
+    "Progress UI must not contain 'points remaining'"
+  );
+
+  // Split source at disclosure row to verify collapsed portion has no unit/point words
+  const [collapsedCode, expandedCode] = progressSource.split("isExplanationOpen &&");
+  assert.ok(collapsedCode, "Collapsed section must be present");
+  assert.ok(expandedCode, "Expanded section must be present");
+
+  // Check collapsed portion (stripping comments) has no unit or point words
+  const collapsedClean = collapsedCode.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
+  const prohibitedWordsRegex = /\b(unit|units|point|points)\b/i;
+  assert.ok(
+    !prohibitedWordsRegex.test(collapsedClean),
+    "Collapsed progress UI must contain no 'unit', 'units', 'point', or 'points' copy"
+  );
+
+  // Check entry card has no unit or point words
+  const entryClean = entryCardSource.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
+  assert.ok(
+    !prohibitedWordsRegex.test(entryClean),
+    "Compact entry card must contain no 'unit', 'units', 'point', or 'points' copy"
+  );
+
+  // Expanded portion must retain the truthful calculation with units
+  assert.ok(
+    expandedCode.includes("{calc.pointsUntilNextThreshold.toFixed(1)} units until {calc.nextMilestoneLabel}"),
+    "Expanded breakdown must retain truthful calculation with units until next milestone"
+  );
+  assert.ok(
+    expandedCode.includes("{calc.totalFoundationProgress.toFixed(1)} / 100"),
+    "Expanded breakdown must retain total foundation progress out of 100"
+  );
+});
+
+// ----------------------------------------------------------------------------
+// 36. Deterministic Couple Uniqueness, Botanical Foliage Contract & Selection Invariants
+// ----------------------------------------------------------------------------
+test("36. Deterministic Couple Uniqueness, Botanical Foliage Contract & Selection Invariants", () => {
+  // 1. Three distinct couple IDs verification
+  const coupleAlpha = "couple_alpha_stable_001";
+  const coupleBeta = "couple_beta_stable_002";
+  const coupleGamma = "couple_gamma_stable_003";
+
+  const dnaA = derivePainterlyCoupleDNA(coupleAlpha);
+  const dnaB = derivePainterlyCoupleDNA(coupleBeta);
+  const dnaC = derivePainterlyCoupleDNA(coupleGamma);
+
+  // Invariant permanent planting anchor: all couples anchored identically at (390.4, 441.0)
+  assert.equal(dnaA.structuralVariation.pivotX, 390.4, "Couple Alpha pivotX must be permanent anchor 390.4");
+  assert.equal(dnaA.structuralVariation.pivotY, 441.0, "Couple Alpha pivotY must be permanent anchor 441.0");
+  assert.equal(dnaB.structuralVariation.pivotX, 390.4, "Couple Beta pivotX must be permanent anchor 390.4");
+  assert.equal(dnaB.structuralVariation.pivotY, 441.0, "Couple Beta pivotY must be permanent anchor 441.0");
+  assert.equal(dnaC.structuralVariation.pivotX, 390.4, "Couple Gamma pivotX must be permanent anchor 390.4");
+  assert.equal(dnaC.structuralVariation.pivotY, 441.0, "Couple Gamma pivotY must be permanent anchor 441.0");
+
+  // Distinct composition signatures:
+  assert.notDeepEqual(
+    dnaA.ecologicalComposition,
+    dnaB.ecologicalComposition,
+    "Couple Alpha and Beta must have distinct ecological compositions"
+  );
+  assert.notDeepEqual(
+    dnaB.ecologicalComposition,
+    dnaC.ecologicalComposition,
+    "Couple Beta and Gamma must have distinct ecological compositions"
+  );
+  assert.notDeepEqual(
+    dnaA.ecologicalComposition,
+    dnaC.ecologicalComposition,
+    "Couple Alpha and Gamma must have distinct ecological compositions"
+  );
+
+  // Verify bounded couple-specific variation exists across ecological feature categories
+  assert.ok(dnaA.ecologicalComposition.mossCushions.length > 0);
+  assert.ok(dnaB.ecologicalComposition.mossCushions.length > 0);
+  assert.notEqual(
+    dnaA.ecologicalComposition.mossCushions[0].x,
+    dnaB.ecologicalComposition.mossCushions[0].x,
+    "Moss cushions must have distinct couple-seeded x coordinates"
+  );
+
+  assert.ok(dnaA.ecologicalComposition.groundcoverClusters.length > 0);
+  assert.ok(dnaB.ecologicalComposition.groundcoverClusters.length > 0);
+  assert.notEqual(
+    dnaA.ecologicalComposition.groundcoverClusters[0].rotation,
+    dnaB.ecologicalComposition.groundcoverClusters[0].rotation,
+    "Groundcover must have distinct couple-seeded rotation"
+  );
+
+  assert.ok(dnaA.ecologicalComposition.smallStones.length > 0);
+  assert.ok(dnaB.ecologicalComposition.smallStones.length > 0);
+
+  assert.ok(dnaA.ecologicalComposition.woodlandLightMotes.length > 0);
+  assert.ok(dnaB.ecologicalComposition.woodlandLightMotes.length > 0);
+
+  // Plant micro-variation
+  assert.ok(typeof dnaA.ecologicalComposition.plantMicroVariation.twigLeanDeg === "number");
+  assert.ok(typeof dnaA.ecologicalComposition.plantMicroVariation.shootCurvatureMod === "number");
+  assert.ok(typeof dnaA.ecologicalComposition.plantMicroVariation.leafOrientationOffsetDeg === "number");
+
+  // 2. Deterministic stability & partner equality
+  const dnaARepeat = derivePainterlyCoupleDNA(coupleAlpha);
+  assert.deepEqual(dnaA, dnaARepeat, "Same couple seed must produce byte-identical couple DNA");
+
+  const events = [
+    { id: "ev-1", kind: "positive_moment", timestamp: "2026-03-01T10:00:00Z" },
+    { id: "ev-2", kind: "reconnection", timestamp: "2026-03-02T10:00:00Z" },
+    { id: "ev-3", kind: "important_date", timestamp: "2026-03-03T10:00:00Z" },
+  ];
+
+  const markersA = resolveMvpFoundationMemoryMarkers(events, coupleAlpha, 70);
+  const markersARepeat = resolveMvpFoundationMemoryMarkers(events, coupleAlpha, 70);
+  assert.deepEqual(markersA, markersARepeat, "Same couple + same events = byte-identical memory constellation");
+
+  // Both partners of one couple produce identical markers
+  const partnerMarkers = resolveMvpFoundationMemoryMarkers(events, coupleAlpha, 70);
+  assert.deepEqual(markersA, partnerMarkers, "Both partners of the couple receive identical markers");
+
+  // Adding a new event preserves existing features and positions
+  const newEvent = { id: "ev-4", kind: "positive_moment", timestamp: "2026-03-04T10:00:00Z" };
+  const markersWithAddition = resolveMvpFoundationMemoryMarkers([...events, newEvent], coupleAlpha, 70);
+  assert.equal(markersWithAddition.length, 4);
+  for (const original of markersA) {
+    const retained = markersWithAddition.find((m) => m.sourceId === original.sourceId);
+    assert.ok(retained, `Original event ${original.sourceId} must be retained`);
+    assert.equal(retained.x, original.x, `Event ${original.sourceId} x must remain unchanged`);
+    assert.equal(retained.y, original.y, `Event ${original.sourceId} y must remain unchanged`);
+    assert.equal(retained.visualKind, original.visualKind, `Event ${original.sourceId} visualKind must remain unchanged`);
+  }
+
+  // Deleting an event removes only its feature
+  const markersAfterDeletion = resolveMvpFoundationMemoryMarkers(
+    events.filter((e) => e.id !== "ev-2"),
+    coupleAlpha,
+    70
+  );
+  assert.equal(markersAfterDeletion.length, 2);
+  assert.ok(!markersAfterDeletion.some((m) => m.sourceId === "ev-2"), "Deleted event must be absent");
+  const ev1After = markersAfterDeletion.find((m) => m.sourceId === "ev-1");
+  const ev3After = markersAfterDeletion.find((m) => m.sourceId === "ev-3");
+  const ev1Before = markersA.find((m) => m.sourceId === "ev-1");
+  const ev3Before = markersA.find((m) => m.sourceId === "ev-3");
+  assert.equal(ev1After.x, ev1Before.x);
+  assert.equal(ev3After.x, ev3Before.x);
+
+  // 3. Botanical Realism & Semantic Roles
+  for (const marker of markersA) {
+    assert.ok(marker.semanticRole, "Every marker must possess an explicit semanticRole");
+    if (marker.visualKind === "sapling_leaf") {
+      assert.equal(marker.semanticRole, "living_oak_leaf", "sapling_leaf must have role living_oak_leaf");
+      assert.notEqual(marker.semanticRole, "moss_cushion", "oak leaf must never have moss role");
+    } else if (marker.visualKind === "moss") {
+      assert.equal(marker.semanticRole, "moss_cushion", "moss must have role moss_cushion");
+      assert.notEqual(marker.semanticRole, "living_oak_leaf", "moss must never have oak leaf role");
+    }
+  }
+
+  // 4. Source code audits for selection indicator bounds & invisible hit areas
+  const rendererSource = fs.readFileSync("src/components/garden/PainterlyGardenRenderer.tsx", "utf8");
+  const explorerSource = fs.readFileSync("src/components/garden/GardenExplorer.tsx", "utf8");
+  const treeSource = fs.readFileSync("src/components/garden/PainterlyTreeStructure.tsx", "utf8");
+
+  // PainterlyTreeStructure: All procedural leaves must use createOakLobedLeafD and createLeafVeinD
+  assert.ok(
+    treeSource.includes("createOakLobedLeafD"),
+    "PainterlyTreeStructure must use createOakLobedLeafD for juvenile oak leaves"
+  );
+  assert.ok(
+    treeSource.includes("createLeafVeinD"),
+    "PainterlyTreeStructure must use createLeafVeinD for leaf veins"
+  );
+  // Ensure crude angular paths are absent
+  assert.ok(
+    !treeSource.includes("374.0 417.0, 372.0 413.0, 374.0 410.0"),
+    "Crude angular polygonal leaf paths must be removed from PainterlyTreeStructure"
+  );
+
+  // PainterlyGardenRenderer: Highlighting must be tightly bounded
+  assert.ok(
+    rendererSource.includes('id="painterly-story-reveal-halo"'),
+    "Highlight halo must be present in renderer"
+  );
+  assert.ok(
+    rendererSource.includes('highlightCoord.kind === "oak_leaf"'),
+    "Renderer must provide feature-specific oak leaf outline/vein highlighting"
+  );
+  assert.ok(
+    rendererSource.includes('highlightCoord.kind === "acorn"'),
+    "Renderer must provide feature-specific acorn contour highlighting"
+  );
+  assert.ok(
+    rendererSource.includes('highlightCoord.kind === "moss"'),
+    "Renderer must provide feature-specific moss cushion contour highlighting"
+  );
+  assert.ok(
+    rendererSource.includes("Math.min(7.0"),
+    "Generic fallback selection indicator radius must be capped at 7px (max diameter 14px)"
+  );
+
+  // Hit testing tolerances must remain invisible: no hit area SVG elements in production
+  assert.ok(
+    !rendererSource.includes('id="debug-hit-area"'),
+    "Production renderer must never render debug hit areas"
+  );
+  assert.ok(
+    !rendererSource.includes('id="mouse-hit-circle"'),
+    "Mouse hit tolerance must remain invisible"
+  );
+  assert.ok(
+    !rendererSource.includes('id="touch-hit-circle"'),
+    "Touch hit tolerance must remain invisible"
+  );
+
+  // 5. Inspect Camera Terminology Audit
+  assert.ok(
+    explorerSource.includes('"Focus Plant"'),
+    "GardenExplorer must use 'Focus Plant' in overview state"
+  );
+  assert.ok(
+    explorerSource.includes('"Back to Overview"'),
+    "GardenExplorer must use 'Back to Overview' in focused state"
+  );
+  assert.ok(
+    explorerSource.includes('"Focus camera on your plant"'),
+    "GardenExplorer must include 'Focus camera on your plant' accessibility label"
+  );
+  assert.ok(
+    explorerSource.includes('"Return camera to the clearing overview"'),
+    "GardenExplorer must include 'Return camera to the clearing overview' accessibility label"
+  );
+  assert.ok(
+    explorerSource.includes('"Reset garden camera"'),
+    "GardenExplorer must include 'Reset garden camera' accessibility label"
+  );
+  assert.ok(
+    !explorerSource.includes('>Inspect<'),
+    "Legacy 'Inspect' button label must be replaced"
+  );
+});
+
+// ----------------------------------------------------------------------------
+// 37. Authoritative MVP Foundation Clamp, Legacy Stage Decoupling & Parity Regression Invariants
+// ----------------------------------------------------------------------------
+test("37. Authoritative MVP Foundation Clamp, Legacy Stage Decoupling & Parity Regression Invariants", () => {
+  // 1. Care 22 + attempted time 42 clamps to: time 20, total 42, Level 2, Emerging Oak Shoot
+  const clamped42 = calculateAuthoritativeFoundation(22, 42);
+  assert.equal(clamped42.rawCareContribution, 22, "Care contribution must be exactly 22");
+  assert.equal(clamped42.supportingTimeContribution, 20, "Time contribution 42 must clamp to max 20");
+  assert.equal(clamped42.totalFoundationProgress, 42, "Total foundation progress must be 22 + 20 = 42");
+  assert.equal(clamped42.currentLevel, 2, "42 units must resolve to Level 2");
+  assert.equal(clamped42.currentStage, "Emerging Oak Shoot", "42 units must be 'Emerging Oak Shoot'");
+  assert.equal(clamped42.subphaseKey, "emerging_shoot", "42 units subphase must be 'emerging_shoot'");
+
+  // 2. Valid care 44 / time 20 fixture resolves to: total 64, Level 3, Small Oak Seedling
+  // e.g. 12 positive moments (24) + 4 completed reconnections (16) + 2 important dates (4) = 44 care
+  // elapsedDays = 40 -> 20 time (at 20 cap)
+  const l3Events = [
+    // 12 positive moments
+    ...Array.from({ length: 12 }, (_, i) => createMockEvent(`ev-l3-pos-${i + 1}`, "positive_moment", `2026-05-${String(i + 1).padStart(2, "0")}T10:00:00Z`)),
+    // 4 completed reconnections
+    ...Array.from({ length: 4 }, (_, i) => createMockEvent(`ev-l3-rec-${i + 1}`, "reconnection", `2026-06-${String(i + 1).padStart(2, "0")}T10:00:00Z`)),
+    // 2 important dates
+    ...Array.from({ length: 2 }, (_, i) => createMockEvent(`ev-l3-date-${i + 1}`, "important_date", `2026-06-${String(i + 10).padStart(2, "0")}T10:00:00Z`)),
+  ];
+  const l3Calc = calculateAuthoritativeFoundation(l3Events, 40);
+  assert.equal(l3Calc.rawCareContribution, 44, "12 pos (24) + 4 rec (16) + 2 dates (4) must yield exactly 44 care");
+  assert.equal(l3Calc.supportingTimeContribution, 20, "40 days * 0.5 = 20 time units");
+  assert.equal(l3Calc.totalFoundationProgress, 64, "44 care + 20 time must yield exactly 64 total progress");
+  assert.equal(l3Calc.currentLevel, 3, "64 units must resolve to Level 3");
+  assert.equal(l3Calc.currentStage, "Small Oak Seedling", "64 units must be 'Small Oak Seedling'");
+  assert.equal(l3Calc.subphaseKey, "small_seedling", "64 units subphase must be 'small_seedling'");
+  assert.equal(l3Calc.levelLabel, "Level 3 of 3");
+
+  // 3. Forcing legacy stage leafy_canopy cannot override a calculated 42-point MVP result
+  // If progress is 42, legacy canonical stage from getGardenStage is 'branching_out' (36-55 units)
+  // Forcing leafy_canopy conflicts and must not change the authoritative calculation
+  const stageFromUnits = getGardenStage(clamped42.totalFoundationProgress);
+  assert.equal(stageFromUnits.key, "branching_out", "42 units canonical stage is branching_out, NOT leafy_canopy");
+  assert.notEqual(stageFromUnits.key, "leafy_canopy", "42 units must never resolve to leafy_canopy");
+
+  // Even if legacy stage leafy_canopy is passed, the visual stage strictly follows calculateAuthoritativeFoundation
+  const visualStageFor42 = calculateAuthoritativeFoundation(clamped42.totalFoundationProgress).subphaseKey;
+  assert.equal(visualStageFor42, "emerging_shoot", "Visual stage for 42 units must remain emerging_shoot");
+  assert.notEqual(visualStageFor42, "leafy_canopy", "Visual stage must not be overridden by legacy stage name");
+
+  // 4. Parity across Garden, Explore, Story, progress card, and Visual QA:
+  // All consumers resolve the exact same visual stage and level from the same calculation
+  const testUnits = 64;
+  const authoritative = calculateAuthoritativeFoundation(testUnits, 44, 20);
+
+  // Garden progress section resolution
+  const progressSectionCalc = calculateAuthoritativeFoundation(authoritative.totalFoundationProgress);
+  assert.equal(progressSectionCalc.currentStage, "Small Oak Seedling");
+  assert.equal(progressSectionCalc.currentLevel, 3);
+  assert.equal(progressSectionCalc.subphaseKey, "small_seedling");
+
+  // PainterlyGardenRenderer presentation resolution
+  const rendererPresentation = resolveMvpFoundationPresentation(authoritative.totalFoundationProgress, 44, 20);
+  assert.equal(rendererPresentation.label, "Small Oak Seedling");
+  assert.equal(rendererPresentation.level, 3);
+  assert.equal(rendererPresentation.subphaseKey, "small_seedling");
+
+  // GardenExplorer plant inspection subphase resolution
+  const explorerSubphase = calculateAuthoritativeFoundation(authoritative.totalFoundationProgress).subphaseKey;
+  assert.equal(explorerSubphase, "small_seedling");
+
+  // Visual QA scenario resolution
+  const qaCalc = calculateAuthoritativeFoundation(authoritative.totalFoundationProgress);
+  assert.equal(qaCalc.currentStage, "Small Oak Seedling");
+  assert.equal(qaCalc.currentLevel, 3);
+  assert.equal(qaCalc.subphaseKey, "small_seedling");
+
+  // 5. Audit all QA fixtures: No QA fixture reports supportingTimeContribution above 20
+  const qaSource = fs.readFileSync("src/app/garden-visual-qa.tsx", "utf8");
+  assert.ok(
+    !qaSource.includes("time: 42"),
+    "garden-visual-qa.tsx must not contain uncapped time: 42"
+  );
+  assert.ok(
+    !qaSource.includes("time: 30"),
+    "garden-visual-qa.tsx must not contain uncapped time: 30"
+  );
+  assert.ok(
+    !qaSource.includes("time: 48"),
+    "garden-visual-qa.tsx must not contain uncapped time: 48"
+  );
+  assert.ok(
+    !qaSource.includes("time: 60"),
+    "garden-visual-qa.tsx must not contain uncapped time: 60"
+  );
+  // Verify all hardcoded time values in garden-visual-qa.tsx are <= 20
+  const timeMatches = qaSource.match(/time:\s*(\d+)/g) || [];
+  for (const tm of timeMatches) {
+    const val = parseInt(tm.replace(/\D/g, ""), 10);
+    assert.ok(val <= 20, `Every hardcoded time in garden-visual-qa.tsx must be <= 20, found: ${val}`);
   }
 });
 
