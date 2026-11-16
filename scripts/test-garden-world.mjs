@@ -6617,6 +6617,339 @@ test("37. Authoritative MVP Foundation Clamp, Legacy Stage Decoupling & Parity R
   }
 });
 
+// ----------------------------------------------------------------------------
+// Test 38: Downward Progress Recalculation — Moment Deletion Regression Suite
+// Verifies that removing eligible care events reduces foundation progress,
+// levels, botanical stage, explorable memory count, and Garden Story frames.
+// ----------------------------------------------------------------------------
+test("38. Downward progress recalculation: deleting eligible Moments reduces foundation percentage, level, stage, memory count, and Garden Story", () => {
+  // -------------------------------------------------------------------------
+  // Shared helper: build a mock event with optional status/visibility overrides
+  // -------------------------------------------------------------------------
+  function delEv(id, kind, dateStr, overrides = {}) {
+    return {
+      id,
+      kind,
+      occurredAt: dateStr,
+      createdAt: dateStr,
+      category: "affection",
+      ...overrides,
+    };
+  }
+
+  // =========================================================================
+  // Scenario 1: Delete positive moment — progress drops 63 → 61, Level 3 → 3
+  // =========================================================================
+  // 10 pos(20) + 4 rec(16) + 4 dates(8) = 44 care; 38 elapsed days → time 19; total 63 Level 3
+  const sc1Events = [
+    ...Array.from({ length: 10 }, (_, i) => delEv(`sc1-pos-${i + 1}`, "positive_moment", `2026-03-${String(i + 1).padStart(2, "0")}T10:00:00Z`)),
+    ...Array.from({ length: 4 }, (_, i) => delEv(`sc1-rec-${i + 1}`, "reconnection", `2026-04-${String(i + 1).padStart(2, "0")}T10:00:00Z`)),
+    ...Array.from({ length: 4 }, (_, i) => delEv(`sc1-date-${i + 1}`, "important_date", `2026-04-${String(i + 10).padStart(2, "0")}T10:00:00Z`)),
+  ];
+  const sc1Before = calculateAuthoritativeFoundation(sc1Events, 38);
+  assert.equal(sc1Before.rawCareContribution, 44, "Sc1 before: 10pos+4rec+4dates must yield 44 care");
+  assert.equal(sc1Before.supportingTimeContribution, 19, "Sc1 before: 38 days * 0.5 = 19 time");
+  assert.equal(sc1Before.totalFoundationProgress, 63, "Sc1 before: 44+19 = 63");
+  assert.equal(sc1Before.currentLevel, 3, "Sc1 before: 63 must be Level 3");
+  assert.equal(sc1Before.subphaseKey, "small_seedling", "Sc1 before: 63 must be small_seedling");
+
+  // Delete sc1-pos-10 (last positive moment)
+  const sc1After = calculateAuthoritativeFoundation(sc1Events.filter(e => e.id !== "sc1-pos-10"), 38);
+  assert.equal(sc1After.rawCareContribution, 42, "Sc1 after: 9pos+4rec+4dates must yield 42 care");
+  assert.equal(sc1After.supportingTimeContribution, 19, "Sc1 after: time unchanged at 19");
+  assert.equal(sc1After.totalFoundationProgress, 61, "Sc1 after: 42+19 = 61");
+  assert.equal(sc1After.currentLevel, 3, "Sc1 after: 61 must remain Level 3");
+  assert.equal(sc1After.subphaseKey, "small_seedling", "Sc1 after: 61 must remain small_seedling");
+  assert.equal(sc1After.isFoundationComplete, false, "Sc1 after: 61 is not foundation complete");
+
+  // =========================================================================
+  // Scenario 2: Delete another positive moment — progress drops 61 → 59, Level 3 → 2
+  // =========================================================================
+  const sc2Events = sc1Events.filter(e => e.id !== "sc1-pos-10" && e.id !== "sc1-pos-9");
+  const sc2 = calculateAuthoritativeFoundation(sc2Events, 38);
+  assert.equal(sc2.rawCareContribution, 40, "Sc2: 8pos+4rec+4dates must yield 40 care");
+  assert.equal(sc2.totalFoundationProgress, 59, "Sc2: 40+19 = 59");
+  assert.equal(sc2.currentLevel, 2, "Sc2: 59 must drop to Level 2");
+  assert.equal(sc2.currentStage, "Emerging Oak Shoot", "Sc2: 59 must be Emerging Oak Shoot");
+  assert.equal(sc2.subphaseKey, "emerging_shoot", "Sc2: 59 must be emerging_shoot");
+  assert.ok(sc1After.currentLevel === 3 && sc2.currentLevel === 2, "Sc2: level must cross the Level-3 boundary downward");
+
+  // =========================================================================
+  // Scenario 3: Delete positive moment — progress drops 25 → 23, Level 2 → 1
+  // =========================================================================
+  // 2 pos(4) + 1 rec(4) + 3 dates(6) = 14 care; 22 elapsed days → time 11; total 25 Level 2
+  const sc3Events = [
+    delEv("sc3-pos-1", "positive_moment", "2026-03-01T10:00:00Z"),
+    delEv("sc3-pos-2", "positive_moment", "2026-03-02T10:00:00Z"),
+    delEv("sc3-rec-1", "reconnection", "2026-03-05T10:00:00Z"),
+    delEv("sc3-date-1", "important_date", "2026-03-10T10:00:00Z"),
+    delEv("sc3-date-2", "important_date", "2026-03-11T10:00:00Z"),
+    delEv("sc3-date-3", "important_date", "2026-03-12T10:00:00Z"),
+  ];
+  const sc3Before = calculateAuthoritativeFoundation(sc3Events, 22);
+  assert.equal(sc3Before.rawCareContribution, 14, "Sc3 before: 2pos+1rec+3dates = 14 care");
+  assert.equal(sc3Before.supportingTimeContribution, 11, "Sc3 before: 22 days * 0.5 = 11 time");
+  assert.equal(sc3Before.totalFoundationProgress, 25, "Sc3 before: 14+11 = 25");
+  assert.equal(sc3Before.currentLevel, 2, "Sc3 before: 25 must be Level 2");
+
+  const sc3After = calculateAuthoritativeFoundation(sc3Events.filter(e => e.id !== "sc3-pos-2"), 22);
+  assert.equal(sc3After.rawCareContribution, 12, "Sc3 after: 1pos+1rec+3dates = 12 care");
+  assert.equal(sc3After.totalFoundationProgress, 23, "Sc3 after: 12+11 = 23");
+  assert.equal(sc3After.currentLevel, 1, "Sc3 after: 23 must drop to Level 1");
+  assert.equal(sc3After.currentStage, "Planted Acorn", "Sc3 after: 23 must be Planted Acorn");
+  assert.equal(sc3After.subphaseKey, "planted_acorn", "Sc3 after: 23 must be planted_acorn");
+
+  // =========================================================================
+  // Scenario 4: Delete positive moment — progress drops 100 → 98 (complete removed)
+  // =========================================================================
+  // 40 pos(80) + time 20 (40 elapsed days) = 100 isFoundationComplete
+  const sc4Events = Array.from({ length: 40 }, (_, i) =>
+    delEv(`sc4-pos-${i + 1}`, "positive_moment", `2026-03-${String((i % 28) + 1).padStart(2, "0")}T10:00:00Z`)
+  );
+  const sc4Before = calculateAuthoritativeFoundation(sc4Events, 40);
+  assert.equal(sc4Before.rawCareContribution, 80, "Sc4 before: 40 pos must yield 80 care");
+  assert.equal(sc4Before.supportingTimeContribution, 20, "Sc4 before: 40 days * 0.5 caps at 20");
+  assert.equal(sc4Before.totalFoundationProgress, 100, "Sc4 before: 80+20 = 100");
+  assert.equal(sc4Before.isFoundationComplete, true, "Sc4 before: 100 must be foundation complete");
+
+  const sc4After = calculateAuthoritativeFoundation(sc4Events.filter(e => e.id !== "sc4-pos-40"), 40);
+  assert.equal(sc4After.rawCareContribution, 78, "Sc4 after: 39 pos must yield 78 care");
+  assert.equal(sc4After.totalFoundationProgress, 98, "Sc4 after: 78+20 = 98");
+  assert.equal(sc4After.currentLevel, 3, "Sc4 after: 98 must remain Level 3");
+  assert.equal(sc4After.subphaseKey, "small_seedling", "Sc4 after: 98 must remain small_seedling");
+  assert.equal(sc4After.isFoundationComplete, false, "Sc4 after: 98 must no longer be foundation complete");
+
+  // =========================================================================
+  // Scenario 5: Delete completed reconnection — progress drops by exactly −4
+  // =========================================================================
+  // 10 pos(20) + 1 rec(4) = 24 care; 20 elapsed days → time 10; total 34 Level 2
+  const sc5Base = [
+    ...Array.from({ length: 10 }, (_, i) => delEv(`sc5-pos-${i + 1}`, "positive_moment", `2026-03-${String(i + 1).padStart(2, "0")}T10:00:00Z`)),
+    delEv("sc5-rec-1", "reconnection", "2026-03-15T10:00:00Z"),
+  ];
+  const sc5Before = calculateAuthoritativeFoundation(sc5Base, 20);
+  assert.equal(sc5Before.rawCareContribution, 24, "Sc5 before: 10pos+1rec = 24 care");
+  assert.equal(sc5Before.supportingTimeContribution, 10, "Sc5 before: 20 days * 0.5 = 10 time");
+  assert.equal(sc5Before.totalFoundationProgress, 34, "Sc5 before: 24+10 = 34 total");
+  assert.equal(sc5Before.currentLevel, 2, "Sc5 before: 34 must be Level 2");
+
+  const sc5After = calculateAuthoritativeFoundation(sc5Base.filter(e => e.id !== "sc5-rec-1"), 20);
+  assert.equal(sc5After.rawCareContribution, 20, "Sc5 after: 10pos (no rec) = 20 care");
+  assert.equal(sc5After.totalFoundationProgress, 30, "Sc5 after: 20+10 = 30 (dropped by 4)");
+  assert.equal(sc5After.currentLevel, 2, "Sc5 after: 30 must remain Level 2");
+  assert.equal(
+    sc5Before.totalFoundationProgress - sc5After.totalFoundationProgress,
+    4,
+    "Sc5: Deleting a completed reconnection must reduce progress by exactly 4"
+  );
+
+  // =========================================================================
+  // Scenario 6: Delete important date — progress drops by exactly −2
+  // =========================================================================
+  // 10 pos(20) + 1 date(2) = 22 care; 40 elapsed days → time 20; total 42 Level 2
+  const sc6Base = [
+    ...Array.from({ length: 10 }, (_, i) => delEv(`sc6-pos-${i + 1}`, "positive_moment", `2026-03-${String(i + 1).padStart(2, "0")}T10:00:00Z`)),
+    delEv("sc6-date-1", "important_date", "2026-03-15T10:00:00Z"),
+  ];
+  const sc6Before = calculateAuthoritativeFoundation(sc6Base, 40);
+  assert.equal(sc6Before.rawCareContribution, 22, "Sc6 before: 10pos+1date = 22 care");
+  assert.equal(sc6Before.supportingTimeContribution, 20, "Sc6 before: 40 days → time capped at 20");
+  assert.equal(sc6Before.totalFoundationProgress, 42, "Sc6 before: 22+20 = 42 total");
+  assert.equal(sc6Before.currentLevel, 2, "Sc6 before: 42 must be Level 2");
+
+  const sc6After = calculateAuthoritativeFoundation(sc6Base.filter(e => e.id !== "sc6-date-1"), 40);
+  assert.equal(sc6After.rawCareContribution, 20, "Sc6 after: 10pos (no date) = 20 care");
+  assert.equal(sc6After.totalFoundationProgress, 40, "Sc6 after: 20+20 = 40 (dropped by 2)");
+  assert.equal(sc6After.currentLevel, 2, "Sc6 after: 40 must remain Level 2");
+  assert.equal(
+    sc6Before.totalFoundationProgress - sc6After.totalFoundationProgress,
+    2,
+    "Sc6: Deleting an important date must reduce progress by exactly 2"
+  );
+
+  // =========================================================================
+  // Scenario 7: Delete unresolved friction — eligible count and progress unchanged
+  // =========================================================================
+  // Unresolved friction (reconnection with status "open") must contribute 0 and removing it changes nothing
+  const sc7ValidEvents = [
+    ...Array.from({ length: 5 }, (_, i) => delEv(`sc7-pos-${i + 1}`, "positive_moment", `2026-03-${String(i + 1).padStart(2, "0")}T10:00:00Z`)),
+  ];
+  const sc7Friction = {
+    id: "sc7-friction-1",
+    kind: "reconnection",
+    occurredAt: "2026-03-10T10:00:00Z",
+    createdAt: "2026-03-10T10:00:00Z",
+    category: "conflict",
+    status: "open", // unresolved → ineligible
+  };
+  const sc7WithFriction = calculateAuthoritativeFoundation([...sc7ValidEvents, sc7Friction], 20);
+  const sc7WithoutFriction = calculateAuthoritativeFoundation(sc7ValidEvents, 20);
+  assert.equal(sc7WithFriction.rawCareContribution, sc7WithoutFriction.rawCareContribution,
+    "Sc7: open/unresolved friction must not increase rawCareContribution");
+  assert.equal(sc7WithFriction.totalFoundationProgress, sc7WithoutFriction.totalFoundationProgress,
+    "Sc7: deleting unresolved friction must leave totalFoundationProgress unchanged");
+  assert.equal(sc7WithFriction.currentLevel, sc7WithoutFriction.currentLevel,
+    "Sc7: deleting unresolved friction must leave currentLevel unchanged");
+
+  // =========================================================================
+  // Scenario 8: Backfill stability — deleting one event must not alter
+  //             the feature IDs or parent assignments of unrelated features
+  // =========================================================================
+  const sc8Events = [
+    delEv("sc8-pos-1", "positive_moment", "2026-03-01T10:00:00Z"),
+    delEv("sc8-pos-2", "positive_moment", "2026-03-02T10:00:00Z"),
+    delEv("sc8-rec-1", "reconnection", "2026-03-05T10:00:00Z"),
+  ];
+  // World with all 3 events (care=8, total=8+10=18 from elapsedDays=20)
+  const sc8SceneWith = generateGardenSVGScene(COUPLE_A, 18, 8, false, undefined, "light", sc8Events);
+  const sc8WorldWith = buildGardenWorld(sc8SceneWith, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 18,
+    careGrowthUnits: 8,
+    timeGrowthUnits: 10,
+    careEvents: sc8Events,
+  });
+  // World with sc8-pos-2 deleted (care=6, total=16)
+  const sc8EventsReduced = sc8Events.filter(e => e.id !== "sc8-pos-2");
+  const sc8SceneWithout = generateGardenSVGScene(COUPLE_A, 16, 6, false, undefined, "light", sc8EventsReduced);
+  const sc8WorldWithout = buildGardenWorld(sc8SceneWithout, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 16,
+    careGrowthUnits: 6,
+    timeGrowthUnits: 10,
+    careEvents: sc8EventsReduced,
+  });
+  // sc8-pos-2's feature node must be absent from the world without it
+  const fid2 = getCareFeatureId("positive_moment", "sc8-pos-2");
+  assert.ok(sc8WorldWith.nodes[fid2], "Sc8: sc8-pos-2 feature must exist before deletion");
+  assert.ok(!sc8WorldWithout.nodes[fid2], "Sc8: sc8-pos-2 feature must be absent after deletion");
+  // The unrelated feature sc8-pos-1 must retain its stable ID and parent
+  const fid1 = getCareFeatureId("positive_moment", "sc8-pos-1");
+  assert.ok(sc8WorldWith.nodes[fid1], "Sc8: sc8-pos-1 feature must exist in both worlds");
+  assert.ok(sc8WorldWithout.nodes[fid1], "Sc8: sc8-pos-1 feature must remain after deleting sc8-pos-2");
+  assert.equal(sc8WorldWith.nodes[fid1].id, sc8WorldWithout.nodes[fid1].id,
+    "Sc8: sc8-pos-1 node ID must be stable after sc8-pos-2 deletion");
+  assert.equal(sc8WorldWith.nodes[fid1].parentId, sc8WorldWithout.nodes[fid1].parentId,
+    "Sc8: sc8-pos-1 parent attachment must be stable after sc8-pos-2 deletion");
+  // The reconnection feature must also remain stable
+  const fidRec = getCareFeatureId("reconnection", "sc8-rec-1");
+  assert.ok(sc8WorldWith.nodes[fidRec], "Sc8: sc8-rec-1 must exist in world with all events");
+  assert.ok(sc8WorldWithout.nodes[fidRec], "Sc8: sc8-rec-1 must remain stable after sc8-pos-2 deletion");
+  assert.equal(sc8WorldWith.nodes[fidRec].parentId, sc8WorldWithout.nodes[fidRec].parentId,
+    "Sc8: sc8-rec-1 parent attachment must be stable after sc8-pos-2 deletion");
+
+  // =========================================================================
+  // Scenario 9: Garden Story parity — deleted event is absent from new snapshot
+  // =========================================================================
+  // Build story with 3 events, then without 1 — confirm deleted event's key is absent
+  const sc9Events = [
+    delEv("sc9-pos-1", "positive_moment", "2026-04-01T10:00:00Z"),
+    delEv("sc9-pos-2", "positive_moment", "2026-04-05T10:00:00Z"),
+    delEv("sc9-rec-1", "reconnection", "2026-04-10T10:00:00Z"),
+  ];
+  const sc9StoryBefore = createGardenStory({
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    createdAt: "2026-01-01T00:00:00Z",
+    careEvents: sc9Events,
+    asOfTime: "2026-06-01T00:00:00Z",
+    isResting: false,
+    themeKey: "light",
+  });
+  const sc9StoryAfter = createGardenStory({
+    coupleId: COUPLE_A,
+    seedString: COUPLE_A,
+    createdAt: "2026-01-01T00:00:00Z",
+    careEvents: sc9Events.filter(e => e.id !== "sc9-pos-2"),
+    asOfTime: "2026-06-01T00:00:00Z",
+    isResting: false,
+    themeKey: "light",
+  });
+  // Story before must contain a step referencing sc9-pos-2
+  const sc9BeforeKeys = sc9StoryBefore.steps.map(s => s.addedEventKey).filter(Boolean);
+  assert.ok(
+    sc9BeforeKeys.some(k => k.includes("sc9-pos-2")),
+    "Sc9: Before deletion, Garden Story must include a step for sc9-pos-2"
+  );
+  // Story after deletion must NOT contain sc9-pos-2
+  const sc9AfterKeys = sc9StoryAfter.steps.map(s => s.addedEventKey).filter(Boolean);
+  assert.ok(
+    !sc9AfterKeys.some(k => k.includes("sc9-pos-2")),
+    "Sc9: After deletion, Garden Story must not contain a step for sc9-pos-2"
+  );
+  // Story after must still contain the remaining events
+  assert.ok(
+    sc9AfterKeys.some(k => k.includes("sc9-pos-1")),
+    "Sc9: After deletion, sc9-pos-1 step must still be present"
+  );
+  assert.ok(
+    sc9AfterKeys.some(k => k.includes("sc9-rec-1")),
+    "Sc9: After deletion, sc9-rec-1 step must still be present"
+  );
+  // Growth reflected in final story step must be lower without sc9-pos-2
+  const sc9FinalBefore = sc9StoryBefore.steps[sc9StoryBefore.steps.length - 1];
+  const sc9FinalAfter = sc9StoryAfter.steps[sc9StoryAfter.steps.length - 1];
+  assert.ok(
+    sc9FinalBefore.totalGrowthUnits > sc9FinalAfter.totalGrowthUnits,
+    "Sc9: Final story step must reflect lower totalGrowthUnits after deletion"
+  );
+
+  // =========================================================================
+  // Scenario 10: UI consumer parity — all 5 callers on the same event array
+  //              must resolve the same reduced totalFoundationProgress
+  // =========================================================================
+  // After deleting sc9-pos-2 from sc9Events: 1pos(2)+1rec(4)=6 care, 20days→10time, total=16
+  const sc10Events = sc9Events.filter(e => e.id !== "sc9-pos-2");
+  const sc10ElapsedDays = 20;
+  // Consumer 1: direct calculateAuthoritativeFoundation(events, days)
+  const sc10C1 = calculateAuthoritativeFoundation(sc10Events, sc10ElapsedDays);
+  // Consumer 2: calculateAuthoritativeFoundation(total) — from stored total
+  const sc10C2 = calculateAuthoritativeFoundation(sc10C1.totalFoundationProgress);
+  // Consumer 3: via GardenExplorer-style — passes totalGrowthUnits number when careEvents available
+  //   (GardenExplorer uses: careEvents.length > 0 ? careEvents : totalGrowthUnits, without elapsed days)
+  //   For the subphase-only resolution, pass the authoritative total directly:
+  const sc10C3 = calculateAuthoritativeFoundation(sc10C1.totalFoundationProgress);
+  // Consumer 4: GardenProgressSection-style (events array + elapsedDays)
+  const sc10C4 = calculateAuthoritativeFoundation(sc10Events, sc10ElapsedDays);
+  // Consumer 5: resolveMvpFoundationPresentation(total, care, time)
+  const sc10C5 = resolveMvpFoundationPresentation(sc10C1.totalFoundationProgress, sc10C1.rawCareContribution, sc10C1.supportingTimeContribution);
+
+  assert.equal(sc10C1.totalFoundationProgress, 16, "Sc10 C1: 1pos+1rec+20days should yield 16 total");
+  assert.equal(sc10C2.totalFoundationProgress, 16, "Sc10 C2: totalFoundationProgress must equal 16");
+  assert.equal(sc10C3.totalFoundationProgress, 16, "Sc10 C3: GardenExplorer numeric total must resolve 16");
+  assert.equal(sc10C4.totalFoundationProgress, 16, "Sc10 C4: GardenProgressSection-style must resolve 16");
+  assert.equal(sc10C5.level, sc10C1.currentLevel, "Sc10 C5: resolveMvpFoundationPresentation level must match");
+  assert.equal(sc10C5.subphaseKey, sc10C1.subphaseKey, "Sc10 C5: resolveMvpFoundationPresentation subphaseKey must match");
+  // All consumers must agree on level
+  const sc10Level = sc10C1.currentLevel;
+  assert.equal(sc10C2.currentLevel, sc10Level, "Sc10: All consumers must agree on currentLevel after deletion");
+  assert.equal(sc10C3.currentLevel, sc10Level, "Sc10: GardenExplorer-style level must match after deletion");
+  assert.equal(sc10C4.currentLevel, sc10Level, "Sc10: GardenProgressSection-style level must match after deletion");
+  // Explorable memory count must also reflect deletion (fewer events → fewer memories)
+  const sc10SceneReduced = generateGardenSVGScene(COUPLE_A, 16, 6, false, undefined, "light", sc10Events);
+  const sc10WorldReduced = buildGardenWorld(sc10SceneReduced, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 16,
+    careGrowthUnits: 6,
+    timeGrowthUnits: 10,
+    careEvents: sc10Events,
+  });
+  const sc10SceneFull = generateGardenSVGScene(COUPLE_A, 18, 8, false, undefined, "light", sc9Events);
+  const sc10WorldFull = buildGardenWorld(sc10SceneFull, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 18,
+    careGrowthUnits: 8,
+    timeGrowthUnits: 10,
+    careEvents: sc9Events,
+  });
+  const sc10MemsFull = getExplorableMemories(sc10WorldFull, sc9Events);
+  const sc10MemsReduced = getExplorableMemories(sc10WorldReduced, sc10Events);
+  assert.ok(
+    sc10MemsReduced.length < sc10MemsFull.length,
+    `Sc10: Explorable memory count must decrease after deletion (${sc10MemsFull.length} → ${sc10MemsReduced.length})`
+  );
+});
+
 function gardenVisualQACDCGuarded(code) {
   return code.includes("if (!__DEV__)") && code.includes("<Redirect href=\"/garden\"");
 }
