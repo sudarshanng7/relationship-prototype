@@ -52,6 +52,8 @@ export type WhatHelpedAction =
 export interface WhatHelpedBeforeProps {
   /** ID of the current friction event */
   currentEventId: string;
+  /** Category of the current friction event */
+  currentCategory?: string | null;
   /** The couple ID */
   coupleId: string;
   /** The current authenticated user */
@@ -71,6 +73,7 @@ const ACKNOWLEDGEMENT_TEXT: Record<"try_same" | "adapt", string> = {
 
 export function WhatHelpedBefore({
   currentEventId,
+  currentCategory,
   coupleId,
   userId,
   candidate,
@@ -146,6 +149,9 @@ export function WhatHelpedBefore({
         }
 
         if (action === "try_same" || action === "adapt") {
+          if (currentCategory && candidate.category !== currentCategory) {
+            return;
+          }
           const res = await saveRelationDecision({
             currentEventId,
             priorEventId: candidate.eventId,
@@ -196,8 +202,12 @@ export function WhatHelpedBefore({
         sharedTakeaway.takeawayTag.trim().length > 0)
   );
 
-  // Do not render an empty guidance card if there is no reusable content
-  if (loading || !hasReusableContent) {
+  // Defensive check: Do not render guidance card if there is no reusable content, or if categories mismatch
+  if (
+    loading ||
+    !hasReusableContent ||
+    (currentCategory && candidate.category !== currentCategory)
+  ) {
     return null;
   }
 

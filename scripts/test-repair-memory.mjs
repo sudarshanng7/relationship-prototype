@@ -36,11 +36,14 @@ function formatRepairDuration(durationMs) {
     const hours = Math.round(totalHours);
     return `about ${hours} ${hours === 1 ? "hour" : "hours"}`;
   }
-  if (totalMinutes >= 10) {
+  if (durationMs >= 60 * 1000) {
     const minutes = Math.round(totalMinutes);
-    return `about ${minutes} minutes`;
+    if (minutes >= 60) {
+      return "about 1 hour";
+    }
+    return `about ${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
   }
-  return null;
+  return "less than a minute";
 }
 
 function calculateRepairDurationMs(createdAt, reconnectedAt) {
@@ -57,6 +60,20 @@ function calculateRepairDurationMs(createdAt, reconnectedAt) {
 const REPAIR_MEMORY_GARDEN_CONTRIBUTION = 0;
 const MAX_REPAIR_MEMORY_CANDIDATES = 3;
 
+const SUPPORTED_FRICTION_CATEGORIES = new Set([
+  "household",
+  "money",
+  "family",
+  "communication",
+  "work_stress",
+  "time_together",
+  "phones_screens",
+  "affection",
+  "parenting",
+  "plans",
+  "other",
+]);
+
 function filterAndRankCandidates({
   priorEvents,
   userReflections,
@@ -65,9 +82,19 @@ function filterAndRankCandidates({
   currentCategory,
   currentUserId,
 }) {
+  if (
+    !currentCategory ||
+    typeof currentCategory !== "string" ||
+    !SUPPORTED_FRICTION_CATEGORIES.has(currentCategory.trim())
+  ) {
+    return [];
+  }
+  const normalizedCategory = currentCategory.trim();
+
   const candidates = [];
   for (const event of priorEvents) {
     if (suppressedIds && suppressedIds.has(event.id)) continue;
+    if (event.category !== normalizedCategory) continue;
     if (!event.reconnected_at) continue;
 
     const userNote = userReflections?.get(event.id);
@@ -103,17 +130,10 @@ function filterAndRankCandidates({
     });
   }
 
-  if (currentCategory) {
-    candidates.sort((a, b) => {
-      const aMatch = a.category === currentCategory ? 0 : 1;
-      const bMatch = b.category === currentCategory ? 0 : 1;
-      if (aMatch !== bMatch) return aMatch - bMatch;
-      return (
-        new Date(b.reconnectedAt).getTime() -
-        new Date(a.reconnectedAt).getTime()
-      );
-    });
-  }
+  candidates.sort(
+    (a, b) =>
+      new Date(b.reconnectedAt).getTime() - new Date(a.reconnectedAt).getTime()
+  );
 
   return candidates.slice(0, MAX_REPAIR_MEMORY_CANDIDATES);
 }
@@ -298,22 +318,22 @@ test("8. Mine-only events not accessible to non-creator (visibility filter)", ()
 });
 
 // ---------------------------------------------------------------------------
-// 9. Candidate ordering deterministic — newer first, same-category first
+// 9. Candidate category matching — strictly matches currentEvent.category
 // ---------------------------------------------------------------------------
 
-test("9. Same-category candidates ranked first; then by recency", () => {
+test("9. Candidate category must match currentEvent.category strictly — candidates with other categories excluded", () => {
   const src = fs.readFileSync(
     path.join(PROJECT_ROOT, "src/lib/repair-memory.ts"),
     "utf8"
   );
   assert.ok(
-    src.includes('a.category === currentCategory ? 0 : 1'),
-    "Sort must rank same-category candidates first"
+    src.includes("event.category !== normalizedCategory") ||
+      src.includes("c.category === canonicalCategory"),
+    "Candidates with categories different from current event must be excluded"
   );
   assert.ok(
-    src.includes("reconnectedAt").getTime !== undefined ||
-      src.includes("new Date(b.reconnectedAt).getTime()"),
-    "Sort must use reconnectedAt for recency ordering"
+    src.includes("SUPPORTED_FRICTION_CATEGORIES"),
+    "Must validate against SUPPORTED_FRICTION_CATEGORIES"
   );
 });
 
@@ -334,32 +354,28 @@ test("10b. Source caps result to MAX_REPAIR_MEMORY_CANDIDATES", () => {
     src.includes("candidates.slice(0, MAX_REPAIR_MEMORY_CANDIDATES)"),
     "Return must slice to MAX_REPAIR_MEMORY_CANDIDATES"
   );
-  assert.ok(
-    src.includes("candidates.length >= MAX_REPAIR_MEMORY_CANDIDATES"),
-    "Inner loop must break when cap is reached"
-  );
 });
 
 // ---------------------------------------------------------------------------
 // 11. Same-category matching
 // ---------------------------------------------------------------------------
 
-test("11. hasCategoryMatch is true when any candidate shares category with current event", () => {
+test("11. hasCategoryMatch is true when candidates are found for the category", () => {
   const src = fs.readFileSync(
     path.join(PROJECT_ROOT, "src/lib/repair-memory.ts"),
     "utf8"
   );
   assert.ok(
-    src.includes("candidates.some((c) => c.category === currentCategory)"),
-    "hasCategoryMatch must use candidates.some() with category equality"
+    src.includes("hasCategoryMatch"),
+    "findRepairMemoryCandidates must return hasCategoryMatch flag"
   );
 });
 
 // ---------------------------------------------------------------------------
-// 12. Optional category — empty category does not block registration
+// 12. Invalid or missing category returns zero candidates
 // ---------------------------------------------------------------------------
 
-test("12. Category is optional — empty category does not block candidate save path", () => {
+test("12. Invalid or missing category returns zero candidates without blocking saved event navigation", () => {
   const src = fs.readFileSync(
     path.join(PROJECT_ROOT, "src/lib/repair-memory.ts"),
     "utf8"
@@ -369,10 +385,10 @@ test("12. Category is optional — empty category does not block candidate save 
     src.includes("currentCategory: string | null"),
     "findRepairMemoryCandidates must accept null category"
   );
-  // Sort logic only applies if currentCategory is truthy
+  // Returns empty array when currentCategory is invalid/missing
   assert.ok(
-    src.includes("if (currentCategory) {"),
-    "Category sort must only apply when category is non-null"
+    src.includes("!currentCategory") && src.includes("SUPPORTED_FRICTION_CATEGORIES"),
+    "Must return empty candidates for invalid or missing category"
   );
 });
 
@@ -612,8 +628,9 @@ test("22e. formatRepairDuration(NaN) returns null", () => {
   assert.strictEqual(formatRepairDuration(NaN), null);
 });
 
-test("22f. formatRepairDuration < 10 minutes returns null (too short to present)", () => {
-  assert.strictEqual(formatRepairDuration(5 * 60 * 1000), null); // 5 minutes
+test("22f. formatRepairDuration positive duration under 1 minute formats as 'less than a minute'", () => {
+  assert.strictEqual(formatRepairDuration(45 * 1000), "less than a minute");
+  assert.strictEqual(formatRepairDuration(1000), "less than a minute");
 });
 
 // ---------------------------------------------------------------------------
@@ -1448,20 +1465,20 @@ test("55. Only one Repair Memory migration exists — superseded file removed", 
 // 56. pgTAP test file exists, is executable, covers 16 tests
 // ---------------------------------------------------------------------------
 
-test("56. pgTAP test file exists and covers 16 test cases", () => {
+test("56. pgTAP test file exists and covers 23 test cases", () => {
   const testPath = path.join(PROJECT_ROOT, "supabase/tests/test_friction_moment_relations_rls.sql");
   assert.ok(fs.existsSync(testPath), "pgTAP test file must exist");
   const src = fs.readFileSync(testPath, "utf8");
-  // Verify tests 1–16 are present
-  for (let i = 1; i <= 16; i++) {
+  // Verify tests 1–23 are present
+  for (let i = 1; i <= 23; i++) {
     assert.ok(
       src.includes(`TEST ${i}`),
       `pgTAP test file must include TEST ${i}`
     );
   }
   assert.ok(
-    src.includes("SELECT plan(16)"),
-    "pgTAP test must declare plan(16)"
+    src.includes("SELECT plan(23)"),
+    "pgTAP test must declare plan(23)"
   );
   assert.ok(
     src.includes("npx supabase test db"),
@@ -2017,4 +2034,511 @@ test("79. Privacy, lack of predictive claims, and touch target accessibility", (
     src.includes("minHeight: 44"),
     "WhatHelpedBefore action buttons must maintain minimum 44pt touch target"
   );
+});
+
+// ---------------------------------------------------------------------------
+// 80. Current Family event never returns Affection candidate
+// ---------------------------------------------------------------------------
+
+test("80. Current Family event never returns Affection candidate", () => {
+  const evAff = makeEvent({
+    id: "ev-aff-1",
+    category: "affection",
+    created_at: "2026-01-01T00:00:00Z",
+    reconnected_at: "2026-01-01T02:00:00Z",
+  });
+  const userReflections = new Map([["ev-aff-1", "Hello testing"]]);
+  const sharedTakeaways = new Map();
+
+  const results = filterAndRankCandidates({
+    priorEvents: [evAff],
+    userReflections,
+    sharedTakeaways,
+    currentCategory: "family",
+    currentUserId: USER_ID_A,
+  });
+
+  assert.equal(
+    results.length,
+    0,
+    "Family moment lookup must never return an Affection candidate"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 81. Family event returns eligible Family candidate
+// ---------------------------------------------------------------------------
+
+test("81. Family event returns eligible Family candidate", () => {
+  const evFam = makeEvent({
+    id: "ev-fam-1",
+    category: "family",
+    created_at: "2026-01-01T00:00:00Z",
+    reconnected_at: "2026-01-01T12:00:00Z",
+  });
+  const userReflections = new Map([["ev-fam-1", "Family resolution reflection"]]);
+
+  const results = filterAndRankCandidates({
+    priorEvents: [evFam],
+    userReflections,
+    currentCategory: "family",
+    currentUserId: USER_ID_A,
+  });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].eventId, "ev-fam-1");
+  assert.equal(results[0].category, "family");
+});
+
+// ---------------------------------------------------------------------------
+// 82. Newest Affection candidate plus older Family candidate -> Family selected
+// ---------------------------------------------------------------------------
+
+test("82. Newest Affection candidate plus older Family candidate -> Family selected", () => {
+  const evAff = makeEvent({
+    id: "ev-aff-new",
+    category: "affection",
+    created_at: "2026-02-01T00:00:00Z",
+    reconnected_at: "2026-02-01T02:00:00Z",
+  });
+  const evFam = makeEvent({
+    id: "ev-fam-old",
+    category: "family",
+    created_at: "2026-01-01T00:00:00Z",
+    reconnected_at: "2026-01-01T10:00:00Z",
+  });
+
+  const userReflections = new Map([
+    ["ev-aff-new", "Affection reflection"],
+    ["ev-fam-old", "Family reflection"],
+  ]);
+
+  const results = filterAndRankCandidates({
+    priorEvents: [evAff, evFam],
+    userReflections,
+    currentCategory: "family",
+    currentUserId: USER_ID_A,
+  });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].eventId, "ev-fam-old");
+  assert.equal(results[0].category, "family");
+});
+
+// ---------------------------------------------------------------------------
+// 83. No eligible Family history -> zero candidates, even if eligible Affection history exists
+// ---------------------------------------------------------------------------
+
+test("83. No eligible Family history -> zero candidates, even if eligible Affection history exists", () => {
+  const evAff1 = makeEvent({
+    id: "ev-aff-1",
+    category: "affection",
+    created_at: "2026-02-01T00:00:00Z",
+    reconnected_at: "2026-02-01T02:00:00Z",
+  });
+  const evAff2 = makeEvent({
+    id: "ev-aff-2",
+    category: "affection",
+    created_at: "2026-01-15T00:00:00Z",
+    reconnected_at: "2026-01-15T05:00:00Z",
+  });
+
+  const userReflections = new Map([
+    ["ev-aff-1", "Affection note 1"],
+    ["ev-aff-2", "Affection note 2"],
+  ]);
+
+  const results = filterAndRankCandidates({
+    priorEvents: [evAff1, evAff2],
+    userReflections,
+    currentCategory: "family",
+    currentUserId: USER_ID_A,
+  });
+
+  assert.equal(results.length, 0);
+});
+
+// ---------------------------------------------------------------------------
+// 84. Every supported category matches only itself
+// ---------------------------------------------------------------------------
+
+test("84. Every supported category matches only itself", () => {
+  const categories = [
+    "household",
+    "money",
+    "family",
+    "communication",
+    "work_stress",
+    "time_together",
+    "phones_screens",
+    "affection",
+    "parenting",
+    "plans",
+    "other",
+  ];
+
+  for (const cat of categories) {
+    const ev = makeEvent({
+      id: `ev-${cat}`,
+      category: cat,
+      created_at: "2026-01-01T00:00:00Z",
+      reconnected_at: "2026-01-01T04:00:00Z",
+    });
+    const userReflections = new Map([[`ev-${cat}`, `Reflection for ${cat}`]]);
+
+    // Matching itself -> 1 candidate
+    const selfMatch = filterAndRankCandidates({
+      priorEvents: [ev],
+      userReflections,
+      currentCategory: cat,
+      currentUserId: USER_ID_A,
+    });
+    assert.equal(selfMatch.length, 1, `${cat} must match itself`);
+    assert.equal(selfMatch[0].category, cat);
+
+    // Mismatched category -> 0 candidates
+    const otherCat = cat === "family" ? "affection" : "family";
+    const crossMatch = filterAndRankCandidates({
+      priorEvents: [ev],
+      userReflections,
+      currentCategory: otherCat,
+      currentUserId: USER_ID_A,
+    });
+    assert.equal(crossMatch.length, 0, `${cat} must NOT match ${otherCat}`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 85. Invalid or missing category -> zero candidates
+// ---------------------------------------------------------------------------
+
+test("85. Invalid or missing category -> zero candidates", () => {
+  const ev = makeEvent({
+    id: "ev-test",
+    category: "family",
+    created_at: "2026-01-01T00:00:00Z",
+    reconnected_at: "2026-01-01T04:00:00Z",
+  });
+  const userReflections = new Map([["ev-test", "Reflection"]]);
+
+  for (const invalid of [null, undefined, "", "   ", "nonexistent_category", "random"]) {
+    const results = filterAndRankCandidates({
+      priorEvents: [ev],
+      userReflections,
+      currentCategory: invalid,
+      currentUserId: USER_ID_A,
+    });
+    assert.equal(results.length, 0, `Category ${invalid} must yield 0 candidates`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 86. Two sequential saves in one mounted session: state is properly reset
+// ---------------------------------------------------------------------------
+
+test("86. Two sequential saves in one mounted session: state is properly reset", () => {
+  const recordSrc = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/app/record-moment.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    recordSrc.includes("setRepairCandidates([])") &&
+      recordSrc.includes("setCandidateLookupDone(false)") &&
+      recordSrc.includes("setSavedFrictionCategory(null)"),
+    "executeSave must clear previous candidate and category state at the start of every save"
+  );
+  assert.ok(
+    recordSrc.includes("repairCandidates.every((c) => c.category === savedFrictionCategory)"),
+    "showSuggestion must enforce all repairCandidates match savedFrictionCategory"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 87. Older asynchronous Affection lookup cannot overwrite newer Family lookup
+// ---------------------------------------------------------------------------
+
+test("87. Older asynchronous lookup cannot overwrite newer lookup (request generation guard)", () => {
+  const recordSrc = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/app/record-moment.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    recordSrc.includes("lookupRequestIdRef = useRef(0)"),
+    "record-moment must track lookup request generation using lookupRequestIdRef"
+  );
+  assert.ok(
+    recordSrc.includes("const currentRequestId = ++lookupRequestIdRef.current;"),
+    "executeSave must increment lookupRequestIdRef for every save attempt"
+  );
+  assert.ok(
+    recordSrc.includes("if (currentRequestId !== lookupRequestIdRef.current) return;"),
+    "lookup resolution must reject stale async responses"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 88. Category filtering occurs before limit and ranking
+// ---------------------------------------------------------------------------
+
+test("88. Category filtering occurs before limit and ranking", () => {
+  // 4 newer Affection events + 2 older Family events
+  const evAff1 = makeEvent({ id: "aff-1", category: "affection", created_at: "2026-03-01T00:00:00Z", reconnected_at: "2026-03-01T02:00:00Z" });
+  const evAff2 = makeEvent({ id: "aff-2", category: "affection", created_at: "2026-02-20T00:00:00Z", reconnected_at: "2026-02-20T02:00:00Z" });
+  const evAff3 = makeEvent({ id: "aff-3", category: "affection", created_at: "2026-02-15T00:00:00Z", reconnected_at: "2026-02-15T02:00:00Z" });
+  const evAff4 = makeEvent({ id: "aff-4", category: "affection", created_at: "2026-02-10T00:00:00Z", reconnected_at: "2026-02-10T02:00:00Z" });
+  const evFam1 = makeEvent({ id: "fam-1", category: "family", created_at: "2026-01-05T00:00:00Z", reconnected_at: "2026-01-05T02:00:00Z" });
+  const evFam2 = makeEvent({ id: "fam-2", category: "family", created_at: "2026-01-01T00:00:00Z", reconnected_at: "2026-01-01T02:00:00Z" });
+
+  const userReflections = new Map([
+    ["aff-1", "note"], ["aff-2", "note"], ["aff-3", "note"], ["aff-4", "note"],
+    ["fam-1", "fam note 1"], ["fam-2", "fam note 2"]
+  ]);
+
+  const results = filterAndRankCandidates({
+    priorEvents: [evAff1, evAff2, evAff3, evAff4, evFam1, evFam2],
+    userReflections,
+    currentCategory: "family",
+    currentUserId: USER_ID_A,
+  });
+
+  // If filtering occurred AFTER top 3 limit, results would be 0 because top 3 would be aff-1, aff-2, aff-3.
+  // Because filtering occurs BEFORE limit, both Family events must be returned!
+  assert.equal(results.length, 2);
+  assert.equal(results[0].eventId, "fam-1");
+  assert.equal(results[1].eventId, "fam-2");
+});
+
+// ---------------------------------------------------------------------------
+// 89. Mismatched hydrated candidate is suppressed on event page
+// ---------------------------------------------------------------------------
+
+test("89. Mismatched hydrated candidate is suppressed on event page", () => {
+  const eventSrc = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/app/event/[id].tsx"),
+    "utf8"
+  );
+  assert.ok(
+    eventSrc.includes("currentEv.category !== priorEvent.category"),
+    "event/[id].tsx must check category match before hydrating candidate"
+  );
+  assert.ok(
+    eventSrc.includes("repairMemoryCandidate.category === event.category"),
+    "event/[id].tsx must gate WhatHelpedBefore render on category equality"
+  );
+
+  const whatHelpedSrc = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/components/WhatHelpedBefore.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    whatHelpedSrc.includes("currentCategory && candidate.category !== currentCategory"),
+    "WhatHelpedBefore must return null if candidate.category does not match currentCategory"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 90. No cross-category relation write occurs
+// ---------------------------------------------------------------------------
+
+test("90. No cross-category relation write occurs", () => {
+  const suggestionSrc = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/components/RepairMemorySuggestion.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    suggestionSrc.includes("currentCategory && candidate.category !== currentCategory"),
+    "RepairMemorySuggestion must guard against saving a cross-category relation"
+  );
+
+  const whatHelpedSrc = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/components/WhatHelpedBefore.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    whatHelpedSrc.includes("currentCategory && candidate.category !== currentCategory"),
+    "WhatHelpedBefore must prevent saving a cross-category relation"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 91. Canonical category comes from saved relationship_events row
+// ---------------------------------------------------------------------------
+
+test("91. Canonical category comes from saved relationship_events row", () => {
+  const recordSrc = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/app/record-moment.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    recordSrc.includes("savedEventRow?.category") || recordSrc.includes("canonicalCategory"),
+    "record-moment.tsx must fetch and use the canonical category from saved row"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 92. Garden contribution remains zero with strict category matching
+// ---------------------------------------------------------------------------
+
+test("92. Garden contribution remains zero with strict category matching", () => {
+  assert.strictEqual(REPAIR_MEMORY_GARDEN_CONTRIBUTION, 0);
+  const baseline = calculateAuthoritativeFoundation(4, 30);
+  const afterMatching = calculateAuthoritativeFoundation(4, 30);
+  assert.strictEqual(afterMatching.foundationPercent, baseline.foundationPercent);
+  assert.strictEqual(afterMatching.rawCareContribution, baseline.rawCareContribution);
+});
+
+// ---------------------------------------------------------------------------
+// 93. 1 minute 52 seconds formats as "about 2 minutes"
+// ---------------------------------------------------------------------------
+
+test("93. 1 minute 52 seconds formats as 'about 2 minutes'", () => {
+  const durationMs = 1 * 60 * 1000 + 52 * 1000; // 112,000 ms
+  assert.strictEqual(formatRepairDuration(durationMs), "about 2 minutes");
+});
+
+// ---------------------------------------------------------------------------
+// 94. Positive duration under 1 minute formats as "less than a minute"
+// ---------------------------------------------------------------------------
+
+test("94. Positive duration under 1 minute formats as 'less than a minute'", () => {
+  assert.strictEqual(formatRepairDuration(500), "less than a minute");
+  assert.strictEqual(formatRepairDuration(30 * 1000), "less than a minute");
+  assert.strictEqual(formatRepairDuration(59 * 1000), "less than a minute");
+});
+
+// ---------------------------------------------------------------------------
+// 95. Same-category candidate with takeaway_tag only and sub-10-minute duration is returned
+// ---------------------------------------------------------------------------
+
+test("95. Same-category candidate with takeaway_tag only and sub-10-minute duration is returned", () => {
+  const priorEvents = [
+    {
+      id: "fam-short-tag",
+      category: "family",
+      created_at: "2026-11-11T16:53:58.689Z",
+      reconnected_at: "2026-11-11T16:55:50.660Z", // ~1m 52s
+      creator_id: "user-1",
+      shared_topic: null,
+    },
+  ];
+
+  const sharedTakeaways = new Map([
+    [
+      "fam-short-tag",
+      { takeawayNote: null, takeawayTag: "giving_space" },
+    ],
+  ]);
+
+  const results = filterAndRankCandidates({
+    priorEvents,
+    userReflections: new Map(),
+    sharedTakeaways,
+    currentCategory: "family",
+    currentUserId: "user-1",
+  });
+
+  assert.strictEqual(results.length, 1);
+  assert.strictEqual(results[0].eventId, "fam-short-tag");
+  assert.strictEqual(results[0].category, "family");
+  assert.strictEqual(results[0].repairDurationLabel, "about 2 minutes");
+});
+
+// ---------------------------------------------------------------------------
+// 96. Same-category candidate with private note only and sub-10-minute duration is returned
+// ---------------------------------------------------------------------------
+
+test("96. Same-category candidate with private note only and sub-10-minute duration is returned", () => {
+  const priorEvents = [
+    {
+      id: "comm-short-note",
+      category: "communication",
+      created_at: "2026-11-11T10:00:00.000Z",
+      reconnected_at: "2026-11-11T10:05:00.000Z", // 5 minutes
+      creator_id: "user-1",
+      shared_topic: "Tone during discussion",
+    },
+  ];
+
+  const userReflections = new Map([
+    ["comm-short-note", "I took a deep breath before answering"],
+  ]);
+
+  const results = filterAndRankCandidates({
+    priorEvents,
+    userReflections,
+    sharedTakeaways: new Map(),
+    currentCategory: "communication",
+    currentUserId: "user-1",
+  });
+
+  assert.strictEqual(results.length, 1);
+  assert.strictEqual(results[0].eventId, "comm-short-note");
+  assert.strictEqual(results[0].category, "communication");
+  assert.strictEqual(results[0].repairDurationLabel, "about 5 minutes");
+});
+
+// ---------------------------------------------------------------------------
+// 97. Invalid/negative duration remains excluded without fabricating timing
+// ---------------------------------------------------------------------------
+
+test("97. Invalid/negative duration remains excluded without fabricating timing", () => {
+  const priorEvents = [
+    {
+      id: "invalid-duration-event",
+      category: "money",
+      created_at: "2026-11-11T12:00:00.000Z",
+      reconnected_at: "2026-11-11T11:00:00.000Z", // negative duration (1h before)
+      creator_id: "user-1",
+    },
+    {
+      id: "missing-reconnected-event",
+      category: "money",
+      created_at: "2026-11-11T12:00:00.000Z",
+      reconnected_at: null,
+      creator_id: "user-1",
+    },
+  ];
+
+  const sharedTakeaways = new Map([
+    ["invalid-duration-event", { takeawayNote: "Budget review", takeawayTag: null }],
+    ["missing-reconnected-event", { takeawayNote: "Spreadsheet", takeawayTag: null }],
+  ]);
+
+  const results = filterAndRankCandidates({
+    priorEvents,
+    sharedTakeaways,
+    currentCategory: "money",
+    currentUserId: "user-1",
+  });
+
+  assert.strictEqual(results.length, 0, "Events with invalid or null duration must be excluded");
+});
+
+// ---------------------------------------------------------------------------
+// 98. Cross-category candidate remains rejected with sub-10-minute duration
+// ---------------------------------------------------------------------------
+
+test("98. Cross-category candidate remains rejected with sub-10-minute duration", () => {
+  const priorEvents = [
+    {
+      id: "affection-short",
+      category: "affection",
+      created_at: "2026-11-11T16:53:58.689Z",
+      reconnected_at: "2026-11-11T16:55:50.660Z", // ~1m 52s
+      creator_id: "user-1",
+    },
+  ];
+
+  const sharedTakeaways = new Map([
+    ["affection-short", { takeawayNote: "Hugged it out", takeawayTag: "giving_space" }],
+  ]);
+
+  const results = filterAndRankCandidates({
+    priorEvents,
+    sharedTakeaways,
+    currentCategory: "family",
+    currentUserId: "user-1",
+  });
+
+  assert.strictEqual(results.length, 0, "Cross-category event must never be returned");
 });

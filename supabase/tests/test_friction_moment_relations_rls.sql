@@ -15,7 +15,7 @@
 --   npx supabase test db executes these 16 assertions against the local
 --   Postgres container managed by Docker.
 --
--- COVERAGE (16 tests):
+-- COVERAGE (23 tests):
 --   1.  Valid owner INSERT into friction_moment_relations succeeds
 --   2.  Partner B inserts independent decision (no conflict with Partner A)
 --   3.  Partner-independent suppression: Partner A suppresses, Partner B is unaffected
@@ -32,6 +32,13 @@
 --   14. Valid decision UPDATE by owner succeeds
 --   15. Valid helpfulness_response UPDATE by owner succeeds
 --   16. CASCADE deletion removes relation rows when event is deleted
+--   17. Same-category 'related' insert succeeds
+--   18. Same-category 'deferred' insert succeeds
+--   19. Cross-category 'related' insert fails
+--   20. Cross-category 'somewhat_related' insert fails
+--   21. Cross-category 'deferred' insert fails
+--   22. Cross-category 'different' insert fails
+--   23. Categories are read canonically from relationship_events
 --
 -- FIXTURE DESIGN NOTES:
 --   - Runs entirely within a single ROLLBACK transaction; leaves no data behind.
@@ -45,7 +52,7 @@
 -- =====================================================
 
 BEGIN;
-SELECT plan(16);
+SELECT plan(23);
 
 -- =====================================================
 -- SETUP: extensions
@@ -73,10 +80,12 @@ INSERT INTO repair_memory_test_ids VALUES
     ('couple_1', '00000002-0002-0002-0002-000000000001'),
     ('couple_2', '00000002-0002-0002-0002-000000000002'),
     -- Events
-    ('ev_current','00000003-0003-0003-0003-000000000001'), -- friction, open,        couple_1
-    ('ev_prior',  '00000003-0003-0003-0003-000000000002'), -- friction, reconnected, couple_1
-    ('ev_open',   '00000003-0003-0003-0003-000000000003'), -- friction, open,        couple_1
-    ('ev_cross',  '00000003-0003-0003-0003-000000000004'); -- friction, reconnected, couple_2
+    ('ev_current','00000003-0003-0003-0003-000000000001'), -- friction, open,        couple_1, communication
+    ('ev_prior',  '00000003-0003-0003-0003-000000000002'), -- friction, reconnected, couple_1, communication
+    ('ev_open',   '00000003-0003-0003-0003-000000000003'), -- friction, open,        couple_1, communication
+    ('ev_cross',  '00000003-0003-0003-0003-000000000004'), -- friction, reconnected, couple_2, communication
+    ('ev_other_cat','00000003-0003-0003-0003-000000000005'), -- friction, reconnected, couple_1, household
+    ('ev_diff_cur', '00000003-0003-0003-0003-000000000006'); -- friction, open,        couple_1, household
 
 -- =====================================================
 -- SETUP: auth.users (4 fixtures)
@@ -171,6 +180,26 @@ VALUES
      '00000002-0002-0002-0002-000000000002',
      '00000001-0001-0001-0001-000000000003',
      'friction', 'communication', 'ours', 'reconnected', now(), now() - interval '1 day')
+ON CONFLICT (id) DO NOTHING;
+
+-- ev_other_cat: reconnected friction in couple_1 with a DIFFERENT category (household)
+INSERT INTO public.relationship_events
+    (id, couple_id, creator_id, event_type, category, visibility, status, reconnected_at, created_at)
+VALUES
+    ('00000003-0003-0003-0003-000000000005',
+     '00000002-0002-0002-0002-000000000001',
+     '00000001-0001-0001-0001-000000000001',
+     'friction', 'household', 'ours', 'reconnected', now(), now() - interval '3 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ev_diff_cur: open friction in couple_1 with household category (matching ev_other_cat)
+INSERT INTO public.relationship_events
+    (id, couple_id, creator_id, event_type, category, visibility, status, created_at)
+VALUES
+    ('00000003-0003-0003-0003-000000000006',
+     '00000002-0002-0002-0002-000000000001',
+     '00000001-0001-0001-0001-000000000001',
+     'friction', 'household', 'ours', 'open', now())
 ON CONFLICT (id) DO NOTHING;
 
 -- =====================================================
@@ -515,6 +544,162 @@ SELECT is(
      WHERE current_event_id = '00000003-0003-0003-0003-000000000001'),
     0,
     'TEST 16: CASCADE deletion removes relation rows when event is deleted'
+);
+
+-- =====================================================
+-- TEST 17: Same-category 'related' insert succeeds
+-- ev_diff_cur (household) and ev_other_cat (household, reconnected)
+-- =====================================================
+SELECT lives_ok(
+    $$
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claim.sub = '00000001-0001-0001-0001-000000000001';
+    INSERT INTO public.friction_moment_relations
+        (current_event_id, prior_event_id, couple_id, user_id, decision)
+    VALUES (
+        '00000003-0003-0003-0003-000000000006',
+        '00000003-0003-0003-0003-000000000005',
+        '00000002-0002-0002-0002-000000000001',
+        '00000001-0001-0001-0001-000000000001',
+        'related'
+    );
+    $$,
+    'TEST 17: same-category related insert succeeds'
+);
+
+-- =====================================================
+-- TEST 18: Same-category 'deferred' insert succeeds
+-- ev_diff_cur (household) and ev_other_cat (household, reconnected) by Partner B
+-- =====================================================
+SELECT lives_ok(
+    $$
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claim.sub = '00000001-0001-0001-0001-000000000002';
+    INSERT INTO public.friction_moment_relations
+        (current_event_id, prior_event_id, couple_id, user_id, decision)
+    VALUES (
+        '00000003-0003-0003-0003-000000000006',
+        '00000003-0003-0003-0003-000000000005',
+        '00000002-0002-0002-0002-000000000001',
+        '00000001-0001-0001-0001-000000000002',
+        'deferred'
+    );
+    $$,
+    'TEST 18: same-category deferred insert succeeds'
+);
+
+-- =====================================================
+-- TEST 19: Cross-category 'related' insert fails
+-- ev_open (communication) and ev_other_cat (household)
+-- =====================================================
+SELECT throws_ok(
+    $$
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claim.sub = '00000001-0001-0001-0001-000000000001';
+    INSERT INTO public.friction_moment_relations
+        (current_event_id, prior_event_id, couple_id, user_id, decision)
+    VALUES (
+        '00000003-0003-0003-0003-000000000003',
+        '00000003-0003-0003-0003-000000000005',
+        '00000002-0002-0002-0002-000000000001',
+        '00000001-0001-0001-0001-000000000001',
+        'related'
+    );
+    $$,
+    '23514', NULL,
+    'TEST 19: cross-category related insert fails'
+);
+
+-- =====================================================
+-- TEST 20: Cross-category 'somewhat_related' insert fails
+-- ev_open (communication) and ev_other_cat (household)
+-- =====================================================
+SELECT throws_ok(
+    $$
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claim.sub = '00000001-0001-0001-0001-000000000001';
+    INSERT INTO public.friction_moment_relations
+        (current_event_id, prior_event_id, couple_id, user_id, decision)
+    VALUES (
+        '00000003-0003-0003-0003-000000000003',
+        '00000003-0003-0003-0003-000000000005',
+        '00000002-0002-0002-0002-000000000001',
+        '00000001-0001-0001-0001-000000000001',
+        'somewhat_related'
+    );
+    $$,
+    '23514', NULL,
+    'TEST 20: cross-category somewhat_related insert fails'
+);
+
+-- =====================================================
+-- TEST 21: Cross-category 'deferred' insert fails
+-- ev_open (communication) and ev_other_cat (household)
+-- =====================================================
+SELECT throws_ok(
+    $$
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claim.sub = '00000001-0001-0001-0001-000000000001';
+    INSERT INTO public.friction_moment_relations
+        (current_event_id, prior_event_id, couple_id, user_id, decision)
+    VALUES (
+        '00000003-0003-0003-0003-000000000003',
+        '00000003-0003-0003-0003-000000000005',
+        '00000002-0002-0002-0002-000000000001',
+        '00000001-0001-0001-0001-000000000001',
+        'deferred'
+    );
+    $$,
+    '23514', NULL,
+    'TEST 21: cross-category deferred insert fails'
+);
+
+-- =====================================================
+-- TEST 22: Cross-category 'different' insert fails
+-- ev_open (communication) and ev_other_cat (household)
+-- =====================================================
+SELECT throws_ok(
+    $$
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claim.sub = '00000001-0001-0001-0001-000000000001';
+    INSERT INTO public.friction_moment_relations
+        (current_event_id, prior_event_id, couple_id, user_id, decision)
+    VALUES (
+        '00000003-0003-0003-0003-000000000003',
+        '00000003-0003-0003-0003-000000000005',
+        '00000002-0002-0002-0002-000000000001',
+        '00000001-0001-0001-0001-000000000001',
+        'different'
+    );
+    $$,
+    '23514', NULL,
+    'TEST 22: cross-category different insert fails'
+);
+
+-- =====================================================
+-- TEST 23: Categories are read canonically from relationship_events
+-- Updating ev_diff_cur category from household to communication allows insert with ev_prior
+-- =====================================================
+RESET ROLE;
+UPDATE public.relationship_events
+SET category = 'communication'
+WHERE id = '00000003-0003-0003-0003-000000000006';
+
+SELECT lives_ok(
+    $$
+    SET LOCAL ROLE authenticated;
+    SET LOCAL request.jwt.claim.sub = '00000001-0001-0001-0001-000000000001';
+    INSERT INTO public.friction_moment_relations
+        (current_event_id, prior_event_id, couple_id, user_id, decision)
+    VALUES (
+        '00000003-0003-0003-0003-000000000006',
+        '00000003-0003-0003-0003-000000000002',
+        '00000002-0002-0002-0002-000000000001',
+        '00000001-0001-0001-0001-000000000001',
+        'related'
+    );
+    $$,
+    'TEST 23: categories are read canonically from relationship_events'
 );
 
 -- =====================================================

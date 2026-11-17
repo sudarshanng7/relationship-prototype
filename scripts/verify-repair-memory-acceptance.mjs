@@ -75,6 +75,7 @@ async function findCandidates({ supabase, coupleId, currentUserId, currentEventI
 
   const eligible = [];
   for (const ev of priorEvents) {
+    if (currentCategory && ev.category !== currentCategory) continue;
     const hasReusable = eventsWithUserReflection.has(ev.id) || eventsWithSharedTakeaway.has(ev.id);
     if (!hasReusable) continue;
     eligible.push({

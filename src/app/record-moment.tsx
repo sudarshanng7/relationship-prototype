@@ -24,6 +24,7 @@ import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import {
   RepairMemoryCandidate,
+  SUPPORTED_FRICTION_CATEGORIES,
   findRepairMemoryCandidates,
 } from "@/lib/repair-memory";
 
@@ -84,11 +85,13 @@ export default function RecordMomentScreen() {
 
   // Repair memory state: set after a friction is saved, before navigation
   const [savedFrictionId, setSavedFrictionId] = useState<string | null>(null);
+  const [savedFrictionCategory, setSavedFrictionCategory] = useState<string | null>(null);
   const [savedFrictionVisibility, setSavedFrictionVisibility] = useState<Visibility>("mine");
   const [repairCandidates, setRepairCandidates] = useState<RepairMemoryCandidate[]>([]);
   const [candidateLookupDone, setCandidateLookupDone] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const navigatedRef = useRef(false);
+  const lookupRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (contextCoupleId && !coupleId) {
@@ -122,6 +125,13 @@ export default function RecordMomentScreen() {
       setEventType(typeParam);
       setCategory("");
       setIsReviewingOurs(false);
+      // Reset repair memory state on route parameter change
+      lookupRequestIdRef.current++;
+      setSavedFrictionId(null);
+      setSavedFrictionCategory(null);
+      setRepairCandidates([]);
+      setCandidateLookupDone(false);
+      navigatedRef.current = false;
     }
   }, [typeParam]);
 
@@ -132,6 +142,13 @@ export default function RecordMomentScreen() {
       setVisibility("mine");
     }
     setIsReviewingOurs(false);
+    // Reset repair memory state on visibility change
+    lookupRequestIdRef.current++;
+    setSavedFrictionId(null);
+    setSavedFrictionCategory(null);
+    setRepairCandidates([]);
+    setCandidateLookupDone(false);
+    navigatedRef.current = false;
   }, [visibilityParam]);
 
   async function loadCouple() {
@@ -225,6 +242,14 @@ export default function RecordMomentScreen() {
     setSaving(true);
     setStatus("Saving...");
 
+    // Invalidate any older in-flight candidate lookup
+    const currentRequestId = ++lookupRequestIdRef.current;
+    setSavedFrictionId(null);
+    setSavedFrictionCategory(null);
+    setRepairCandidates([]);
+    setCandidateLookupDone(false);
+    navigatedRef.current = false;
+
     try {
       const finalVisibility: Visibility = effectiveVisibility;
 
@@ -248,28 +273,53 @@ export default function RecordMomentScreen() {
         throw new Error("Moment could not be created.");
       }
 
+      // Fetch the canonical saved row to guarantee exact category source
+      const { data: savedEventRow } = await supabase
+        .from("relationship_events")
+        .select("id, category, event_type, visibility")
+        .eq("id", eventId as string)
+        .maybeSingle();
+
+      const canonicalCategory = savedEventRow?.category ?? category;
+
       // Rule 1: Save first — navigation happens AFTER.
-      // For shared friction moments, check for prior repair memory candidates.
+      // For shared friction moments with supported category, check for prior repair memory candidates.
       // This check must NEVER block registration (errors are silently ignored).
-      if (eventType === "friction" && finalVisibility === "ours" && coupleId && currentUserId) {
+      if (
+        eventType === "friction" &&
+        finalVisibility === "ours" &&
+        coupleId &&
+        currentUserId &&
+        canonicalCategory &&
+        SUPPORTED_FRICTION_CATEGORIES.has(canonicalCategory)
+      ) {
         setSavedFrictionId(eventId as string);
+        setSavedFrictionCategory(canonicalCategory);
         setSavedFrictionVisibility(finalVisibility);
         setCandidateLookupDone(false);
 
         // Async lookup — does not block UI
         findRepairMemoryCandidates({
           currentEventId: eventId as string,
-          currentCategory: category || null,
+          currentCategory: canonicalCategory,
           coupleId,
           currentUserId,
         })
           .then((result) => {
-            setRepairCandidates(result.candidates);
+            // Guard against stale asynchronous lookup race
+            if (currentRequestId !== lookupRequestIdRef.current) return;
+            // Defensive guarantee: only candidates strictly matching canonicalCategory
+            const matching = (result.candidates || []).filter(
+              (c) => c.category === canonicalCategory
+            );
+            setRepairCandidates(matching);
           })
           .catch(() => {
+            if (currentRequestId !== lookupRequestIdRef.current) return;
             setRepairCandidates([]);
           })
           .finally(() => {
+            if (currentRequestId !== lookupRequestIdRef.current) return;
             setCandidateLookupDone(true);
           });
 
@@ -333,6 +383,8 @@ export default function RecordMomentScreen() {
     savedFrictionId !== null &&
     candidateLookupDone &&
     repairCandidates.length > 0 &&
+    savedFrictionCategory !== null &&
+    repairCandidates.every((c) => c.category === savedFrictionCategory) &&
     currentUserId !== null &&
     coupleId !== null;
 
@@ -362,6 +414,7 @@ export default function RecordMomentScreen() {
             {/* Optional suggestion — does not block registration */}
             <RepairMemorySuggestion
               currentEventId={savedFrictionId}
+              currentCategory={savedFrictionCategory}
               coupleId={coupleId}
               userId={currentUserId}
               candidates={repairCandidates}

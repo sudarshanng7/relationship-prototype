@@ -42,6 +42,20 @@ export type FrictionCategory =
   | "plans"
   | "other";
 
+export const SUPPORTED_FRICTION_CATEGORIES = new Set<string>([
+  "household",
+  "money",
+  "family",
+  "communication",
+  "work_stress",
+  "time_together",
+  "phones_screens",
+  "affection",
+  "parenting",
+  "plans",
+  "other",
+]);
+
 /** Decision values for a user's perspective on two related friction events */
 export type RelationDecision =
   | "related"
@@ -130,13 +144,15 @@ export function formatRepairDuration(durationMs: number): string | null {
     return `about ${hours} ${hours === 1 ? "hour" : "hours"}`;
   }
 
-  if (totalMinutes >= 10) {
+  if (durationMs >= 60 * 1000) {
     const minutes = Math.round(totalMinutes);
-    return `about ${minutes} minutes`;
+    if (minutes >= 60) {
+      return "about 1 hour";
+    }
+    return `about ${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
   }
 
-  // Less than 10 minutes — too short to present meaningfully
-  return null;
+  return "less than a minute";
 }
 
 /**
@@ -251,6 +267,20 @@ export async function findRepairMemoryCandidates(params: {
   const { currentEventId, currentCategory, coupleId, currentUserId } = params;
 
   try {
+    // MVP Category Contract:
+    // - A candidate must have candidate.category === currentEvent.category.
+    // - Category filtering must happen before ranking and before the top-three limit.
+    // - Missing, invalid or unsupported current category returns zero candidates.
+    // - Never fall back to Affection, any default category, or any unrelated event.
+    if (
+      !currentCategory ||
+      typeof currentCategory !== "string" ||
+      !SUPPORTED_FRICTION_CATEGORIES.has(currentCategory.trim())
+    ) {
+      return { candidates: [], hasCategoryMatch: false, error: null };
+    }
+    const normalizedCategory = currentCategory.trim();
+
     // 0. Check if the current user has suppressed suggestions for this event.
     //    Uses per-user friction_repair_memory_suppressions table so Partner A's
     //    suppression never affects Partner B's independent experience.
@@ -266,7 +296,8 @@ export async function findRepairMemoryCandidates(params: {
     }
 
     // 1. Find all prior completed reconnections visible to this user in this couple,
-    //    excluding the current event and any "different" decisions already made.
+    //    strictly matching currentCategory, excluding the current event and any
+    //    "different" decisions already made.
     const { data: priorEvents, error: eventsError } = await supabase
       .from("relationship_events")
       .select(
@@ -275,6 +306,7 @@ export async function findRepairMemoryCandidates(params: {
       .eq("couple_id", coupleId)
       .eq("event_type", "friction")
       .eq("status", "reconnected")
+      .eq("category", normalizedCategory)
       .neq("id", currentEventId)
       .or(`creator_id.eq.${currentUserId},visibility.eq.ours`)
       .order("reconnected_at", { ascending: false })
@@ -355,11 +387,14 @@ export async function findRepairMemoryCandidates(params: {
     }
 
     // 3. Filter, validate, and rank candidates
-    //    Reusable-content eligibility is evaluated across all prior events
-    //    BEFORE capping to MAX_REPAIR_MEMORY_CANDIDATES.
+    //    Strict category matching and reusable-content eligibility are evaluated
+    //    across all prior events BEFORE capping to MAX_REPAIR_MEMORY_CANDIDATES.
     const candidates: RepairMemoryCandidate[] = [];
 
     for (const event of priorEvents) {
+      // Defensive check: must strictly match category
+      if (event.category !== normalizedCategory) continue;
+
       // Skip events suppressed by user's "different" decision
       if (suppressedPriorIds.has(event.id)) continue;
 
@@ -396,28 +431,16 @@ export async function findRepairMemoryCandidates(params: {
         sharedTopic: event.shared_topic ?? null,
         isCreatedByCurrentUser: event.creator_id === currentUserId,
       });
-
-      // Cap candidate evaluation after gathering sufficient eligible candidates:
-      // candidates.length >= MAX_REPAIR_MEMORY_CANDIDATES
     }
 
-    // Sort: same-category candidates first, then by recency (already ordered)
-    if (currentCategory) {
-      candidates.sort((a, b) => {
-        const aMatch = a.category === currentCategory ? 0 : 1;
-        const bMatch = b.category === currentCategory ? 0 : 1;
-        if (aMatch !== bMatch) return aMatch - bMatch;
-        // Preserve recency order for same-match-status items
-        return (
-          new Date(b.reconnectedAt).getTime() -
-          new Date(a.reconnectedAt).getTime()
-        );
-      });
-    }
+    // Sort strictly by recency (newest reconnected first)
+    candidates.sort(
+      (a, b) =>
+        new Date(b.reconnectedAt).getTime() -
+        new Date(a.reconnectedAt).getTime()
+    );
 
-    const hasCategoryMatch =
-      currentCategory !== null &&
-      candidates.some((c) => c.category === currentCategory);
+    const hasCategoryMatch = candidates.length > 0;
 
     return {
       candidates: candidates.slice(0, MAX_REPAIR_MEMORY_CANDIDATES),
@@ -428,9 +451,94 @@ export async function findRepairMemoryCandidates(params: {
     const msg =
       err && typeof err === "object" && "message" in err
         ? String((err as { message: unknown }).message)
-        : String(err);
+        : "Unknown error finding repair memory candidates";
     return { candidates: [], hasCategoryMatch: false, error: msg };
   }
+}
+
+/**
+ * Pure evaluation function for filtering and ranking repair memory candidates.
+ * Enforces:
+ * - candidate.category === currentCategory
+ * - Category filtering before ranking and top-three limit
+ * - Invalid/missing/unsupported category returns empty array
+ * - Reusable content requirement
+ * - Canonical duration requirement
+ */
+export function filterAndRankCandidates(params: {
+  priorEvents: any[];
+  userReflections?: Map<string, string> | null;
+  sharedTakeaways?: Map<
+    string,
+    { takeawayNote?: string | null; takeawayTag?: string | null }
+  > | null;
+  suppressedIds?: Set<string> | null;
+  currentCategory?: string | null;
+  currentUserId?: string | null;
+}): RepairMemoryCandidate[] {
+  const {
+    priorEvents,
+    userReflections,
+    sharedTakeaways,
+    suppressedIds,
+    currentCategory,
+    currentUserId,
+  } = params;
+
+  if (
+    !currentCategory ||
+    typeof currentCategory !== "string" ||
+    !SUPPORTED_FRICTION_CATEGORIES.has(currentCategory.trim())
+  ) {
+    return [];
+  }
+  const normalizedCategory = currentCategory.trim();
+
+  const candidates: RepairMemoryCandidate[] = [];
+  for (const event of priorEvents) {
+    if (suppressedIds && suppressedIds.has(event.id)) continue;
+    if (event.category !== normalizedCategory) continue;
+    if (!event.reconnected_at) continue;
+
+    const userNote = userReflections?.get(event.id);
+    const takeaway = sharedTakeaways?.get(event.id);
+    const hasReflection =
+      typeof userNote === "string" && userNote.trim().length > 0;
+    const hasNote =
+      typeof takeaway?.takeawayNote === "string" &&
+      takeaway.takeawayNote.trim().length > 0;
+    const hasTag =
+      typeof takeaway?.takeawayTag === "string" &&
+      takeaway.takeawayTag.trim().length > 0;
+
+    if (!hasReflection && !hasNote && !hasTag) continue;
+
+    const durationMs = calculateRepairDurationMs(
+      event.created_at,
+      event.reconnected_at
+    );
+    if (durationMs === null) continue;
+    const repairDurationLabel = formatRepairDuration(durationMs);
+    if (repairDurationLabel === null) continue;
+
+    candidates.push({
+      eventId: event.id,
+      category: event.category ?? "",
+      createdAt: event.created_at,
+      reconnectedAt: event.reconnected_at,
+      repairDurationLabel,
+      repairDurationMs: durationMs,
+      sharedTopic: event.shared_topic ?? null,
+      isCreatedByCurrentUser: event.creator_id === currentUserId,
+    });
+  }
+
+  candidates.sort(
+    (a, b) =>
+      new Date(b.reconnectedAt).getTime() - new Date(a.reconnectedAt).getTime()
+  );
+
+  return candidates.slice(0, MAX_REPAIR_MEMORY_CANDIDATES);
 }
 
 // ============================================================================

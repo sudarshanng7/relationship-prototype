@@ -143,21 +143,43 @@ export default function EventDetailScreen() {
             d.decision === "somewhat_related"
         );
         if (deferred && !repairMemoryDismissed) {
+          // Fetch current event and prior event details to enforce strict category match
+          const [currentRes, priorRes] = await Promise.all([
+            supabase
+              .from("relationship_events")
+              .select("id, category")
+              .eq("id", eventId)
+              .maybeSingle(),
+            supabase
+              .from("relationship_events")
+              .select("id, category, created_at, reconnected_at, shared_topic, creator_id")
+              .eq("id", deferred.priorEventId)
+              .maybeSingle(),
+          ]);
+
+          if (isCancelled) return;
+
+          const currentEv = currentRes.data;
+          const priorEvent = priorRes.data;
+
+          // Defensive display rule: candidate category must strictly match current event category
+          if (
+            !currentEv?.category ||
+            !priorEvent?.category ||
+            currentEv.category !== priorEvent.category
+          ) {
+            // Mismatched hydrated candidate is suppressed on event page
+            return;
+          }
+
           setRelationDecision(deferred.decision);
           if (deferred.decision === "related") {
             setShowWhatHelpedBefore(true);
           }
 
-          // Fetch the prior completed reconnection details
-          const { data: priorEvent, error } = await supabase
-            .from("relationship_events")
-            .select("id, category, created_at, reconnected_at, shared_topic, creator_id")
-            .eq("id", deferred.priorEventId)
-            .maybeSingle();
-
           if (isCancelled) return;
 
-          if (!error && priorEvent && priorEvent.reconnected_at) {
+          if (!priorRes.error && priorEvent && priorEvent.reconnected_at) {
             // Reusable-content check: candidate must have at least one reusable item
             // (current user's private reflection or couple-shared takeaway)
             const [priorReflection, priorTakeaway] = await Promise.all([
@@ -670,6 +692,8 @@ export default function EventDetailScreen() {
                 !showWhatHelpedBefore &&
                 !repairMemoryDismissed &&
                 event?.status !== "reconnected" &&
+                event?.category &&
+                repairMemoryCandidate.category === event.category &&
                 currentUserId &&
                 coupleId && (
                   <CouplySectionCard
@@ -741,11 +765,14 @@ export default function EventDetailScreen() {
 
               {showWhatHelpedBefore &&
                 repairMemoryCandidate &&
+                event?.category &&
+                repairMemoryCandidate.category === event.category &&
                 currentUserId &&
                 coupleId &&
                 eventId && (
                   <WhatHelpedBefore
                     currentEventId={eventId}
+                    currentCategory={event.category}
                     coupleId={coupleId}
                     userId={currentUserId}
                     candidate={repairMemoryCandidate}

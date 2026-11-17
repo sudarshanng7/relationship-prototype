@@ -39,9 +39,11 @@ import {
 } from "react-native";
 import { ThemeColors } from "@/context/ThemeContext";
 
-interface RepairMemorySuggestionProps {
+export interface RepairMemorySuggestionProps {
   /** ID of the newly saved friction event */
   currentEventId: string;
+  /** Category of the newly saved friction event */
+  currentCategory?: string | null;
   /** The couple this event belongs to */
   coupleId: string;
   /** The current authenticated user */
@@ -56,6 +58,7 @@ interface RepairMemorySuggestionProps {
 
 export function RepairMemorySuggestion({
   currentEventId,
+  currentCategory,
   coupleId,
   userId,
   candidates,
@@ -70,12 +73,25 @@ export function RepairMemorySuggestion({
   const [suppressedIds, setSuppressedIds] = useState<Set<string>>(new Set());
   const handlingActionRef = React.useRef(false);
 
+  // Defensive display rule: only render candidates strictly matching currentCategory
   const visibleCandidates = candidates
-    .filter((c) => !suppressedIds.has(c.eventId))
+    .filter(
+      (c) =>
+        !suppressedIds.has(c.eventId) &&
+        (!currentCategory || c.category === currentCategory)
+    )
     .slice(0, MAX_REPAIR_MEMORY_CANDIDATES);
 
   const saveDecision = useCallback(
     async (candidate: RepairMemoryCandidate, decision: RelationDecision) => {
+      if (
+        currentCategory &&
+        candidate.category !== currentCategory &&
+        decision !== "different"
+      ) {
+        // Defensive check: never persist a cross-category relation
+        return;
+      }
       setLoading(true);
       try {
         await saveRelationDecision({
@@ -91,28 +107,36 @@ export function RepairMemorySuggestion({
         setLoading(false);
       }
     },
-    [currentEventId, coupleId, userId]
+    [currentEventId, currentCategory, coupleId, userId]
   );
 
   const handleShowMe = useCallback(
     async (candidate: RepairMemoryCandidate) => {
       if (handlingActionRef.current) return;
       handlingActionRef.current = true;
+      if (currentCategory && candidate.category !== currentCategory) {
+        onDismiss();
+        return;
+      }
       await saveDecision(candidate, "related");
       onShowCandidate(candidate);
       onDismiss();
     },
-    [saveDecision, onShowCandidate, onDismiss]
+    [currentCategory, saveDecision, onShowCandidate, onDismiss]
   );
 
   const handleMaybeLater = useCallback(
     async (candidate: RepairMemoryCandidate) => {
       if (handlingActionRef.current) return;
       handlingActionRef.current = true;
+      if (currentCategory && candidate.category !== currentCategory) {
+        onDismiss();
+        return;
+      }
       await saveDecision(candidate, "deferred");
       onDismiss();
     },
-    [saveDecision, onDismiss]
+    [currentCategory, saveDecision, onDismiss]
   );
 
   const handleDifferent = useCallback(
