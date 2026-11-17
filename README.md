@@ -52,7 +52,48 @@ not been executed as part of Finding 12. The proposed CI file is outside
 `.github/workflows/`, pending review:
 [ROS-03C-offline-ci.yml](docs/events/ros-03c-review/proposals/ROS-03C-offline-ci.yml).
 
-After approved setup, start the app with `pnpm exec expo start`.
+## Safe local Expo profile
+
+The existing `.env` targets isolated staging. Keep it unchanged. Do not start
+the ordinary app against it. The client now requires an explicit local profile
+and validates the target before creating Supabase or loading a stored session.
+Only HTTP loopback URLs with an explicit port are enabled; hosted targets and
+secret/service-role keys are rejected. No hosted profile is enabled by this change.
+
+After separately provisioning a **new disposable local Supabase instance**, use
+its actual API origin and `sb_publishable_` client key:
+
+```sh
+ROS_LOCAL_SUPABASE_URL='http://127.0.0.1:55321' \
+ROS_LOCAL_SUPABASE_PUBLISHABLE_KEY='<publishable key from the new local instance>' \
+node scripts/start-local.cjs
+```
+
+Port 55321 is a candidate for the new instance, not a provisioned service. The
+launcher refuses missing/invalid inputs before starting Expo. It clears inherited
+Supabase/public variables, disables all dotenv loading, sets the local profile,
+and runs `pnpm exec expo start --offline --localhost`. pnpm dependency verification
+remains enabled. The public key is intended for the client bundle; never supply
+a database password, access token, secret key or service-role key. There is no
+fallback to the staging `.env`. The initial profile supports browser/loopback
+development; physical-device or emulator host addresses need separate configuration
+review rather than expanding the allowlist automatically.
+
+Docker Desktop WSL integration is not available yet. Local provisioning remains
+a separate step: select a new unlinked project/work directory and unused ports,
+then review a bootstrap of the original 29 unchanged migrations plus a local-only
+ACL setup for the two migration 30 functions. Migration 30's staging TLS, exact
+PostgreSQL patch and history guards must remain unchanged; do not replay it locally
+or fabricate its history entry. Keep hosted signup, Data API, Realtime and ordinary
+application access disabled. Create synthetic Partner A/B/C through real **local**
+Auth only after that setup is approved. Use separate browser profiles for distinct
+sessions. No local backend, account or fixture is created by the Expo launcher.
+
+Focused isolation checks make no SDK/network calls:
+
+```sh
+pnpm exec node --test --experimental-test-isolation=none --test-reporter=spec tests/local-supabase-target.test.cjs
+```
 
 ## Offline validation with existing dependencies
 
