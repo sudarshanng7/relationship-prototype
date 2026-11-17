@@ -218,6 +218,30 @@ export async function suppressRepairMemory(params: {
   }
 }
 
+/**
+ * Checks whether an event has reusable content for the given user:
+ * 1. Non-empty private reflection authored by the current user; OR
+ * 2. Non-empty shared repair takeaway note or tag.
+ *
+ * Duration by itself is NOT sufficient.
+ */
+export function hasReusableRepairContent(params: {
+  userPrivateReflection?: string | null;
+  sharedTakeawayNote?: string | null;
+  sharedTakeawayTag?: string | null;
+}): boolean {
+  const hasReflection =
+    typeof params.userPrivateReflection === "string" &&
+    params.userPrivateReflection.trim().length > 0;
+  const hasNote =
+    typeof params.sharedTakeawayNote === "string" &&
+    params.sharedTakeawayNote.trim().length > 0;
+  const hasTag =
+    typeof params.sharedTakeawayTag === "string" &&
+    params.sharedTakeawayTag.trim().length > 0;
+  return hasReflection || hasNote || hasTag;
+}
+
 export async function findRepairMemoryCandidates(params: {
   currentEventId: string;
   currentCategory: string | null;
@@ -269,36 +293,88 @@ export async function findRepairMemoryCandidates(params: {
       return { candidates: [], hasCategoryMatch: false, error: null };
     }
 
-    // 2. Fetch any existing "different" decisions made by this user for these events
     const priorEventIds = priorEvents.map((e) => e.id);
-    const { data: existingDecisions, error: decisionsError } = await supabase
-      .from("friction_moment_relations")
-      .select("prior_event_id, decision")
-      .eq("current_event_id", currentEventId)
-      .eq("user_id", currentUserId)
-      .in("prior_event_id", priorEventIds);
+
+    // 2. In parallel: fetch existing "different" decisions, user's private reflections,
+    //    and couple-shared repair outcomes.
+    //    Privacy rules:
+    //    - Only query private reflections authored by currentUserId (never partner's).
+    //    - Shared outcomes are couple-scoped.
+    const [decisionsResult, reflectionsResult, outcomesResult] =
+      await Promise.all([
+        supabase
+          .from("friction_moment_relations")
+          .select("prior_event_id, decision")
+          .eq("current_event_id", currentEventId)
+          .eq("user_id", currentUserId)
+          .in("prior_event_id", priorEventIds),
+        supabase
+          .from("event_private_reflections")
+          .select("event_id, note")
+          .in("event_id", priorEventIds)
+          .eq("author_id", currentUserId),
+        supabase
+          .from("relationship_event_repair_outcomes")
+          .select("event_id, takeaway_note, takeaway_tag")
+          .in("event_id", priorEventIds),
+      ]);
 
     // On decisions error — log but don't block (non-critical)
     const suppressedPriorIds = new Set<string>();
-    if (!decisionsError && existingDecisions) {
-      for (const d of existingDecisions) {
+    if (!decisionsResult.error && decisionsResult.data) {
+      for (const d of decisionsResult.data) {
         if (d.decision === "different") {
           suppressedPriorIds.add(d.prior_event_id);
         }
       }
     }
 
+    // Build sets of event IDs with non-empty reusable items
+    const eventsWithUserReflection = new Set<string>();
+    if (reflectionsResult.data) {
+      for (const r of reflectionsResult.data) {
+        if (typeof r.note === "string" && r.note.trim().length > 0) {
+          eventsWithUserReflection.add(r.event_id);
+        }
+      }
+    }
+
+    const eventsWithSharedTakeaway = new Set<string>();
+    if (outcomesResult.data) {
+      for (const o of outcomesResult.data) {
+        const hasNote =
+          typeof o.takeaway_note === "string" &&
+          o.takeaway_note.trim().length > 0;
+        const hasTag =
+          typeof o.takeaway_tag === "string" &&
+          o.takeaway_tag.trim().length > 0;
+        if (hasNote || hasTag) {
+          eventsWithSharedTakeaway.add(o.event_id);
+        }
+      }
+    }
+
     // 3. Filter, validate, and rank candidates
+    //    Reusable-content eligibility is evaluated across all prior events
+    //    BEFORE capping to MAX_REPAIR_MEMORY_CANDIDATES.
     const candidates: RepairMemoryCandidate[] = [];
 
     for (const event of priorEvents) {
-      if (candidates.length >= MAX_REPAIR_MEMORY_CANDIDATES) break;
-
       // Skip events suppressed by user's "different" decision
       if (suppressedPriorIds.has(event.id)) continue;
 
       // Validate reconnected_at exists (should always be true for status=reconnected)
       if (!event.reconnected_at) continue;
+
+      // Reusable-content eligibility rule:
+      // Candidate MUST have at least one reusable item available to current user:
+      // 1. Non-empty private reflection authored by current user; OR
+      // 2. Non-empty shared repair takeaway note or tag.
+      // Duration by itself is NOT sufficient.
+      const hasReusable =
+        eventsWithUserReflection.has(event.id) ||
+        eventsWithSharedTakeaway.has(event.id);
+      if (!hasReusable) continue;
 
       // Calculate and validate duration
       const durationMs = calculateRepairDurationMs(
@@ -320,6 +396,9 @@ export async function findRepairMemoryCandidates(params: {
         sharedTopic: event.shared_topic ?? null,
         isCreatedByCurrentUser: event.creator_id === currentUserId,
       });
+
+      // Cap candidate evaluation after gathering sufficient eligible candidates:
+      // candidates.length >= MAX_REPAIR_MEMORY_CANDIDATES
     }
 
     // Sort: same-category candidates first, then by recency (already ordered)
@@ -526,8 +605,10 @@ export async function fetchPriorPrivateReflection(params: {
       .eq("author_id", userId)
       .maybeSingle();
 
-    if (error || !data) return null;
-    return data.note ?? null;
+    if (error || !data || typeof data.note !== "string" || !data.note.trim()) {
+      return null;
+    }
+    return data.note.trim();
   } catch {
     return null;
   }
@@ -551,9 +632,17 @@ export async function fetchPriorSharedTakeaway(params: {
       .maybeSingle();
 
     if (error || !data) return { takeawayNote: null, takeawayTag: null };
+    const note =
+      typeof data.takeaway_note === "string" && data.takeaway_note.trim()
+        ? data.takeaway_note.trim()
+        : null;
+    const tag =
+      typeof data.takeaway_tag === "string" && data.takeaway_tag.trim()
+        ? data.takeaway_tag.trim()
+        : null;
     return {
-      takeawayNote: data.takeaway_note ?? null,
-      takeawayTag: data.takeaway_tag ?? null,
+      takeawayNote: note,
+      takeawayTag: tag,
     };
   } catch {
     return { takeawayNote: null, takeawayTag: null };

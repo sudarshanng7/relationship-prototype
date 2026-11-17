@@ -57,6 +57,67 @@ function calculateRepairDurationMs(createdAt, reconnectedAt) {
 const REPAIR_MEMORY_GARDEN_CONTRIBUTION = 0;
 const MAX_REPAIR_MEMORY_CANDIDATES = 3;
 
+function filterAndRankCandidates({
+  priorEvents,
+  userReflections,
+  sharedTakeaways,
+  suppressedIds,
+  currentCategory,
+  currentUserId,
+}) {
+  const candidates = [];
+  for (const event of priorEvents) {
+    if (suppressedIds && suppressedIds.has(event.id)) continue;
+    if (!event.reconnected_at) continue;
+
+    const userNote = userReflections?.get(event.id);
+    const takeaway = sharedTakeaways?.get(event.id);
+    const hasReflection =
+      typeof userNote === "string" && userNote.trim().length > 0;
+    const hasNote =
+      typeof takeaway?.takeawayNote === "string" &&
+      takeaway.takeawayNote.trim().length > 0;
+    const hasTag =
+      typeof takeaway?.takeawayTag === "string" &&
+      takeaway.takeawayTag.trim().length > 0;
+
+    if (!hasReflection && !hasNote && !hasTag) continue;
+
+    const durationMs = calculateRepairDurationMs(
+      event.created_at,
+      event.reconnected_at
+    );
+    if (durationMs === null) continue;
+    const repairDurationLabel = formatRepairDuration(durationMs);
+    if (repairDurationLabel === null) continue;
+
+    candidates.push({
+      eventId: event.id,
+      category: event.category ?? "",
+      createdAt: event.created_at,
+      reconnectedAt: event.reconnected_at,
+      repairDurationLabel,
+      repairDurationMs: durationMs,
+      sharedTopic: event.shared_topic ?? null,
+      isCreatedByCurrentUser: event.creator_id === currentUserId,
+    });
+  }
+
+  if (currentCategory) {
+    candidates.sort((a, b) => {
+      const aMatch = a.category === currentCategory ? 0 : 1;
+      const bMatch = b.category === currentCategory ? 0 : 1;
+      if (aMatch !== bMatch) return aMatch - bMatch;
+      return (
+        new Date(b.reconnectedAt).getTime() -
+        new Date(a.reconnectedAt).getTime()
+      );
+    });
+  }
+
+  return candidates.slice(0, MAX_REPAIR_MEMORY_CANDIDATES);
+}
+
 import {
   calculateAuthoritativeFoundation,
 } from "../src/lib/garden/stage-contracts.ts";
@@ -1507,5 +1568,453 @@ test("60. Database test execution status accurately documented as blocked", () =
   assert.ok(
     !src.includes("PASSED") && !src.includes("All tests pass"),
     "pgTAP test file must not falsely claim tests have executed"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 61. Newest historical event has no reusable content, older event has current user's private reflection -> older event selected
+// ---------------------------------------------------------------------------
+
+test("61. Newest historical event has no reusable content, older event has current user's private reflection -> older event selected", () => {
+  const evNewest = makeEvent({
+    id: "evt-newest-empty",
+    category: "communication",
+    reconnected_at: "2026-03-01T10:00:00.000Z",
+    created_at: "2026-02-28T10:00:00.000Z",
+  });
+  const evOlder = makeEvent({
+    id: "evt-older-with-note",
+    category: "communication",
+    reconnected_at: "2026-02-01T10:00:00.000Z",
+    created_at: "2026-01-31T10:00:00.000Z",
+  });
+
+  const userReflections = new Map([
+    ["evt-older-with-note", "I took a deep breath before responding."],
+  ]);
+  const sharedTakeaways = new Map();
+
+  const results = filterAndRankCandidates({
+    priorEvents: [evNewest, evOlder],
+    userReflections,
+    sharedTakeaways,
+    currentCategory: "communication",
+    currentUserId: USER_ID_A,
+  });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].eventId, "evt-older-with-note");
+});
+
+// ---------------------------------------------------------------------------
+// 62. Newest event has no private reflection but has shared takeaway -> newest event remains eligible
+// ---------------------------------------------------------------------------
+
+test("62. Newest event has no private reflection but has shared takeaway -> newest event remains eligible", () => {
+  const evNewest = makeEvent({
+    id: "evt-newest-takeaway",
+    category: "communication",
+    reconnected_at: "2026-03-01T10:00:00.000Z",
+    created_at: "2026-02-28T10:00:00.000Z",
+  });
+  const evOlder = makeEvent({
+    id: "evt-older-note",
+    category: "communication",
+    reconnected_at: "2026-02-01T10:00:00.000Z",
+    created_at: "2026-01-31T10:00:00.000Z",
+  });
+
+  const userReflections = new Map([
+    ["evt-older-note", "Private reflection."],
+  ]);
+  const sharedTakeaways = new Map([
+    ["evt-newest-takeaway", { takeawayNote: "Agreed to pause", takeawayTag: "talking_it_through" }],
+  ]);
+
+  const results = filterAndRankCandidates({
+    priorEvents: [evNewest, evOlder],
+    userReflections,
+    sharedTakeaways,
+    currentCategory: "communication",
+    currentUserId: USER_ID_A,
+  });
+
+  assert.equal(results.length, 2);
+  assert.equal(results[0].eventId, "evt-newest-takeaway");
+  assert.equal(results[1].eventId, "evt-older-note");
+});
+
+// ---------------------------------------------------------------------------
+// 63. Event has only partner's private reflection -> ineligible for current user
+// ---------------------------------------------------------------------------
+
+test("63. Event has only partner's private reflection -> ineligible for current user", () => {
+  const ev = makeEvent({
+    id: "evt-partner-only",
+    category: "communication",
+  });
+
+  // User A is the current user; the reflection belongs to Partner B (so userReflections for User A is empty)
+  const userReflections = new Map();
+  const sharedTakeaways = new Map();
+
+  const results = filterAndRankCandidates({
+    priorEvents: [ev],
+    userReflections,
+    sharedTakeaways,
+    currentCategory: "communication",
+    currentUserId: USER_ID_A,
+  });
+
+  assert.equal(results.length, 0, "Partner-only reflection must NOT qualify the event for current user");
+});
+
+// ---------------------------------------------------------------------------
+// 64. Event has blank/whitespace private note and blank/whitespace takeaway -> ineligible
+// ---------------------------------------------------------------------------
+
+test("64. Event has blank/whitespace private note and blank/whitespace takeaway -> ineligible", () => {
+  const ev = makeEvent({ id: "evt-whitespace" });
+  const userReflections = new Map([["evt-whitespace", "   \n\t  "]]);
+  const sharedTakeaways = new Map([["evt-whitespace", { takeawayNote: "   ", takeawayTag: "" }]]);
+
+  const results = filterAndRankCandidates({
+    priorEvents: [ev],
+    userReflections,
+    sharedTakeaways,
+    currentCategory: "communication",
+    currentUserId: USER_ID_A,
+  });
+
+  assert.equal(results.length, 0, "Whitespace-only reflection and takeaway must be ineligible");
+});
+
+// ---------------------------------------------------------------------------
+// 65. Event has factual duration only -> ineligible
+// ---------------------------------------------------------------------------
+
+test("65. Event has factual duration only -> ineligible", () => {
+  const ev = makeEvent({
+    id: "evt-duration-only",
+    created_at: "2026-01-01T00:00:00.000Z",
+    reconnected_at: "2026-01-01T18:00:00.000Z",
+  });
+  const userReflections = new Map();
+  const sharedTakeaways = new Map();
+
+  const results = filterAndRankCandidates({
+    priorEvents: [ev],
+    userReflections,
+    sharedTakeaways,
+    currentCategory: "communication",
+    currentUserId: USER_ID_A,
+  });
+
+  assert.equal(results.length, 0, "Duration alone without reusable reflection or takeaway must be ineligible");
+});
+
+// ---------------------------------------------------------------------------
+// 66. All historical candidates lack reusable content -> zero candidates
+// ---------------------------------------------------------------------------
+
+test("66. All historical candidates lack reusable content -> zero candidates", () => {
+  const ev1 = makeEvent({ id: "ev1" });
+  const ev2 = makeEvent({ id: "ev2" });
+  const ev3 = makeEvent({ id: "ev3" });
+
+  const results = filterAndRankCandidates({
+    priorEvents: [ev1, ev2, ev3],
+    userReflections: new Map(),
+    sharedTakeaways: new Map(),
+    currentCategory: "communication",
+    currentUserId: USER_ID_A,
+  });
+
+  assert.equal(results.length, 0);
+});
+
+// ---------------------------------------------------------------------------
+// 67. Eligibility filtering occurs before the top-three limit
+// ---------------------------------------------------------------------------
+
+test("67. Eligibility filtering occurs before the top-three limit", () => {
+  const ev1 = makeEvent({ id: "ev1-empty", created_at: "2026-04-30T00:00:00Z", reconnected_at: "2026-05-01T00:00:00Z" });
+  const ev2 = makeEvent({ id: "ev2-empty", created_at: "2026-03-31T00:00:00Z", reconnected_at: "2026-04-01T00:00:00Z" });
+  const ev3 = makeEvent({ id: "ev3-empty", created_at: "2026-02-28T00:00:00Z", reconnected_at: "2026-03-01T00:00:00Z" });
+  const ev4 = makeEvent({ id: "ev4-valid", created_at: "2026-01-31T00:00:00Z", reconnected_at: "2026-02-01T00:00:00Z" });
+  const ev5 = makeEvent({ id: "ev5-valid", created_at: "2025-12-31T00:00:00Z", reconnected_at: "2026-01-01T00:00:00Z" });
+
+  const userReflections = new Map([
+    ["ev4-valid", "Valid private reflection 4"],
+    ["ev5-valid", "Valid private reflection 5"],
+  ]);
+  const sharedTakeaways = new Map();
+
+  const results = filterAndRankCandidates({
+    priorEvents: [ev1, ev2, ev3, ev4, ev5],
+    userReflections,
+    sharedTakeaways,
+    currentCategory: "communication",
+    currentUserId: USER_ID_A,
+  });
+
+  assert.equal(results.length, 2, "Must return ev4 and ev5 even though 3 empty events were newer");
+  assert.equal(results[0].eventId, "ev4-valid");
+  assert.equal(results[1].eventId, "ev5-valid");
+});
+
+// ---------------------------------------------------------------------------
+// 68. Existing relation whose content was deleted -> empty card not rendered
+// ---------------------------------------------------------------------------
+
+test("68. Existing relation whose content was deleted -> empty card not rendered and repair loop remains usable", () => {
+  const whatHelpedSrc = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/components/WhatHelpedBefore.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    whatHelpedSrc.includes("!hasReusableContent") && whatHelpedSrc.includes("return null"),
+    "WhatHelpedBefore must return null when no reusable content exists"
+  );
+
+  const eventSrc = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/app/event/[id].tsx"),
+    "utf8"
+  );
+  assert.ok(
+    eventSrc.includes("hasReusable") || eventSrc.includes("fetchPriorPrivateReflection"),
+    "event/[id].tsx must check reusable content before hydrating candidate"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 69. Candidate lookup/read failure does not block saved-event navigation
+// ---------------------------------------------------------------------------
+
+test("69. Candidate lookup/read failure does not block saved-event navigation", () => {
+  const recordSrc = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/app/record-moment.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    recordSrc.includes(".catch(") && recordSrc.includes("setRepairCandidates([])"),
+    "Candidate lookup failure in record-moment must fall back to empty candidates"
+  );
+  assert.ok(
+    recordSrc.includes("navigateToSavedEvent"),
+    "record-moment must navigate to saved event on zero candidates"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 70. Source code verification: reusable content filtering in findRepairMemoryCandidates
+// ---------------------------------------------------------------------------
+
+test("70. findRepairMemoryCandidates verifies reusable content before surface", () => {
+  const src = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/lib/repair-memory.ts"),
+    "utf8"
+  );
+  assert.ok(
+    src.includes("eventsWithUserReflection") || src.includes("hasReusable"),
+    "findRepairMemoryCandidates must track events with reusable content"
+  );
+  assert.ok(
+    src.includes("hasReusableRepairContent") || src.includes("eventsWithSharedTakeaway"),
+    "findRepairMemoryCandidates must check user reflection and shared takeaway"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 71. Garden contribution remains zero and reconnection remains +4 with reusable content filtering
+// ---------------------------------------------------------------------------
+
+test("71. Garden contribution remains zero and reconnection remains +4 with reusable content filtering", () => {
+  const before = calculateAuthoritativeFoundation(
+    { reconnectionCount: 1 },
+    1
+  );
+  assert.equal(before.rawCareContribution, 4);
+
+  // Adding repair memory relations or candidates does not alter Garden foundation
+  const after = calculateAuthoritativeFoundation(
+    { reconnectionCount: 1 },
+    1
+  );
+  assert.equal(after.rawCareContribution, 4);
+  assert.equal(after.foundationPercent, before.foundationPercent);
+});
+
+// ---------------------------------------------------------------------------
+// 72. WhatHelpedBefore: loading/double-tap lock prevention
+// ---------------------------------------------------------------------------
+
+test("72. WhatHelpedBefore: immediate double-tap prevention & actionLoading lock", () => {
+  const src = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/components/WhatHelpedBefore.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    src.includes("isProcessingRef.current") && src.includes("isProcessingRef = useRef"),
+    "WhatHelpedBefore must use synchronous ref lock to immediately prevent duplicate taps"
+  );
+  assert.ok(
+    src.includes("disabled={actionLoading}") && src.includes("setActionLoading(true)"),
+    "WhatHelpedBefore must disable buttons while action is loading"
+  );
+  assert.ok(
+    src.includes("busy: isBusy") && src.includes("disabled: actionLoading"),
+    "WhatHelpedBefore must provide accessible busy & disabled state on action buttons"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 73. WhatHelpedBefore: selected styling and acknowledgement for Try same
+// ---------------------------------------------------------------------------
+
+test("73. WhatHelpedBefore: selected styling and acknowledgement for Try same", () => {
+  const src = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/components/WhatHelpedBefore.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    src.includes("We’ll keep this approach in view while you work through this moment."),
+    "WhatHelpedBefore must render the exact neutral copy for Try same approach"
+  );
+  assert.ok(
+    src.includes("theme.primaryAccent") && src.includes("theme.primaryActionText"),
+    "WhatHelpedBefore selected state must use primaryAccent and primaryActionText for theme contrast"
+  );
+  assert.ok(
+    src.includes("selected: isSelected"),
+    "WhatHelpedBefore must expose accessibilityState.selected for the selected approach"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 74. WhatHelpedBefore: switching from Try same to Adapt updates acknowledgement
+// ---------------------------------------------------------------------------
+
+test("74. WhatHelpedBefore: switching from Try same to Adapt updates acknowledgement", () => {
+  const src = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/components/WhatHelpedBefore.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    src.includes("You can carry forward what helped and adjust it for this moment."),
+    "WhatHelpedBefore must render the exact neutral copy for Adapt approach"
+  );
+  assert.ok(
+    src.includes("setSelectedApproach(action)"),
+    "WhatHelpedBefore must update in-session selected approach state when switching choices"
+  );
+  assert.ok(
+    src.includes("ACKNOWLEDGEMENT_TEXT[selectedApproach]"),
+    "WhatHelpedBefore must dynamically resolve acknowledgement text from selectedApproach"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 75. WhatHelpedBefore: card remains visible after selecting approach (does not auto-dismiss)
+// ---------------------------------------------------------------------------
+
+test("75. WhatHelpedBefore: card remains visible after selecting approach (does not auto-dismiss)", () => {
+  const whatHelpedSrc = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/components/WhatHelpedBefore.tsx"),
+    "utf8"
+  );
+  // Verify that try_same and adapt do NOT call onNotRelated
+  assert.ok(
+    !whatHelpedSrc.match(/if\s*\(\s*action\s*===\s*["']try_same["']\s*\|\|\s*action\s*===\s*["']adapt["']\s*\)\s*\{[^}]*onNotRelated/),
+    "try_same and adapt must never trigger onNotRelated dismissal"
+  );
+
+  const eventSrc = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/app/event/[id].tsx"),
+    "utf8"
+  );
+  assert.ok(
+    eventSrc.includes("if (action === \"not_related\")"),
+    "event/[id].tsx must only hide WhatHelpedBefore on not_related"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 76. WhatHelpedBefore: persistence failure restores controls and shows non-blocking error
+// ---------------------------------------------------------------------------
+
+test("76. WhatHelpedBefore: persistence failure restores controls and shows non-blocking error", () => {
+  const src = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/components/WhatHelpedBefore.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    src.includes("setActionError(") && src.includes("actionError ?"),
+    "WhatHelpedBefore must capture and render action error"
+  );
+  assert.ok(
+    src.includes("isProcessingRef.current = false") && src.includes("setActionLoading(false)"),
+    "WhatHelpedBefore must reset processing lock and loading state on failure in finally block"
+  );
+  assert.ok(
+    src.includes("accessibilityLiveRegion=\"assertive\"") || src.includes("errorText"),
+    "WhatHelpedBefore must render accessible error banner"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 77. WhatHelpedBefore: Not related still dismisses and persists different
+// ---------------------------------------------------------------------------
+
+test("77. WhatHelpedBefore: Not related still dismisses and persists different", () => {
+  const src = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/components/WhatHelpedBefore.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    src.includes('action === "not_related"') && src.includes('decision: "different"'),
+    "Not related action must persist decision=different"
+  );
+  assert.ok(
+    src.includes("onNotRelated?.()"),
+    "Not related action must call onNotRelated callback"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 78. No schema or database migration changes introduced
+// ---------------------------------------------------------------------------
+
+test("78. No schema or database migration changes introduced for in-session selection", () => {
+  const migrationsDir = path.join(PROJECT_ROOT, "supabase/migrations");
+  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith(".sql"));
+  const repairMemoryMigrations = files.filter(f => f.includes("20261116") || f.includes("friction_moment_relations"));
+  assert.equal(
+    repairMemoryMigrations.length,
+    1,
+    "Exactly one consolidated Repair Memory migration must exist — no new migrations for presentational state"
+  );
+  assert.equal(
+    repairMemoryMigrations[0],
+    "20261116155443_create_friction_moment_relations.sql"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 79. Privacy, lack of predictive claims, and touch target accessibility
+// ---------------------------------------------------------------------------
+
+test("79. Privacy, lack of predictive claims, and touch target accessibility", () => {
+  const src = fs.readFileSync(
+    path.join(PROJECT_ROOT, "src/components/WhatHelpedBefore.tsx"),
+    "utf8"
+  );
+  assert.ok(
+    !src.includes("reconnect faster") && !src.includes("probability") && !src.includes("algorithm"),
+    "WhatHelpedBefore must not contain predictive claims or probability promises"
+  );
+  assert.ok(
+    src.includes("minHeight: 44"),
+    "WhatHelpedBefore action buttons must maintain minimum 44pt touch target"
   );
 });

@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -87,6 +88,7 @@ export default function RecordMomentScreen() {
   const [repairCandidates, setRepairCandidates] = useState<RepairMemoryCandidate[]>([]);
   const [candidateLookupDone, setCandidateLookupDone] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const navigatedRef = useRef(false);
 
   useEffect(() => {
     if (contextCoupleId && !coupleId) {
@@ -303,15 +305,28 @@ export default function RecordMomentScreen() {
     }
   };
 
-  // Navigate to the saved event (called after suggestion is dismissed)
+  // Navigate to the saved event (called after suggestion is dismissed or no candidates)
   function navigateToSavedEvent() {
-    if (savedFrictionId) {
+    if (savedFrictionId && !navigatedRef.current) {
+      navigatedRef.current = true;
       router.replace({
         pathname: "/event/[id]",
         params: { id: savedFrictionId, scope: savedFrictionVisibility },
       });
     }
   }
+
+  // Idempotent navigation when lookup completes with 0 candidates
+  useEffect(() => {
+    if (
+      savedFrictionId !== null &&
+      candidateLookupDone &&
+      repairCandidates.length === 0 &&
+      !navigatedRef.current
+    ) {
+      navigateToSavedEvent();
+    }
+  }, [savedFrictionId, candidateLookupDone, repairCandidates.length]);
 
   // Show suggestion screen once the friction has been saved and lookup is done
   const showSuggestion =
@@ -366,10 +381,46 @@ export default function RecordMomentScreen() {
     );
   }
 
-  // If saved but lookup still running (or no candidates) — navigate automatically
+  // If saved and candidate lookup is running, show a brief transition view
+  if (savedFrictionId !== null && !candidateLookupDone) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.column, { alignItems: "center", justifyContent: "center", paddingVertical: 48 }]}>
+          <CouplyHeader
+            title="Moment recorded"
+            subtitle="Your moment has been saved."
+            style={styles.headerCouply}
+          />
+          <CouplySectionCard style={{ gap: 8, alignItems: "center", paddingVertical: 24, width: "100%" }}>
+            <ActivityIndicator size="small" color={theme.primaryAccent} />
+            <Text style={{ fontSize: 14, color: theme.secondaryText }}>
+              Opening repair loop...
+            </Text>
+          </CouplySectionCard>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // If saved and no candidates found, wait for navigation
   if (savedFrictionId !== null && candidateLookupDone && repairCandidates.length === 0) {
-    navigateToSavedEvent();
-    return null;
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.column, { alignItems: "center", justifyContent: "center", paddingVertical: 48 }]}>
+          <CouplyHeader
+            title="Moment recorded"
+            subtitle="Your moment has been saved."
+            style={styles.headerCouply}
+          />
+          <CouplySectionCard style={{ gap: 8, alignItems: "center", paddingVertical: 24, width: "100%" }}>
+            <ActivityIndicator size="small" color={theme.primaryAccent} />
+            <Text style={{ fontSize: 14, color: theme.secondaryText }}>
+              Opening repair loop...
+            </Text>
+          </CouplySectionCard>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const saveButtonLabel = saving

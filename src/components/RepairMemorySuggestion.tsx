@@ -68,6 +68,7 @@ export function RepairMemorySuggestion({
   const [loading, setLoading] = useState(false);
   // Track which candidate IDs have been suppressed this session
   const [suppressedIds, setSuppressedIds] = useState<Set<string>>(new Set());
+  const handlingActionRef = React.useRef(false);
 
   const visibleCandidates = candidates
     .filter((c) => !suppressedIds.has(c.eventId))
@@ -76,20 +77,27 @@ export function RepairMemorySuggestion({
   const saveDecision = useCallback(
     async (candidate: RepairMemoryCandidate, decision: RelationDecision) => {
       setLoading(true);
-      await saveRelationDecision({
-        currentEventId,
-        priorEventId: candidate.eventId,
-        coupleId,
-        userId,
-        decision,
-      });
-      setLoading(false);
+      try {
+        await saveRelationDecision({
+          currentEventId,
+          priorEventId: candidate.eventId,
+          coupleId,
+          userId,
+          decision,
+        });
+      } catch {
+        // Persistence failure must never block the user
+      } finally {
+        setLoading(false);
+      }
     },
     [currentEventId, coupleId, userId]
   );
 
   const handleShowMe = useCallback(
     async (candidate: RepairMemoryCandidate) => {
+      if (handlingActionRef.current) return;
+      handlingActionRef.current = true;
       await saveDecision(candidate, "related");
       onShowCandidate(candidate);
       onDismiss();
@@ -99,6 +107,8 @@ export function RepairMemorySuggestion({
 
   const handleMaybeLater = useCallback(
     async (candidate: RepairMemoryCandidate) => {
+      if (handlingActionRef.current) return;
+      handlingActionRef.current = true;
       await saveDecision(candidate, "deferred");
       onDismiss();
     },
@@ -107,8 +117,11 @@ export function RepairMemorySuggestion({
 
   const handleDifferent = useCallback(
     async (candidate: RepairMemoryCandidate) => {
+      if (handlingActionRef.current) return;
+      handlingActionRef.current = true;
       await saveDecision(candidate, "different");
       setSuppressedIds((prev) => new Set([...prev, candidate.eventId]));
+      handlingActionRef.current = false;
       // If all candidates are now suppressed, dismiss the sheet
       if (visibleCandidates.length <= 1) {
         onDismiss();
@@ -123,7 +136,13 @@ export function RepairMemorySuggestion({
    * this specific friction event without implying any safety diagnosis.
    */
   const handleSuppressAll = useCallback(async () => {
-    await suppressRepairMemory({ eventId: currentEventId, userId });
+    if (handlingActionRef.current) return;
+    handlingActionRef.current = true;
+    try {
+      await suppressRepairMemory({ eventId: currentEventId, userId });
+    } catch {
+      // Persistence failure must never block the user
+    }
     onDismiss();
   }, [currentEventId, userId, onDismiss]);
 

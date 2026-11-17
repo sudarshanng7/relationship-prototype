@@ -26,7 +26,12 @@ import {
 import {
   RepairMemoryCandidate,
   RelationRecord,
+  RelationDecision,
   fetchRelationDecisions,
+  fetchPriorPrivateReflection,
+  fetchPriorSharedTakeaway,
+  calculateRepairDurationMs,
+  formatRepairDuration,
 } from "@/lib/repair-memory";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -109,9 +114,11 @@ export default function EventDetailScreen() {
   const [isEditingReflection, setIsEditingReflection] = useState(false);
   const [reflectionInput, setReflectionInput] = useState("");
 
-  // Repair memory state: deferred candidate (from "Maybe later" or passed-in state)
+  // Repair memory state: deferred or related candidate
   const [repairMemoryCandidate, setRepairMemoryCandidate] =
     useState<RepairMemoryCandidate | null>(null);
+  const [relationDecision, setRelationDecision] =
+    useState<RelationDecision | null>(null);
   const [showWhatHelpedBefore, setShowWhatHelpedBefore] = useState(false);
   const [showHelpfulnessQuestion, setShowHelpfulnessQuestion] = useState(false);
   const [repairMemoryDismissed, setRepairMemoryDismissed] = useState(false);
@@ -121,28 +128,89 @@ export default function EventDetailScreen() {
     loadEvent();
   }, [eventId]);
 
-  // Load existing repair memory decisions for this event (deferred candidates)
+  // Load existing repair memory decisions for this event (deferred/related candidates)
   useEffect(() => {
     if (!eventId || !currentUserId) return;
+    let isCancelled = false;
+
     fetchRelationDecisions({ currentEventId: eventId, userId: currentUserId })
-      .then((decisions) => {
-        const deferred = decisions.find((d) => d.decision === "deferred" || d.decision === "related" || d.decision === "somewhat_related");
+      .then(async (decisions) => {
+        if (isCancelled) return;
+        const deferred = decisions.find(
+          (d) =>
+            d.decision === "deferred" ||
+            d.decision === "related" ||
+            d.decision === "somewhat_related"
+        );
         if (deferred && !repairMemoryDismissed) {
-          // Build a minimal candidate record from the stored decision so we can show WhatHelpedBefore
-          // The actual event data is fetched inside WhatHelpedBefore via the candidate eventId
-          setRepairMemoryCandidate({
-            eventId: deferred.priorEventId,
-            category: "",
-            createdAt: deferred.createdAt,
-            reconnectedAt: deferred.updatedAt,
-            repairDurationLabel: "",
-            repairDurationMs: 0,
-            sharedTopic: null,
-            isCreatedByCurrentUser: deferred.userId === currentUserId,
-          });
+          setRelationDecision(deferred.decision);
+          if (deferred.decision === "related") {
+            setShowWhatHelpedBefore(true);
+          }
+
+          // Fetch the prior completed reconnection details
+          const { data: priorEvent, error } = await supabase
+            .from("relationship_events")
+            .select("id, category, created_at, reconnected_at, shared_topic, creator_id")
+            .eq("id", deferred.priorEventId)
+            .maybeSingle();
+
+          if (isCancelled) return;
+
+          if (!error && priorEvent && priorEvent.reconnected_at) {
+            // Reusable-content check: candidate must have at least one reusable item
+            // (current user's private reflection or couple-shared takeaway)
+            const [priorReflection, priorTakeaway] = await Promise.all([
+              fetchPriorPrivateReflection({
+                priorEventId: priorEvent.id,
+                userId: currentUserId,
+              }),
+              fetchPriorSharedTakeaway({ priorEventId: priorEvent.id }),
+            ]);
+
+            if (isCancelled) return;
+
+            const hasReusable = Boolean(
+              (priorReflection && priorReflection.trim().length > 0) ||
+                (priorTakeaway?.takeawayNote &&
+                  priorTakeaway.takeawayNote.trim().length > 0) ||
+                (priorTakeaway?.takeawayTag &&
+                  priorTakeaway.takeawayTag.trim().length > 0)
+            );
+
+            if (!hasReusable) {
+              return;
+            }
+
+            const durationMs = calculateRepairDurationMs(
+              priorEvent.created_at,
+              priorEvent.reconnected_at
+            );
+            const repairDurationLabel =
+              durationMs !== null ? formatRepairDuration(durationMs) : null;
+
+            if (durationMs !== null && repairDurationLabel) {
+              setRepairMemoryCandidate({
+                eventId: priorEvent.id,
+                category: priorEvent.category ?? "",
+                createdAt: priorEvent.created_at,
+                reconnectedAt: priorEvent.reconnected_at,
+                repairDurationLabel,
+                repairDurationMs: durationMs,
+                sharedTopic: priorEvent.shared_topic ?? null,
+                isCreatedByCurrentUser: priorEvent.creator_id === currentUserId,
+              });
+            }
+          }
         }
       })
-      .catch(() => {/* non-blocking */});
+      .catch(() => {
+        /* non-blocking */
+      });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [eventId, currentUserId, repairMemoryDismissed]);
 
   async function loadEvent() {
@@ -504,21 +572,6 @@ export default function EventDetailScreen() {
                     </Text>
                   </View>
                 )}
-
-              {/* Helpfulness question after reconnection: shown only when user had a repair memory
-                   link. HelpfulnessQuestion checks the persisted answer on mount and renders null
-                   if already answered — so refresh and remount cannot reopen it. */}
-              {repairWorkflow.derivedStage === "reconnected" &&
-                repairMemoryCandidate !== null &&
-                currentUserId !== null &&
-                eventId !== undefined && (
-                  <HelpfulnessQuestion
-                    currentEventId={eventId}
-                    priorEventId={repairMemoryCandidate.eventId}
-                    userId={currentUserId}
-                    onComplete={() => setShowHelpfulnessQuestion(false)}
-                  />
-                )}
             </View>
           </CouplySectionCard>
 
@@ -701,8 +754,6 @@ export default function EventDetailScreen() {
                         setShowWhatHelpedBefore(false);
                         setRepairMemoryDismissed(true);
                         setRepairMemoryCandidate(null);
-                      } else {
-                        setShowWhatHelpedBefore(false);
                       }
                     }}
                     onNotRelated={() => {
@@ -746,10 +797,11 @@ export default function EventDetailScreen() {
 
               {/* Stage: Reconnected Outcome */}
               {repairWorkflow.derivedStage === "reconnected" ? (
-                <CouplySectionCard
-                  variant="lilac"
-                  style={styles.reconnectedSection}
-                >
+                <>
+                  <CouplySectionCard
+                    variant="lilac"
+                    style={styles.reconnectedSection}
+                  >
                   <View style={styles.reconnectedHeaderRow}>
                     <Text style={styles.reconnectedEmoji}>🌱</Text>
                     <View style={styles.reconnectedTitleGroup}>
@@ -798,7 +850,22 @@ export default function EventDetailScreen() {
                     </View>
                   )}
                 </CouplySectionCard>
-              ) : (
+
+                {/* Helpfulness question after reconnection: shown only when user had a repair memory
+                     link. HelpfulnessQuestion checks the persisted answer on mount and renders null
+                     if already answered — so refresh and remount cannot reopen it. */}
+                {repairMemoryCandidate !== null &&
+                  currentUserId !== null &&
+                  eventId !== undefined && (
+                    <HelpfulnessQuestion
+                      currentEventId={eventId}
+                      priorEventId={repairMemoryCandidate.eventId}
+                      userId={currentUserId}
+                      onComplete={() => setShowHelpfulnessQuestion(false)}
+                    />
+                  )}
+              </>
+            ) : (
                 /* Active Stages: Open, In Care, Reconnecting, Both Ready */
                 <CouplySectionCard style={styles.nextActionCard}>
                   {/* Phase 1: Arrival */}

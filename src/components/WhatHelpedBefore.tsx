@@ -32,7 +32,7 @@ import {
   saveRelationDecision,
 } from "@/lib/repair-memory";
 import { TAKEAWAY_TAG_LABELS } from "@/lib/use-repair-workflow";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -64,6 +64,11 @@ export interface WhatHelpedBeforeProps {
   onNotRelated?: () => void;
 }
 
+const ACKNOWLEDGEMENT_TEXT: Record<"try_same" | "adapt", string> = {
+  try_same: "✓ We’ll keep this approach in view while you work through this moment.",
+  adapt: "✓ You can carry forward what helped and adjust it for this moment.",
+};
+
 export function WhatHelpedBefore({
   currentEventId,
   coupleId,
@@ -84,6 +89,10 @@ export function WhatHelpedBefore({
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [activeAction, setActiveAction] = useState<WhatHelpedAction | null>(null);
+  const [selectedApproach, setSelectedApproach] = useState<"try_same" | "adapt" | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const isProcessingRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,19 +121,59 @@ export function WhatHelpedBefore({
 
   const handleAction = useCallback(
     async (action: WhatHelpedAction) => {
+      if (isProcessingRef.current) return;
+      isProcessingRef.current = true;
       setActionLoading(true);
-      if (action === "not_related") {
-        await saveRelationDecision({
-          currentEventId,
-          priorEventId: candidate.eventId,
-          coupleId,
-          userId,
-          decision: "different",
-        });
-        onNotRelated?.();
+      setActiveAction(action);
+      setActionError(null);
+
+      try {
+        if (action === "not_related") {
+          const res = await saveRelationDecision({
+            currentEventId,
+            priorEventId: candidate.eventId,
+            coupleId,
+            userId,
+            decision: "different",
+          });
+          if (res?.error) {
+            setActionError("Unable to update relation. Please try again.");
+            return;
+          }
+          onNotRelated?.();
+          onAction?.(action);
+          return;
+        }
+
+        if (action === "try_same" || action === "adapt") {
+          const res = await saveRelationDecision({
+            currentEventId,
+            priorEventId: candidate.eventId,
+            coupleId,
+            userId,
+            decision: "related",
+          });
+          if (res?.error) {
+            setActionError("Unable to save selection. Please try again.");
+            return;
+          }
+          setSelectedApproach(action);
+          onAction?.(action);
+          return;
+        }
+
+        if (action === "choose_different") {
+          setSelectedApproach(null);
+          onAction?.(action);
+          return;
+        }
+      } catch {
+        setActionError("An unexpected error occurred. Please try again.");
+      } finally {
+        isProcessingRef.current = false;
+        setActionLoading(false);
+        setActiveAction(null);
       }
-      onAction?.(action);
-      setActionLoading(false);
     },
     [currentEventId, candidate.eventId, coupleId, userId, onAction, onNotRelated]
   );
@@ -138,6 +187,19 @@ export function WhatHelpedBefore({
     day: "numeric",
     year: "numeric",
   });
+
+  const hasReusableContent = Boolean(
+    (privateReflection && privateReflection.trim().length > 0) ||
+      (sharedTakeaway?.takeawayNote &&
+        sharedTakeaway.takeawayNote.trim().length > 0) ||
+      (sharedTakeaway?.takeawayTag &&
+        sharedTakeaway.takeawayTag.trim().length > 0)
+  );
+
+  // Do not render an empty guidance card if there is no reusable content
+  if (loading || !hasReusableContent) {
+    return null;
+  }
 
   return (
     <CouplySectionCard variant="lilac" style={styles.container}>
@@ -229,66 +291,128 @@ export function WhatHelpedBefore({
       )}
 
       {/* Action choices — neutral labels, no compliance/score language */}
-      {actionLoading ? (
-        <ActivityIndicator
-          size="small"
-          color={theme.primaryAccent}
-          style={{ marginTop: 8 }}
-        />
-      ) : (
-        <View style={styles.actions}>
-          {(
-            [
-              {
-                action: "try_same" as const,
-                label: "Try the same shared approach",
-              },
-              { action: "adapt" as const, label: "Adapt it for this situation" },
-              {
-                action: "choose_different" as const,
-                label: "Choose something different",
-              },
-              {
-                action: "not_related" as const,
-                label: "This situation is not related",
-              },
-            ] as { action: WhatHelpedAction; label: string }[]
-          ).map(({ action, label }) => (
+      <View style={styles.actions}>
+        {(
+          [
+            {
+              action: "try_same" as const,
+              label: "Try the same shared approach",
+            },
+            { action: "adapt" as const, label: "Adapt it for this situation" },
+            {
+              action: "choose_different" as const,
+              label: "Choose something different",
+            },
+            {
+              action: "not_related" as const,
+              label: "This situation is not related",
+            },
+          ] as { action: WhatHelpedAction; label: string }[]
+        ).map(({ action, label }) => {
+          const isSelected = selectedApproach === action;
+          const isBusy = actionLoading && activeAction === action;
+          const isNotRelated = action === "not_related";
+
+          return (
             <Pressable
               key={action}
+              disabled={actionLoading}
               style={({ pressed }) => [
                 styles.actionBtn,
                 {
-                  backgroundColor:
-                    action === "not_related"
-                      ? "transparent"
-                      : theme.secondarySurface,
-                  borderColor:
-                    action === "not_related" ? "transparent" : theme.border,
+                  backgroundColor: isSelected
+                    ? theme.primaryAccent
+                    : isNotRelated
+                    ? "transparent"
+                    : theme.secondarySurface,
+                  borderColor: isSelected
+                    ? theme.primaryAccent
+                    : isNotRelated
+                    ? "transparent"
+                    : theme.border,
                 },
-                pressed && { opacity: 0.65 },
+                pressed && !actionLoading && { opacity: 0.65 },
+                actionLoading && !isBusy && { opacity: 0.5 },
               ]}
               onPress={() => handleAction(action)}
               accessibilityRole="button"
               accessibilityLabel={label}
+              accessibilityState={{
+                selected: isSelected,
+                busy: isBusy,
+                disabled: actionLoading,
+              }}
             >
-              <Text
-                style={[
-                  styles.actionBtnText,
-                  {
-                    color:
-                      action === "not_related"
+              {isBusy ? (
+                <ActivityIndicator
+                  size="small"
+                  color={
+                    isSelected ? theme.primaryActionText : theme.primaryAccent
+                  }
+                />
+              ) : (
+                <Text
+                  style={[
+                    styles.actionBtnText,
+                    {
+                      color: isSelected
+                        ? theme.primaryActionText
+                        : isNotRelated
                         ? theme.mutedText
                         : theme.primaryText,
-                  },
-                ]}
-              >
-                {label}
-              </Text>
+                    },
+                  ]}
+                >
+                  {isSelected ? `✓ ${label}` : label}
+                </Text>
+              )}
             </Pressable>
-          ))}
+          );
+        })}
+      </View>
+
+      {/* Inline acknowledgement */}
+      {selectedApproach && (
+        <View
+          style={[
+            styles.acknowledgementBox,
+            {
+              backgroundColor: theme.blushSurface,
+              borderColor: theme.borderSoft,
+            },
+          ]}
+          accessibilityLiveRegion="polite"
+        >
+          <Text
+            style={[styles.acknowledgementText, { color: theme.primaryText }]}
+          >
+            {ACKNOWLEDGEMENT_TEXT[selectedApproach]}
+          </Text>
         </View>
       )}
+
+      {/* Non-blocking error banner */}
+      {actionError ? (
+        <View
+          style={[
+            styles.errorBox,
+            {
+              backgroundColor: theme.status?.error?.bg ?? "#FDF0F0",
+              borderColor: theme.status?.error?.border ?? "#FECDCA",
+            },
+          ]}
+          accessibilityLiveRegion="assertive"
+        >
+          <Text
+            style={[
+              styles.errorText,
+              { color: theme.status?.error?.text ?? "#B42318" },
+            ]}
+          >
+            {actionError}
+          </Text>
+        </View>
+      ) : null}
     </CouplySectionCard>
   );
 }
@@ -352,6 +476,30 @@ function createStyles(theme: ThemeColors) {
     actionBtnText: {
       fontSize: 14,
       fontWeight: "600",
+    },
+    acknowledgementBox: {
+      borderRadius: 10,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginTop: 2,
+    },
+    acknowledgementText: {
+      fontSize: 13,
+      lineHeight: 18,
+      fontWeight: "500",
+    },
+    errorBox: {
+      borderRadius: 10,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      marginTop: 2,
+    },
+    errorText: {
+      fontSize: 12.5,
+      lineHeight: 17,
+      fontWeight: "500",
     },
   });
 }
