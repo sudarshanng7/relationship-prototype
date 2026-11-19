@@ -8,7 +8,7 @@ import { useAccessRevalidation, type AccessResult } from "@/hooks/useAccessReval
 import type { EventRepairState } from "@/lib/repair-states";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 
 type OwnPerspective = {
@@ -50,6 +50,7 @@ function isOwnRepair(value: unknown): value is OwnRepair {
     (value.sharing_status !== "shared" || value.status_origin === "explicit") &&
     isTimestamp(value.updated_at);
 }
+let nextContributionChannelId = 0;
 const REPAIR_LABELS = {
   open: "I still feel unresolved",
   partially_repaired: "I feel partly repaired",
@@ -68,9 +69,7 @@ function MyContributionsContent() {
   const scope = useAccountSessionScope();
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [channelEpoch, setChannelEpoch] = useState(0);
-  const [liveFailed, setLiveFailed] = useState(false);
-  const liveFailure = useRef(false);
+  const [realtimeUnavailable, setRealtimeUnavailable] = useState(false);
   const verify = useCallback(async (currentRead: () => boolean): Promise<AccessResult<Snapshot>> => {
     const valid = () => currentRead() && scope.isCurrent();
     const auth = await scope.authorize();
@@ -121,42 +120,61 @@ function MyContributionsContent() {
     return () => controller.stop();
   }, [controller]));
   const channelCouple = access.state.phase === "unavailable" ? null : snapshot?.coupleId;
-  useFocusEffect(useCallback(() => {
-    if (!channelCouple || !scope.isCurrent()) return;
-    liveFailure.current = false;
-    setLiveFailed(false);
-    let active = true;
-    let failed = false;
-    const hint = () => { if (active && scope.isCurrent()) void controller.refresh(true); };
-    const channel = supabase.channel(`own-contributions-${scope.userId}-${channelCouple}-${channelEpoch}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "couple_members", filter: `user_id=eq.${scope.userId}` }, hint)
-      .on("postgres_changes", { event: "*", schema: "public", table: "event_perspectives", filter: `author_id=eq.${scope.userId}` }, hint)
-      .on("postgres_changes", { event: "*", schema: "public", table: "event_repair_states", filter: `user_id=eq.${scope.userId}` }, hint)
-      .subscribe((status) => {
-        if (!active || !scope.isCurrent()) return;
-        if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
-          failed = true; liveFailure.current = true; setLiveFailed(true); controller.invalidate();
-        } else if (status === "SUBSCRIBED" && failed) {
-          failed = false; liveFailure.current = false; setLiveFailed(false); void controller.refresh(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (!channelCouple || !scope.isCurrent()) return;
+
+      let active = true;
+      let channel: ReturnType<typeof supabase.channel> | undefined;
+
+      const hint = () => {
+        if (active && scope.isCurrent()) {
+          void controller.refresh(true);
         }
-      });
-    return () => { active = false; void supabase.removeChannel(channel); };
-  }, [channelCouple, channelEpoch, controller, scope]));
+      };
+
+      setRealtimeUnavailable(false);
+
+      try {
+        channel = supabase.channel(
+          `own-contributions-${scope.userId}-${channelCouple}-${Date.now()}-${++nextContributionChannelId}`,
+        );
+
+        channel
+          .on("postgres_changes", { event: "*", schema: "public", table: "couple_members", filter: `user_id=eq.${scope.userId}` }, hint)
+          .on("postgres_changes", { event: "*", schema: "public", table: "event_perspectives", filter: `author_id=eq.${scope.userId}` }, hint)
+          .on("postgres_changes", { event: "*", schema: "public", table: "event_repair_states", filter: `user_id=eq.${scope.userId}` }, hint)
+          .subscribe((status) => {
+            if (!active || !scope.isCurrent()) return;
+
+            if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+              setRealtimeUnavailable(true);
+            } else if (status === "SUBSCRIBED") {
+              setRealtimeUnavailable(false);
+            }
+          });
+      } catch {
+        setRealtimeUnavailable(true);
+      }
+
+      return () => {
+        active = false;
+        if (channel) void supabase.removeChannel(channel);
+      };
+    }, [channelCouple, controller, scope]),
+  );
   const refresh = () => {
     if (!scope.isCurrent()) return;
-    if (liveFailure.current) {
-      liveFailure.current = false; setLiveFailed(false); setChannelEpoch((value) => value + 1);
-    }
     void controller.refresh(true);
   };
   const verified = access.state.phase === "ready" && controller.hasFreshAccess() && scope.isCurrent();
   const state = {
     loading: access.state.phase === "checking",
     items: verified ? snapshot?.items ?? [] : [],
-    error: verified ? "" : access.state.phase === "unavailable"
-      ? "Could not verify access to your contributions. Your relationship space is unavailable."
-      : liveFailed
-        ? "Live access checks are unavailable. Refresh to check your contributions again."
+    error: verified
+      ? ""
+      : access.state.phase === "unavailable"
+        ? "Could not verify access to your contributions. Your relationship space is unavailable."
         : "Could not verify access to your contributions. Refresh to check again.",
   };
 
@@ -187,6 +205,18 @@ function MyContributionsContent() {
               loading={state.loading}
               onPress={refresh}
             />
+            <Text style={styles.body}>
+              Reopen or refresh to load your latest contributions.
+            </Text>
+
+            {realtimeUnavailable && (
+              <CouplySectionCard variant="muted" style={styles.notice}>
+                <Text accessibilityLiveRegion="polite" style={styles.body}>
+                  Automatic updates are unavailable. You can still refresh your
+                  contributions.
+                </Text>
+              </CouplySectionCard>
+            )}
             {state.loading && (
               <CouplySectionCard variant="muted" style={styles.notice}>
                 <ActivityIndicator size="small" color={tokens.colors.plum} />
@@ -235,7 +265,10 @@ function MyContributionsContent() {
                 ? "Shared by you. Partner access depends on the moment remaining shared."
                 : "Private — not shared with your partner."}</Text>
             </>}
-            <Text style={styles.timestamp}>Contribution updated: {new Date(item.row.updated_at).toLocaleString()}</Text>
+            <Text style={styles.timestamp}>
+              Contribution updated:{" "}
+              {new Date(item.row.updated_at).toLocaleString()}
+            </Text>
           </CouplySectionCard>
         )}
       />

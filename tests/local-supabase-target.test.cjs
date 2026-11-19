@@ -83,6 +83,56 @@ test("launcher replaces public staging variables and disables dotenv loading", (
   assert.equal(env.PATH, "/synthetic/path");
 });
 
+test("local startup uses only the localhost flag and the validated local environment", () => {
+  const file = path.join(__dirname, "../scripts/start-local.cjs");
+  const source = fs.readFileSync(file, "utf8");
+  const calls = [];
+  const main = {};
+  const requireMock = (name) => {
+    if (name === "node:child_process") return {
+      spawn(command, args, options) {
+        calls.push({ command, args, options });
+        return { on() {} };
+      },
+    };
+    if (name === "node:path") return path;
+    if (name === "../src/lib/local-supabase-target.js") return { getLocalSupabaseConfig };
+    throw new Error("Unexpected startup import");
+  };
+  requireMock.main = main;
+  const run = (environment) => {
+    const processMock = { argv: ["node", file], env: environment };
+    vm.runInNewContext(source, {
+      require: requireMock, module: main, __dirname: path.dirname(file),
+      process: processMock, console: { log() {}, error() {} },
+    });
+    return processMock;
+  };
+  run({
+    ROS_LOCAL_SUPABASE_URL: "http://127.0.0.1:55421",
+    ROS_LOCAL_SUPABASE_PUBLISHABLE_KEY: KEY,
+    EXPO_PUBLIC_SUPABASE_URL: STAGING,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic_staging",
+    SUPABASE_SERVICE_ROLE_KEY: "synthetic-secret",
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].command, "pnpm");
+  assert.deepEqual(Array.from(calls[0].args), ["exec", "expo", "start", "--localhost"]);
+  assert.equal(calls[0].options.env.EXPO_NO_DOTENV, "1");
+  assert.equal(calls[0].options.env.EXPO_OFFLINE, "1");
+  assert.equal(calls[0].options.env.EXPO_PUBLIC_SUPABASE_URL, "http://127.0.0.1:55421");
+  assert.equal(calls[0].options.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY, KEY);
+  assert.equal(calls[0].options.env.SUPABASE_SERVICE_ROLE_KEY, undefined);
+  for (const environment of [
+    { ROS_LOCAL_SUPABASE_URL: STAGING, ROS_LOCAL_SUPABASE_PUBLISHABLE_KEY: KEY },
+    { EXPO_PUBLIC_SUPABASE_URL: STAGING, EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: KEY },
+    { ROS_LOCAL_SUPABASE_URL: "http://127.0.0.1:55421", ROS_LOCAL_SUPABASE_PUBLISHABLE_KEY: "sb_secret_synthetic" },
+  ]) {
+    assert.equal(run(environment).exitCode, 1);
+    assert.equal(calls.length, 1);
+  }
+});
+
 // Evaluate the actual client module with mocked imports: no SDK or network runs.
 function evaluateClient(environment) {
   const source = fs.readFileSync(path.join(__dirname, "../src/lib/supabase.ts"), "utf8");

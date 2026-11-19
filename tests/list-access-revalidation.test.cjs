@@ -58,12 +58,61 @@ for(const kind of ['moments','contributions']){
   assert.equal(db.reads.length-before,kind==='moments'?6:4);assert.equal(db.channels.length,1);assert.equal(channel.removed,false);assert.doesNotMatch(ui.text(),/UNTRUSTED_PUSH_PAYLOAD/);
   await ui.tap(refresh(kind));await ui.tap(refresh(kind));assert.equal(db.channels.length,1);assert.equal(db.writes?.length??0,0);
  });
- for(const status of ['CHANNEL_ERROR','TIMED_OUT','CLOSED'])test(`${kind}: ${status} invalidates access and SUBSCRIBED triggers verified recovery`,async t=>{
-  const {db,ui}=await setup(t,kind);const channel=db.channels.at(-1);channel.status(status);ui.render();await ui.flush();noProtected(ui,kind);channel.status('SUBSCRIBED');await ui.flush();assert.equal(kind==='moments'?cards(ui).length>0:ownText(ui),true);assert.equal(db.channels.length,1);
-  const count=db.reads.length;channel.status('SUBSCRIBED');await ui.flush();assert.equal(db.reads.length,count);
- });
- test(`${kind}: periodic fallback recovers even if the channel stays failed`,async t=>{
-  const {db,ui,time}=await setup(t,kind);db.channels.at(-1).status('CHANNEL_ERROR');ui.render();noProtected(ui,kind);time.advance(25000);await ui.flush();assert.equal(kind==='moments'?cards(ui).length>0:ownText(ui),true);assert.equal(db.channels.length,1);
+ for (const status of ["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"]) {
+   test(`${kind}: ${status} handles Realtime failure according to screen policy`, async (t) => {
+     const { db, ui } = await setup(t, kind);
+     const channel = db.channels.at(-1);
+     const readsBefore = db.reads.length;
+     channel.status(status);
+     ui.render();
+     await ui.flush();
+     if (kind === "moments") {
+       // Preserve the existing Moments access-invalidation behavior.
+       noProtected(ui, kind);
+     } else {
+       // Contributions retain independently verified REST access.
+       assert.equal(ownText(ui), true);
+       assert.match(ui.text(), /Automatic updates are unavailable/);
+       assert.equal(db.reads.length, readsBefore);
+     }
+     channel.status("SUBSCRIBED");
+     await ui.flush();
+     assert.equal(
+       kind === "moments" ? cards(ui).length > 0 : ownText(ui),
+       true,
+     );
+     if (kind === "contributions") {
+       assert.doesNotMatch(ui.text(), /Automatic updates are unavailable/);
+       assert.equal(db.reads.length, readsBefore);
+     }
+     assert.equal(db.channels.length, 1);
+     const count = db.reads.length;
+     channel.status("SUBSCRIBED");
+     await ui.flush();
+     assert.equal(db.reads.length, count);
+   });
+ }
+ test(`${kind}: periodic access refresh continues while Realtime remains unavailable`, async (t) => {
+   const { db, ui, time } = await setup(t, kind);
+   const readsBefore = db.reads.length;
+   db.channels.at(-1).status("CHANNEL_ERROR");
+   ui.render();
+   await ui.flush();
+   if (kind === "moments") {
+     noProtected(ui, kind);
+   } else {
+     assert.equal(ownText(ui), true);
+     assert.match(ui.text(), /Automatic updates are unavailable/);
+     assert.equal(db.reads.length, readsBefore);
+   }
+   time.advance(25000);
+   await ui.flush();
+   assert.equal(kind === "moments" ? cards(ui).length > 0 : ownText(ui), true);
+   assert.equal(db.channels.length, 1);
+   if (kind === "contributions") {
+     assert.equal(db.reads.length - readsBefore, 4);
+     assert.match(ui.text(), /Automatic updates are unavailable/);
+   }
  });
  test(`${kind}: blur cleans up the subscription, ignores old hints and rejects outstanding reads`,async t=>{
   const {db,ui,time}=await setup(t,kind);const channel=db.channels.at(-1),original=db.read,pending=deferred();db.read=()=>pending.promise;channel.handlers[0].handler();await ui.flush();await ui.blur();assert.equal(channel.removed,true);const count=db.reads.length;channel.handlers[0].handler();channel.status('SUBSCRIBED');time.advance(90000);await ui.flush();assert.equal(db.reads.length,count);

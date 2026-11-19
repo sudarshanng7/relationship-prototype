@@ -255,17 +255,41 @@ for (const table of ["couple_members", "event_perspectives", "event_repair_state
 }
 
 for (const status of ["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"]) {
-  test(`${status} clears cards and allows recovery through a new read-only subscription`, async (t) => {
+  test(`${status} preserves authorized cards and permits read-only refresh`, async (t) => {
     const { db, ui } = await setup(t);
+
     const channel = db.channels.at(-1);
-    channel.status(status); ui.render();
-    assert.equal(cards(ui).length, 0);
-    assert.match(ui.text(), /Live access checks are unavailable/);
-    assert.doesNotMatch(ui.text(), /a retained perspective|No contributions available/);
-    await ui.tap("Refresh my contributions");
-    assert.equal(channel.removed, true); assert.equal(db.channels.length, 2);
+    const readsBefore = db.reads.length;
+
+    // Realtime failure must not invalidate freshly verified REST access.
+    channel.status(status);
+    ui.render();
+    await ui.flush();
+
+    assert.equal(cards(ui).length, 2);
     assert.match(ui.text(), /a retained perspective/);
+    assert.match(ui.text(), /Automatic updates are unavailable/);
+
+    // A channel failure alone must not initiate new REST requests.
+    assert.equal(db.reads.length, readsBefore);
+
+    // Manual refresh revalidates access without replacing the channel.
+    await ui.tap("Refresh my contributions");
+
+    assert.match(ui.text(), /a retained perspective/);
+    assert.ok(db.reads.length > readsBefore);
+    assert.equal(db.channels.length, 1);
+    assert.equal(channel.removed, false);
     assert.equal(db.writes.length, 0);
+
+    // Recovery clears the warning without requiring another REST request.
+    const readsAfterRefresh = db.reads.length;
+
+    channel.status("SUBSCRIBED");
+    await ui.flush();
+
+    assert.doesNotMatch(ui.text(), /Automatic updates are unavailable/);
+    assert.equal(db.reads.length, readsAfterRefresh);
   });
 }
 

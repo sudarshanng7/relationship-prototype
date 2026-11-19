@@ -218,14 +218,275 @@ for (const table of ["event_perspectives", "event_repair_states"]) test(`A03: ${
   assert.doesNotMatch(ui.text(), /a own perspective|My report:|PRIVATE ERROR CANARY/);
 });
 
-test("A03: live channel failure clears loaded content and refresh only reads", async (t) => {
+test("A03: Realtime failure preserves freshly authorized contributions and refresh only reads", async (t) => {
   const { db, ui } = await setup(t);
-  db.channels.at(-1).status("CHANNEL_ERROR"); ui.render();
-  assert.doesNotMatch(ui.text(), /a own perspective/);
-  assert.match(ui.text(), /Live access checks are unavailable/);
+
+  const channel = db.channels.at(-1);
+  const readsBeforeFailure = db.reads.length;
+
+  // A Realtime connection error must not invalidate valid REST access.
+  channel.status("CHANNEL_ERROR");
+  ui.render();
+  await ui.flush();
+
+  assert.match(ui.text(), /a own perspective/);
+  assert.match(ui.text(), /Automatic updates are unavailable/);
+
+  // Connection failure alone must not trigger additional REST requests.
+  assert.equal(db.reads.length, readsBeforeFailure);
+
+  // Manual refresh revalidates access without replacing the subscription.
+  db.perspectives[0].perspective_text = "a own perspective refreshed during Realtime outage";
   await ui.tap("Refresh my contributions");
+
+  assert.match(ui.text(), /a own perspective/);
+  assert.match(ui.text(), /a own perspective refreshed during Realtime outage/);
+  assert.match(ui.text(), /Automatic updates are unavailable/);
+  assert.ok(db.reads.length > readsBeforeFailure);
+  assert.equal(db.channels.length, 1);
+  assert.equal(channel.removed, false);
+
+  const readsAfterRefresh = db.reads.length;
+  channel.status("SUBSCRIBED");
+  await ui.flush();
+  assert.doesNotMatch(ui.text(), /Automatic updates are unavailable/);
+  assert.match(ui.text(), /a own perspective refreshed during Realtime outage/);
+  assert.equal(db.reads.length, readsAfterRefresh);
+  assert.equal(db.channels.length, 1);
+  assert.equal(channel.removed, false);
+  ownQueryContract(db, "a");
+
+  // This screen must never perform a mutation.
+  assert.equal(db.writes.length, 0);
+});
+
+for (const status of ["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"]) test(`A03: ${status} cannot cancel an in-flight authorized REST refresh`, async (t) => {
+  // The channel is created only after the initial authorized snapshot exists.
+  const { db, ui } = await setup(t);
+  const channel = db.channels.at(-1);
+  const pending = deferred();
+  const original = db.read, reads = db.reads.length, checks = db.checks.length;
+  db.read = (call) => call.table === "couple_members" ? original(call) : pending.promise.then(() => original(call));
+  await ui.tap("Refresh my contributions");
+  assert.match(ui.text(), /Checking access/);
+  assert.doesNotMatch(ui.text(), /a own perspective|b own perspective|My report:/);
+  assert.equal(ui.find("Refresh my contributions").props.disabled, true);
+  assert.equal(db.reads.length - reads, 3, "membership and both child reads are in flight");
+  assert.equal(db.checks.length - checks, 1);
+
+  channel.status(status); await ui.flush();
+  assert.match(ui.text(), /Automatic updates are unavailable/);
+  assert.match(ui.text(), /Checking access/);
+  assert.doesNotMatch(ui.text(), /a own perspective|b own perspective|My report:/);
+  assert.equal(db.reads.length - reads, 3, "channel failure neither retries nor replaces the REST refresh");
+  assert.equal(db.checks.length - checks, 1);
+
+  pending.resolve(); await ui.flush();
+  assert.match(ui.text(), /a own perspective/);
+  assert.match(ui.text(), /My report: I feel reconnected/);
+  assert.match(ui.text(), /Automatic updates are unavailable/);
+  assert.doesNotMatch(ui.text(), /b own perspective/);
+  assert.equal(ui.find("Refresh my contributions").props.disabled, false);
+  assert.equal(db.reads.length - reads, 4, "refresh rechecks membership after both child responses");
+  assert.equal(db.reads.slice(reads).filter((call) => call.table === "couple_members").length, 2);
+  assert.equal(db.checks.length - checks, 2, "refresh reauthorizes before publishing");
+  assert.equal(db.channels.length, 1);
+  assert.equal(channel.removed, false);
+  ownQueryContract(db, "a");
+});
+
+test("A03: immediate subscription error does not prevent initial REST loading", async (t) => {
+  const { db, ui } = await setup(t, (db) => {
+    const original = db.supabase.channel;
+    db.supabase.channel = () => {
+      const channel = original();
+      channel.subscribe = (handler) => { channel.status = handler; handler("CHANNEL_ERROR"); return channel; };
+      return channel;
+    };
+  });
+  assert.match(ui.text(), /a own perspective/);
+  assert.match(ui.text(), /Automatic updates are unavailable/);
+  ownQueryContract(db, "a");
+});
+
+test("A03: synchronous subscribe failure is best effort and does not expose raw errors", async (t) => {
+  const { db, ui } = await setup(t, (db) => {
+    const original = db.supabase.channel;
+    db.supabase.channel = () => {
+      const channel = original();
+      channel.subscribe = () => { throw new Error("PRIVATE CONNECTION ERROR CANARY"); };
+      return channel;
+    };
+  });
+  assert.match(ui.text(), /a own perspective/);
+  assert.match(ui.text(), /Automatic updates are unavailable/);
+  assert.doesNotMatch(ui.text(), /PRIVATE CONNECTION ERROR CANARY/);
+  ownQueryContract(db, "a");
+  await ui.blur(); assert.equal(db.channels[0].removed, true);
+});
+
+test("A03: manual refresh works with no channel status or change notifications", async (t) => {
+  const { db, ui } = await setup(t);
+  const reads = db.reads.length, checks = db.checks.length;
+  db.repairs[0].repair_status = "partially_repaired";
+  await ui.tap("Refresh my contributions");
+  assert.match(ui.text(), /My report: I feel partly repaired/);
+  assert.ok(db.reads.length > reads);
+  assert.ok(db.checks.length > checks, "refresh repeats server authentication checks");
+  assert.equal(db.channels.length, 1);
+  assert.match(ui.text(), /Reopen or refresh to load your latest contributions/);
+  ownQueryContract(db, "a");
+});
+
+for (const table of ["event_perspectives", "event_repair_states"]) test(`A03: manual refresh clears previous private data when ${table} is denied and Realtime is down`, async (t) => {
+  const { db, ui } = await setup(t);
+  db.channels[0].status("CHANNEL_ERROR"); await ui.flush();
+  const pending = deferred(), original = db.read;
+  db.read = (call) => call.table === table ? pending.promise : original(call);
+  ui.find("Refresh my contributions").props.onPress(); ui.render();
+  assert.doesNotMatch(ui.text(), /a own perspective|My report:/);
+  pending.resolve({ data: null, error: { code: "42501", message: "PRIVATE DENIAL CANARY" } });
+  await ui.flush();
+  assert.match(ui.text(), /Could not verify access/);
+  assert.match(ui.text(), /Automatic updates are unavailable/);
+  assert.doesNotMatch(ui.text(), /a own perspective|My report:|PRIVATE DENIAL CANARY/);
+  const reads = db.reads.length;
+  db.channels[0].status("SUBSCRIBED"); await ui.flush();
+  assert.match(ui.text(), /Could not verify access/);
+  assert.doesNotMatch(ui.text(), /a own perspective|My report:|Automatic updates are unavailable/);
+  assert.equal(db.reads.length, reads, "channel recovery is not authorization or a retry");
+  assert.equal(db.channels.length, 1);
+  assert.equal(db.writes.length, 0);
+});
+
+test("A03: refresh while Realtime is down still clears data on membership revocation", async (t) => {
+  const { db, ui } = await setup(t);
+  db.channels[0].status("CLOSED"); await ui.flush();
+  const before = db.reads.length;
+  db.memberships.delete("a");
+  await ui.tap("Refresh my contributions");
+  assert.match(ui.text(), /Could not verify access/);
+  assert.doesNotMatch(ui.text(), /a own perspective|My report:/);
+  assert.ok(db.reads.slice(before).every((call) => call.table === "couple_members"));
+  assert.equal(db.channels.length, 1);
+  assert.equal(db.writes.length, 0);
+});
+
+test("A03: membership replacement during manual refresh rejects pending rows without Realtime", async (t) => {
+  const { db, ui } = await setup(t);
+  db.channels[0].status("CHANNEL_ERROR");
+  const pending = deferred(), original = db.read;
+  db.read = (call) => call.table === "couple_members" ? original(call) : pending.promise.then(() => original(call));
+  ui.find("Refresh my contributions").props.onPress(); await ui.flush();
+  assert.doesNotMatch(ui.text(), /a own perspective|My report:/);
+  db.memberships.set("a", "replacement-space");
+  pending.resolve(); await ui.flush();
+  assert.match(ui.text(), /Could not verify access/);
+  assert.doesNotMatch(ui.text(), /a own perspective|My report:/);
+  assert.equal(db.writes.length, 0);
+});
+
+test("A03: REST reauthentication failure clears cached data despite channel recovery", async (t) => {
+  const { db, ui } = await setup(t);
+  const channel = db.channels[0]; channel.status("CHANNEL_ERROR");
+  db.getUser = async () => ({ data: { user: null }, error: { message: "PRIVATE AUTH ERROR" } });
+  await ui.tap("Refresh my contributions");
+  assert.match(ui.text(), /Private data has been cleared/);
+  assert.doesNotMatch(ui.text(), /a own perspective|My report:|PRIVATE AUTH ERROR/);
+  channel.status("SUBSCRIBED"); await ui.flush();
+  assert.match(ui.text(), /Private data has been cleared/);
+  assert.doesNotMatch(ui.text(), /a own perspective|My report:/);
+  assert.equal(channel.removed, true);
+});
+
+test("A03: account switch and logout stay isolated when Realtime is unavailable", async (t) => {
+  const { db, ui } = await setup(t);
+  const oldChannel = db.channels[0]; oldChannel.status("CHANNEL_ERROR");
+  await ui.switchAccount("b"); onlyB(ui);
+  oldChannel.status("CHANNEL_ERROR"); await ui.flush();
+  onlyB(ui); assert.doesNotMatch(ui.text(), /Automatic updates are unavailable/);
+  assert.equal(oldChannel.removed, true);
+  db.channels.at(-1).status("CLOSED"); await ui.flush();
+  await ui.switchAccount(null);
+  assert.doesNotMatch(ui.text(), /own perspective|My report:/);
+  assert.ok(ui.navigations.includes("/"));
+  assert.equal(db.writes.length, 0);
+});
+
+test("A03: repeated connection errors do not resubscribe or retry REST automatically", async (t) => {
+  const { db, ui } = await setup(t);
+  const reads = db.reads.length, checks = db.checks.length, channel = db.channels[0];
+  for (const status of ["CHANNEL_ERROR", "TIMED_OUT", "CLOSED", "CHANNEL_ERROR"]) {
+    channel.status(status); await ui.flush();
+  }
+  assert.equal(db.channels.length, 1);
+  assert.equal(db.reads.length, reads);
+  assert.equal(db.checks.length, checks);
   assert.match(ui.text(), /a own perspective/);
   assert.equal(db.writes.length, 0);
+});
+
+test("A03: best-effort notifications still trigger guarded reload after recovery", async (t) => {
+  const { db, ui } = await setup(t);
+  db.channels[0].status("CHANNEL_ERROR"); await ui.flush();
+  db.channels[0].status("SUBSCRIBED"); await ui.flush();
+  db.perspectives[0].perspective_text = "A notified update";
+  const pending = deferred(), original = db.read;
+  db.read = (call) => call.table === "couple_members" ? original(call) : pending.promise.then(() => original(call));
+  db.signal("event_perspectives"); ui.render();
+  assert.doesNotMatch(ui.text(), /a own perspective|A notified update|My report:/);
+  pending.resolve(); await ui.flush();
+  assert.match(ui.text(), /A notified update/);
+  assert.doesNotMatch(ui.text(), /Automatic updates are unavailable/);
+  assert.equal(db.channels.length, 1);
+  ownQueryContract(db, "a");
+});
+
+test("A03: overlapping manual refreshes coalesce and cancelled responses cannot replace the newer authorized snapshot", async (t) => {
+  const { db, ui } = await setup(t);
+  const pending = deferred(), original = db.read;
+  const reads = db.reads.length, checks = db.checks.length;
+  db.read = (call) => call.table === "event_perspectives" ? pending.promise : original(call);
+  const refresh = ui.find("Refresh my contributions").props.onPress;
+  refresh(); await ui.flush();
+  assert.match(ui.text(), /Checking access/);
+  assert.doesNotMatch(ui.text(), /a own perspective|b own perspective|My report:/);
+  assert.equal(ui.find("Refresh my contributions").props.disabled, true);
+  assert.equal(db.reads.length - reads, 3);
+  assert.equal(db.checks.length - checks, 1);
+
+  db.read = original; db.perspectives[0].perspective_text = "A latest refresh";
+  db.repairs[0].repair_status = "partially_repaired";
+  // Deliberately invoke the saved callback past the disabled host: a duplicate
+  // refresh joins the pending job rather than launching an overlapping read.
+  refresh(); await ui.flush();
+  assert.match(ui.text(), /Checking access/);
+  assert.doesNotMatch(ui.text(), /a own perspective|A latest refresh|My report:/);
+  assert.equal(db.reads.length - reads, 3, "duplicate manual refresh coalesces");
+  assert.equal(db.checks.length - checks, 1);
+
+  // Backgrounding abandons the old job; foregrounding must fully revalidate.
+  await ui.appState("background");
+  assert.doesNotMatch(ui.text(), /a own perspective|A latest refresh|My report:/);
+  assert.equal(db.reads.length - reads, 3, "backgrounding dispatches no reads");
+  await ui.appState("active");
+  assert.match(ui.text(), /A latest refresh/);
+  assert.match(ui.text(), /My report: I feel partly repaired/);
+  assert.equal(ui.find("Refresh my contributions").props.disabled, false);
+  assert.equal(db.reads.length - reads, 7, "new generation performs both membership checks and both child reads");
+  assert.equal(db.reads.slice(reads + 3).filter((call) => call.table === "couple_members").length, 2);
+  assert.equal(db.checks.length - checks, 3, "new generation reauthorizes before and after loading");
+
+  pending.resolve({ data: [perspective("a", { perspective_text: "A stale refresh" })], error: null });
+  await ui.flush();
+  assert.match(ui.text(), /A latest refresh/);
+  assert.match(ui.text(), /My report: I feel partly repaired/);
+  assert.doesNotMatch(ui.text(), /A stale refresh|a own perspective|b own perspective|My report: I feel reconnected/);
+  assert.equal(db.reads.length - reads, 7, "cancelled response cannot continue membership revalidation or retry");
+  assert.equal(db.checks.length - checks, 3);
+  assert.equal(db.channels.length, 1);
+  assert.equal(db.channels[0].removed, false);
+  ownQueryContract(db, "a");
 });
 
 test("A03: missing/nonexistent supplied event IDs cannot trigger parent navigation or lookup", async (t) => {

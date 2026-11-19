@@ -36,7 +36,7 @@ function startLocal() {
   const env = localExpoEnvironment(process.env);
   console.log(`Starting Expo for local Supabase at ${env.EXPO_PUBLIC_SUPABASE_URL}`);
   // pnpm still checks the installation; no implicit install or CLI download.
-  const child = spawn("pnpm", ["exec", "expo", "start", "--offline", "--localhost"], {
+  const child = spawn("pnpm", ["exec", "expo", "start", "--localhost"], {
     cwd: path.resolve(__dirname, ".."),
     env,
     stdio: "inherit",
