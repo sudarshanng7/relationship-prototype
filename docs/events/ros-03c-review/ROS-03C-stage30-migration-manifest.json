@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "scope": "ROS-03C stage30 local source migration inventory; not deployment or functional acceptance authorization",
+  "source_branch": "feature/ros-03c-independent-repair-states",
+  "source_base_head": "3c1f20524fde9eb251659d8744bd2a0fae64ed4b",
+  "migration_directory": "supabase/migrations",
+  "migration_count": 30,
+  "predecessor_count": 29,
+  "predecessor_manifest_sha256": {
+    "tests/sql/ros03c-a01-guarded-writes-manifest.json": "f0307c87be337ac61d6c822d90b365c386533e9b4f3c3e119bcce9c0c77d6d36",
+    "tests/sql/ros03c-acceptance-manifest.json": "bf20d038cf492b4fc5f11d8c56e3050bc93debb999d3ca10a4d2bc242a952faf"
+  },
+  "approved_migration30": {
+    "review_id": "migration30-transaction-2026-11-16-tymeemr5",
+    "file": "20261116190000_ros03c_revoke_anon_execute_on_couple_rpcs.sql",
+    "sha256": "bbfcfb439122d4aee38dcb1ce0e7cab3e622095d44d69160d628d73e37bb099d"
+  },
+  "cli_execution_contract": {
+    "version": "2.120.0",
+    "platform": "linux-x64",
+    "binary_sha256": "e4e5d910546d7eda3bc3c63affce09a12b9954a00685dce5236080cd45f43eda",
+    "migration30_top_level_statements": 5,
+    "mode": "CLI-managed single transaction batch including migration-history INSERT"
+  },
+  "migrations": [
+    {
+      "order": 1,
+      "file": "20261001000000_initial_schema.sql",
+      "version": "20261001000000",
+      "sha256": "d4924259a1cfa03efa4df73f4bd3a953895094c7e5eec30248dc7e47c7d1cb94",
+      "bytes": 18079
+    },
+    {
+      "order": 2,
+      "file": "20261013210000_secure_couple_invite_acceptance.sql",
+      "version": "20261013210000",
+      "sha256": "298456337c5ac7a78c18831cd19b3479839c3fbf1e5ad1c72179b9304b367f88",
+      "bytes": 2205
+    },
+    {
+      "order": 3,
+      "file": "20261014154911_separate_private_reflections.sql",
+      "version": "20261014154911",
+      "sha256": "900a26bc145957d93537ac00b1602ea0f3c4472603b09bff917e716e61c11fca",
+      "bytes": 3335
+    },
+    {
+      "order": 4,
+      "file": "20261014155951_create_moment_save_function.sql",
+      "version": "20261014155951",
+      "sha256": "7ad55ff75cb203cd5dfd631eac87befb492096906c2cafdad59a4ecda94fb1bb",
+      "bytes": 2973
+    },
+    {
+      "order": 5,
+      "file": "20261014193712_restrict_private_reflection_updates.sql",
+      "version": "20261014193712",
+      "sha256": "3d142c3e458d3aacda09633f7c2fe62b09d71dfdc1170dc88b9a164dc4c17b74",
+      "bytes": 464
+    },
+    {
+      "order": 6,
+      "file": "20261014204124_secure_event_visibility_transitions.sql",
+      "version": "20261014204124",
+      "sha256": "496dad8e80e73ebba22defc46f0078b70fce97ca60a2978ddb7e2d19930dddc5",
+      "bytes": 3046
+    },
+    {
+      "order": 7,
+      "file": "20261016100826_create_event_perspectives.sql",
+      "version": "20261016100826",
+      "sha256": "0858016da9bc41df6b97d1df84589f441dafb89a3b6854e710e550ea8af570ad",
+      "bytes": 4350
+    },
+    {
+      "order": 8,
+      "file": "20261016101735_restrict_perspective_updates.sql",
+      "version": "20261016101735",
+      "sha256": "79e13e0ab4f7d247d88ffad2ff548c3ce4354de8a83400be9579650228270a19",
+      "bytes": 335
+    },
+    {
+      "order": 9,
+      "file": "20261016144728_secure_perspective_resubmission.sql",
+      "version": "20261016144728",
+      "sha256": "4714e615850d2420c01d607f1aa3d52b78b5869c8d7d5a709e6bf200a62b5dbf",
+      "bytes": 2888
+    },
+    {
+      "order": 10,
+      "file": "20261016152107_secure_perspective_withdrawal.sql",
+      "version": "20261016152107",
+      "sha256": "b55d467db25ede70ce516452b74943e83a03ed339ab1875d5672c5328f1f2fbc",
+      "bytes": 1780
+    },
+    {
+      "order": 11,
+      "file": "20261016155850_preserve_suspended_perspective_author_access.sql",
+      "version": "20261016155850",
+      "sha256": "6c59cae71e44320b6a66fa7fa91fa34be6152720f235117065c30762166d8d5a",
+      "bytes": 1865
+    },
+    {
+      "order": 12,
+      "file": "20261016193312_require_event_membership_for_reads.sql",
+      "version": "20261016193312",
+      "sha256": "840f1a90f92e4f460b495f07ccf0a678595afdae630b2685b25a290d23e64806",
+      "bytes": 586
+    },
+    {
+      "order": 13,
+      "file": "20261020120246_require_membership_for_private_reflections.sql",
+      "version": "20261020120246",
+      "sha256": "10fc30bcae690530bef1df27345c880d1f43cab324a2735979cdf9700c702b31",
+      "bytes": 544
+    },
+    {
+      "order": 14,
+      "file": "20261020180334_restrict_private_reflection_mutations.sql",
+      "version": "20261020180334",
+      "sha256": "8880876751f528196d5568d8e7babd10439e66c4032c65571025e8db04ce3963",
+      "bytes": 1294
+    },
+    {
+      "order": 15,
+      "file": "20261023090000_ros03c_add_individual_repair_states.sql",
+      "version": "20261023090000",
+      "sha256": "5b2cf998d57d3ab9212cdd58c5df2fbb007f4602e02ecee1a6d642cd4b664f8f",
+      "bytes": 14967
+    },
+    {
+      "order": 16,
+      "file": "20261027214000_ros03c_stop_legacy_status_on_creation.sql",
+      "version": "20261027214000",
+      "sha256": "3a097e2436697f27a8e7ff2b5fa29b5a07640ea80fd1b5d86957dc0ce7e47aaf",
+      "bytes": 2961
+    },
+    {
+      "order": 17,
+      "file": "20261028184500_ros03c_revoke_legacy_repair_updates.sql",
+      "version": "20261028184500",
+      "sha256": "7f7bfe833bc145b5bfd183d79d7353fa6a09b73c6fe83a889786c959508b6dc9",
+      "bytes": 433
+    },
+    {
+      "order": 18,
+      "file": "20261028200000_ros03c_restrict_event_insert_columns.sql",
+      "version": "20261028200000",
+      "sha256": "37caf2df1f9043c102feb03a7430ed13b78d466f42dd0b60d0ba3303e08daa04",
+      "bytes": 930
+    },
+    {
+      "order": 19,
+      "file": "20261028220000_ros03c_legacy_repair_privacy_cutover.sql",
+      "version": "20261028220000",
+      "sha256": "0455536361df8a27d9e412af963251504ceaf28c909d09c5d8f1145dca054d34",
+      "bytes": 20235
+    },
+    {
+      "order": 20,
+      "file": "20261102180000_ros03c_harden_client_table_privileges.sql",
+      "version": "20261102180000",
+      "sha256": "6208c60a064362bb4cca6e97246d2b167bfab425b31e673be46975ff5d2bde72",
+      "bytes": 4678
+    },
+    {
+      "order": 21,
+      "file": "20261103200000_ros03c_version_checked_repair_saves.sql",
+      "version": "20261103200000",
+      "sha256": "3c919c5e6eae0e38139926b5cfd4bc422b6a63318d90c8edb4ac35b76f136ef7",
+      "bytes": 4999
+    },
+    {
+      "order": 22,
+      "file": "20261104100000_ros03c_repair_rpc_privacy.sql",
+      "version": "20261104100000",
+      "sha256": "5d7f475bc4b50b9b5b41ef550dcf57501e28b8ecc0060ed4fcb359afc3c1cf35",
+      "bytes": 4375
+    },
+    {
+      "order": 23,
+      "file": "20261104120000_ros03c_checked_repair_withdrawals.sql",
+      "version": "20261104120000",
+      "sha256": "db845bde954a1f8dda8bdd94ae1402be453b1f6a6eba2485813ebaa99824a529",
+      "bytes": 4752
+    },
+    {
+      "order": 24,
+      "file": "20261105100000_ros03c_perspective_rpc_privacy.sql",
+      "version": "20261105100000",
+      "sha256": "d2350a549c95d3411a47183aa0b100c7fe203feac9f536f368d237c689ca1f39",
+      "bytes": 6084
+    },
+    {
+      "order": 25,
+      "file": "20261106120000_ros03c_require_membership_for_event_deletion.sql",
+      "version": "20261106120000",
+      "sha256": "ed5fc7ebb7f8bc6bbe4c190cbcd1f734b098c6cbe927c70e9056a4b4f410eaad",
+      "bytes": 2860
+    },
+    {
+      "order": 26,
+      "file": "20261106160000_ros03c_guard_event_deletion.sql",
+      "version": "20261106160000",
+      "sha256": "3bbd68b4ed7dc04c5b2b9ade7ed360eea7c72d55ef19afe0960e10c09d6b5eed",
+      "bytes": 4319
+    },
+    {
+      "order": 27,
+      "file": "20261108120000_ros03c_authorize_repair_before_lock.sql",
+      "version": "20261108120000",
+      "sha256": "2ab4d2abf3b6664bf0ae4f6d3ef2656ce32d4275608550c0eb7e3c5797ff2d84",
+      "bytes": 16848
+    },
+    {
+      "order": 28,
+      "file": "20261108160000_ros03c_fence_visibility_membership.sql",
+      "version": "20261108160000",
+      "sha256": "92386ba18cba1e4ff02e1fb68703e5b70d84f110a9e5518ebd20ea63ff6d01cf",
+      "bytes": 10571
+    },
+    {
+      "order": 29,
+      "file": "20261108180000_ros03c_guard_event_and_reflection_writes.sql",
+      "version": "20261108180000",
+      "sha256": "ffbc30073ee5ec0bf4f1e3d4c797c161d39441a0e0b86478db154ea97368e511",
+      "bytes": 17956
+    },
+    {
+      "order": 30,
+      "file": "20261116190000_ros03c_revoke_anon_execute_on_couple_rpcs.sql",
+      "version": "20261116190000",
+      "sha256": "bbfcfb439122d4aee38dcb1ce0e7cab3e622095d44d69160d628d73e37bb099d",
+      "bytes": 8424
+    }
+  ],
+  "limits": [
+    "Existing 29-stage manifests, resources and guards are preserved; this inventory does not make them stage30-compatible.",
+    "Prior isolated PostgreSQL17.11 compilation/transaction evidence does not establish successful privilege application or hosted acceptance.",
+    "Hosted preflight, migration30 execution including history writes, credentials and focused post-verification require separate explicit approval."
+  ]
+}
