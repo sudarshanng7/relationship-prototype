@@ -72,8 +72,9 @@ node scripts/start-local.cjs
 Port 55321 is a candidate for the new instance, not a provisioned service. The
 launcher refuses missing/invalid inputs before starting Expo. It clears inherited
 Supabase/public variables, disables all dotenv loading, sets the local profile,
-and runs `pnpm exec expo start --offline --localhost`. pnpm dependency verification
-remains enabled. The public key is intended for the client bundle; never supply
+and runs `pnpm exec expo start --localhost` with `EXPO_OFFLINE=1` in the child
+environment. pnpm dependency verification remains enabled. The public key is
+intended for the client bundle; never supply
 a database password, access token, secret key or service-role key. There is no
 fallback to the staging `.env`. The initial profile supports browser/loopback
 development; physical-device or emulator host addresses need separate configuration
@@ -93,6 +94,43 @@ Focused isolation checks make no SDK/network calls:
 
 ```sh
 pnpm exec node --test --experimental-test-isolation=none --test-reporter=spec tests/local-supabase-target.test.cjs
+```
+
+## Static acceptance source inventory
+
+`python3 -B scripts/ros03c_acceptance.py --json` verifies repository sources
+without connecting to a database, executing SQL, importing concurrency runners,
+or changing files. It accepts exactly the frozen historical 29-migration source
+inventory, or that same prefix plus the reviewed migration 30. The latter requires
+the independently SHA-256-pinned
+[stage-30 source manifest](docs/events/ros-03c-review/ROS-03C-stage30-migration-manifest.json).
+Missing, extra, nested, reordered or modified migrations are rejected. Updating
+migration bytes and their manifest hashes together does not bypass the separately
+reviewed trust anchor. A remaining stage-30 manifest prevents a missing migration
+30 from silently downgrading the checkout to source inventory 29.
+
+Repository source inventory and planned database acceptance are separate fields.
+A repository with 30 verified source migrations can still describe a database
+acceptance plan for stage 29. `--stage` supports only stages 22–29; it neither
+changes the source inventory nor selects or connects to a database. The default
+remains stage 29, and `--stage 30` is unsupported.
+
+Static source verification does **not** prove database deployment. Output retains
+`database_acceptance: NOT_EXECUTED`, `database_deployment: NOT_VERIFIED`,
+`release_acceptance: BLOCKED`, and every existing evidence gap. Historical SQL
+resources, function fingerprints, exact stage-29 ledger checks, target identity,
+isolation approvals, and fixture guards remain unchanged. The local original-29
+database plus reviewed ACL bootstrap is not a deployed stage-30 database. Do not
+apply migration 30, fabricate history, bypass a guard, or reuse a consumed journal
+to make source verification pass. Live stage-30 acceptance needs its own review.
+
+Offline compatibility checks:
+
+```sh
+python3 -B -m unittest discover -s tests -p 'test_ros03c_acceptance.py' -v
+python3 -B scripts/ros03c_acceptance.py --json
+python3 -B scripts/ros03c_acceptance.py --stage 29 --json
+git diff --check
 ```
 
 ## Offline validation with existing dependencies

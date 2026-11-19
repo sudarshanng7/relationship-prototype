@@ -20,13 +20,25 @@ SPEC.loader.exec_module(inventory)
 
 
 class AcceptanceInventoryTests(unittest.TestCase):
+    SOURCE_COUNT = 29
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="ros03c-static-fixture-")
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         shutil.copytree(ROOT / "tests/sql", self.root / "tests/sql")
-        shutil.copytree(ROOT / "supabase/migrations", self.root / "supabase/migrations")
         self.manifest = json.loads((self.root / inventory.MANIFEST).read_text())
+        # Historical fixtures select the exact reviewed list; real-repository CLI
+        # checks below still inspect every migration and reject unexpected files.
+        migrations = self.root / "supabase/migrations"
+        migrations.mkdir(parents=True)
+        for spec in self.manifest["migrations"]:
+            shutil.copyfile(ROOT / "supabase/migrations" / spec["file"], migrations / spec["file"])
+        if self.SOURCE_COUNT == 30:
+            shutil.copyfile(ROOT / "supabase/migrations" / inventory.MIGRATION30, migrations / inventory.MIGRATION30)
+            path = self.root / inventory.SOURCE30_MANIFEST
+            path.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / inventory.SOURCE30_MANIFEST, path)
 
     def reject(self, manifest=None):
         with self.assertRaises(inventory.InventoryError):
@@ -39,9 +51,13 @@ class AcceptanceInventoryTests(unittest.TestCase):
         self.assertEqual(report["migration_versions"], sorted(set(report["migration_versions"])))
         self.assertEqual(report["final_launch_profiles"], inventory.FINAL_LAUNCH)
         self.assertEqual(report["sequential_payloads"], inventory.SEQUENTIAL_PAYLOADS)
+        self.assertEqual(report["source_migration_count"], self.SOURCE_COUNT)
+        self.assertEqual(len(report["source_migration_versions"]), self.SOURCE_COUNT)
+        self.assertEqual(report["planned_database_stage"], 29)
+        self.assertEqual(report["database_deployment"], "NOT_VERIFIED")
 
     def test_known_26_27_28_29_stage_definitions(self):
-        for stage, tail in [(26, "20261106160000"), (27, "20261108120000"), (28, "20261108160000"), (29, "20261108180000")]:
+        for stage, tail in inventory.STAGE_ENDS.items():
             with self.subTest(stage=stage):
                 report = inventory.inspect(self.root, stage=stage)
                 self.assertEqual(len(report["migration_versions"]), stage)
@@ -180,6 +196,8 @@ class AcceptanceInventoryTests(unittest.TestCase):
              patch.object(Path, "mkdir", side_effect=forbidden), \
              redirect_stdout(io.StringIO()) as output:
             self.assertEqual(inventory.main([]), 0)
+            self.assertEqual(inventory.inspect(self.root)["source_migration_count"], self.SOURCE_COUNT)
+        self.assertIn("Static source verification does not prove database deployment.", output.getvalue())
         self.assertIn("NOT_EXECUTED", output.getvalue())
         self.assertIn("GAP historical-data-replay: BLOCKED", output.getvalue())
 
@@ -190,6 +208,10 @@ class AcceptanceInventoryTests(unittest.TestCase):
         self.assertEqual(report["stage"], 29)
         self.assertEqual(report["mode"], "static-only")
         self.assertEqual(report["database_acceptance"], "NOT_EXECUTED")
+        self.assertEqual(report["source_migration_count"], 30)
+        self.assertEqual(report["source_migration_versions"][-1], "20261116190000")
+        self.assertEqual(report["planned_database_stage"], 29)
+        self.assertEqual(report["database_deployment"], "NOT_VERIFIED")
 
     def test_cli_accepts_no_execution_or_database_target_option(self):
         for args in (["--execute"], ["--database", "original"], ["--stage", "30"]):
@@ -239,6 +261,138 @@ class AcceptanceInventoryTests(unittest.TestCase):
                     source = source.replace('print("PASS: " + ("negative control observed predecessor lock disclosure" if args.negative_control else "locked inaccessible/missing availability equivalence"))', 'print("PASS: locked inaccessible/missing availability equivalence")')
                 actual = (ROOT / f"tests/sql/ros03c-stage29-finding{finding}-concurrency.py").read_text()
                 self.assertEqual(source, actual[actual.index('"""', 3) + 3:])
+
+
+class Stage30AcceptanceInventoryTests(AcceptanceInventoryTests):
+    # Re-run every historical security/resource/plan assertion on reviewed source
+    # 30 as well. The database stage and all SQL resources remain historical.
+    SOURCE_COUNT = 30
+
+    def source_manifest(self):
+        path = self.root / inventory.SOURCE30_MANIFEST
+        return path, json.loads(path.read_text())
+
+    def test_missing_migration30_cannot_downgrade_inventory(self):
+        (self.root / "supabase/migrations" / inventory.MIGRATION30).unlink()
+        with self.assertRaisesRegex(inventory.InventoryError, "Missing, additional or reordered migrations"):
+            inventory.inspect(self.root)
+
+    def test_missing_stage30_manifest(self):
+        (self.root / inventory.SOURCE30_MANIFEST).unlink()
+        with self.assertRaisesRegex(inventory.InventoryError, "Missing source"):
+            inventory.inspect(self.root)
+
+    def test_modified_migration30(self):
+        path = self.root / "supabase/migrations" / inventory.MIGRATION30
+        path.write_bytes(path.read_bytes() + b"\n-- mutation\n")
+        with self.assertRaisesRegex(inventory.InventoryError, "Modified migration"):
+            inventory.inspect(self.root)
+
+    def test_renamed_migration30(self):
+        path = self.root / "supabase/migrations" / inventory.MIGRATION30
+        path.rename(path.with_name("20261116190000_unreviewed.sql"))
+        self.reject()
+
+    def test_migration31_rejected(self):
+        (self.root / "supabase/migrations/20261117190000_unreviewed.sql").write_text("SELECT 1;\n")
+        self.reject()
+
+    def test_modified_stage30_manifest_metadata(self):
+        path, data = self.source_manifest()
+        data["scope"] = "unreviewed"
+        path.write_text(json.dumps(data))
+        with self.assertRaisesRegex(inventory.InventoryError, "Reviewed stage-30 source manifest changed"):
+            inventory.inspect(self.root)
+
+    def test_reordered_stage30_manifest(self):
+        path, data = self.source_manifest()
+        data["migrations"][0:2] = reversed(data["migrations"][0:2])
+        path.write_text(json.dumps(data))
+        self.reject()
+
+    def test_coordinated_migration30_and_manifest_hash_changes_rejected(self):
+        path = self.root / "supabase/migrations" / inventory.MIGRATION30
+        path.write_bytes(path.read_bytes() + b"\n-- coordinated mutation\n")
+        manifest_path, data = self.source_manifest()
+        changed = inventory.digest(path.read_bytes())
+        data["migrations"][-1].update(sha256=changed, bytes=path.stat().st_size)
+        data["approved_migration30"]["sha256"] = changed
+        manifest_path.write_text(json.dumps(data))
+        with self.assertRaisesRegex(inventory.InventoryError, "Reviewed stage-30 source manifest changed"):
+            inventory.inspect(self.root)
+
+    def test_coordinated_historical_migration_and_manifests_rejected(self):
+        name = self.manifest["migrations"][0]["file"]
+        path = self.root / "supabase/migrations" / name
+        path.write_bytes(path.read_bytes() + b"\n-- coordinated predecessor mutation\n")
+        changed = inventory.digest(path.read_bytes())
+        self.manifest["migrations"][0]["sha256"] = changed
+        (self.root / inventory.MANIFEST).write_text(json.dumps(self.manifest))
+        manifest_path, data = self.source_manifest()
+        data["migrations"][0].update(sha256=changed, bytes=path.stat().st_size)
+        data["predecessor_manifest_sha256"][inventory.MANIFEST] = inventory.digest(
+            (self.root / inventory.MANIFEST).read_bytes())
+        manifest_path.write_text(json.dumps(data))
+        self.reject()
+
+    def test_new_source_anchor_cannot_rewrite_historical_prefix(self):
+        path, data = self.source_manifest()
+        data["migrations"][0]["sha256"] = "0" * 64
+        path.write_text(json.dumps(data))
+        with patch.object(inventory, "SOURCE30_MANIFEST_SHA256", inventory.digest(path.read_bytes())):
+            with self.assertRaisesRegex(inventory.InventoryError, "prefix differs from trusted historical inventory"):
+                inventory.inspect(self.root)
+
+    def test_new_source_anchor_cannot_reorder_migrations(self):
+        path, data = self.source_manifest()
+        data["migrations"][-1]["order"] = 29
+        path.write_text(json.dumps(data))
+        with patch.object(inventory, "SOURCE30_MANIFEST_SHA256", inventory.digest(path.read_bytes())):
+            with self.assertRaisesRegex(inventory.InventoryError, "filenames, versions or order differ"):
+                inventory.inspect(self.root)
+
+    def test_new_source_anchor_cannot_change_migration_version(self):
+        path, data = self.source_manifest()
+        data["migrations"][-1]["version"] = "20261117190000"
+        path.write_text(json.dumps(data))
+        with patch.object(inventory, "SOURCE30_MANIFEST_SHA256", inventory.digest(path.read_bytes())):
+            with self.assertRaisesRegex(inventory.InventoryError, "filenames, versions or order differ"):
+                inventory.inspect(self.root)
+
+    def test_symlinked_migration30_rejected(self):
+        path = self.root / "supabase/migrations" / inventory.MIGRATION30
+        target = self.root / "migration30-copy.sql"
+        path.rename(target)
+        path.symlink_to(target)
+        with self.assertRaisesRegex(inventory.InventoryError, "Source must stay inside repository"):
+            inventory.inspect(self.root)
+
+    def test_symlinked_source_manifest_rejected(self):
+        path = self.root / inventory.SOURCE30_MANIFEST
+        target = self.root / "source30-copy.json"
+        path.rename(target)
+        path.symlink_to(target)
+        with self.assertRaisesRegex(inventory.InventoryError, "Source must stay inside repository"):
+            inventory.inspect(self.root)
+
+    def test_source30_does_not_enable_database_stage30(self):
+        with self.assertRaisesRegex(inventory.InventoryError, "Unknown reviewed stage"):
+            inventory.inspect(self.root, stage=30)
+
+    def test_source30_preserves_every_historical_stage_plan(self):
+        historical = inventory.inspect(self.root)
+        (self.root / "supabase/migrations" / inventory.MIGRATION30).unlink()
+        (self.root / inventory.SOURCE30_MANIFEST).unlink()
+        for stage in inventory.STAGE_ENDS:
+            with self.subTest(stage=stage):
+                old = inventory.inspect(self.root, stage=stage)
+                self.assertEqual(old["source_migration_count"], 29)
+                # Source metadata alone may differ; every database-stage field
+                # is compared against the same reviewed source-30 plan.
+                current = inventory.inspect(ROOT, stage=stage)
+                for key in old.keys() - {"source_migration_count", "source_migration_versions"}:
+                    self.assertEqual(old[key], current[key])
+        self.assertEqual(historical["source_migration_count"], 30)
 
 
 if __name__ == "__main__":

@@ -51,6 +51,9 @@ REQUIRED_GAPS = {
 }
 MANIFEST = "tests/sql/ros03c-acceptance-manifest.json"
 A01_MANIFEST_SHA256 = "f0307c87be337ac61d6c822d90b365c386533e9b4f3c3e119bcce9c0c77d6d36"
+SOURCE30_MANIFEST = "docs/events/ros-03c-review/ROS-03C-stage30-migration-manifest.json"
+SOURCE30_MANIFEST_SHA256 = "ef3e3f3320572075fc1c561c3e5381e6ff61fc0ee3f2435edb27c5b2b09effdc"
+MIGRATION30 = "20261116190000_ros03c_revoke_anon_execute_on_couple_rpcs.sql"
 
 
 class InventoryError(ValueError):
@@ -74,6 +77,44 @@ def read_local(root, name):
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def reviewed_source_migrations(root, historical, actual_names):
+    """Recognize two frozen source inventories, never a database target."""
+    path = root / SOURCE30_MANIFEST
+    if not (path.exists() or path.is_symlink() or MIGRATION30 in actual_names):
+        return historical
+
+    # Either stage-30 artifact requires its reviewed counterpart. A missing tail
+    # must not silently downgrade a stage-30 checkout to historical source 29.
+    source = read_local(root, SOURCE30_MANIFEST)
+    require(digest(source) == SOURCE30_MANIFEST_SHA256,
+            "Reviewed stage-30 source manifest changed")
+    reviewed = json.loads(source)
+    require(reviewed.get("schema_version") == 1
+            and reviewed.get("migration_directory") == "supabase/migrations"
+            and reviewed.get("migration_count") == 30
+            and reviewed.get("predecessor_count") == 29,
+            "Unexpected stage-30 source inventory contract")
+    require(reviewed.get("predecessor_manifest_sha256") == {
+        "tests/sql/ros03c-a01-guarded-writes-manifest.json": A01_MANIFEST_SHA256,
+        MANIFEST: digest(read_local(root, MANIFEST)),
+    }, "Stage-30 predecessor manifest differs from reviewed contract")
+
+    migrations = reviewed.get("migrations", [])
+    require(len(migrations) == 30, "Exact reviewed 30-migration source inventory required")
+    require([{key: spec.get(key) for key in ("file", "version", "sha256")}
+             for spec in migrations[:29]] == historical,
+            "Stage-30 prefix differs from trusted historical inventory")
+    require([spec.get("file") for spec in migrations] == [spec["file"] for spec in historical] + [MIGRATION30]
+            and [spec.get("version") for spec in migrations] == [spec["version"] for spec in historical] + ["20261116190000"]
+            and [spec.get("order") for spec in migrations] == list(range(1, 31)),
+            "Stage-30 migration filenames, versions or order differ")
+    approved = reviewed.get("approved_migration30", {})
+    require(approved.get("file") == MIGRATION30
+            and approved.get("sha256") == migrations[-1].get("sha256"),
+            "Migration 30 differs from its reviewed approval")
+    return migrations
 
 
 def inspect(root, manifest=None, stage=29):
@@ -123,15 +164,21 @@ def inspect(root, manifest=None, stage=29):
     entries = list((root / "supabase/migrations").iterdir())
     require(all(p.is_file() and p.suffix == ".sql" for p in entries), "Unexpected migration directory entry")
     actual_names = sorted(p.name for p in entries)
-    require(len(migrations) == 29 and [spec["file"] for spec in migrations] == expected_names == actual_names,
-            "Missing, additional or reordered migrations")
+    require(len(migrations) == 29 and [spec["file"] for spec in migrations] == expected_names,
+            "Missing, additional or reordered historical migrations")
     require([spec["version"] for spec in migrations] == a01["versions"] and len(set(a01["versions"])) == 29,
             "Exact 29-stage A01 ledger differs")
     for spec in migrations:
         require(spec["file"].startswith(spec["version"] + "_") and spec["sha256"] == a01["migration_sha256"][spec["file"]],
                 "Migration manifest differs from A01 contract")
-        require(digest(read_local(root, "supabase/migrations/" + spec["file"])) == spec["sha256"],
-                "Modified migration: " + spec["file"])
+    source_migrations = reviewed_source_migrations(root, migrations, actual_names)
+    require(actual_names == [spec["file"] for spec in source_migrations],
+            "Missing, additional or reordered migrations")
+    for spec in source_migrations:
+        source = read_local(root, "supabase/migrations/" + spec["file"])
+        require(digest(source) == spec["sha256"], "Modified migration: " + spec["file"])
+        if "bytes" in spec:
+            require(len(source) == spec["bytes"], "Migration byte length differs: " + spec["file"])
     require(set(manifest.get("stages", {})) == {str(n) for n in STAGE_ENDS}, "Stage inventory mismatch")
     for number, tail in STAGE_ENDS.items():
         spec = manifest["stages"][str(number)]
@@ -157,6 +204,9 @@ def inspect(root, manifest=None, stage=29):
     included = [key for key, spec in profiles.items() if stage in spec["stages"]]
     return {
         "mode": "static-only", "stage": stage, "source_inventory": "VERIFIED",
+        "source_migration_count": len(source_migrations),
+        "source_migration_versions": [spec["version"] for spec in source_migrations],
+        "planned_database_stage": stage, "database_deployment": "NOT_VERIFIED",
         "database_acceptance": "NOT_EXECUTED", "release_acceptance": "BLOCKED",
         "migration_versions": manifest["stages"][str(stage)]["versions"],
         "required_tests": [{"id": key, **profiles[key]} for key in included],
@@ -181,7 +231,9 @@ def main(argv=None):
     if args.json:
         print(json.dumps(report, indent=2))
     else:
-        print(f"Static source inventory VERIFIED. Stage {args.stage}: " + ", ".join(report["migration_versions"]))
+        print(f"Static repository source inventory VERIFIED: {report['source_migration_count']} migrations.")
+        print(f"Planned database acceptance stage {args.stage}: " + ", ".join(report["migration_versions"]))
+        print("Static source verification does not prove database deployment.")
         print("Database acceptance NOT_EXECUTED. Release acceptance BLOCKED.")
         for spec in report["required_tests"]:
             print(f"REQUIRED {spec['id']}: {spec['path']} | stages={spec['stages']} | {spec['classification']} | NOT_EXECUTED")
