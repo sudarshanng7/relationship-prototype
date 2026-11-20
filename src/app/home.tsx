@@ -1010,11 +1010,11 @@ export default function HomeScreen() {
 
   const personalCoverSource = personalCoverSignedUrl
     ? { uri: personalCoverSignedUrl }
-    : require("@/assets/images/shared-horizon.png");
+    : require("@/assets/images/shared-horizon.jpg");
 
   const coupleImageSource = coupleImageSignedUrl
     ? { uri: coupleImageSignedUrl }
-    : require("@/assets/images/giggle-otters.png");
+    : require("@/assets/images/giggle-otters.jpg");
 
   const isReflectionActive = previewState === "evening_reflection";
 

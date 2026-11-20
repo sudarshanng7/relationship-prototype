@@ -274,14 +274,14 @@ test("18. Default fallback asset is resolved when signed URL or path is null", (
 
   const defaultPersonalCover = personalCoverSignedUrl
     ? { uri: personalCoverSignedUrl }
-    : "default-shared-horizon.png";
+    : "default-shared-horizon.jpg";
 
   const defaultCoupleImage = coupleImageSignedUrl
     ? { uri: coupleImageSignedUrl }
-    : "default-giggle-otters.png";
+    : "default-giggle-otters.jpg";
 
-  assert.equal(defaultPersonalCover, "default-shared-horizon.png");
-  assert.equal(defaultCoupleImage, "default-giggle-otters.png");
+  assert.equal(defaultPersonalCover, "default-shared-horizon.jpg");
+  assert.equal(defaultCoupleImage, "default-giggle-otters.jpg");
 });
 
 // ----------------------------------------------------------------------------
