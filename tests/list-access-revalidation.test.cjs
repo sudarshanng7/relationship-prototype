@@ -133,6 +133,101 @@ for(const kind of ['moments','contributions']){
  });
 }
 
+test('moments: a late authorized response cannot overwrite newer membership-unavailable verification; fresh authorization recovers', async t => {
+  const { db, ui, time } = await setup(t, 'moments', db => {
+    db.repairs = [momentRepair(), momentRepair({ user_id: 'b', sharing_status: 'shared', repair_status: 'reconnected', what_helped: 'talking' })];
+  });
+  const initialIds = ['a-mine', 'a-ours', 'b-ours', 'good'];
+  assert.deepEqual(ids(ui), initialIds);
+  assert.match(ui.text(), /Your update: Still unresolved/);
+  assert.match(ui.text(), /Partner shared: I feel reconnected/);
+  const protectedLabels = cards(ui).map(node => node.props.accessibilityLabel);
+  assert.ok(protectedLabels.every(label => /^Open (mine|ours) .+ moment$/.test(label)));
+  const assertHidden = () => {
+    noProtected(ui, 'moments');
+    assert.ok(!ui.nodes().some(node => protectedLabels.includes(node.props.accessibilityLabel)));
+    assert.ok(!ui.nodes().some(node => /^Open (mine|ours) .+ moment$/.test(node.props.accessibilityLabel ?? '')));
+  };
+
+  const original = db.read, pending = deferred(), order = [];
+  let holdNextEvent = true, heldResponse, lateDelivered = false;
+  db.read = async call => {
+    const response = await original(call);
+    if (call.table === 'couple_members') {
+      assert.equal(response.error, null);
+      order.push(response.data ? 'membership-present' : 'membership-absent');
+    }
+    if (holdNextEvent && call.table === 'relationship_events') {
+      holdNextEvent = false;
+      heldResponse = structuredClone(response);
+      order.push('old-event-held');
+      const delivered = await pending.promise;
+      lateDelivered = true;
+      order.push('old-event-delivered');
+      return delivered;
+    }
+    return response;
+  };
+
+  // The periodic generation authorizes before capturing its unresolved response.
+  const beforePending = db.reads.length;
+  time.advance(25000);
+  await ui.flush();
+  assert.deepEqual(db.reads.slice(beforePending).map(call => call.table), ['couple_members', 'relationship_events']);
+  assert.deepEqual(order, ['membership-present', 'old-event-held']);
+  assert.equal(heldResponse.error, null);
+  assert.deepEqual(heldResponse.data.map(row => row.id).sort(), initialIds);
+  assert.deepEqual(ids(ui), initialIds);
+  assert.match(ui.text(), /Partner shared: I feel reconnected/);
+  assert.equal(lateDelivered, false);
+
+  time.advance(5001);
+  await ui.flush();
+  assertHidden();
+  assert.match(ui.text(), /Could not verify access to your moments/);
+  assert.equal(lateDelivered, false);
+
+  // A newer generation observes successful membership absence, not a read error.
+  db.memberships.delete('a');
+  const beforeUnavailable = db.reads.length;
+  await ui.tap(refresh('moments'));
+  assert.deepEqual(db.reads.slice(beforeUnavailable).map(call => call.table), ['couple_members']);
+  assertHidden();
+  assert.match(ui.text(), /Your relationship space is unavailable/);
+  assert.ok(ui.find('Go to Settings'));
+  assert.equal(lateDelivered, false);
+  order.push('unavailable-rendered');
+  const unavailableText = ui.text(), readsBeforeLate = db.reads.length, authBeforeLate = db.authChecks;
+
+  pending.resolve(heldResponse);
+  await ui.flush();
+  assert.equal(lateDelivered, true, 'the old transport completed after the newer unavailable state rendered');
+  assert.deepEqual(order, ['membership-present', 'old-event-held', 'membership-absent', 'unavailable-rendered', 'old-event-delivered']);
+  assertHidden();
+  assert.equal(ui.text(), unavailableText, 'late completion must not overwrite the newer verification result');
+  assert.equal(db.reads.length, readsBeforeLate, 'the retired generation must not continue child or membership reads');
+  assert.equal(db.authChecks, authBeforeLate, 'the retired generation must not continue authorization');
+
+  // Recovery must render current data from a complete new authorized verification.
+  db.memberships.set('a', 'couple-1');
+  db.events.find(row => row.id === 'a-mine').category = 'health';
+  db.repairs[0].repair_status = 'partially_repaired';
+  db.repairs[0].report_version++;
+  const beforeRecovery = db.reads.length;
+  await ui.tap(refresh('moments'));
+  assert.deepEqual(db.reads.slice(beforeRecovery).map(call => call.table), [
+    'couple_members', 'relationship_events', 'event_repair_states', 'event_repair_states', 'relationship_events', 'couple_members',
+  ]);
+  assert.deepEqual(ids(ui), initialIds);
+  assert.ok(ui.find('Open mine Health moment'));
+  assert.equal(ui.find('Open mine Household moment'), undefined);
+  assert.match(ui.text(), /Your update: A little better/);
+  assert.match(ui.text(), /Partner shared: I feel reconnected/);
+  assert.doesNotMatch(ui.text(), /Your relationship space is unavailable|Could not verify access|Your update: Still unresolved/);
+  assert.doesNotMatch(ui.text(), empty);
+  assert.deepEqual(ui.navigations, []);
+});
+
 test('moments: Ours becomes Mine; the peer loses the card and the author retains it privately',async t=>{
  const {db,ui,time}=await setup(t,'moments');db.events.find(e=>e.id==='b-ours').visibility='mine';time.advance(25000);await ui.flush();assert.ok(!ids(ui).includes('b-ours'));
  await ui.switchAccount('b');await ui.tap('Show Mine moments');assert.ok(ids(ui).includes('b-ours'));assert.equal(db.writes?.length??0,0);
