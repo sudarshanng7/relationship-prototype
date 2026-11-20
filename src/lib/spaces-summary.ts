@@ -20,7 +20,8 @@ export type EventNavigationOrigin =
   | "my-rhythm"
   | "mine"
   | "ours"
-  | "moments";
+  | "moments"
+  | "weekly-reflection";
 
 export interface EventBackConfig {
   origin: EventNavigationOrigin;
@@ -288,7 +289,8 @@ export function resolveEventBackNavigation(
     rawFrom === "my-rhythm" ||
     rawFrom === "mine" ||
     rawFrom === "ours" ||
-    rawFrom === "moments"
+    rawFrom === "moments" ||
+    rawFrom === "weekly-reflection"
   ) {
     origin = rawFrom;
   } else if (rawScope === "mine") {
@@ -306,6 +308,13 @@ export function resolveEventBackNavigation(
   }
 
   switch (origin) {
+    case "weekly-reflection":
+      return {
+        origin,
+        backLabel: "‹ Back to Your Week",
+        backAccessibilityLabel: "Back to Your Week",
+        destination: "/weekly-reflection?from=my-rhythm",
+      };
     case "my-rhythm":
       return {
         origin,

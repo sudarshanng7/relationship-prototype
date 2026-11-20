@@ -109,6 +109,12 @@ function RootLayoutNavigator() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="weekly-reflection"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

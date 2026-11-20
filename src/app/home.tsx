@@ -41,6 +41,11 @@ import {
   type CanonicalPrivateReflection,
   type CanonicalOursEvent,
 } from "@/lib/spaces-summary";
+import {
+  getWeeklyReflectionPeriod,
+  fetchCurrentWeeklyReflection,
+  type WeeklyReflectionRecord,
+} from "@/lib/weekly-reflection";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -379,6 +384,10 @@ export default function HomeScreen() {
   const [spacesSummaryError, setSpacesSummaryError] = useState<string | null>(
     null,
   );
+  const [weeklyReflection, setWeeklyReflection] =
+    useState<WeeklyReflectionRecord | null>(null);
+  const [isWeeklyReflectionLoading, setIsWeeklyReflectionLoading] =
+    useState<boolean>(true);
   const isNavigatingActivityRef = useRef<boolean>(false);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
@@ -464,13 +473,25 @@ export default function HomeScreen() {
 
         if (userError || !user) {
           setIsIdentityLoading(false);
+          setWeeklyReflection(null);
+          setIsWeeklyReflectionLoading(false);
           return false;
+        }
+
+        if (currentUserId && currentUserId !== user.id) {
+          setWeeklyReflection(null);
+          setIsWeeklyReflectionLoading(true);
         }
 
         setCurrentUserId(user.id);
 
-        // 1. Fetch current user display_name, membership, and personal profile in parallel
-        const [profileRes, memberRes, personalProfileRes] = await Promise.all([
+        // 1. Fetch current user display_name, membership, personal profile, and weekly reflection in parallel
+        const [
+          profileRes,
+          memberRes,
+          personalProfileRes,
+          weeklyReflectionRes,
+        ] = await Promise.all([
           supabase
             .from("profiles")
             .select("display_name")
@@ -486,9 +507,15 @@ export default function HomeScreen() {
             .select("personal_cover_path")
             .eq("user_id", user.id)
             .maybeSingle(),
+          fetchCurrentWeeklyReflection(supabase, getWeeklyReflectionPeriod()),
         ]);
 
         if (!mountedRef.current) return false;
+
+        if (!weeklyReflectionRes.error) {
+          setWeeklyReflection(weeklyReflectionRes.data);
+        }
+        setIsWeeklyReflectionLoading(false);
 
         const personalDbPath =
           personalProfileRes.data?.personal_cover_path ?? null;
@@ -717,6 +744,7 @@ export default function HomeScreen() {
         }
         setSpacesSummaryError("Unable to load summaries");
         setIsSpacesSummaryLoading(false);
+        setIsWeeklyReflectionLoading(false);
         return false;
       } finally {
         isRefreshingRef.current = false;
@@ -1406,9 +1434,7 @@ export default function HomeScreen() {
   };
 
   const handleWeeklyGentlePress = () => {
-    setLocalFeedback(
-      "Your weekly reflection will appear here when it is connected."
-    );
+    router.push("/weekly-reflection?from=my-rhythm" as any);
   };
 
 
@@ -2140,13 +2166,17 @@ export default function HomeScreen() {
           >
             <View style={styles.weeklyGentleHeaderRow}>
               <View style={styles.sectionHeaderBubble}>
-                <Text style={styles.sectionHeaderIcon}>🌿</Text>
+                <Text style={styles.sectionHeaderIcon}>🌱</Text>
               </View>
               <Text style={styles.sectionOverline}>Your week, gently</Text>
             </View>
             <View style={styles.weeklyGentleBodyRow}>
               <Text style={styles.weeklyGentleContentText}>
-                A quiet place to notice what has mattered lately.
+                {isWeeklyReflectionLoading
+                  ? "Loading…"
+                  : weeklyReflection
+                  ? "Your reflection is here whenever you want to revisit it."
+                  : "A quiet place to notice what has mattered lately."}
               </Text>
               <View style={styles.weeklyGentleAffordanceWrap}>
                 <Text style={styles.weeklyGentleAffordance}>Look back →</Text>
