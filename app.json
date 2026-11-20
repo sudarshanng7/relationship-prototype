@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "relationship-prototype",
-    "slug": "relationship-prototype",
-    "version": "1.0.0",
+    "name": "Purple Garden Alpha",
+    "slug": "purple-garden-alpha",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "relationshipprototype",
@@ -11,6 +11,8 @@
       "icon": "./assets/images/icon.png"
     },
     "android": {
+      "package": "com.purplegarden.alpha",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#D2DCB5",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
