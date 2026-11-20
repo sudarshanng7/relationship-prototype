@@ -16,6 +16,7 @@
  *    - 7: Important date added by partner
  *    - 8: Qualifying activity created by current user
  *    - 9: Eligible gently resurfaced friction moment
+ *    - Explicitly opened evening reflection temporarily owns the tile
  *    - 10: Existing evening-reflection candidate
  *    - 11: Calm empty state
  * 5. Deterministic tie-breaking:
@@ -538,6 +539,31 @@ export function deriveWhatMattersNowActivity(
   } = params;
 
   const partnerLabel = partnerName?.trim() || "Your partner";
+
+  // An explicitly opened reflection is a user choice, not an automatically
+  // competing activity. Let it temporarily own the tile even when a newer
+  // shared activity exists; dismissing or completing it restores the normal
+  // priority selector without marking the shared activity as seen.
+  if (isReflectionActive) {
+    const occurredAt = new Date(nowMs).toISOString();
+    return {
+      key: "reflection:current:active",
+      kind: "reflection",
+      sourceId: "evening_reflection",
+      coupleId: coupleId || "",
+      actorId: currentUserId,
+      occurredAt,
+      priority: 10,
+      actionable: true,
+      attentionMode: "actionable",
+      route: "reflection",
+      overline: "EVENING REFLECTION",
+      title: "Evening reflection",
+      body: "How did today feel between you two?",
+      actionLabel: "Reflect on today",
+    };
+  }
+
   const candidatesMap = new Map<string, HomeActivityCandidate>();
 
   // Build receipts lookup map strictly for current user
@@ -976,30 +1002,6 @@ export function deriveWhatMattersNowActivity(
   const resurfaced = deriveResurfacedCandidate(params);
   if (resurfaced) {
     candidatesMap.set(resurfaced.key, resurfaced);
-  }
-
-  // --------------------------------------------------------------------------
-  // Priority 10: Existing evening-reflection candidate (Actionable)
-  // --------------------------------------------------------------------------
-  if (isReflectionActive) {
-    const occurredAt = new Date(nowMs).toISOString();
-    const key = `reflection:current:active`;
-    candidatesMap.set(key, {
-      key,
-      kind: "reflection",
-      sourceId: "evening_reflection",
-      coupleId: coupleId || "",
-      actorId: currentUserId,
-      occurredAt,
-      priority: 10,
-      actionable: true,
-      attentionMode: "actionable",
-      route: "reflection",
-      overline: "EVENING REFLECTION",
-      title: "Evening reflection",
-      body: "How did today feel between you two?",
-      actionLabel: "Reflect on today",
-    });
   }
 
   // --------------------------------------------------------------------------

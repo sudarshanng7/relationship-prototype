@@ -58,6 +58,33 @@ test("1. New partner friction moment within 24h wins over lower priority candida
   assert.equal(candidate.actionLabel, "Open when ready");
 });
 
+test("1b. Explicit reflection remains accessible while a shared moment is waiting", () => {
+  const frictionEvent = {
+    id: "friction-reflection-override",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 10 * 60 * 1000).toISOString(),
+  };
+
+  const candidate = deriveWhatMattersNowActivity({
+    events: [frictionEvent],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+    isReflectionActive: true,
+  });
+
+  assert.equal(candidate.kind, "reflection");
+  assert.equal(candidate.actionLabel, "Reflect on today");
+  assert.equal(candidate.sourceId, "evening_reflection");
+  // Opening reflection must not mutate or resolve the waiting shared moment.
+  assert.equal(frictionEvent.status, "open");
+});
+
 // ----------------------------------------------------------------------------
 // Test 2: New partner Good moment appears when no higher-priority action exists
 // ----------------------------------------------------------------------------

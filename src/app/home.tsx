@@ -932,8 +932,12 @@ export default function HomeScreen() {
       // Optimistic immediate suppression for smooth UI transition
       setOptimisticSeenKeys((prev) => new Set(prev).add(keyToMark));
 
-      // Persist receipt asynchronously without blocking navigation
-      void markHomeActivitySeen({
+      // Confirm the private seen receipt before leaving Home. This ensures a
+      // newly opened shared moment stays out of "What matters now" after the
+      // Home screen remounts or the browser refreshes. A technical failure
+      // never blocks access to the moment; the optimistic key still prevents
+      // an immediate in-session repeat.
+      await markHomeActivitySeen({
         supabase,
         candidate,
         coupleId: effectiveCoupleId,
@@ -1639,6 +1643,26 @@ export default function HomeScreen() {
                 </Pressable>
               </View>
             )}
+
+            {/* Daily reflection remains independently available even when a
+                shared activity currently owns the primary attention tile. */}
+            {whatMattersNow.kind !== "reflection" &&
+              whatMattersNow.kind !== "empty" && (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.activityReflectButton,
+                    pressed && styles.activityReflectButtonPressed,
+                  ]}
+                  onPress={handleOpenReflectionFromHome}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reflect on today"
+                  accessibilityHint="Opens your private daily reflection without dismissing the shared moment"
+                >
+                  <Text style={styles.activityReflectButtonText}>
+                    Reflect on today
+                  </Text>
+                </Pressable>
+              )}
           </CouplySectionCard>
 
           {/* Separate Secondary Section: Invitation Preview (Demonstration) */}
@@ -2174,6 +2198,30 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       color: theme.accent,
       fontWeight: "600",
       textDecorationLine: "underline",
+    },
+    activityReflectButton: {
+      width: "100%",
+      minHeight: 44,
+      marginTop: 14,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.buttonSecondaryBg,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+    },
+    activityReflectButtonPressed: {
+      backgroundColor: theme.border,
+      borderColor: theme.accent,
+    },
+    activityReflectButtonText: {
+      fontSize: 13.5,
+      lineHeight: 19,
+      color: theme.accent,
+      fontWeight: "600",
+      textAlign: "center",
     },
 
     /* Evening Reflection */
