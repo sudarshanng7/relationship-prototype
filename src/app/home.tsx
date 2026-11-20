@@ -23,11 +23,20 @@ import {
   TWENTY_FOUR_HOURS_MS,
 } from "@/lib/home-activity";
 import { supabase } from "@/lib/supabase";
+import {
+  savePersonalCoverImage,
+  removePersonalCoverImage,
+  saveCoupleImage,
+  removeCoupleImage,
+  createProfileMediaSignedUrl,
+  validateImageFile,
+} from "@/lib/profile-media";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   AppState,
   Image,
   Pressable,
@@ -310,7 +319,19 @@ export default function HomeScreen() {
   }>();
   const mainScrollRef = useRef<ScrollView>(null);
   const reflectionCardY = useRef<number>(0);
-  const [personalCoverUri, setPersonalCoverUri] = useState<string | null>(null);
+  const [personalCoverPath, setPersonalCoverPath] = useState<string | null>(null);
+  const [personalCoverSignedUrl, setPersonalCoverSignedUrl] = useState<string | null>(null);
+  const [isPersonalCoverUploading, setIsPersonalCoverUploading] = useState<boolean>(false);
+  const personalCoverPathRef = useRef<string | null>(null);
+  personalCoverPathRef.current = personalCoverPath;
+
+  const [coupleImagePath, setCoupleImagePath] = useState<string | null>(null);
+  const [coupleImageSignedUrl, setCoupleImageSignedUrl] = useState<string | null>(null);
+  const [isCoupleImageUploading, setIsCoupleImageUploading] = useState<boolean>(false);
+  const coupleImagePathRef = useRef<string | null>(null);
+  coupleImagePathRef.current = coupleImagePath;
+
+  const [imageSheetTarget, setImageSheetTarget] = useState<"personal" | "couples" | null>(null);
   const identity = useUserIdentity();
   const { activeInvitation } = useChallengePreview();
   const [partnerName, setPartnerName] = useState<string | null>(null);
@@ -429,8 +450,8 @@ export default function HomeScreen() {
 
         setCurrentUserId(user.id);
 
-        // 1. Fetch current user display_name and membership in parallel
-        const [profileRes, memberRes] = await Promise.all([
+        // 1. Fetch current user display_name, membership, and personal profile in parallel
+        const [profileRes, memberRes, personalProfileRes] = await Promise.all([
           supabase
             .from("profiles")
             .select("display_name")
@@ -441,9 +462,41 @@ export default function HomeScreen() {
             .select("couple_id")
             .eq("user_id", user.id)
             .maybeSingle(),
+          supabase
+            .from("user_partner_profiles")
+            .select("personal_cover_path")
+            .eq("user_id", user.id)
+            .maybeSingle(),
         ]);
 
         if (!mountedRef.current) return false;
+
+        const personalDbPath =
+          personalProfileRes.data?.personal_cover_path ?? null;
+        if (personalDbPath !== personalCoverPathRef.current) {
+          setPersonalCoverPath(personalDbPath);
+          if (personalDbPath) {
+            void createProfileMediaSignedUrl(personalDbPath).then((signedUrl) => {
+              if (
+                mountedRef.current &&
+                currentRequestSeq >= requestSeqRef.current
+              ) {
+                setPersonalCoverSignedUrl(signedUrl);
+              }
+            });
+          } else {
+            setPersonalCoverSignedUrl(null);
+          }
+        } else if (personalDbPath && !personalCoverSignedUrl) {
+          void createProfileMediaSignedUrl(personalDbPath).then((signedUrl) => {
+            if (
+              mountedRef.current &&
+              currentRequestSeq >= requestSeqRef.current
+            ) {
+              setPersonalCoverSignedUrl(signedUrl);
+            }
+          });
+        }
 
         if (profileRes.data?.display_name?.trim()) {
           setDisplayName(profileRes.data.display_name.trim());
@@ -468,10 +521,11 @@ export default function HomeScreen() {
 
         setCoupleId(activeCoupleId);
 
-        // 2. Fetch partner details, 6 activity sources and private receipts in parallel
+        // 2. Fetch partner details, couple profile, 6 activity sources and private receipts in parallel
         const [
           partnerNameRes,
           membersRes,
+          coupleProfileRes,
           eventsRes,
           responsesRes,
           outcomesRes,
@@ -485,6 +539,11 @@ export default function HomeScreen() {
             .from("couple_members")
             .select("user_id")
             .eq("couple_id", activeCoupleId),
+          supabase
+            .from("couple_profiles")
+            .select("couple_image_path")
+            .eq("couple_id", activeCoupleId)
+            .maybeSingle(),
           supabase
             .from("relationship_events")
             .select(
@@ -540,6 +599,32 @@ export default function HomeScreen() {
         // Discard result if an even newer request already completed
         if (currentRequestSeq < requestSeqRef.current) {
           return false;
+        }
+
+        const coupleDbPath = coupleProfileRes.data?.couple_image_path ?? null;
+        if (coupleDbPath !== coupleImagePathRef.current) {
+          setCoupleImagePath(coupleDbPath);
+          if (coupleDbPath) {
+            void createProfileMediaSignedUrl(coupleDbPath).then((signedUrl) => {
+              if (
+                mountedRef.current &&
+                currentRequestSeq >= requestSeqRef.current
+              ) {
+                setCoupleImageSignedUrl(signedUrl);
+              }
+            });
+          } else {
+            setCoupleImageSignedUrl(null);
+          }
+        } else if (coupleDbPath && !coupleImageSignedUrl) {
+          void createProfileMediaSignedUrl(coupleDbPath).then((signedUrl) => {
+            if (
+              mountedRef.current &&
+              currentRequestSeq >= requestSeqRef.current
+            ) {
+              setCoupleImageSignedUrl(signedUrl);
+            }
+          });
         }
 
         const partnerMember = membersRes.data?.find(
@@ -758,6 +843,30 @@ export default function HomeScreen() {
         () => {
           scheduleSilentRefresh();
         },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "couple_profiles",
+          filter: `couple_id=eq.${effectiveCoupleId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_partner_profiles",
+          filter: `user_id=eq.${effectiveUserId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
       );
 
     channel.subscribe((subStatus, err) => {
@@ -825,9 +934,13 @@ export default function HomeScreen() {
 
   const greeting = getDeviceGreeting();
 
-  const personalCoverSource = personalCoverUri
-    ? { uri: personalCoverUri }
+  const personalCoverSource = personalCoverSignedUrl
+    ? { uri: personalCoverSignedUrl }
     : require("@/assets/images/shared-horizon.png");
+
+  const coupleImageSource = coupleImageSignedUrl
+    ? { uri: coupleImageSignedUrl }
+    : require("@/assets/images/giggle-otters.png");
 
   const isReflectionActive = previewState === "evening_reflection";
 
@@ -1092,7 +1205,21 @@ export default function HomeScreen() {
     setLocalFeedback(`${spaceName} space: Feature preview only.`);
   };
 
-  const handleChangePersonalPhoto = async () => {
+  const handleOpenCoverPhotoActionSheet = () => {
+    setImageSheetTarget("personal");
+  };
+
+  const handleOpenCoupleImageActionSheet = () => {
+    setImageSheetTarget("couples");
+  };
+
+  const handleCloseImageSheet = () => {
+    if (isPersonalCoverUploading || isCoupleImageUploading) return;
+    setImageSheetTarget(null);
+  };
+
+  const handlePickAndSaveImage = async (target: "personal" | "couples") => {
+    setImageSheetTarget(null);
     try {
       const currentPerm = await ImagePicker.getMediaLibraryPermissionsAsync();
       let hasPermission = currentPerm.granted;
@@ -1116,16 +1243,117 @@ export default function HomeScreen() {
         quality: 0.85,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const pickedAsset = result.assets[0];
-        if (pickedAsset?.uri) {
-          setPersonalCoverUri(pickedAsset.uri);
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const pickedAsset = result.assets[0];
+      const validation = validateImageFile(pickedAsset);
+      if (!validation.valid) {
+        setLocalFeedback(
+          validation.error ||
+            "Please choose a valid JPG, PNG, or WebP image under 8 MB."
+        );
+        return;
+      }
+
+      if (target === "personal") {
+        setIsPersonalCoverUploading(true);
+        try {
+          const saveRes = await savePersonalCoverImage(
+            effectiveUserId || "",
+            pickedAsset,
+            personalCoverPathRef.current
+          );
+          setPersonalCoverPath(saveRes.path);
+          setPersonalCoverSignedUrl(saveRes.signedUrl);
+        } catch (err: any) {
+          if (__DEV__) {
+            console.error("[Home] Error saving personal cover image:", err);
+          }
+          setLocalFeedback(
+            err?.message ||
+              "Unable to save your photo right now. Please try again."
+          );
+        } finally {
+          setIsPersonalCoverUploading(false);
+        }
+      } else {
+        if (!effectiveCoupleId) {
+          setLocalFeedback(
+            "Unable to save couple image: shared couple space not found."
+          );
+          return;
+        }
+        setIsCoupleImageUploading(true);
+        try {
+          const saveRes = await saveCoupleImage(
+            effectiveCoupleId,
+            pickedAsset,
+            coupleImagePathRef.current
+          );
+          setCoupleImagePath(saveRes.path);
+          setCoupleImageSignedUrl(saveRes.signedUrl);
+        } catch (err: any) {
+          if (__DEV__) {
+            console.error("[Home] Error saving couple image:", err);
+          }
+          setLocalFeedback(
+            err?.message ||
+              "We couldn't save your shared couple image. Please try again."
+          );
+        } finally {
+          setIsCoupleImageUploading(false);
         }
       }
-    } catch {
+    } catch (err: any) {
+      if (__DEV__) {
+        console.error("[Home] Image picker error:", err);
+      }
       setLocalFeedback(
         "We couldn’t open your photo library. You can allow photo access in your device settings and try again."
       );
+    }
+  };
+
+  const handleRemoveImage = async (target: "personal" | "couples") => {
+    setImageSheetTarget(null);
+    if (target === "personal") {
+      if (!effectiveUserId) return;
+      setIsPersonalCoverUploading(true);
+      try {
+        await removePersonalCoverImage(
+          effectiveUserId,
+          personalCoverPathRef.current
+        );
+        setPersonalCoverPath(null);
+        setPersonalCoverSignedUrl(null);
+      } catch (err: any) {
+        setLocalFeedback(
+          err?.message ||
+            "We couldn't restore the default cover photo. Please try again."
+        );
+      } finally {
+        setIsPersonalCoverUploading(false);
+      }
+    } else {
+      if (!effectiveCoupleId) return;
+      setIsCoupleImageUploading(true);
+      try {
+        await removeCoupleImage(
+          effectiveCoupleId,
+          coupleImagePathRef.current
+        );
+        setCoupleImagePath(null);
+        setCoupleImageSignedUrl(null);
+      } catch (err: any) {
+        setLocalFeedback(
+          err?.message ||
+            "We couldn't restore the default couple image. Please try again."
+        );
+      } finally {
+        setIsCoupleImageUploading(false);
+      }
     }
   };
 
@@ -1191,6 +1419,25 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {/* Top Feedback Banner */}
+          {localFeedback && (
+            <View
+              style={styles.feedbackBanner}
+              accessible={true}
+              accessibilityRole="alert"
+            >
+              <Text style={styles.feedbackBannerText}>{localFeedback}</Text>
+              <Pressable
+                style={styles.feedbackDismissButton}
+                onPress={() => setLocalFeedback(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss notice"
+              >
+                <Text style={styles.feedbackDismissText}>Dismiss</Text>
+              </Pressable>
+            </View>
+          )}
+
           {/* 2. Personal Cover Banner ("Your corner") */}
           <View style={styles.sharedBannerCard}>
             <Image
@@ -1200,15 +1447,23 @@ export default function HomeScreen() {
               accessible={true}
               accessibilityLabel="Your personal cover photo"
             />
+            {isPersonalCoverUploading && (
+              <View style={styles.bannerLoadingOverlay}>
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              </View>
+            )}
             {/* Quiet circular Change Photo icon button */}
             <Pressable
               style={({ pressed }) => [
                 styles.changePhotoButton,
                 pressed && styles.changePhotoButtonPressed,
+                isPersonalCoverUploading && styles.changePhotoButtonDisabled,
               ]}
-              onPress={handleChangePersonalPhoto}
+              onPress={handleOpenCoverPhotoActionSheet}
+              disabled={isPersonalCoverUploading}
               accessibilityRole="button"
               accessibilityLabel="Change your personal cover photo"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.changePhotoIcon}>✎</Text>
             </Pressable>
@@ -1728,53 +1983,88 @@ export default function HomeScreen() {
               </View>
             </Pressable>
 
-            {/* Ours Tile (~66% width with real giggle otters image and space name, whole tile tappable) */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.spaceTile,
-                styles.oursTile,
-                pressed && styles.oursTilePressed,
-              ]}
-              onPress={() => handleSpaceAction("Ours")}
-              accessibilityRole="button"
-              accessibilityLabel="Open Ours, your shared space"
-            >
-              <View style={styles.oursTileTop}>
-                {/* Paired otters illustration in soft circular lilac area */}
-                <View
-                  style={styles.oursAvatarCircle}
-                  accessible={true}
-                  accessibilityLabel="Giggle otters mascot"
-                >
-                  <Image
-                    source={require("@/assets/images/giggle-otters.png")}
-                    style={styles.oursAvatarImage}
-                    resizeMode="contain"
-                  />
-                </View>
-                <View style={styles.oursTitleColumn}>
-                  <View style={styles.oursHeaderInline}>
-                    <Text style={styles.oursHeart}>♡</Text>
-                    <Text style={styles.oursRoomTitle}>Ours</Text>
+            {/* Ours Tile (~66% width with circular avatar and space name, non-interactive wrapper) */}
+            <View style={styles.oursCardContainer}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.spaceTile,
+                  styles.oursTile,
+                  styles.oursCardNavigation,
+                  pressed && styles.oursTilePressed,
+                ]}
+                onPress={() => handleSpaceAction("Ours")}
+                accessibilityRole="button"
+                accessibilityLabel="Open Ours, your shared space"
+              >
+                <View style={styles.oursTileTop}>
+                  {/* Paired otters illustration or custom couple image in soft circular lilac area */}
+                  <View style={styles.oursAvatarContainer}>
+                    <View
+                      style={styles.oursAvatarCircle}
+                      accessible={true}
+                      accessibilityLabel={
+                        coupleImageSignedUrl
+                          ? "Your shared couple photo"
+                          : "Giggle otters mascot"
+                      }
+                    >
+                      <Image
+                        source={coupleImageSource}
+                        style={
+                          coupleImageSignedUrl
+                            ? styles.oursAvatarCustomImage
+                            : styles.oursAvatarImage
+                        }
+                        resizeMode={coupleImageSignedUrl ? "cover" : "contain"}
+                      />
+                      {isCoupleImageUploading && (
+                        <View style={styles.oursAvatarLoadingOverlay}>
+                          <ActivityIndicator color={theme.accent} size="small" />
+                        </View>
+                      )}
+                    </View>
                   </View>
-                  <Text style={styles.oursSharedName}>
-                    {effectivePartnerConnected
-                      ? effectivePartnerName
-                        ? `Shared with ${effectivePartnerName}`
-                        : "Shared with your partner"
-                      : "Shared space with partner"}
+                  <View style={styles.oursTitleColumn}>
+                    <View style={styles.oursHeaderInline}>
+                      <Text style={styles.oursHeart}>♡</Text>
+                      <Text style={styles.oursRoomTitle}>Ours</Text>
+                    </View>
+                    <Text style={styles.oursSharedName}>
+                      {effectivePartnerConnected
+                        ? effectivePartnerName
+                          ? `Shared with ${effectivePartnerName}`
+                          : "Shared with your partner"
+                        : "Shared space with partner"}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.oursTileBody}>
+                  Shared memories, repairs, and progress.
+                </Text>
+                <View style={styles.tileFooterRow}>
+                  <Text style={styles.oursSummaryText}>
+                    1 shared moment this week
                   </Text>
                 </View>
-              </View>
-              <Text style={styles.oursTileBody}>
-                Shared memories, repairs, and progress.
-              </Text>
-              <View style={styles.tileFooterRow}>
-                <Text style={styles.oursSummaryText}>
-                  1 shared moment this week
-                </Text>
-              </View>
-            </Pressable>
+              </Pressable>
+
+              {/* Sibling Pressable edit badge positioned over circular avatar */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.oursAvatarEditBadge,
+                  pressed && styles.oursAvatarEditBadgePressed,
+                  isCoupleImageUploading && styles.oursAvatarEditBadgeDisabled,
+                ]}
+                onPress={handleOpenCoupleImageActionSheet}
+                disabled={isCoupleImageUploading}
+                accessibilityRole="button"
+                accessibilityLabel="Change your shared couple image"
+                accessibilityHint="Opens options to change or restore your shared couple image"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.oursAvatarEditIcon}>✎</Text>
+              </Pressable>
+            </View>
           </View>
 
           {/* 5. "Your week, gently" - Look back card */}
@@ -1912,6 +2202,84 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {/* Profile Media Action Sheet */}
+      {imageSheetTarget !== null && (
+        <View style={styles.sheetBackdrop} pointerEvents="box-none">
+          <Pressable
+            style={styles.sheetBackdropTouch}
+            onPress={handleCloseImageSheet}
+            accessibilityRole="button"
+            accessibilityLabel="Close photo options"
+          />
+          <View style={styles.sheetContainer}>
+            <View style={styles.sheetContent}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetHeading}>
+                {imageSheetTarget === "personal"
+                  ? "Your corner photo"
+                  : "Shared couple image"}
+              </Text>
+              <Text style={styles.sheetSubtext}>
+                {imageSheetTarget === "personal"
+                  ? "Choose a personal cover photo. Only you can see this."
+                  : "Choose an image for your shared space. Both of you can see this."}
+              </Text>
+
+              <View style={styles.mediaSheetActions}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.mediaSheetPrimaryBtn,
+                    pressed && styles.mediaSheetPrimaryBtnPressed,
+                  ]}
+                  onPress={() => handlePickAndSaveImage(imageSheetTarget)}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    imageSheetTarget === "personal"
+                      ? "Choose new cover photo"
+                      : "Choose new couple image"
+                  }
+                >
+                  <Text style={styles.mediaSheetPrimaryBtnText}>
+                    Choose new photo
+                  </Text>
+                </Pressable>
+
+                {(imageSheetTarget === "personal"
+                  ? Boolean(personalCoverPath)
+                  : Boolean(coupleImagePath)) && (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.mediaSheetSecondaryBtn,
+                      pressed && styles.mediaSheetSecondaryBtnPressed,
+                    ]}
+                    onPress={() => handleRemoveImage(imageSheetTarget)}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      imageSheetTarget === "personal"
+                        ? "Restore default horizon cover"
+                        : "Restore default giggle otters mascot"
+                    }
+                  >
+                    <Text style={styles.mediaSheetSecondaryBtnText}>
+                      Restore default
+                    </Text>
+                  </Pressable>
+                )}
+
+                <Pressable
+                  style={styles.sheetCloseButton}
+                  onPress={handleCloseImageSheet}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel"
+                >
+                  <Text style={styles.sheetCloseButtonText}>Cancel</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Fixed Visual Bottom Navigation */}
       <AppBottomNav
         activeTab="rhythm"
@@ -2032,13 +2400,23 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       width: "100%",
       height: "100%",
     },
+    bannerLoadingOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.4)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
     changePhotoButton: {
       position: "absolute",
       top: 12,
       right: 12,
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       backgroundColor: "rgba(30, 20, 32, 0.5)",
       borderWidth: 1,
       borderColor: "rgba(255, 255, 255, 0.4)",
@@ -2047,6 +2425,9 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
     },
     changePhotoButtonPressed: {
       backgroundColor: "rgba(30, 20, 32, 0.75)",
+    },
+    changePhotoButtonDisabled: {
+      opacity: 0.5,
     },
     changePhotoIcon: {
       color: "#FFFFFF",
@@ -2710,8 +3091,15 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       backgroundColor: theme.border,
       borderColor: theme.border,
     },
-    oursTile: {
+    oursCardContainer: {
       flex: 66,
+      position: "relative",
+    },
+    oursCardNavigation: {
+      flex: 1,
+      width: "100%",
+    },
+    oursTile: {
       backgroundColor: theme.sharedSurface,
       borderColor: theme.border,
       padding: 12,
@@ -2758,6 +3146,11 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       gap: 10,
       marginBottom: 4,
     },
+    oursAvatarContainer: {
+      position: "relative",
+      width: 64,
+      height: 64,
+    },
     oursAvatarCircle: {
       width: 64,
       height: 64,
@@ -2772,6 +3165,52 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
     oursAvatarImage: {
       width: 60,
       height: 60,
+    },
+    oursAvatarCustomImage: {
+      width: 64,
+      height: 64,
+    },
+    oursAvatarLoadingOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.35)",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 32,
+    },
+    oursAvatarEditBadge: {
+      position: "absolute",
+      top: 50,
+      left: 50,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: theme.surface,
+      borderWidth: 1.5,
+      borderColor: theme.accent,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.15,
+      shadowRadius: 2,
+      elevation: 3,
+      zIndex: 2,
+    },
+    oursAvatarEditBadgePressed: {
+      backgroundColor: theme.surface,
+    },
+    oursAvatarEditBadgeDisabled: {
+      opacity: 0.5,
+    },
+    oursAvatarEditIcon: {
+      fontSize: 12,
+      lineHeight: 14,
+      color: theme.accent,
+      fontWeight: "700",
     },
     oursTitleColumn: {
       flex: 1,
@@ -3099,6 +3538,48 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       fontSize: 14,
       fontWeight: "600",
       color: theme.secondaryText,
+    },
+    mediaSheetActions: {
+      width: "100%",
+      gap: 10,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    mediaSheetPrimaryBtn: {
+      width: "100%",
+      minHeight: 48,
+      backgroundColor: theme.accent,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 20,
+    },
+    mediaSheetPrimaryBtnPressed: {
+      opacity: 0.85,
+    },
+    mediaSheetPrimaryBtnText: {
+      color: "#FFFFFF",
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    mediaSheetSecondaryBtn: {
+      width: "100%",
+      minHeight: 48,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 20,
+    },
+    mediaSheetSecondaryBtnPressed: {
+      backgroundColor: theme.surface,
+    },
+    mediaSheetSecondaryBtnText: {
+      color: theme.primaryText,
+      fontSize: 15,
+      fontWeight: "600",
     },
   });
 
