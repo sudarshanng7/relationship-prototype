@@ -31,6 +31,16 @@ import {
   createProfileMediaSignedUrl,
   validateImageFile,
 } from "@/lib/profile-media";
+import {
+  fetchCanonicalMineReflections,
+  filterCanonicalOursEvents,
+  countOursEventsThisWeek,
+  formatMineSummary,
+  formatOursSummary,
+  appendNavigationOrigin,
+  type CanonicalPrivateReflection,
+  type CanonicalOursEvent,
+} from "@/lib/spaces-summary";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -360,6 +370,15 @@ export default function HomeScreen() {
   const [optimisticSeenKeys, setOptimisticSeenKeys] = useState<Set<string>>(
     () => new Set(),
   );
+  const [mineReflections, setMineReflections] = useState<
+    CanonicalPrivateReflection[]
+  >([]);
+  const [oursEvents, setOursEvents] = useState<CanonicalOursEvent[]>([]);
+  const [isSpacesSummaryLoading, setIsSpacesSummaryLoading] =
+    useState<boolean>(true);
+  const [spacesSummaryError, setSpacesSummaryError] = useState<string | null>(
+    null,
+  );
   const isNavigatingActivityRef = useRef<boolean>(false);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
@@ -514,6 +533,9 @@ export default function HomeScreen() {
           setImportantDates([]);
           setAttentionStates([]);
           setActivityReceipts([]);
+          setMineReflections([]);
+          setOursEvents([]);
+          setIsSpacesSummaryLoading(false);
           setOptimisticSeenKeys(new Set());
           setIsIdentityLoading(false);
           return false;
@@ -533,6 +555,7 @@ export default function HomeScreen() {
           datesRes,
           attRes,
           receiptsRes,
+          mineReflectionsRes,
         ] = await Promise.all([
           supabase.rpc("get_partner_display_name"),
           supabase
@@ -592,6 +615,7 @@ export default function HomeScreen() {
             )
             .eq("couple_id", activeCoupleId)
             .eq("user_id", user.id),
+          fetchCanonicalMineReflections(supabase, user.id),
         ]);
 
         if (!mountedRef.current) return false;
@@ -645,13 +669,21 @@ export default function HomeScreen() {
           );
         }
 
+        if (!mineReflectionsRes.error) {
+          setMineReflections(mineReflectionsRes.data);
+        }
+
         if (!eventsRes.error && eventsRes.data) {
           const reconciledMap = new Map<string, HomeRelationshipEvent>();
           for (const row of eventsRes.data) {
             reconciledMap.set(row.id, row as HomeRelationshipEvent);
           }
           setRelationshipEvents(Array.from(reconciledMap.values()));
+          setOursEvents(filterCanonicalOursEvents(eventsRes.data, activeCoupleId));
         }
+
+        setSpacesSummaryError(null);
+        setIsSpacesSummaryLoading(false);
 
         if (!responsesRes.error && responsesRes.data) {
           setRepairResponses(responsesRes.data as HomeRepairResponse[]);
@@ -683,6 +715,8 @@ export default function HomeScreen() {
         if (__DEV__) {
           console.warn("refreshHomeData failed:", err);
         }
+        setSpacesSummaryError("Unable to load summaries");
+        setIsSpacesSummaryLoading(false);
         return false;
       } finally {
         isRefreshingRef.current = false;
@@ -867,6 +901,18 @@ export default function HomeScreen() {
         () => {
           scheduleSilentRefresh();
         },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "event_private_reflections",
+          filter: `author_id=eq.${effectiveUserId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
       );
 
     channel.subscribe((subStatus, err) => {
@@ -1029,7 +1075,8 @@ export default function HomeScreen() {
           });
         } catch {}
       }
-      router.push(targetRoute as any);
+      const finalRoute = appendNavigationOrigin(targetRoute, "my-rhythm");
+      router.push(finalRoute as any);
     },
     [effectiveCoupleId, effectiveUserId, router],
   );
@@ -1064,8 +1111,9 @@ export default function HomeScreen() {
         });
       }
 
+      const finalRoute = appendNavigationOrigin(targetRoute, "my-rhythm");
       try {
-        router.push(targetRoute as any);
+        router.push(finalRoute as any);
       } finally {
         setTimeout(() => {
           isNavigatingActivityRef.current = false;
@@ -1979,7 +2027,13 @@ export default function HomeScreen() {
                 Private reflections and notes.
               </Text>
               <View style={styles.tileFooterRow}>
-                <Text style={styles.mineSummaryText}>2 private reflections</Text>
+                <Text style={styles.mineSummaryText}>
+                  {isSpacesSummaryLoading
+                    ? "Loading…"
+                    : spacesSummaryError
+                    ? "Private reflections"
+                    : formatMineSummary(mineReflections.length)}
+                </Text>
               </View>
             </Pressable>
 
@@ -2043,7 +2097,13 @@ export default function HomeScreen() {
                 </Text>
                 <View style={styles.tileFooterRow}>
                   <Text style={styles.oursSummaryText}>
-                    1 shared moment this week
+                    {isSpacesSummaryLoading
+                      ? "Loading…"
+                      : spacesSummaryError
+                      ? "Shared moments"
+                      : formatOursSummary(
+                          countOursEventsThisWeek(oursEvents, nowMs),
+                        )}
                   </Text>
                 </View>
               </Pressable>

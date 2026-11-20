@@ -12,6 +12,11 @@ import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useRepairPreview } from "@/context/RepairPreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
+import {
+  fetchCanonicalMineReflections,
+  type CanonicalPrivateReflection,
+  type EventNavigationOrigin,
+} from "@/lib/spaces-summary";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
@@ -69,6 +74,9 @@ export default function EventsScreen() {
   const subscriptionSeqRef = useRef(0);
 
   const [events, setEvents] = useState<RelationshipEvent[]>([]);
+  const [mineReflections, setMineReflections] = useState<
+    CanonicalPrivateReflection[]
+  >([]);
   const [status, setStatus] = useState("Loading...");
   const [activeScope, setActiveScope] = useState<FilterOption>(() => {
     const rawScope = Array.isArray(params.scope) ? params.scope[0] : params.scope;
@@ -191,6 +199,18 @@ export default function EventsScreen() {
   const loadEventsRef = useRef(loadEvents);
   loadEventsRef.current = loadEvents;
 
+  const loadMineReflections = useCallback(async (userId: string) => {
+    const { data, error } = await fetchCanonicalMineReflections(
+      supabase,
+      userId,
+    );
+    if (mountedRef.current && !error) {
+      setMineReflections(data);
+    }
+  }, []);
+  const loadMineReflectionsRef = useRef(loadMineReflections);
+  loadMineReflectionsRef.current = loadMineReflections;
+
   const loadPage = useCallback(async (silent = false) => {
     if (!silent && mountedRef.current) {
       setStatus("Loading...");
@@ -236,10 +256,15 @@ export default function EventsScreen() {
 
     setCoupleId(membership.couple_id);
 
-    const didLoadEvents = await loadEventsRef.current(
-      membership.couple_id,
-      silent,
-    );
+    const [didLoadEvents, reflectionsRes] = await Promise.all([
+      loadEventsRef.current(membership.couple_id, silent),
+      fetchCanonicalMineReflections(supabase, user.id),
+    ]);
+
+    if (mountedRef.current && !reflectionsRes.error) {
+      setMineReflections(reflectionsRes.data);
+    }
+
     if (didLoadEvents && mountedRef.current) {
       hasLoadedOnceRef.current = true;
       setHasFinishedInitialLoad(true);
@@ -261,12 +286,15 @@ export default function EventsScreen() {
         coupleIdRef.current
       ) {
         void loadEventsRef.current(coupleIdRef.current, true);
+        if (currentUserId) {
+          void loadMineReflectionsRef.current(currentUserId);
+        }
       }
     });
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [currentUserId]);
 
   // Screen-owned Realtime subscription for relationship_events scoped to active couple
   useEffect(() => {
@@ -287,23 +315,39 @@ export default function EventsScreen() {
         debounceTimerRef.current = null;
         if (mountedRef.current) {
           void loadEventsRef.current(coupleId, true);
+          if (currentUserId) {
+            void loadMineReflectionsRef.current(currentUserId);
+          }
         }
       }, 200);
     };
 
-    // Register handler synchronously before subscribe()
-    channel.on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "relationship_events",
-        filter: `couple_id=eq.${coupleId}`,
-      },
-      () => {
-        scheduleSilentRefresh();
-      },
-    );
+    // Register handlers synchronously before subscribe()
+    channel
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "relationship_events",
+          filter: `couple_id=eq.${coupleId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "event_private_reflections",
+          filter: `author_id=eq.${currentUserId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
+      );
 
     channel.subscribe((subStatus, err) => {
       if (
@@ -362,11 +406,18 @@ export default function EventsScreen() {
       ? "ours"
       : "moments";
 
+    const currentOrigin: EventNavigationOrigin = isMineMode
+      ? "mine"
+      : isOursMode
+      ? "ours"
+      : "moments";
+
     router.push({
       pathname: "/event/[id]",
       params: {
         id: eventId,
         scope: currentScope,
+        from: currentOrigin,
       },
     });
   }
@@ -484,7 +535,7 @@ export default function EventsScreen() {
       {/* Empty states */}
       {!shouldShowLoading &&
         ((!isMineMode && !isOursMode) || hasFinishedInitialLoad) &&
-        visibleEvents.length === 0 &&
+        (isMineMode ? mineReflections.length === 0 : visibleEvents.length === 0) &&
         !hasSpaceError && (
         <CouplyEmptyState
           title={
@@ -533,9 +584,123 @@ export default function EventsScreen() {
         />
       )}
 
-      {/* List of redesigned moment cards */}
-      {!shouldShowLoading &&
-        visibleEvents.map((event) => {
+      {/* List of redesigned moment cards or canonical private reflections */}
+      {!shouldShowLoading && isMineMode
+        ? mineReflections.map((ref) => {
+            const naturalDate = formatNaturalDate(ref.createdAt);
+            const isPositive = ref.eventType === "positive";
+
+            return (
+              <Pressable
+                key={ref.id}
+                onPress={() => openEvent(ref.eventId)}
+                style={({ pressed }) => [
+                  styles.card,
+                  isPositive && styles.positiveCard,
+                  pressed && styles.cardPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Open private reflection for ${formatCategory(
+                  ref.eventCategory,
+                )} moment recorded ${naturalDate.toLowerCase()}.`}
+              >
+                {/* Top card row: Icon + Category + Attribution & Date + Chevron */}
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.cardHeaderLeft}>
+                    <View
+                      style={[
+                        styles.iconBadge,
+                        isPositive
+                          ? styles.positiveIconBadge
+                          : styles.frictionIconBadge,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.iconSymbol,
+                          isPositive && styles.positiveIconSymbol,
+                        ]}
+                      >
+                        {isPositive ? "✦" : "〰"}
+                      </Text>
+                    </View>
+
+                    <View style={styles.categoryWrap}>
+                      <Text style={styles.categoryTitle}>
+                        {formatCategory(ref.eventCategory)}
+                      </Text>
+                      <Text style={styles.attributionText}>Recorded by you</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.cardHeaderRight}>
+                    <Text style={styles.dateText}>{naturalDate}</Text>
+                    <Text style={styles.chevron}>›</Text>
+                  </View>
+                </View>
+
+                {/* Reflection Note preview if present */}
+                {ref.note ? (
+                  <View style={styles.mineReflectionNoteWrap}>
+                    <Text
+                      style={styles.mineReflectionNoteText}
+                      numberOfLines={2}
+                    >
+                      {ref.note}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {/* Bottom card row: Privacy badge & status pill */}
+                <View
+                  style={[
+                    styles.cardFooterRow,
+                    isPositive && styles.positiveCardFooterRow,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.privacyBadge,
+                      isPositive
+                        ? styles.minePositivePrivacyBadge
+                        : styles.minePrivacyBadge,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.privacyBadgeText,
+                        isPositive
+                          ? styles.minePositivePrivacyText
+                          : styles.minePrivacyText,
+                      ]}
+                    >
+                      Mine · Private
+                    </Text>
+                  </View>
+
+                  {isPositive ? (
+                    <CouplyStatusPill
+                      label="Celebration"
+                      variant="positive"
+                    />
+                  ) : ref.eventStatus ? (
+                    <CouplyStatusPill
+                      label={formatStatus(ref.eventStatus)}
+                      variant={
+                        ref.eventStatus === "reconnected"
+                          ? "reconnected"
+                          : ref.eventStatus === "partially_repaired"
+                          ? "softening"
+                          : "open"
+                      }
+                    />
+                  ) : null}
+                </View>
+              </Pressable>
+            );
+          })
+        : !shouldShowLoading &&
+          visibleEvents.map((event) => {
           const isCreator = event.creator_id === currentUserId;
           const naturalDate = formatNaturalDate(event.created_at);
           const isPositive = event.event_type === "positive";
@@ -1271,7 +1436,7 @@ export default function EventsScreen() {
   );
 }
 
-function formatStatus(status: RelationshipEvent["status"]) {
+function formatStatus(status: RelationshipEvent["status"] | string | null) {
   switch (status) {
     case "open":
       return "Still lingering";
@@ -1816,6 +1981,21 @@ const createStyles = (theme: ThemeColors) =>
       color: theme.iconMuted,
       fontWeight: "600",
       marginTop: -2,
+    },
+
+    mineReflectionNoteWrap: {
+      marginTop: 10,
+      backgroundColor: theme.secondarySurface,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+    },
+
+    mineReflectionNoteText: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: theme.secondaryText,
+      fontStyle: "italic",
     },
 
     cardFooterRow: {

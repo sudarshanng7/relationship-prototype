@@ -331,7 +331,11 @@ export default function RecordMomentScreen() {
 
       router.replace({
         pathname: "/event/[id]",
-        params: { id: eventId, scope: finalVisibility },
+        params: {
+          id: eventId,
+          scope: finalVisibility,
+          from: finalVisibility === "mine" ? "mine" : "ours",
+        },
       });
     } catch (error) {
       console.error(
@@ -361,7 +365,11 @@ export default function RecordMomentScreen() {
       navigatedRef.current = true;
       router.replace({
         pathname: "/event/[id]",
-        params: { id: savedFrictionId, scope: savedFrictionVisibility },
+        params: {
+          id: savedFrictionId,
+          scope: savedFrictionVisibility,
+          from: savedFrictionVisibility === "mine" ? "mine" : "ours",
+        },
       });
     }
   }

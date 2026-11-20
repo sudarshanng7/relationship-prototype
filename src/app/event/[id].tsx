@@ -33,6 +33,7 @@ import {
   calculateRepairDurationMs,
   formatRepairDuration,
 } from "@/lib/repair-memory";
+import { resolveEventBackNavigation } from "@/lib/spaces-summary";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -77,13 +78,17 @@ export default function EventDetailScreen() {
 
   const params = useLocalSearchParams<{
     id?: string | string[];
-    scope?: string;
+    scope?: string | string[];
+    from?: string | string[];
   }>();
 
   const eventId = Array.isArray(params.id) ? params.id[0] : params.id;
   const scopeParam = Array.isArray(params.scope)
     ? params.scope[0]
     : params.scope;
+  const fromParam = Array.isArray(params.from)
+    ? params.from[0]
+    : params.from;
 
   const [event, setEvent] = useState<RelationshipEvent | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -416,41 +421,23 @@ export default function EventDetailScreen() {
     router.back();
   }
 
-  const returnScope =
-    scopeParam === "mine" || scopeParam === "ours" || scopeParam === "moments"
-      ? scopeParam
-      : event?.visibility === "mine" || event?.visibility === "ours"
-      ? event.visibility
-      : null;
+  const backConfig = resolveEventBackNavigation(
+    fromParam,
+    scopeParam,
+    event?.visibility,
+  );
 
-  const backLabel =
-    returnScope === "mine"
-      ? "‹ Back to Mine"
-      : returnScope === "ours"
-      ? "‹ Back to Our Space"
-      : "‹ Back to Moments";
-
-  const backAccessibilityLabel =
-    returnScope === "mine"
-      ? "Back to Mine"
-      : returnScope === "ours"
-      ? "Back to Our Space"
-      : "Back to Moments";
+  const backLabel = backConfig.backLabel;
+  const backAccessibilityLabel = backConfig.backAccessibilityLabel;
 
   function handleBack() {
-    if (returnScope === "mine") {
-      router.replace("/events?scope=mine");
-    } else if (returnScope === "ours") {
-      router.replace("/events?scope=ours");
-    } else {
-      router.replace("/events");
-    }
+    router.replace(backConfig.destination as any);
   }
 
   const screenTitle =
-    returnScope === "mine"
+    backConfig.origin === "mine" || scopeParam === "mine" || event?.visibility === "mine"
       ? "Mine"
-      : returnScope === "ours"
+      : backConfig.origin === "ours" || scopeParam === "ours" || event?.visibility === "ours"
       ? "Our Space"
       : "Moments";
 
