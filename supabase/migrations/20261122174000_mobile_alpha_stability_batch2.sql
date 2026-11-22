@@ -18,6 +18,19 @@ BEGIN;
 ALTER TABLE public.relationship_events
   ADD COLUMN IF NOT EXISTS custom_category_label text;
 
+-- Preserve legacy events created before custom category labels existed by
+-- normalizing existing rows before applying the custom category check constraint.
+UPDATE public.relationship_events
+SET custom_category_label = CASE
+  WHEN category = 'other' THEN
+    CASE
+      WHEN custom_category_label IS NOT NULL AND length(btrim(custom_category_label)) > 0 THEN
+        substring(btrim(custom_category_label) from 1 for 60)
+      ELSE 'Other'
+    END
+  ELSE NULL
+END;
+
 ALTER TABLE public.relationship_events
   DROP CONSTRAINT IF EXISTS relationship_events_custom_category_check;
 
@@ -174,7 +187,10 @@ BEGIN
         p_visibility,
         p_private_note,
         p_shared_topic,
-        NULL::text
+        CASE
+            WHEN trim(p_category) = 'other' THEN 'Other'
+            ELSE NULL::text
+        END
     );
 END;
 $$;

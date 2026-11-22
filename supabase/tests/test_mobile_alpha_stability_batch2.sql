@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(57);
+SELECT plan(68);
 
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
@@ -45,6 +45,14 @@ BEGIN
 END $$;
 
 -- 1. Custom category constraint: Valid 'other' with trimmed label <= 60
+SELECT is(
+  (SELECT count(*)::int FROM public.relationship_events
+   WHERE category = 'other'
+     AND (custom_category_label IS NULL OR length(btrim(custom_category_label)) = 0 OR length(custom_category_label) > 60)),
+  0,
+  'No category=other row remains with a null, blank, or over-60-character label'
+);
+
 PREPARE valid_other AS
   INSERT INTO public.relationship_events (
     id, couple_id, creator_id, event_type, category, custom_category_label, visibility, status
@@ -379,6 +387,21 @@ PREPARE forged_reframe_author AS
   );
 SELECT throws_ok('forged_reframe_author', '42501', NULL, 'Forged author_id in annoyance_reframes rejected by RLS');
 
+-- Function signature existence and unambiguity checks
+SELECT has_function(
+  'public',
+  'create_relationship_moment',
+  ARRAY['uuid', 'text', 'text', 'smallint', 'text', 'text', 'text'],
+  '7-argument create_relationship_moment compatibility wrapper exists'
+);
+
+SELECT has_function(
+  'public',
+  'create_relationship_moment',
+  ARRAY['uuid', 'text', 'text', 'smallint', 'text', 'text', 'text', 'text'],
+  '8-argument create_relationship_moment function exists'
+);
+
 -- 29. Backward-compatible 7-argument create_relationship_moment call succeeds (installed v0.1.0 APK)
 SET "request.jwt.claims" = '{"sub": "00000000-0000-0000-0000-000000000001", "role": "authenticated"}';
 SET "request.jwt.claim.sub" = '00000000-0000-0000-0000-000000000001';
@@ -395,6 +418,31 @@ PREPARE rpc_7arg_call AS
   );
 SELECT lives_ok('rpc_7arg_call', '7-argument create_relationship_moment compatibility wrapper succeeds');
 
+SELECT is(
+  (SELECT custom_category_label FROM public.relationship_events WHERE shared_topic = 'Evening tea' AND category = 'appreciation'),
+  NULL,
+  '7-argument create_relationship_moment stores NULL custom_category_label for non-other event'
+);
+
+-- 7-argument create_relationship_moment with category=other stores 'Other'
+PREPARE rpc_7arg_other AS
+  SELECT public.create_relationship_moment(
+    '00000000-0000-0000-0000-000000000010'::uuid,
+    'positive',
+    'other',
+    NULL::smallint,
+    'ours',
+    '7-arg legacy moment note',
+    'Legacy other shared topic'
+  );
+SELECT lives_ok('rpc_7arg_other', '7-argument create_relationship_moment creates category=other event');
+
+SELECT is(
+  (SELECT custom_category_label FROM public.relationship_events WHERE shared_topic = 'Legacy other shared topic' AND category = 'other'),
+  'Other',
+  '7-argument RPC stores custom_category_label = Other for category=other'
+);
+
 -- 30. 8-argument create_relationship_moment with custom_category_label for category=other succeeds
 PREPARE rpc_8arg_valid_other AS
   SELECT public.create_relationship_moment(
@@ -409,6 +457,26 @@ PREPARE rpc_8arg_valid_other AS
   );
 SELECT lives_ok('rpc_8arg_valid_other', '8-argument create_relationship_moment with custom_category_label succeeds');
 
+-- 8-argument create_relationship_moment stores supplied trimmed custom label
+PREPARE rpc_8arg_trimmed_other AS
+  SELECT public.create_relationship_moment(
+    '00000000-0000-0000-0000-000000000010'::uuid,
+    'positive',
+    'other',
+    NULL::smallint,
+    'ours',
+    '8-arg trimmed note',
+    'Stargazing topic',
+    '   Stargazing on roof   '
+  );
+SELECT lives_ok('rpc_8arg_trimmed_other', '8-argument create_relationship_moment with trimmed custom label succeeds');
+
+SELECT is(
+  (SELECT custom_category_label FROM public.relationship_events WHERE shared_topic = 'Stargazing topic' AND category = 'other'),
+  'Stargazing on roof',
+  '8-argument RPC stores supplied trimmed custom label'
+);
+
 -- 31. 8-argument create_relationship_moment for category=other without label throws exception
 PREPARE rpc_8arg_invalid_other AS
   SELECT public.create_relationship_moment(
@@ -422,6 +490,40 @@ PREPARE rpc_8arg_invalid_other AS
     NULL
   );
 SELECT throws_ok('rpc_8arg_invalid_other', NULL, 'Custom category label is required and must be 60 characters or fewer', 'create_relationship_moment without custom label for other throws');
+
+-- 8-argument create_relationship_moment for category=other with blank/whitespace label throws exception
+PREPARE rpc_8arg_blank_other AS
+  SELECT public.create_relationship_moment(
+    '00000000-0000-0000-0000-000000000010'::uuid,
+    'positive',
+    'other',
+    NULL::smallint,
+    'ours',
+    NULL,
+    NULL,
+    '     '
+  );
+SELECT throws_ok('rpc_8arg_blank_other', NULL, 'Custom category label is required and must be 60 characters or fewer', '8-argument create_relationship_moment with blank custom label throws');
+
+-- 8-argument create_relationship_moment with non-other category clears custom_category_label
+PREPARE rpc_8arg_non_other_with_label AS
+  SELECT public.create_relationship_moment(
+    '00000000-0000-0000-0000-000000000010'::uuid,
+    'positive',
+    'appreciation',
+    NULL::smallint,
+    'ours',
+    'Appreciation note',
+    'Non-other topic',
+    'Should be cleared'
+  );
+SELECT lives_ok('rpc_8arg_non_other_with_label', '8-argument RPC with non-other category and label succeeds');
+
+SELECT is(
+  (SELECT custom_category_label FROM public.relationship_events WHERE shared_topic = 'Non-other topic' AND category = 'appreciation'),
+  NULL,
+  'Non-other events do not retain custom_category_label'
+);
 
 -- 32. Atomic save_annoyance_reframe RPC inserts reframe and private note atomically
 PREPARE atomic_save_rpc AS

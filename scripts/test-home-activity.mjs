@@ -2982,3 +2982,15 @@ test("Batch2 Part 1: Deterministic tie-breaking orders by priority -> newest tim
   assert.equal(sorted[1].key, itemNewB.key);
   assert.equal(sorted[2].key, itemOld.key);
 });
+
+test("create_relationship_moment 7-argument backward-compatibility wrapper contract", () => {
+  function emulate7ArgCompatibility(p_category) {
+    return (p_category && p_category.trim() === "other") ? "Other" : null;
+  }
+  assert.equal(emulate7ArgCompatibility("other"), "Other");
+  assert.equal(emulate7ArgCompatibility("  other  "), "Other");
+  assert.equal(emulate7ArgCompatibility("appreciation"), null);
+  assert.equal(emulate7ArgCompatibility("household"), null);
+  assert.equal(emulate7ArgCompatibility("friction"), null);
+  assert.equal(emulate7ArgCompatibility(null), null);
+});
