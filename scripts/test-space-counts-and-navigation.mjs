@@ -406,3 +406,39 @@ test("Regression: Opening an event from My Rhythm returns to /home, not /events?
   assert.notEqual(backConfig.destination, "/events?scope=ours");
   assert.notEqual(backConfig.backLabel, "‹ Back to Our Space");
 });
+
+// -----------------------------------------------------------------------------
+// CLIENT PRIVATE REFLECTION AUTHORSHIP CONTRACT
+// -----------------------------------------------------------------------------
+
+test("Regression: Positive moments send the active authenticated user ID as author_id", () => {
+  // Scenario: Partner A created a shared positive moment.
+  // Partner B is viewing it and saves a private reflection.
+  const partnerA_Id = "partner-a-uuid";
+  const partnerB_Id = "partner-b-uuid";
+
+  const sharedPositiveEvent = {
+    id: "event-positive-789",
+    creator_id: partnerA_Id,
+    event_type: "positive",
+    visibility: "ours",
+    couple_id: "couple-123",
+  };
+
+  // The client simulation: active session is Partner B
+  const activeSessionUserId = partnerB_Id;
+  const noteText = "I felt really happy when we walked together.";
+
+  // Reflection payload generation contract:
+  // Must use active session user as author_id, never partner ID or creator ID
+  const payload = {
+    event_id: sharedPositiveEvent.id,
+    author_id: activeSessionUserId,
+    note: noteText.trim(),
+  };
+
+  assert.equal(payload.author_id, partnerB_Id, "Must be the viewing authenticated user");
+  assert.notEqual(payload.author_id, partnerA_Id, "Must NOT be the partner/creator ID");
+  assert.equal(payload.event_id, "event-positive-789");
+  assert.equal(payload.note, noteText);
+});

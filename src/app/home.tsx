@@ -50,12 +50,12 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   AppState,
   Image,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
@@ -1440,7 +1440,7 @@ export default function HomeScreen() {
 
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <ScrollView
         ref={mainScrollRef}
         contentContainerStyle={styles.scrollContent}
@@ -2215,7 +2215,10 @@ export default function HomeScreen() {
           pointerEvents="box-none"
         >
           <Pressable
-            style={styles.floatingRecordButton}
+            style={({ pressed }) => [
+              styles.floatingRecordButton,
+              pressed && styles.floatingRecordButtonPressed,
+            ]}
             onPress={handleOpenRecordSheet}
             accessibilityRole="button"
             accessibilityLabel="Record a moment"
@@ -2568,10 +2571,15 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       elevation: 1,
     },
     betweenUsCard: {
+      marginHorizontal: 0,
+      borderRadius: 20,
+      borderWidth: 1,
       borderColor: theme.border,
       backgroundColor: theme.surface,
-      shadowOpacity: 0.05,
-      shadowRadius: 10,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.03,
+      shadowRadius: 8,
       elevation: 2,
     },
     sectionHeaderRow: {
@@ -3484,27 +3492,35 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
     floatingRecordButton: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: theme.accent,
+      backgroundColor: theme.key === "light" ? "rgba(253, 251, 254, 0.85)" : "rgba(42, 33, 46, 0.80)",
+      borderWidth: 1.5,
+      borderColor: theme.accent,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 24,
       shadowColor: "#000000",
       shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.18,
+      shadowOpacity: 0.12,
       shadowRadius: 8,
       elevation: 5,
       minHeight: 44,
+      minWidth: 44,
       gap: 6,
+    },
+    floatingRecordButtonPressed: {
+      backgroundColor: theme.key === "light" ? "rgba(235, 225, 242, 0.95)" : "rgba(65, 52, 72, 0.95)",
+      borderColor: theme.accentPressed,
+      transform: [{ scale: 0.98 }],
     },
     floatingRecordPlus: {
       fontSize: 16,
-      color: theme.accentText,
+      color: theme.accent,
       fontWeight: "700",
     },
     floatingRecordLabel: {
       fontSize: 14,
-      color: theme.accentText,
-      fontWeight: "600",
+      color: theme.accent,
+      fontWeight: "700",
       letterSpacing: 0.2,
     },
 

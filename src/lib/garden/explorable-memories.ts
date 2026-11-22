@@ -313,8 +313,7 @@ export function findMemoryIndexByNodeId(
       m.nodeId === nodeIdOrFeatureId ||
       m.legacyFeatureId === nodeIdOrFeatureId ||
       m.semanticKey === nodeIdOrFeatureId ||
-      m.source.sourceId === nodeIdOrFeatureId ||
-      m.nodeId.includes(nodeIdOrFeatureId)
+      m.source.sourceId === nodeIdOrFeatureId
   );
 }
 

@@ -37,14 +37,16 @@ import { resolveEventBackNavigation } from "@/lib/spaces-summary";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type RelationshipEvent = {
   id: string;
@@ -443,11 +445,14 @@ export default function EventDetailScreen() {
 
   if (!event) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
         <Stack.Screen options={{ headerShown: false }} />
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { flexGrow: 1, paddingBottom: 110 },
+          ]}
         >
           <View style={styles.column}>
             <CouplyHeader
@@ -485,13 +490,21 @@ export default function EventDetailScreen() {
     : displayName || "You";
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
       >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { flexGrow: 1, paddingBottom: 110 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
         <View style={styles.column}>
           <CouplyHeader
             title={screenTitle}
@@ -1756,7 +1769,9 @@ export default function EventDetailScreen() {
           {/* Friction repair controls (creator only, Mine friction only) */}
           {!isPositive && isCreator && !isSharedFriction && (
             <View style={styles.sectionContainer}>
-              <Text style={styles.sectionHeading}>How does this feel now?</Text>
+              <Text style={styles.sectionHeading}>
+                How does this feel for you now?
+              </Text>
 
               <View style={styles.repairCardsContainer}>
                 <Pressable
@@ -1767,7 +1782,7 @@ export default function EventDetailScreen() {
                   onPress={() => updateEventStatus("open")}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: event.status === "open" }}
-                  accessibilityLabel="Still lingering: This is still with us. Giving it time."
+                  accessibilityLabel="Still unsettled: I need more time with this right now."
                 >
                   <Text
                     style={[
@@ -1775,10 +1790,10 @@ export default function EventDetailScreen() {
                       event.status === "open" && styles.repairCardTitleActive,
                     ]}
                   >
-                    Still lingering
+                    Still unsettled
                   </Text>
                   <Text style={styles.repairCardSubtitle}>
-                    This is still with us. Giving it time.
+                    I need more time with this right now.
                   </Text>
                 </Pressable>
 
@@ -1793,7 +1808,7 @@ export default function EventDetailScreen() {
                   accessibilityState={{
                     selected: event.status === "partially_repaired",
                   }}
-                  accessibilityLabel="In care: It is beginning to ease."
+                  accessibilityLabel="Clearer: Things are beginning to soften and make sense."
                 >
                   <Text
                     style={[
@@ -1802,10 +1817,10 @@ export default function EventDetailScreen() {
                         styles.repairCardTitleActive,
                     ]}
                   >
-                    In care
+                    Clearer
                   </Text>
                   <Text style={styles.repairCardSubtitle}>
-                    It is beginning to ease.
+                    Things are beginning to soften and make sense.
                   </Text>
                 </Pressable>
 
@@ -1819,7 +1834,7 @@ export default function EventDetailScreen() {
                   accessibilityState={{
                     selected: event.status === "reconnected",
                   }}
-                  accessibilityLabel="Reconnected: We found our way back."
+                  accessibilityLabel="Lighter: I feel ready to gently set this down."
                 >
                   <Text
                     style={[
@@ -1828,10 +1843,10 @@ export default function EventDetailScreen() {
                         styles.repairCardTitleActive,
                     ]}
                   >
-                    Reconnected
+                    Lighter
                   </Text>
                   <Text style={styles.repairCardSubtitle}>
-                    We found our way back.
+                    I feel ready to gently set this down.
                   </Text>
                 </Pressable>
               </View>
@@ -2058,6 +2073,7 @@ export default function EventDetailScreen() {
           )}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -2065,11 +2081,11 @@ export default function EventDetailScreen() {
 function formatStatus(status: RelationshipEvent["status"]) {
   switch (status) {
     case "open":
-      return "Still lingering";
+      return "Still unsettled";
     case "partially_repaired":
-      return "In care";
+      return "Clearer";
     case "reconnected":
-      return "Reconnected";
+      return "Lighter";
     default:
       return "—";
   }
@@ -2216,9 +2232,9 @@ const createStyles = (theme: ThemeColors) => {
       marginTop: 2,
     },
     privacyCardHeaderRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: tokens.spacing.xs,
+      flexDirection: "column",
+      alignItems: "flex-start",
+      gap: 6,
       marginBottom: tokens.spacing.xs,
     },
     privatePill: {

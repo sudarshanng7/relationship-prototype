@@ -6950,6 +6950,143 @@ test("38. Downward progress recalculation: deleting eligible Moments reduces fou
   );
 });
 
+// ----------------------------------------------------------------------------
+// Test 39: Exact ID matching in explorable memory lookup (no substring collision)
+// ----------------------------------------------------------------------------
+test("39. findMemoryIndexByNodeId performs exact matching without substring collisions", () => {
+  const mockMemories = [
+    {
+      index: 0,
+      totalMemories: 3,
+      nodeId: "earned:positive_moment:ev-10",
+      legacyFeatureId: "care-positive-ev-10",
+      semanticKey: "positive_moment:ev-10",
+      source: { kind: "positive_moment", sourceId: "ev-10", rawEvent: {} },
+      bounds: { minX: 10, minY: 10, maxX: 20, maxY: 20, width: 10, height: 10 },
+      anchor: { x: 15, y: 15 },
+      chronologicalTimestamp: "2026-02-01T10:00:00Z",
+      memoryType: "Shared Good Moment",
+      botanicalRepresentation: "Shared Moment Growth",
+      displayHeadline: "Moment 10",
+      displayDateLabel: "Feb 1, 2026",
+      explanatoryCopy: "Copy",
+      actionLabel: "View moment",
+      actionRoute: "/event/ev-10",
+      accessibilityLabel: "Moment 10",
+    },
+    {
+      index: 1,
+      totalMemories: 3,
+      nodeId: "earned:positive_moment:ev-100",
+      legacyFeatureId: "care-positive-ev-100",
+      semanticKey: "positive_moment:ev-100",
+      source: { kind: "positive_moment", sourceId: "ev-100", rawEvent: {} },
+      bounds: { minX: 30, minY: 30, maxX: 40, maxY: 40, width: 10, height: 10 },
+      anchor: { x: 35, y: 35 },
+      chronologicalTimestamp: "2026-02-02T10:00:00Z",
+      memoryType: "Shared Good Moment",
+      botanicalRepresentation: "Shared Moment Growth",
+      displayHeadline: "Moment 100",
+      displayDateLabel: "Feb 2, 2026",
+      explanatoryCopy: "Copy",
+      actionLabel: "View moment",
+      actionRoute: "/event/ev-100",
+      accessibilityLabel: "Moment 100",
+    },
+    {
+      index: 2,
+      totalMemories: 3,
+      nodeId: "earned:positive_moment:ev-1",
+      legacyFeatureId: "care-positive-ev-1",
+      semanticKey: "positive_moment:ev-1",
+      source: { kind: "positive_moment", sourceId: "ev-1", rawEvent: {} },
+      bounds: { minX: 50, minY: 50, maxX: 60, maxY: 60, width: 10, height: 10 },
+      anchor: { x: 55, y: 55 },
+      chronologicalTimestamp: "2026-02-03T10:00:00Z",
+      memoryType: "Shared Good Moment",
+      botanicalRepresentation: "Shared Moment Growth",
+      displayHeadline: "Moment 1",
+      displayDateLabel: "Feb 3, 2026",
+      explanatoryCopy: "Copy",
+      actionLabel: "View moment",
+      actionRoute: "/event/ev-1",
+      accessibilityLabel: "Moment 1",
+    },
+  ];
+
+  // Exact ID lookups
+  assert.equal(findMemoryIndexByNodeId(mockMemories, "ev-1"), 2, "ev-1 must match index 2, not substring in ev-10 or ev-100");
+  assert.equal(findMemoryIndexByNodeId(mockMemories, "ev-10"), 0, "ev-10 must match index 0");
+  assert.equal(findMemoryIndexByNodeId(mockMemories, "ev-100"), 1, "ev-100 must match index 1");
+  assert.equal(findMemoryIndexByNodeId(mockMemories, "earned:positive_moment:ev-1"), 2, "full nodeId matches index 2");
+  assert.equal(findMemoryIndexByNodeId(mockMemories, "care-positive-ev-10"), 0, "legacyFeatureId matches index 0");
+
+  // Non-matching partial strings must return -1
+  assert.equal(findMemoryIndexByNodeId(mockMemories, "ev-"), -1, "Substring 'ev-' must not match anything");
+  assert.equal(findMemoryIndexByNodeId(mockMemories, "positive"), -1, "Substring 'positive' must not match anything");
+  assert.equal(findMemoryIndexByNodeId(mockMemories, "ev-2"), -1, "Non-existent id returns -1");
+});
+
+// ----------------------------------------------------------------------------
+// Test 40: Screen-space hit testing under camera transforms (scale 1.0, 2.0, 0.8, translated)
+// ----------------------------------------------------------------------------
+test("40. Screen-space hit testing under scale 1.0, zoomed-in, zoomed-out, and translated cameras", () => {
+  const evA = createMockEvent("hit-ev-a", "positive_moment", "2026-03-01T10:00:00Z");
+  const scene = generateGardenSVGScene(COUPLE_A, 50, 8, false, undefined, "light", [evA]);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 50,
+    careGrowthUnits: 8,
+    timeGrowthUnits: 42,
+    careEvents: [evA],
+  });
+
+  const earnedNode = Object.values(world.nodes).find(n => n.isEarned && n.sourceEvent?.id === "hit-ev-a");
+  assert.ok(earnedNode, "Must have earned node for hit testing");
+
+  const viewport = { width: 400, height: 600 };
+
+  // 1. Scale 1.0, centered on the node
+  const cameraCentered = {
+    targetX: (earnedNode.worldBounds.minX + earnedNode.worldBounds.maxX) / 2,
+    targetY: (earnedNode.worldBounds.minY + earnedNode.worldBounds.maxY) / 2,
+    zoom: 1.0,
+    viewportWidth: viewport.width,
+    viewportHeight: viewport.height,
+  };
+  const screenCenter = { x: viewport.width / 2, y: viewport.height / 2 };
+  const hitCenter = resolveNodeAtScreenCoordinate(screenCenter, world, cameraCentered, viewport);
+  assert.equal(hitCenter?.id, earnedNode.id, "Center tap must hit earned node at zoom 1.0");
+
+  // 2. Zoomed in 2.0x, centered on node
+  const cameraZoomedIn = { ...cameraCentered, zoom: 2.0 };
+  const hitZoomIn = resolveNodeAtScreenCoordinate(screenCenter, world, cameraZoomedIn, viewport);
+  assert.equal(hitZoomIn?.id, earnedNode.id, "Center tap must hit earned node at zoom 2.0");
+
+  // 3. Zoomed out 0.8x, centered on node
+  const cameraZoomedOut = { ...cameraCentered, zoom: 0.8 };
+  const hitZoomOut = resolveNodeAtScreenCoordinate(screenCenter, world, cameraZoomedOut, viewport);
+  assert.equal(hitZoomOut?.id, earnedNode.id, "Center tap must hit earned node at zoom 0.8");
+
+  // 4. Translated camera: node is offset by 50px right, 50px down on screen
+  const cameraTranslated = {
+    targetX: cameraCentered.targetX - 50,
+    targetY: cameraCentered.targetY - 50,
+    zoom: 1.0,
+    viewportWidth: viewport.width,
+    viewportHeight: viewport.height,
+  };
+  const offsetScreenPoint = { x: viewport.width / 2 + 50, y: viewport.height / 2 + 50 };
+  const hitTranslated = resolveNodeAtScreenCoordinate(offsetScreenPoint, world, cameraTranslated, viewport);
+  assert.equal(hitTranslated?.id, earnedNode.id, "Offset screen point matching translated camera must hit earned node");
+
+  // 5. Empty point far away returns null
+  const farAwayScreenPoint = { x: 5, y: 5 };
+  const hitFar = resolveNodeAtScreenCoordinate(farAwayScreenPoint, world, cameraCentered, viewport);
+  // May hit background terrain or null, but must never hit earnedNode
+  assert.notEqual(hitFar?.id, earnedNode.id, "Far away screen tap must never hit the earned node");
+});
+
 function gardenVisualQACDCGuarded(code) {
   return code.includes("if (!__DEV__)") && code.includes("<Redirect href=\"/garden\"");
 }

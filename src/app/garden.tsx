@@ -394,6 +394,7 @@ export default function GardenScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={!isExploring && !isPlayingStory}
       >
         <View style={styles.mainColumn}>
           {/* Header */}
@@ -541,14 +542,19 @@ export default function GardenScreen() {
               onClose={handleCloseExplore}
             />
           ) : (
-            <View
-              style={[
+            <Pressable
+              style={({ pressed }) => [
                 styles.gardenHero,
                 {
                   backgroundColor: summaryBg,
                   borderColor: theme.borderSoft,
+                  opacity: pressed ? 0.95 : 1,
                 },
               ]}
+              onPress={() => handleStartExplore()}
+              accessibilityRole="button"
+              accessibilityLabel="Explore garden"
+              accessibilityHint="Open interactive garden exploration"
             >
               <GardenVisualizer
                 totalGrowthUnits={effectiveTotalGrowthUnits}
@@ -610,7 +616,7 @@ export default function GardenScreen() {
                   {dynamicGrowthNote}
                 </Text>
               </View>
-            </View>
+            </Pressable>
           )}
 
           {/* SECTION 1.5 — Gentle Growth & Milestone Progress */}

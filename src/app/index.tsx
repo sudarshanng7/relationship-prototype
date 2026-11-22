@@ -8,13 +8,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -178,7 +178,7 @@ export default function LoginScreen() {
     status.toLowerCase().includes("invalid");
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -186,6 +186,7 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.column}>
@@ -397,6 +398,7 @@ const createStyles = (theme: ThemeColors) =>
     scrollContent: {
       flexGrow: 1,
       justifyContent: "center",
+      paddingBottom: 40,
     },
     column: {
       width: "100%",

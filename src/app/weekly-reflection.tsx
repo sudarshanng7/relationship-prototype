@@ -1,9 +1,11 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -180,13 +182,18 @@ export default function WeeklyReflectionScreen() {
   const isSaveDisabled = !stayedWith || !carryForward || isSaving;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.column}>
           {/* Header */}
           <CouplyHeader
@@ -475,6 +482,7 @@ export default function WeeklyReflectionScreen() {
           )}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -489,7 +497,8 @@ function createStyles(theme: ThemeColors) {
       flex: 1,
     },
     scrollContent: {
-      paddingBottom: 64,
+      flexGrow: 1,
+      paddingBottom: 110,
       alignItems: "center",
     },
     column: {

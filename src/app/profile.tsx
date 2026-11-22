@@ -16,13 +16,13 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // ----------------------------------------------------
 // TYPES & CONSTANTS
@@ -1286,7 +1286,7 @@ export default function ProfileScreen() {
 
   if (isInitialLoading) {
     return (
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primaryAccent} />
           <Text style={styles.loadingText}>Loading your profile...</Text>
@@ -1296,7 +1296,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -1305,6 +1305,7 @@ export default function ProfileScreen() {
           ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.container}>
@@ -3236,6 +3237,7 @@ const createStyles = (theme: ThemeColors) =>
     },
     scrollContent: {
       flexGrow: 1,
+      paddingBottom: 110,
     },
     container: {
       width: "100%",

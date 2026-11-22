@@ -225,6 +225,11 @@ export function GardenExplorer({
   const isDraggingRef = useRef(false);
   const initialFocusDoneRef = useRef(false);
 
+  // Two-finger pinch zoom tracking refs
+  const initialPinchDistanceRef = useRef<number | null>(null);
+  const initialPinchCameraRef = useRef<GardenCameraState | null>(null);
+  const initialPinchFocalRef = useRef<{ x: number; y: number } | null>(null);
+
   // Resolved presentation geometry of the world aligning camera and hit testing
   // with active structure scaling, offset, and couple DNA
   const presentationWorld = useMemo(() => {
@@ -459,51 +464,142 @@ export function GardenExplorer({
     [presentationWorld, viewport, explorableMemories, resolveInputMode]
   );
 
-  // PanResponder for mobile 1-finger pan and pointer drag with unified threshold
+  // PanResponder for mobile 1-finger pan, 2-finger pinch zoom, and pointer drag with unified threshold
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, gesture) => {
+        onStartShouldSetPanResponderCapture: (e) =>
+          Boolean(e.nativeEvent.touches && e.nativeEvent.touches.length >= 2),
+        onMoveShouldSetPanResponder: (e, gesture) => {
+          if (e.nativeEvent.touches && e.nativeEvent.touches.length >= 2) {
+            return true;
+          }
           return Math.hypot(gesture.dx, gesture.dy) >= CANONICAL_DRAG_THRESHOLD_PX;
         },
-        onPanResponderGrant: () => {
-          dragStartCamera.current = cameraStateRef.current;
+        onPanResponderGrant: (e) => {
+          const touches = e.nativeEvent.touches;
+          if (touches && touches.length >= 2) {
+            const t0 = touches[0];
+            const t1 = touches[1];
+            initialPinchDistanceRef.current = Math.hypot(
+              t0.pageX - t1.pageX,
+              t0.pageY - t1.pageY
+            );
+            initialPinchCameraRef.current = cameraStateRef.current;
+            initialPinchFocalRef.current = {
+              x: (t0.locationX + t1.locationX) / 2,
+              y: (t0.locationY + t1.locationY) / 2,
+            };
+          } else {
+            dragStartCamera.current = cameraStateRef.current;
+            initialPinchDistanceRef.current = null;
+            initialPinchCameraRef.current = null;
+            initialPinchFocalRef.current = null;
+          }
           isDraggingRef.current = false;
         },
-        onPanResponderMove: (_, gesture) => {
-          if (!dragStartCamera.current) return;
-          const dist = Math.hypot(gesture.dx, gesture.dy);
-          if (dist >= CANONICAL_DRAG_THRESHOLD_PX) {
-            isDraggingRef.current = true;
-            setCameraMode("explore");
-            const updated = panCamera(
-              dragStartCamera.current,
-              gesture.dx,
-              gesture.dy,
-              CANONICAL_SCENE_BOUNDS
+        onPanResponderMove: (e, gesture) => {
+          const touches = e.nativeEvent.touches;
+          if (touches && touches.length >= 2) {
+            const t0 = touches[0];
+            const t1 = touches[1];
+            const currentDistance = Math.hypot(
+              t0.pageX - t1.pageX,
+              t0.pageY - t1.pageY
             );
-            setCameraState(updated);
+            const focalPoint = {
+              x: (t0.locationX + t1.locationX) / 2,
+              y: (t0.locationY + t1.locationY) / 2,
+            };
+
+            if (
+              !initialPinchDistanceRef.current ||
+              !initialPinchCameraRef.current
+            ) {
+              initialPinchDistanceRef.current = currentDistance;
+              initialPinchCameraRef.current = cameraStateRef.current;
+              initialPinchFocalRef.current = focalPoint;
+              return;
+            }
+
+            const distDiff = Math.abs(
+              currentDistance - initialPinchDistanceRef.current
+            );
+            if (
+              distDiff >= CANONICAL_DRAG_THRESHOLD_PX ||
+              isDraggingRef.current
+            ) {
+              isDraggingRef.current = true;
+              setCameraMode("explore");
+              const ratio =
+                currentDistance /
+                Math.max(1, initialPinchDistanceRef.current);
+              const focal =
+                initialPinchFocalRef.current || focalPoint;
+              const updated = zoomCameraAroundPoint(
+                initialPinchCameraRef.current,
+                ratio,
+                focal,
+                CANONICAL_SCENE_BOUNDS,
+                zoomLimits.minZoom,
+                zoomLimits.maxZoom
+              );
+              setCameraState(updated);
+            }
+          } else {
+            if (initialPinchDistanceRef.current !== null) {
+              initialPinchDistanceRef.current = null;
+              initialPinchCameraRef.current = null;
+              initialPinchFocalRef.current = null;
+              dragStartCamera.current = cameraStateRef.current;
+            }
+
+            if (!dragStartCamera.current) {
+              dragStartCamera.current = cameraStateRef.current;
+            }
+            const dist = Math.hypot(gesture.dx, gesture.dy);
+            if (dist >= CANONICAL_DRAG_THRESHOLD_PX) {
+              isDraggingRef.current = true;
+              setCameraMode("explore");
+              const updated = panCamera(
+                dragStartCamera.current,
+                gesture.dx,
+                gesture.dy,
+                CANONICAL_SCENE_BOUNDS
+              );
+              setCameraState(updated);
+            }
           }
         },
         onPanResponderRelease: (e, gesture) => {
           const dist = Math.hypot(gesture.dx, gesture.dy);
-          if (!isDraggingRef.current && dist < CANONICAL_DRAG_THRESHOLD_PX) {
+          if (
+            !isDraggingRef.current &&
+            dist < CANONICAL_DRAG_THRESHOLD_PX &&
+            initialPinchDistanceRef.current === null
+          ) {
             const locX = e.nativeEvent.locationX;
             const locY = e.nativeEvent.locationY;
             const inputMode = resolveInputMode(e.nativeEvent);
             handleScreenTap(locX, locY, inputMode);
           }
           dragStartCamera.current = null;
+          initialPinchDistanceRef.current = null;
+          initialPinchCameraRef.current = null;
+          initialPinchFocalRef.current = null;
           isDraggingRef.current = false;
         },
         onPanResponderTerminate: () => {
           dragStartCamera.current = null;
+          initialPinchDistanceRef.current = null;
+          initialPinchCameraRef.current = null;
+          initialPinchFocalRef.current = null;
           isDraggingRef.current = false;
         },
         onPanResponderTerminationRequest: () => false,
       }),
-    [handleScreenTap]
+    [handleScreenTap, resolveInputMode, zoomLimits]
   );
 
   // Web mouse-wheel zoom listener with active preventDefault (passive: false)
@@ -782,28 +878,30 @@ export function GardenExplorer({
         style={styles.canvasSurface}
         {...panResponder.panHandlers}
       >
-        <GardenVisualizer
-          seedString={seedString}
-          totalGrowthUnits={totalGrowthUnits}
-          careGrowthUnits={careGrowthUnits}
-          timeGrowthUnits={timeGrowthUnits}
-          isResting={isResting}
-          compact={false}
-          careSignals={careSignals}
-          careEvents={careEvents}
-          world={presentationWorld}
-          camera={cameraState}
-          viewport={viewport}
-          exploreMode={true}
-          cropPreset="middle_distance"
-          highlightFeatureId={
-            activeMemory?.legacyFeatureId ||
-            selectedNode?.legacyFeatureId ||
-            selectedNode?.id ||
-            null
-          }
-          style={styles.fullVisualizer}
-        />
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <GardenVisualizer
+            seedString={seedString}
+            totalGrowthUnits={totalGrowthUnits}
+            careGrowthUnits={careGrowthUnits}
+            timeGrowthUnits={timeGrowthUnits}
+            isResting={isResting}
+            compact={false}
+            careSignals={careSignals}
+            careEvents={careEvents}
+            world={presentationWorld}
+            camera={cameraState}
+            viewport={viewport}
+            exploreMode={true}
+            cropPreset="middle_distance"
+            highlightFeatureId={
+              activeMemory?.legacyFeatureId ||
+              selectedNode?.legacyFeatureId ||
+              selectedNode?.id ||
+              null
+            }
+            style={styles.fullVisualizer}
+          />
+        </View>
       </View>
 
       {/* 3. Floating Zoom Controls (+ / -) */}

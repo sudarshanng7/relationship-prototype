@@ -19,13 +19,13 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export type TaskCategory = "groceries" | "home" | "errands" | "other";
 export type TaskStatus = "open" | "completed";
@@ -815,7 +815,7 @@ export default function SharedListScreen() {
   // State 3: No connected partner
   if (!partnerConnected || !coupleId) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
         <CouplyHeader
           title="Shared list"
           subtitle="Groceries, home tasks and little things you’re handling together."
@@ -843,11 +843,12 @@ export default function SharedListScreen() {
   const isEmpty = tasks.length === 0 && !isTasksLoading;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <View style={styles.mainColumn}>
           {/* Header */}
@@ -1467,6 +1468,7 @@ export default function SharedListScreen() {
                     style={styles.templateReviewListScroll}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
                   >
                     {templateReviewItems.map((item) => (
                       <View key={item.id} style={styles.reviewItemRow}>

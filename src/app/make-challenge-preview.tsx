@@ -15,7 +15,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
@@ -23,6 +22,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type ParticipantKey = "me" | "sam" | "both";
 
@@ -230,7 +230,7 @@ export default function MakeChallengePreviewScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -238,6 +238,7 @@ export default function MakeChallengePreviewScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.column}>
@@ -743,8 +744,9 @@ const createStyles = (theme: ThemeColors) => {
     flex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingTop: tokens.spacing.md,
-    paddingBottom: 48,
+    paddingBottom: 110,
   },
   column: {
     maxWidth: tokens.layout.appShell,

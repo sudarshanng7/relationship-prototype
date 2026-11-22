@@ -11,8 +11,9 @@ import { useUserIdentity } from "@/context/UserIdentityContext";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Switch,
@@ -20,6 +21,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type SampleKey = "coffee_mug" | "socks" | "directions";
 type ConsentChoice = "pending" | "try" | "not_today";
@@ -205,12 +207,20 @@ export default function PlayfulReframeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
       >
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { flexGrow: 1, paddingBottom: 110 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.column}>
           {/* Couply Header */}
           <CouplyHeader
@@ -506,6 +516,7 @@ export default function PlayfulReframeScreen() {
           )}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

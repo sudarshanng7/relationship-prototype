@@ -1,9 +1,11 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -493,13 +495,18 @@ export default function RecordMomentScreen() {
         : "Review shared moment";
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.column}>
           {/* Header */}
           <CouplyHeader
@@ -863,6 +870,7 @@ export default function RecordMomentScreen() {
           )}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -881,7 +889,7 @@ const createStyles = (theme: ThemeColors) =>
       flexGrow: 1,
       paddingHorizontal: tokens.layout.pagePaddingStandard,
       paddingTop: 12,
-      paddingBottom: 60,
+      paddingBottom: 110,
     },
     column: {
       width: "100%",

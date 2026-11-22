@@ -2,7 +2,7 @@
   "expo": {
     "name": "Purple Garden Alpha",
     "slug": "purple-garden-alpha",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "relationshipprototype",
@@ -12,13 +12,14 @@
     },
     "android": {
       "package": "com.purplegarden.alpha",
-      "versionCode": 1,
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#D2DCB5",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "output": "static",

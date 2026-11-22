@@ -19,10 +19,10 @@ import {
 } from "@/lib/spaces-summary";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   AppState,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -852,7 +852,7 @@ export default function EventsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

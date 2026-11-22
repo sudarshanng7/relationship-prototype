@@ -15,13 +15,13 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // ----------------------------------------------------
 // CONSTANTS & PRESETS (reused from Profile)
@@ -534,7 +534,7 @@ export default function OnboardingScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={theme.primaryAccent} />
           <Text style={styles.loadingText}>Loading Purple Garden...</Text>
@@ -548,7 +548,7 @@ export default function OnboardingScreen() {
   // ----------------------------------------------------
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -557,6 +557,7 @@ export default function OnboardingScreen() {
           ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.column}>
@@ -1248,6 +1249,7 @@ const createStyles = (theme: ThemeColors) =>
     scrollContent: {
       flexGrow: 1,
       justifyContent: "center",
+      paddingBottom: 80,
     },
     column: {
       width: "100%",
