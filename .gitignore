@@ -51,3 +51,7 @@ example
 
 # Local Supabase SQL Editor snippets
 supabase/snippets/
+# Firebase Android configuration and credentials
+google-services.json
+fcm-service-account.json
+*firebase-adminsdk*.json
