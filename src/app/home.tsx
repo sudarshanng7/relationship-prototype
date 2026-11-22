@@ -24,6 +24,10 @@ import {
 } from "@/lib/home-activity";
 import { supabase } from "@/lib/supabase";
 import {
+  fetchActivePartnerAnnoyanceChallenges,
+  respondToAnnoyanceChallenge,
+} from "@/lib/annoyance-reframe";
+import {
   savePersonalCoverImage,
   removePersonalCoverImage,
   saveCoupleImage,
@@ -50,7 +54,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   AppState,
@@ -102,6 +106,20 @@ export interface ThemeConfig {
   savedBoxBorder: string;
   buttonSecondaryBg: string;
   buttonSecondaryBorder: string;
+}
+
+export interface HomeActiveSharedChallenge {
+  id: string;
+  authorId: string;
+  isFromPartner: boolean;
+  idea: string;
+  participant: "partner" | "both" | "me";
+  timeframe: string | null;
+  reward: string | null;
+  reframeTone: string | null;
+  reframeText: string | null;
+  includeReframeWithPartner: boolean;
+  createdAt: string;
 }
 
 const lilacMorningTheme: ThemeConfig = {
@@ -329,6 +347,7 @@ export type { HomeRelationshipEvent, HomeActivityCandidate };
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     openReflection?: string | string[];
   }>();
@@ -384,6 +403,13 @@ export default function HomeScreen() {
   const [spacesSummaryError, setSpacesSummaryError] = useState<string | null>(
     null,
   );
+  const [activeDbChallenge, setActiveDbChallenge] =
+    useState<HomeActiveSharedChallenge | null>(null);
+  const [isRespondingToChallenge, setIsRespondingToChallenge] =
+    useState(false);
+  const [challengeActionError, setChallengeActionError] = useState<
+    string | null
+  >(null);
   const [weeklyReflection, setWeeklyReflection] =
     useState<WeeklyReflectionRecord | null>(null);
   const [isWeeklyReflectionLoading, setIsWeeklyReflectionLoading] =
@@ -564,13 +590,14 @@ export default function HomeScreen() {
           setOursEvents([]);
           setIsSpacesSummaryLoading(false);
           setOptimisticSeenKeys(new Set());
+          setActiveDbChallenge(null);
           setIsIdentityLoading(false);
           return false;
         }
 
         setCoupleId(activeCoupleId);
 
-        // 2. Fetch partner details, couple profile, 6 activity sources and private receipts in parallel
+        // 2. Fetch partner details, couple profile, 6 activity sources, challenges and private receipts in parallel
         const [
           partnerNameRes,
           membersRes,
@@ -583,6 +610,7 @@ export default function HomeScreen() {
           attRes,
           receiptsRes,
           mineReflectionsRes,
+          challengesRes,
         ] = await Promise.all([
           supabase.rpc("get_partner_display_name"),
           supabase
@@ -643,6 +671,7 @@ export default function HomeScreen() {
             .eq("couple_id", activeCoupleId)
             .eq("user_id", user.id),
           fetchCanonicalMineReflections(supabase, user.id),
+          fetchActivePartnerAnnoyanceChallenges(supabase, activeCoupleId),
         ]);
 
         if (!mountedRef.current) return false;
@@ -734,6 +763,30 @@ export default function HomeScreen() {
 
         if (!receiptsRes.error && receiptsRes.data) {
           setActivityReceipts(receiptsRes.data as HomeActivityReceipt[]);
+        }
+
+        if (!challengesRes.error && challengesRes.data) {
+          const dbChallenges = challengesRes.data as any[];
+          if (dbChallenges.length > 0) {
+            const latest = dbChallenges[0];
+            setActiveDbChallenge({
+              id: latest.id,
+              authorId: latest.author_id,
+              isFromPartner: latest.author_id !== user.id,
+              idea: latest.challenge_idea || "A gentle pause together",
+              participant: latest.challenge_participant || "both",
+              timeframe: latest.challenge_timeframe || null,
+              reward: latest.challenge_reward || null,
+              reframeTone: latest.reframe_tone || null,
+              reframeText: latest.reframe_text || null,
+              includeReframeWithPartner: Boolean(latest.include_reframe_with_partner),
+              createdAt: latest.created_at,
+            });
+          } else {
+            setActiveDbChallenge(null);
+          }
+        } else {
+          setActiveDbChallenge(null);
         }
 
         setNowMs(Date.now());
@@ -941,6 +994,18 @@ export default function HomeScreen() {
         () => {
           scheduleSilentRefresh();
         },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "annoyance_reframes",
+          filter: `couple_id=eq.${effectiveCoupleId}`,
+        },
+        () => {
+          scheduleSilentRefresh();
+        },
       );
 
     channel.subscribe((subStatus, err) => {
@@ -1033,7 +1098,7 @@ export default function HomeScreen() {
         currentUserId: effectiveUserId,
         coupleId: effectiveCoupleId,
         partnerName: effectivePartnerName,
-        isReflectionActive,
+        weeklyReflection,
       }),
     [
       relationshipEvents,
@@ -1048,7 +1113,7 @@ export default function HomeScreen() {
       effectiveUserId,
       effectiveCoupleId,
       effectivePartnerName,
-      isReflectionActive,
+      weeklyReflection,
     ],
   );
 
@@ -1171,6 +1236,36 @@ export default function HomeScreen() {
       }
     },
     [],
+  );
+
+  const handleChallengeResponse = useCallback(
+    async (action: "accept" | "dismiss") => {
+      if (!activeDbChallenge || isRespondingToChallenge) return;
+      setIsRespondingToChallenge(true);
+      setChallengeActionError(null);
+      try {
+        const { success, error } = await respondToAnnoyanceChallenge(
+          supabase,
+          activeDbChallenge.id,
+          action,
+        );
+        if (!success) {
+          setChallengeActionError(
+            error?.message || "Could not update invitation. Please try again.",
+          );
+        } else {
+          setActiveDbChallenge(null);
+          void refreshHomeDataRef.current({ silent: true });
+        }
+      } catch (err: any) {
+        setChallengeActionError(
+          err?.message || "Could not update invitation. Please try again.",
+        );
+      } finally {
+        setIsRespondingToChallenge(false);
+      }
+    },
+    [activeDbChallenge, isRespondingToChallenge],
   );
 
   // Lightweight timer to re-evaluate eligibility when the currently displayed event reaches 24h
@@ -1563,9 +1658,128 @@ export default function HomeScreen() {
               <Text style={styles.sectionOverline}>What matters now</Text>
             </View>
 
-            {/* Priority 1: Explicit personal reflection in progress */}
-            {whatMattersNow.kind === "reflection" ? (
-              <View style={styles.reflectionContent}>
+            {/* Priority Candidate (Tier 1..5) - One and only one item shown */}
+            {whatMattersNow.kind === "resurfaced_moment" ? (
+              /* Tier 3: Resurfaced gentle moment */
+              <View style={styles.resurfacedMomentCard}>
+                <View style={styles.incomingMomentHeader}>
+                  <Text style={styles.resurfacedMomentOverline}>
+                    {whatMattersNow.overline || "A MOMENT RESTING IN OUR SPACE"}
+                  </Text>
+                </View>
+                <Text style={styles.incomingMomentHeading}>
+                  {whatMattersNow.title}
+                </Text>
+                <Text style={styles.incomingMomentBody}>
+                  {whatMattersNow.body}
+                </Text>
+                <View style={styles.resurfacedActionContainer}>
+                  <CouplyPrimaryButton
+                    label={whatMattersNow.actionLabel}
+                    onPress={() =>
+                      handleOpenResurfacedMoment(
+                        whatMattersNow.sourceId,
+                        whatMattersNow.route,
+                        whatMattersNow,
+                      )
+                    }
+                    accessibilityLabel={whatMattersNow.actionLabel}
+                    style={styles.resurfacedPrimaryBtn}
+                  />
+                  <View style={styles.resurfacedQuietRow}>
+                    <Pressable
+                      style={styles.resurfacedQuietBtn}
+                      onPress={() =>
+                        handleSnoozeResurfacedMoment(
+                          whatMattersNow.sourceId,
+                          "day",
+                        )
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel="Not today"
+                      accessibilityHint="Snooze this reminder for 24 hours"
+                    >
+                      <Text style={styles.resurfacedQuietText}>Not today</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.resurfacedQuietBtn}
+                      onPress={() =>
+                        handleSnoozeResurfacedMoment(
+                          whatMattersNow.sourceId,
+                          "week",
+                        )
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel="Give it a week"
+                      accessibilityHint="Snooze this reminder for seven days"
+                    >
+                      <Text style={styles.resurfacedQuietText}>Give it a week</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            ) : whatMattersNow.kind !== "empty" ? (
+              /* Tier 1..4: Actionable priority card */
+              <Pressable
+                style={({ pressed }) => [
+                  styles.incomingMomentCard,
+                  pressed && styles.incomingMomentCardPressed,
+                ]}
+                onPress={() => handleOpenActivityCard(whatMattersNow)}
+                accessibilityRole="button"
+                accessibilityLabel={`${whatMattersNow.title}. ${whatMattersNow.body}`}
+              >
+                <View style={styles.incomingMomentHeader}>
+                  {whatMattersNow.icon ? (
+                    <Text style={styles.incomingMomentIcon}>
+                      {whatMattersNow.icon}
+                    </Text>
+                  ) : null}
+                  <Text style={styles.incomingMomentOverline}>
+                    {whatMattersNow.overline || "A SHARED MOMENT"}
+                  </Text>
+                </View>
+                <Text style={styles.incomingMomentHeading}>
+                  {whatMattersNow.title}
+                </Text>
+                <Text style={styles.incomingMomentBody}>
+                  {whatMattersNow.body}
+                </Text>
+                <View style={styles.incomingMomentActionRow}>
+                  <View style={styles.incomingMomentActionBtn}>
+                    <Text style={styles.incomingMomentActionText}>
+                      {whatMattersNow.actionLabel}
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+            ) : (
+              /* Tier 5: Calm empty state */
+              <View style={styles.calmCheckInContent}>
+                <Text style={styles.calmCheckInOverline}>WHAT MATTERS NOW</Text>
+                <Text style={styles.calmCheckInHeading}>
+                  {whatMattersNow.title}
+                </Text>
+                <Text style={styles.calmCheckInBody}>
+                  {whatMattersNow.body}
+                </Text>
+                <View style={styles.calmCheckInActionRow}>
+                  <CouplyQuietButton
+                    label={whatMattersNow.actionLabel}
+                    onPress={() =>
+                      router.push(whatMattersNow.route as any)
+                    }
+                    accessibilityLabel={whatMattersNow.actionLabel}
+                    variant="soft"
+                    style={styles.calmCheckInPrimaryBtn}
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Permanent secondary daily reflection: always accessible below What Matters Now */}
+            {isReflectionActive ? (
+              <View style={[styles.reflectionContent, { marginTop: 16, borderTopWidth: 1, borderTopColor: "rgba(107, 76, 130, 0.12)", paddingTop: 16 }]}>
                 {eveningClosureState !== null ? (
                   <View style={styles.reflectionClosureCard}>
                     <Text style={styles.reflectionClosureHeading}>
@@ -1829,204 +2043,152 @@ export default function HomeScreen() {
                       </View>
                     )}
 
-                    {/* Secondary quiet dismissal before choosing a feeling */}
-                    {selectedFeeling === null && (
-                      <View style={styles.reflectionSecondaryActions}>
-                        <Pressable
-                          style={styles.quietSecondaryButton}
-                          onPress={handleDismissReflection}
-                          accessibilityRole="button"
-                          accessibilityLabel="Not now"
-                        >
-                          <Text style={styles.quietSecondaryText}>Not now</Text>
-                        </Pressable>
-                      </View>
-                    )}
+                    {/* Secondary quiet dismissal */}
+                    <View style={styles.reflectionSecondaryActions}>
+                      <Pressable
+                        style={styles.quietSecondaryButton}
+                        onPress={handleDismissReflection}
+                        accessibilityRole="button"
+                        accessibilityLabel="Not now"
+                      >
+                        <Text style={styles.quietSecondaryText}>Not now</Text>
+                      </Pressable>
+                    </View>
                   </>
                 )}
               </View>
-            ) : whatMattersNow.kind === "resurfaced_moment" ? (
-              /* Priority 9: Resurfaced gentle moment */
-              <View style={styles.resurfacedMomentCard}>
-                <View style={styles.incomingMomentHeader}>
-                  <Text style={styles.resurfacedMomentOverline}>
-                    {whatMattersNow.overline || "A MOMENT RESTING IN OUR SPACE"}
-                  </Text>
-                </View>
-                <Text style={styles.incomingMomentHeading}>
-                  {whatMattersNow.title}
-                </Text>
-                <Text style={styles.incomingMomentBody}>
-                  {whatMattersNow.body}
-                </Text>
-                <View style={styles.resurfacedActionContainer}>
-                  <CouplyPrimaryButton
-                    label={whatMattersNow.actionLabel}
-                    onPress={() =>
-                      handleOpenResurfacedMoment(
-                        whatMattersNow.sourceId,
-                        whatMattersNow.route,
-                        whatMattersNow,
-                      )
-                    }
-                    accessibilityLabel={whatMattersNow.actionLabel}
-                    style={styles.resurfacedPrimaryBtn}
-                  />
-                  <View style={styles.resurfacedQuietRow}>
-                    <Pressable
-                      style={styles.resurfacedQuietBtn}
-                      onPress={() =>
-                        handleSnoozeResurfacedMoment(
-                          whatMattersNow.sourceId,
-                          "day",
-                        )
-                      }
-                      accessibilityRole="button"
-                      accessibilityLabel="Not today"
-                      accessibilityHint="Snooze this reminder for 24 hours"
-                    >
-                      <Text style={styles.resurfacedQuietText}>Not today</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.resurfacedQuietBtn}
-                      onPress={() =>
-                        handleSnoozeResurfacedMoment(
-                          whatMattersNow.sourceId,
-                          "week",
-                        )
-                      }
-                      accessibilityRole="button"
-                      accessibilityLabel="Give it a week"
-                      accessibilityHint="Snooze this reminder for seven days"
-                    >
-                      <Text style={styles.resurfacedQuietText}>Give it a week</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            ) : whatMattersNow.kind !== "empty" ? (
-              /* Priority 1-8: Recent partner / shared activity */
+            ) : (
               <Pressable
                 style={({ pressed }) => [
-                  styles.incomingMomentCard,
-                  pressed && styles.incomingMomentCardPressed,
+                  styles.activityReflectButton,
+                  pressed && styles.activityReflectButtonPressed,
+                  { marginTop: 14 },
                 ]}
-                onPress={() => handleOpenActivityCard(whatMattersNow)}
+                onPress={handleOpenReflectionFromHome}
                 accessibilityRole="button"
-                accessibilityLabel={`${whatMattersNow.title}. ${whatMattersNow.body}`}
+                accessibilityLabel="Reflect on today"
+                accessibilityHint="Opens your private daily reflection without dismissing the shared moment"
               >
-                <View style={styles.incomingMomentHeader}>
-                  {whatMattersNow.icon ? (
-                    <Text style={styles.incomingMomentIcon}>
-                      {whatMattersNow.icon}
-                    </Text>
-                  ) : null}
-                  <Text style={styles.incomingMomentOverline}>
-                    {whatMattersNow.overline || "A SHARED MOMENT"}
-                  </Text>
-                </View>
-                <Text style={styles.incomingMomentHeading}>
-                  {whatMattersNow.title}
+                <Text style={styles.activityReflectButtonText}>
+                  Reflect on today
                 </Text>
-                <Text style={styles.incomingMomentBody}>
-                  {whatMattersNow.body}
-                </Text>
-                <View style={styles.incomingMomentActionRow}>
-                  <View style={styles.incomingMomentActionBtn}>
-                    <Text style={styles.incomingMomentActionText}>
-                      {whatMattersNow.actionLabel}
-                    </Text>
-                  </View>
-                </View>
               </Pressable>
-            ) : (
-              /* Priority 11: Calm empty state */
-              <View style={styles.calmCheckInContent}>
-                <Text style={styles.calmCheckInOverline}>WHAT MATTERS NOW</Text>
-                <Text style={styles.calmCheckInHeading}>
-                  {whatMattersNow.title}
-                </Text>
-                <Text style={styles.calmCheckInBody}>
-                  {whatMattersNow.body}
-                </Text>
-                <View style={styles.calmCheckInActionRow}>
-                  <CouplyQuietButton
-                    label={whatMattersNow.actionLabel}
-                    onPress={() =>
-                      router.push(whatMattersNow.route as any)
-                    }
-                    accessibilityLabel={whatMattersNow.actionLabel}
-                    variant="soft"
-                    style={styles.calmCheckInPrimaryBtn}
-                  />
-                </View>
-                <Pressable
-                  style={styles.calmReflectSecondaryBtn}
-                  onPress={handleOpenReflectionFromHome}
-                  accessibilityRole="button"
-                  accessibilityLabel="Reflect on today"
-                >
-                  <Text style={styles.calmReflectSecondaryText}>
-                    Reflect on today
-                  </Text>
-                </Pressable>
-              </View>
             )}
-
-            {/* Daily reflection remains independently available even when a
-                shared activity currently owns the primary attention tile. */}
-            {whatMattersNow.kind !== "reflection" &&
-              whatMattersNow.kind !== "empty" && (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.activityReflectButton,
-                    pressed && styles.activityReflectButtonPressed,
-                  ]}
-                  onPress={handleOpenReflectionFromHome}
-                  accessibilityRole="button"
-                  accessibilityLabel="Reflect on today"
-                  accessibilityHint="Opens your private daily reflection without dismissing the shared moment"
-                >
-                  <Text style={styles.activityReflectButtonText}>
-                    Reflect on today
-                  </Text>
-                </Pressable>
-              )}
           </CouplySectionCard>
 
-          {/* Separate Secondary Section: Invitation Preview (Demonstration) */}
-          {hasPendingChallengePreview && (
+          {/* Active Challenge Invitation (Database-Backed Real Partner Experience) or Preview */}
+          {(activeDbChallenge || hasPendingChallengePreview) && (
             <CouplySectionCard
               variant="lilac"
               style={styles.invitationPreviewCard}
             >
               <View style={styles.invitationPreviewHeader}>
                 <Text style={styles.invitationPreviewOverline}>
-                  INVITATION PREVIEW
+                  {activeDbChallenge
+                    ? activeDbChallenge.isFromPartner
+                      ? `INVITATION FROM ${partnerName?.toUpperCase() || "YOUR PARTNER"}`
+                      : `INVITATION SHARED WITH ${partnerName?.toUpperCase() || "YOUR PARTNER"}`
+                    : "INVITATION PREVIEW"}
                 </Text>
               </View>
               <Text style={styles.invitationPreviewHeading}>
-                {challengeRecipientHeading}
+                {activeDbChallenge
+                  ? activeDbChallenge.isFromPartner
+                    ? `${partnerName || "Your partner"} shared an invitation: "${activeDbChallenge.idea}"`
+                    : `Your invitation is waiting for ${partnerName || "your partner"}: "${activeDbChallenge.idea}"`
+                  : challengeRecipientHeading}
               </Text>
-              <Text style={styles.invitationPreviewBody}>
-                See how this invitation would appear for your partner.
-              </Text>
-              <View style={styles.invitationPreviewActionRow}>
-                <CouplyPrimaryButton
-                  label="Open recipient view"
-                  onPress={() =>
-                    router.push({
-                      pathname: "/challenge-lifecycle-preview",
-                      params: { source: "home-preview" },
-                    })
-                  }
-                  accessibilityLabel="Open recipient view"
-                  style={styles.invitationPreviewActionBtn}
-                />
-              </View>
-              <Text style={styles.invitationPreviewTruthfulNote}>
-                Only active in this browser session. Nothing has been sent or saved.
-              </Text>
+
+              {activeDbChallenge &&
+              activeDbChallenge.includeReframeWithPartner &&
+              activeDbChallenge.reframeText ? (
+                <View style={styles.invitationWarmNoteBox}>
+                  <Text style={styles.invitationWarmNoteText}>
+                    "{activeDbChallenge.reframeText}"
+                  </Text>
+                </View>
+              ) : null}
+
+              {activeDbChallenge &&
+              (activeDbChallenge.timeframe ||
+                (activeDbChallenge.reward &&
+                  activeDbChallenge.reward !==
+                    "No reward — just the moment")) ? (
+                <View style={styles.invitationDetailsRow}>
+                  {activeDbChallenge.timeframe ? (
+                    <Text style={styles.invitationDetailTag}>
+                      ⏳ {activeDbChallenge.timeframe}
+                    </Text>
+                  ) : null}
+                  {activeDbChallenge.reward &&
+                  activeDbChallenge.reward !==
+                    "No reward — just the moment" ? (
+                    <Text style={styles.invitationDetailTag}>
+                      🎁 {activeDbChallenge.reward}
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {challengeActionError ? (
+                <View style={styles.challengeActionErrorBox}>
+                  <Text style={styles.challengeActionErrorText}>
+                    {challengeActionError}
+                  </Text>
+                </View>
+              ) : null}
+
+              {activeDbChallenge?.isFromPartner ? (
+                // Real Partner Response Action: "I'm in" / "Not today"
+                <View style={styles.invitationResponseActionRow}>
+                  <CouplyPrimaryButton
+                    label="I'm in"
+                    onPress={() => handleChallengeResponse("accept")}
+                    disabled={isRespondingToChallenge}
+                    loading={isRespondingToChallenge}
+                    accessibilityLabel="Accept invitation"
+                    style={styles.invitationAcceptBtn}
+                  />
+                  <CouplyQuietButton
+                    label="Not today"
+                    variant="soft"
+                    onPress={() => handleChallengeResponse("dismiss")}
+                    disabled={isRespondingToChallenge}
+                    accessibilityLabel="Dismiss invitation"
+                    style={styles.invitationDismissBtn}
+                  />
+                </View>
+              ) : activeDbChallenge ? (
+                // Author waiting view
+                <Text style={styles.invitationPreviewBody}>
+                  Shared with {partnerName || "your partner"}. They can choose
+                  to accept or quietly let it pass.
+                </Text>
+              ) : (
+                // Local in-memory preview fallback
+                <>
+                  <Text style={styles.invitationPreviewBody}>
+                    See how this invitation would appear for your partner.
+                  </Text>
+                  <View style={styles.invitationPreviewActionRow}>
+                    <CouplyPrimaryButton
+                      label="Open recipient view"
+                      onPress={() =>
+                        router.push({
+                          pathname: "/challenge-lifecycle-preview",
+                          params: { source: "home-preview" },
+                        })
+                      }
+                      accessibilityLabel="Open recipient view"
+                      style={styles.invitationPreviewActionBtn}
+                    />
+                  </View>
+                  <Text style={styles.invitationPreviewTruthfulNote}>
+                    Only active in this browser session. Nothing has been sent or
+                    saved.
+                  </Text>
+                </>
+              )}
             </CouplySectionCard>
           )}
 
@@ -2207,7 +2369,10 @@ export default function HomeScreen() {
 
       {/* Floating Action Button (constrained to 520px mobile column) */}
       <View
-        style={styles.floatingButtonFixedContainer}
+        style={[
+          styles.floatingButtonFixedContainer,
+          { bottom: Math.max(92, insets.bottom + 84) },
+        ]}
         pointerEvents="box-none"
       >
         <View
@@ -2391,7 +2556,7 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
     scrollContent: {
       paddingHorizontal: 16,
       paddingTop: 8,
-      paddingBottom: 110,
+      paddingBottom: 140,
     },
     /* Single Centered Column: Full width on mobile, capped at tokens.layout.appShell on desktop/wide viewports */
     mainColumn: {
@@ -3166,6 +3331,58 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       lineHeight: 16,
       fontStyle: "italic",
       marginTop: 2,
+    },
+    invitationWarmNoteBox: {
+      backgroundColor: theme.surface,
+      padding: 10,
+      borderRadius: 10,
+      borderLeftWidth: 3,
+      borderLeftColor: theme.accent,
+      marginVertical: 4,
+    },
+    invitationWarmNoteText: {
+      fontSize: 13.5,
+      color: theme.primaryText,
+      fontStyle: "italic",
+      lineHeight: 19,
+    },
+    invitationDetailsRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginVertical: 4,
+    },
+    invitationDetailTag: {
+      fontSize: 12.5,
+      color: theme.secondaryText,
+      backgroundColor: theme.surface,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    invitationResponseActionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginTop: 8,
+    },
+    invitationAcceptBtn: {
+      flex: 1,
+    },
+    invitationDismissBtn: {
+      flex: 1,
+    },
+    challengeActionErrorBox: {
+      backgroundColor: "#FDF2F2",
+      borderColor: "#F87171",
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 8,
+      marginTop: 4,
+    },
+    challengeActionErrorText: {
+      fontSize: 12,
+      color: "#991B1B",
     },
 
     /* 4. Mine and Ours Spaces (Asymmetric: Mine ~34%, Ours ~66%) */

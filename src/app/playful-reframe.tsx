@@ -8,6 +8,8 @@ import {
 import { getThemedTokens, tokens } from "@/components/couply-tokens";
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
+import { saveAnnoyanceReframe } from "@/lib/annoyance-reframe";
+import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
@@ -135,7 +137,7 @@ export default function PlayfulReframeScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const { partnerName } = useUserIdentity();
+  const { partnerName, coupleId, userId } = useUserIdentity();
 
   const [selectedSampleKey, setSelectedSampleKey] =
     useState<SampleKey>("coffee_mug");
@@ -180,7 +182,30 @@ export default function PlayfulReframeScreen() {
     }
   }
 
-  function handleShapeTinyChallenge() {
+  async function handleShapeTinyChallenge() {
+    let savedId: string | undefined = undefined;
+    if (coupleId && userId) {
+      try {
+        const res = await saveAnnoyanceReframe(supabase, {
+          coupleId,
+          authorId: userId,
+          topicKey: isCustomActive ? "other" : selectedSampleKey,
+          customTopicLabel: isCustomActive ? customText.trim().slice(0, 60) : null,
+          privateIrritationInput: isCustomActive ? customText.trim() : null,
+          isPlayful: true,
+          reframeTone: selectedTone,
+          reframeText: effectiveLighterThought.trim(),
+          includeReframeWithPartner: shareLighterThought,
+          status: "draft",
+        });
+        if (res.data?.id) {
+          savedId = res.data.id;
+        }
+      } catch (err) {
+        console.error("Failed to persist draft annoyance reframe:", err);
+      }
+    }
+
     router.push({
       pathname: "/make-challenge-preview",
       params: {
@@ -190,11 +215,26 @@ export default function PlayfulReframeScreen() {
         reframeTone: selectedToneLabel,
         reframeText: effectiveLighterThought.trim(),
         shareReframe: shareLighterThought ? "true" : "false",
+        reframeId: savedId,
+        topicKey: isCustomActive ? "other" : selectedSampleKey,
+        customTopicLabel: isCustomActive ? customText.trim().slice(0, 60) : "",
       },
     });
   }
 
   function handleReturnToRhythm() {
+    if (coupleId && userId && consentChoice === "not_today") {
+      void saveAnnoyanceReframe(supabase, {
+        coupleId,
+        authorId: userId,
+        topicKey: isCustomActive ? "other" : selectedSampleKey,
+        customTopicLabel: isCustomActive ? customText.trim().slice(0, 60) : null,
+        privateIrritationInput: isCustomActive ? customText.trim() : null,
+        isPlayful: false,
+        status: "dismissed",
+      }).catch(() => {});
+    }
+
     if (router.canGoBack()) {
       router.back();
     } else {

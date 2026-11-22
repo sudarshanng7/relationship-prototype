@@ -41,6 +41,8 @@ export function getCanonicalEventHeading(event?: {
   kind?: string | null;
   event_type?: string | null;
   category?: string | null;
+  custom_category_label?: string | null;
+  customCategoryLabel?: string | null;
   label?: string | null;
   displayTitle?: string | null;
 } | null): string {
@@ -55,14 +57,20 @@ export function getCanonicalEventHeading(event?: {
     return "An important date";
   }
 
-  // 2. Relationship events: authoritative heading is category
+  // 2. Custom category label if category === 'other'
+  const custom = event.custom_category_label || event.customCategoryLabel;
+  if (event.category === "other" && typeof custom === "string" && custom.trim()) {
+    return formatCategory(custom.trim());
+  }
+
+  // 3. Relationship events: authoritative heading is category
   const rawHeading = event.category || event.displayTitle;
   if (typeof rawHeading === "string" && rawHeading.trim()) {
     const formatted = formatCategory(rawHeading);
     if (formatted) return formatted;
   }
 
-  // 3. Fallback chain for blank/missing category
+  // 4. Fallback chain for blank/missing category
   const isPositive =
     event.kind === "positive_moment" || event.event_type === "positive";
   return isPositive ? "A shared good moment" : "A shared moment";

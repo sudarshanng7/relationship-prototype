@@ -1,6 +1,6 @@
 import { tokens } from "@/components/couply-tokens";
 import { AppBottomNav } from "@/components/AppBottomNav";
-import { formatCategory } from "@/lib/event-heading";
+import { formatCategory, getCanonicalEventHeading } from "@/lib/event-heading";
 import { GardenEntryCard } from "@/components/garden/GardenEntryCard";
 import {
   CouplyEmptyState,
@@ -35,6 +35,7 @@ type RelationshipEvent = {
   creator_id: string;
   event_type: "positive" | "friction";
   category: string;
+  custom_category_label?: string | null;
   intensity: number | null;
   visibility: "mine" | "ours";
   status: "open" | "partially_repaired" | "reconnected" | null;
@@ -151,6 +152,7 @@ export default function EventsScreen() {
             creator_id,
             event_type,
             category,
+            custom_category_label,
             intensity,
             visibility,
             status,
@@ -733,11 +735,11 @@ export default function EventsScreen() {
               accessibilityRole="button"
               accessibilityLabel={
                 isPreviewReconnected
-                  ? `Open ${accessiblePrivacy} ${formatCategory(
-                      event.category,
+                  ? `Open ${accessiblePrivacy} ${getCanonicalEventHeading(
+                      event,
                     )} moment recorded ${naturalDate.toLowerCase()}. Status: Reconnected preview.`
-                  : `Open ${accessiblePrivacy} ${formatCategory(
-                      event.category,
+                  : `Open ${accessiblePrivacy} ${getCanonicalEventHeading(
+                      event,
                     )} moment recorded ${naturalDate.toLowerCase()}.`
               }
             >
@@ -764,7 +766,7 @@ export default function EventsScreen() {
 
                   <View style={styles.categoryWrap}>
                     <Text style={styles.categoryTitle}>
-                      {formatCategory(event.category)}
+                      {getCanonicalEventHeading(event)}
                     </Text>
                     <Text style={styles.attributionText}>{attribution}</Text>
                   </View>

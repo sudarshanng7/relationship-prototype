@@ -18,21 +18,21 @@
  *    outrank structural flora and terrain; alphanumeric node ID tie-breaker.
  */
 
-import type {
-  BoundingBox2D,
-  Point2D,
-  GardenWorld,
-  GardenNode,
-  SourceEventRef,
-  SemanticHitRegion,
-  GardenCameraState,
-  ScenicRegion,
-} from "./world-types";
 import {
-  extendBounds,
   createEmptyBounds,
+  extendBounds,
   type FeatureHighlightResult,
 } from "./feature-bounds";
+import type {
+  BoundingBox2D,
+  GardenCameraState,
+  GardenNode,
+  GardenWorld,
+  Point2D,
+  ScenicRegion,
+  SemanticHitRegion,
+  SourceEventRef,
+} from "./world-types";
 
 export interface Camera2D {
   target: Point2D; // World point positioned at center of viewport
@@ -102,6 +102,101 @@ export function projectBoundsToScreen(
     maxY: Math.max(tl.y, br.y),
     width: Math.abs(br.x - tl.x),
     height: Math.abs(br.y - tl.y),
+  };
+}
+
+export interface Insets2D {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
+export interface InteractiveSafeViewport {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  insets: Insets2D;
+}
+
+/**
+ * Canonical insets for Purple Garden interactive safe framing:
+ * - Top (68pt): Top bar, back button, theme indicators and header clearance
+ * - Bottom (84pt): Sliding scenic/memory bar (height ~56pt) + bottom margin + safe area
+ * - Left/Right (16pt): Edge margin preventing clipped flowers/touch targets
+ */
+export const CANONICAL_GARDEN_INSETS: Insets2D = {
+  top: 68,
+  bottom: 84,
+  left: 16,
+  right: 16,
+};
+
+/**
+ * Calculates the interactive safe viewport that excludes top bar, bottom sliding strip,
+ * and edge margins so that all interactive botanical nodes remain fully visible and tappable.
+ */
+export function calculateInteractiveSafeViewport(
+  viewport: Viewport,
+  insets: Partial<Insets2D> = {}
+): InteractiveSafeViewport {
+  const safeInsets: Insets2D = {
+    top: insets.top ?? CANONICAL_GARDEN_INSETS.top,
+    bottom: insets.bottom ?? CANONICAL_GARDEN_INSETS.bottom,
+    left: insets.left ?? CANONICAL_GARDEN_INSETS.left,
+    right: insets.right ?? CANONICAL_GARDEN_INSETS.right,
+  };
+  const width = Math.max(10, viewport.width - safeInsets.left - safeInsets.right);
+  const height = Math.max(10, viewport.height - safeInsets.top - safeInsets.bottom);
+  return {
+    x: safeInsets.left,
+    y: safeInsets.top,
+    width,
+    height,
+    insets: safeInsets,
+  };
+}
+
+/**
+ * Computes optimal camera target and zoom to frame worldBounds completely inside the
+ * interactive safe viewport (excluding top header and bottom sliding strip).
+ */
+export function fitCameraToSafeViewport(
+  worldBounds: BoundingBox2D,
+  viewport: Viewport,
+  insets: Partial<Insets2D> = {},
+  padding: number = 16
+): Camera2D {
+  const safeVp = calculateInteractiveSafeViewport(viewport, insets);
+  const availW = Math.max(10, safeVp.width - padding * 2);
+  const availH = Math.max(10, safeVp.height - padding * 2);
+
+  const zoomX = availW / Math.max(1, worldBounds.width);
+  const zoomY = availH / Math.max(1, worldBounds.height);
+  const zoom = Math.min(zoomX, zoomY);
+
+  // Screen center vs Safe viewport center
+  const screenCenterX = viewport.width / 2;
+  const screenCenterY = viewport.height / 2;
+  const safeCenterX = safeVp.x + safeVp.width / 2;
+  const safeCenterY = safeVp.y + safeVp.height / 2;
+
+  const deltaScreenX = safeCenterX - screenCenterX;
+  const deltaScreenY = safeCenterY - screenCenterY;
+
+  const worldCenterX = (worldBounds.minX + worldBounds.maxX) / 2;
+  const worldCenterY = (worldBounds.minY + worldBounds.maxY) / 2;
+
+  const targetX = worldCenterX - deltaScreenX / zoom;
+  const targetY = worldCenterY - deltaScreenY / zoom;
+
+  return {
+    target: {
+      x: Math.round(targetX * 100) / 100,
+      y: Math.round(targetY * 100) / 100,
+    },
+    zoom: Math.round(zoom * 1000) / 1000,
   };
 }
 
@@ -186,7 +281,8 @@ export type GardenFitStrategy =
   | "full_structure"
   | "viewport_cover"
   | "focused_compact"
-  | "memory_focus";
+  | "memory_focus"
+  | "safe_viewport";
 
 /**
  * Creates a fitted camera state covering the given world bounds inside viewport.
@@ -209,6 +305,7 @@ export function createCameraFromFit(
 /**
  * Creates a camera state matching a deliberate fitting strategy:
  * - "viewport_cover": scales artwork to cover 100% of viewport without blank canvas
+ * - "safe_viewport": fits world bounds completely inside the interactive safe viewport
  * - "full_structure": contains entire bounding box with optional padding
  * - "focused_compact": focused tree crop for compact card
  * - "memory_focus": centered on a feature
@@ -217,16 +314,33 @@ export function createCameraFromFitStrategy(
   worldBounds: BoundingBox2D,
   viewport: Viewport,
   strategy: GardenFitStrategy = "viewport_cover",
-  padding: number = 0
+  padding: number = 0,
+  insets?: Partial<Insets2D>
 ): GardenCameraState {
+  if (strategy === "safe_viewport") {
+    const safeFit = fitCameraToSafeViewport(worldBounds, viewport, insets, padding || 16);
+    return {
+      targetX: safeFit.target.x,
+      targetY: safeFit.target.y,
+      zoom: safeFit.zoom,
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
+    };
+  }
+
   if (strategy === "viewport_cover") {
     const zoomX = viewport.width / Math.max(1, worldBounds.width);
     const zoomY = viewport.height / Math.max(1, worldBounds.height);
     const zoom = Math.max(zoomX, zoomY);
-    const target = {
+    let target = {
       x: (worldBounds.minX + worldBounds.maxX) / 2,
       y: (worldBounds.minY + worldBounds.maxY) / 2,
     };
+    if (insets) {
+      const safeVp = calculateInteractiveSafeViewport(viewport, insets);
+      const deltaY = (safeVp.y + safeVp.height / 2) - viewport.height / 2;
+      target.y = target.y - deltaY / zoom;
+    }
     return {
       targetX: Math.round(target.x * 100) / 100,
       targetY: Math.round(target.y * 100) / 100,

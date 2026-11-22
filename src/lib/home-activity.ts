@@ -30,22 +30,66 @@
  *    - Actionable candidates suppressed during opened cooldown (24h) and re-evaluated gently if incomplete.
  */
 
+export interface HomeWeeklyPeriod {
+  weekStart: string;
+  weekEnd: string;
+  weekKey: string;
+}
+
+export function getWeeklyReflectionPeriod(
+  referenceDate?: Date | string | number,
+): HomeWeeklyPeriod {
+  const ref =
+    referenceDate === undefined
+      ? new Date()
+      : referenceDate instanceof Date
+      ? referenceDate
+      : new Date(referenceDate);
+
+  if (isNaN(ref.getTime())) {
+    throw new Error("Invalid reference date");
+  }
+
+  const day = ref.getUTCDay();
+  const daysSinceMonday = day === 0 ? 6 : day - 1;
+
+  const start = new Date(
+    Date.UTC(
+      ref.getUTCFullYear(),
+      ref.getUTCMonth(),
+      ref.getUTCDate() - daysSinceMonday,
+      0,
+      0,
+      0,
+      0,
+    ),
+  );
+
+  const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+  return {
+    weekStart: start.toISOString(),
+    weekEnd: end.toISOString(),
+    weekKey: start.toISOString().slice(0, 10),
+  };
+}
+
 export const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 export const SEVENTY_TWO_HOURS_MS = 72 * 60 * 60 * 1000;
 export const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 export const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
 export type HomeActivityKind =
-  | "repair_response"
-  | "repair_both_ready"
   | "shared_friction"
   | "shared_positive"
+  | "repair_response"
+  | "repair_both_ready"
   | "reconnection_completed"
   | "shared_list_added"
   | "shared_list_completed"
   | "important_date_added"
   | "self_shared_moment"
   | "resurfaced_moment"
+  | "weekly_reflection"
   | "reflection"
   | "empty";
 
@@ -151,6 +195,14 @@ export interface HomeActivityReceipt {
   updated_at?: string;
 }
 
+export interface HomeWeeklyReflectionRecord {
+  id?: string;
+  userId?: string;
+  weekStart?: string;
+  weekEnd?: string;
+  [key: string]: any;
+}
+
 export interface DeriveHomeActivityParams {
   events: HomeRelationshipEvent[];
   repairResponses?: HomeRepairResponse[];
@@ -165,6 +217,8 @@ export interface DeriveHomeActivityParams {
   coupleId: string | null;
   partnerName?: string | null;
   isReflectionActive?: boolean;
+  weeklyReflection?: HomeWeeklyReflectionRecord | null;
+  isWeeklyReflectionDue?: boolean;
 }
 
 /**
@@ -504,7 +558,7 @@ export function deriveResurfacedCandidate(
     coupleId: selected.couple_id || coupleId || "",
     actorId: null,
     occurredAt: selected.created_at,
-    priority: 9,
+    priority: 3,
     actionable: true,
     attentionMode: "actionable",
     route: `/event/${selected.id}?scope=ours`,
@@ -518,6 +572,14 @@ export function deriveResurfacedCandidate(
 
 /**
  * Pure selector deriving the single authoritative "What matters now" tile candidate.
+ * Canonical 5-tier ranking:
+ * 1. Unopened moment explicitly shared by the partner (friction or positive)
+ * 2. Partner response or repair action requiring acknowledgement
+ * 3. User-owned unresolved moment requiring follow-up / gentle resurfacing / partner lists & dates
+ * 4. Weekly reflection currently available/due
+ * 5. Quiet empty state
+ *
+ * "Reflect on today" is permanently decoupled as an independent secondary action on Home.
  */
 export function deriveWhatMattersNowActivity(
   params: DeriveHomeActivityParams,
@@ -535,35 +597,9 @@ export function deriveWhatMattersNowActivity(
     currentUserId,
     coupleId,
     partnerName,
-    isReflectionActive = false,
   } = params;
 
   const partnerLabel = partnerName?.trim() || "Your partner";
-
-  // An explicitly opened reflection is a user choice, not an automatically
-  // competing activity. Let it temporarily own the tile even when a newer
-  // shared activity exists; dismissing or completing it restores the normal
-  // priority selector without marking the shared activity as seen.
-  if (isReflectionActive) {
-    const occurredAt = new Date(nowMs).toISOString();
-    return {
-      key: "reflection:current:active",
-      kind: "reflection",
-      sourceId: "evening_reflection",
-      coupleId: coupleId || "",
-      actorId: currentUserId,
-      occurredAt,
-      priority: 10,
-      actionable: true,
-      attentionMode: "actionable",
-      route: "reflection",
-      overline: "EVENING REFLECTION",
-      title: "Evening reflection",
-      body: "How did today feel between you two?",
-      actionLabel: "Reflect on today",
-    };
-  }
-
   const candidatesMap = new Map<string, HomeActivityCandidate>();
 
   // Build receipts lookup map strictly for current user
@@ -617,9 +653,100 @@ export function deriveWhatMattersNowActivity(
     }
   }
 
-  // --------------------------------------------------------------------------
-  // Priority 1: Partner repair response requiring current-user action
-  // --------------------------------------------------------------------------
+  // ==========================================================================
+  // TIER 1: Unopened moment explicitly shared by the partner
+  // ==========================================================================
+
+  // 1a. Newly shared partner friction moment
+  for (const ev of sharedEvents) {
+    if (
+      ev.event_type !== "friction" ||
+      ev.status === "reconnected" ||
+      outcomesByEventId.has(ev.id)
+    ) {
+      continue;
+    }
+    if (currentUserId && ev.creator_id === currentUserId) {
+      continue;
+    }
+
+    if (isWithinPast24Hours(ev.created_at, nowMs)) {
+      const normalizedTs = normalizeIsoTimestamp(ev.created_at);
+      const key = `shared_friction:${ev.id}:${normalizedTs}`;
+
+      // Suppress immediate Home presentation once seen by recipient
+      const isSeen =
+        receiptsMap.has(normalizeActivityKey(key)) ||
+        Boolean(attentionByEventId.get(ev.id)?.last_opened_at);
+
+      if (isSeen) {
+        continue;
+      }
+
+      candidatesMap.set(key, {
+        key,
+        kind: "shared_friction",
+        sourceId: ev.id,
+        targetEventId: ev.id,
+        coupleId: ev.couple_id || coupleId || "",
+        actorId: ev.creator_id,
+        occurredAt: ev.created_at,
+        priority: 1,
+        actionable: true,
+        attentionMode: "actionable",
+        route: `/event/${ev.id}?scope=ours`,
+        overline: "A SHARED MOMENT",
+        title: `${partnerLabel} shared a moment`,
+        body: "There is no rush. Take a look whenever you feel ready.",
+        actionLabel: "Open when ready",
+      });
+    }
+  }
+
+  // 1b. Newly shared partner Good moment (Informational)
+  for (const ev of sharedEvents) {
+    if (ev.event_type !== "positive") {
+      continue;
+    }
+    if (currentUserId && ev.creator_id === currentUserId) {
+      continue;
+    }
+
+    if (isWithinPast24Hours(ev.created_at, nowMs)) {
+      const normalizedTs = normalizeIsoTimestamp(ev.created_at);
+      const key = `shared_positive:${ev.id}:${normalizedTs}`;
+
+      // Exclude once seen by current user
+      if (receiptsMap.has(normalizeActivityKey(key))) {
+        continue;
+      }
+
+      candidatesMap.set(key, {
+        key,
+        kind: "shared_positive",
+        sourceId: ev.id,
+        targetEventId: ev.id,
+        coupleId: ev.couple_id || coupleId || "",
+        actorId: ev.creator_id,
+        occurredAt: ev.created_at,
+        priority: 1,
+        actionable: false,
+        attentionMode: "informational",
+        route: `/event/${ev.id}?scope=ours`,
+        overline: "A SHARED MOMENT",
+        title: `${partnerLabel} shared something good`,
+        body: "A small piece of your shared story is waiting for you.",
+        actionLabel: "See the moment",
+        icon: "🌷",
+      });
+    }
+  }
+
+  // ==========================================================================
+  // TIER 2: Partner response or repair action requiring acknowledgement
+  // ==========================================================================
+
+  // 2a. Partner repair response requiring current-user action
   for (const resp of repairResponses) {
     // Must be partner's response
     if (currentUserId && resp.user_id === currentUserId) {
@@ -652,7 +779,7 @@ export function deriveWhatMattersNowActivity(
         coupleId: resp.couple_id || coupleId || "",
         actorId: resp.user_id,
         occurredAt,
-        priority: 1,
+        priority: 2,
         actionable: true,
         attentionMode: "actionable",
         route: `/event/${resp.event_id}?scope=ours`,
@@ -665,9 +792,7 @@ export function deriveWhatMattersNowActivity(
     }
   }
 
-  // --------------------------------------------------------------------------
-  // Priority 2: Both partners ready, current user is event creator (can complete)
-  // --------------------------------------------------------------------------
+  // 2b. Both partners ready, current user is event creator (can complete)
   for (const ev of sharedEvents) {
     if (
       ev.event_type !== "friction" ||
@@ -737,98 +862,7 @@ export function deriveWhatMattersNowActivity(
     }
   }
 
-  // --------------------------------------------------------------------------
-  // Priority 3: Newly shared partner friction moment
-  // --------------------------------------------------------------------------
-  for (const ev of sharedEvents) {
-    if (
-      ev.event_type !== "friction" ||
-      ev.status === "reconnected" ||
-      outcomesByEventId.has(ev.id)
-    ) {
-      continue;
-    }
-    if (currentUserId && ev.creator_id === currentUserId) {
-      continue;
-    }
-
-    if (isWithinPast24Hours(ev.created_at, nowMs)) {
-      const normalizedTs = normalizeIsoTimestamp(ev.created_at);
-      const key = `shared_friction:${ev.id}:${normalizedTs}`;
-
-      // Suppress immediate Home presentation once seen by recipient
-      const isSeen =
-        receiptsMap.has(normalizeActivityKey(key)) ||
-        Boolean(attentionByEventId.get(ev.id)?.last_opened_at);
-
-      if (isSeen) {
-        continue;
-      }
-
-      candidatesMap.set(key, {
-        key,
-        kind: "shared_friction",
-        sourceId: ev.id,
-        targetEventId: ev.id,
-        coupleId: ev.couple_id || coupleId || "",
-        actorId: ev.creator_id,
-        occurredAt: ev.created_at,
-        priority: 3,
-        actionable: true,
-        attentionMode: "actionable",
-        route: `/event/${ev.id}?scope=ours`,
-        overline: "A SHARED MOMENT",
-        title: `${partnerLabel} shared a moment`,
-        body: "There is no rush. Take a look whenever you feel ready.",
-        actionLabel: "Open when ready",
-      });
-    }
-  }
-
-  // --------------------------------------------------------------------------
-  // Priority 4: Newly shared partner Good moment (Informational)
-  // --------------------------------------------------------------------------
-  for (const ev of sharedEvents) {
-    if (ev.event_type !== "positive") {
-      continue;
-    }
-    if (currentUserId && ev.creator_id === currentUserId) {
-      continue;
-    }
-
-    if (isWithinPast24Hours(ev.created_at, nowMs)) {
-      const normalizedTs = normalizeIsoTimestamp(ev.created_at);
-      const key = `shared_positive:${ev.id}:${normalizedTs}`;
-
-      // Informational: exclude permanently once seen by current user
-      if (receiptsMap.has(normalizeActivityKey(key))) {
-        continue;
-      }
-
-      candidatesMap.set(key, {
-        key,
-        kind: "shared_positive",
-        sourceId: ev.id,
-        targetEventId: ev.id,
-        coupleId: ev.couple_id || coupleId || "",
-        actorId: ev.creator_id,
-        occurredAt: ev.created_at,
-        priority: 4,
-        actionable: false,
-        attentionMode: "informational",
-        route: `/event/${ev.id}?scope=ours`,
-        overline: "A SHARED MOMENT",
-        title: `${partnerLabel} shared something good`,
-        body: "A small piece of your shared story is waiting for you.",
-        actionLabel: "See the moment",
-        icon: "🌷",
-      });
-    }
-  }
-
-  // --------------------------------------------------------------------------
-  // Priority 5: Reconnection completed (Informational)
-  // --------------------------------------------------------------------------
+  // 2c. Reconnection completed (Informational)
   for (const outcome of outcomes) {
     if (!outcome.completed_at) continue;
     if (isWithinPast24Hours(outcome.completed_at, nowMs)) {
@@ -849,7 +883,7 @@ export function deriveWhatMattersNowActivity(
         coupleId: outcome.couple_id || ev?.couple_id || coupleId || "",
         actorId: outcome.completed_by,
         occurredAt: outcome.completed_at,
-        priority: 5,
+        priority: 2,
         actionable: false,
         attentionMode: "informational",
         route: `/event/${outcome.event_id}?scope=ours`,
@@ -862,17 +896,17 @@ export function deriveWhatMattersNowActivity(
     }
   }
 
-  // --------------------------------------------------------------------------
-  // Priority 6: Meaningful partner shared-list activity (Informational)
-  // --------------------------------------------------------------------------
+  // ==========================================================================
+  // TIER 3: User-owned unresolved moment / gentle resurfacing / partner lists & dates
+  // ==========================================================================
+
+  // 3a. Meaningful partner shared-list activity (added or completed)
   for (const task of tasks) {
-    // 6a. Shared-list item added by partner
     if (task.created_by && currentUserId && task.created_by !== currentUserId) {
       if (isWithinPast24Hours(task.created_at, nowMs)) {
         const normalizedTs = normalizeIsoTimestamp(task.created_at);
         const key = `shared_list_added:${task.id}:${normalizedTs}`;
 
-        // Informational: exclude permanently once seen
         if (!receiptsMap.has(normalizeActivityKey(key))) {
           candidatesMap.set(key, {
             key,
@@ -881,7 +915,7 @@ export function deriveWhatMattersNowActivity(
             coupleId: task.couple_id || coupleId || "",
             actorId: task.created_by,
             occurredAt: task.created_at,
-            priority: 6,
+            priority: 3,
             actionable: false,
             attentionMode: "informational",
             route: "/shared-list",
@@ -895,7 +929,6 @@ export function deriveWhatMattersNowActivity(
       }
     }
 
-    // 6b. Shared-list item completed
     if (task.status === "completed" && task.completed_at) {
       if (isWithinPast24Hours(task.completed_at, nowMs)) {
         const isPartnerTask =
@@ -904,7 +937,6 @@ export function deriveWhatMattersNowActivity(
           const normalizedTs = normalizeIsoTimestamp(task.completed_at);
           const key = `shared_list_completed:${task.id}:${normalizedTs}`;
 
-          // Informational: exclude permanently once seen
           if (!receiptsMap.has(normalizeActivityKey(key))) {
             candidatesMap.set(key, {
               key,
@@ -913,7 +945,7 @@ export function deriveWhatMattersNowActivity(
               coupleId: task.couple_id || coupleId || "",
               actorId: task.created_by,
               occurredAt: task.completed_at,
-              priority: 6,
+              priority: 3,
               actionable: false,
               attentionMode: "informational",
               route: "/shared-list",
@@ -929,17 +961,13 @@ export function deriveWhatMattersNowActivity(
     }
   }
 
-  // --------------------------------------------------------------------------
-  // Priority 7: Important date added by partner (Informational)
-  // --------------------------------------------------------------------------
+  // 3b. Important date added by partner
   for (const date of importantDates) {
     if (date.created_by && currentUserId && date.created_by !== currentUserId) {
-      // Authoritative timestamp is row created_at, NOT event_date
       if (isWithinPast24Hours(date.created_at, nowMs)) {
         const normalizedTs = normalizeIsoTimestamp(date.created_at);
         const key = `important_date_added:${date.id}:${normalizedTs}`;
 
-        // Informational: exclude permanently once seen
         if (!receiptsMap.has(normalizeActivityKey(key))) {
           candidatesMap.set(key, {
             key,
@@ -948,7 +976,7 @@ export function deriveWhatMattersNowActivity(
             coupleId: date.couple_id || coupleId || "",
             actorId: date.created_by,
             occurredAt: date.created_at,
-            priority: 7,
+            priority: 3,
             actionable: false,
             attentionMode: "informational",
             route: "/profile",
@@ -963,16 +991,13 @@ export function deriveWhatMattersNowActivity(
     }
   }
 
-  // --------------------------------------------------------------------------
-  // Priority 8: Qualifying activity created by current user (Informational)
-  // --------------------------------------------------------------------------
+  // 3c. Qualifying activity created by current user
   for (const ev of sharedEvents) {
     if (currentUserId && ev.creator_id === currentUserId) {
       if (isWithinPast24Hours(ev.created_at, nowMs)) {
         const normalizedTs = normalizeIsoTimestamp(ev.created_at);
         const key = `self_shared_moment:${ev.id}:${normalizedTs}`;
 
-        // Informational: exclude permanently once seen
         if (!receiptsMap.has(normalizeActivityKey(key))) {
           candidatesMap.set(key, {
             key,
@@ -982,7 +1007,7 @@ export function deriveWhatMattersNowActivity(
             coupleId: ev.couple_id || coupleId || "",
             actorId: currentUserId,
             occurredAt: ev.created_at,
-            priority: 8,
+            priority: 3,
             actionable: false,
             attentionMode: "informational",
             route: `/event/${ev.id}?scope=ours`,
@@ -996,17 +1021,48 @@ export function deriveWhatMattersNowActivity(
     }
   }
 
-  // --------------------------------------------------------------------------
-  // Priority 9: Eligible gently resurfaced friction moment (Actionable)
-  // --------------------------------------------------------------------------
+  // 3d. Eligible gently resurfaced friction moment
   const resurfaced = deriveResurfacedCandidate(params);
   if (resurfaced) {
     candidatesMap.set(resurfaced.key, resurfaced);
   }
 
-  // --------------------------------------------------------------------------
-  // Priority 11: Calm empty state (Informational)
-  // --------------------------------------------------------------------------
+  // ==========================================================================
+  // TIER 4: Weekly reflection available/due
+  // ==========================================================================
+  const shouldEvaluateWeeklyReflection =
+    params.isWeeklyReflectionDue === true ||
+    (params.weeklyReflection === null && params.isWeeklyReflectionDue !== false);
+
+  if (coupleId && currentUserId && shouldEvaluateWeeklyReflection) {
+    const period = getWeeklyReflectionPeriod(nowMs);
+    const normalizedPeriodTs = normalizeIsoTimestamp(period.weekStart);
+    const weeklyReflectKey = `weekly_reflection:${period.weekKey}:${normalizedPeriodTs}`;
+    const isSeen = receiptsMap.has(normalizeActivityKey(weeklyReflectKey));
+    if (!isSeen) {
+      candidatesMap.set(weeklyReflectKey, {
+        key: weeklyReflectKey,
+        kind: "weekly_reflection",
+        sourceId: period.weekKey,
+        coupleId: coupleId || "",
+        actorId: currentUserId,
+        occurredAt: period.weekStart,
+        priority: 4,
+        actionable: true,
+        attentionMode: "actionable",
+        route: "/weekly-reflection",
+        overline: "YOUR WEEK, GENTLY",
+        title: "Your week, gently",
+        body: "A quiet place to notice what stayed with you this week.",
+        actionLabel: "Take a quiet moment",
+        icon: "🌿",
+      });
+    }
+  }
+
+  // ==========================================================================
+  // TIER 5: Quiet empty state
+  // ==========================================================================
   const emptyOccurredAt = new Date(nowMs).toISOString();
   const emptyKey = `empty:calm:state`;
   candidatesMap.set(emptyKey, {
@@ -1016,7 +1072,7 @@ export function deriveWhatMattersNowActivity(
     coupleId: coupleId || "",
     actorId: null,
     occurredAt: emptyOccurredAt,
-    priority: 11,
+    priority: 5,
     actionable: false,
     attentionMode: "informational",
     route: "/events?scope=ours",

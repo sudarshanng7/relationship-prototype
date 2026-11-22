@@ -1,0 +1,78 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@deno/installer-shell-setup@*": "0.3.4"
+  },
+  "jsr": {
+    "@deno/installer-shell-setup@0.3.4": {
+      "integrity": "48665d1a737d487cce6874bc97bba70a5aeffa7053aca3f60df93c6fab8963b4"
+    }
+  },
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.119.2",
+    "https://esm.sh/iceberg-js@^0.8.1?target=denonext": "https://esm.sh/iceberg-js@0.8.1?target=denonext"
+  },
+  "remote": {
+    "https://deno.land/std@0.168.0/async/abortable.ts": "80b2ac399f142cc528f95a037a7d0e653296352d95c681e284533765961de409",
+    "https://deno.land/std@0.168.0/async/deadline.ts": "2c2deb53c7c28ca1dda7a3ad81e70508b1ebc25db52559de6b8636c9278fd41f",
+    "https://deno.land/std@0.168.0/async/debounce.ts": "60301ffb37e730cd2d6f9dadfd0ecb2a38857681bd7aaf6b0a106b06e5210a98",
+    "https://deno.land/std@0.168.0/async/deferred.ts": "77d3f84255c3627f1cc88699d8472b664d7635990d5358c4351623e098e917d6",
+    "https://deno.land/std@0.168.0/async/delay.ts": "5a9bfba8de38840308a7a33786a0155a7f6c1f7a859558ddcec5fe06e16daf57",
+    "https://deno.land/std@0.168.0/async/mod.ts": "7809ad4bb223e40f5fdc043e5c7ca04e0e25eed35c32c3c32e28697c553fa6d9",
+    "https://deno.land/std@0.168.0/async/mux_async_iterator.ts": "770a0ff26c59f8bbbda6b703a2235f04e379f73238e8d66a087edc68c2a2c35f",
+    "https://deno.land/std@0.168.0/async/pool.ts": "6854d8cd675a74c73391c82005cbbe4cc58183bddcd1fbbd7c2bcda42b61cf69",
+    "https://deno.land/std@0.168.0/async/retry.ts": "e8e5173623915bbc0ddc537698fa418cf875456c347eda1ed453528645b42e67",
+    "https://deno.land/std@0.168.0/async/tee.ts": "3a47cc4e9a940904fd4341f0224907e199121c80b831faa5ec2b054c6d2eff5e",
+    "https://deno.land/std@0.168.0/http/server.ts": "e99c1bee8a3f6571ee4cdeb2966efad465b8f6fe62bec1bdb59c1f007cc4d155",
+    "https://esm.sh/@supabase/auth-js@2.119.2/denonext/auth-js.mjs": "0732bb8902c05fd8b72fd72dc6676b45b54b0daf6e6fb683c68858176a112e66",
+    "https://esm.sh/@supabase/functions-js@2.119.2/denonext/functions-js.mjs": "75548f6b2c2017ba566fae400831fd181b2df2408d2c02502de3cc034c70c95a",
+    "https://esm.sh/@supabase/phoenix@0.4.5/denonext/phoenix.mjs": "40bd2a70829cd847848baac58e635bacd83fd62188f6624b44e2c295341004eb",
+    "https://esm.sh/@supabase/postgrest-js@2.119.2/denonext/postgrest-js.mjs": "a895ab4672102edc04cfa084460cdeb5f5e0bdf67847eafd9f493ce95e0b3756",
+    "https://esm.sh/@supabase/realtime-js@2.119.2/denonext/realtime-js.mjs": "c22aa641972b170e3eb8cb24f651d3a67b8a455e224df6385ae4f376a29ddcbe",
+    "https://esm.sh/@supabase/storage-js@2.119.2/denonext/storage-js.mjs": "c990980d22c66435e6cb76f00e453ce53ff6b608d32612e28b42eee8be9a8e2f",
+    "https://esm.sh/@supabase/supabase-js@2.119.2": "e7729dec88af13b1d17953717407c06705450383f619c26efa6d542b8f73f8c3",
+    "https://esm.sh/@supabase/supabase-js@2.119.2/denonext/dist/tracingRegistry.mjs": "529e146bb4d00e2bb8817718291608903aa9c23eacf3b13e14c9d7a0cd4d1949",
+    "https://esm.sh/@supabase/supabase-js@2.119.2/denonext/supabase-js.mjs": "014da52afdf1ae9ff710c94bba49a209946a7dfe2aa8cbd0868dd5237e4a1843",
+    "https://esm.sh/iceberg-js@0.8.1/denonext/iceberg-js.mjs": "d839d81a2e3966500ca2cdd0c1cb458e9608bacfc91f7bb67a69b2e878dcdb4f",
+    "https://esm.sh/iceberg-js@0.8.1?target=denonext": "58c849d7fe2bf4eca4a84eb501e83c161a7d8c34ca1bec15a962b3bec3062633",
+    "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs": "c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@expo/ui@~57.0.26",
+        "npm:@react-native-async-storage/async-storage@2.2.0",
+        "npm:@supabase/supabase-js@^2.116.0",
+        "npm:@types/react@~19.2.2",
+        "npm:expo-constants@~57.0.24",
+        "npm:expo-device@~57.0.2",
+        "npm:expo-font@~57.0.4",
+        "npm:expo-glass-effect@~57.0.5",
+        "npm:expo-image-picker@~57.0.21",
+        "npm:expo-image@~57.0.5",
+        "npm:expo-linking@~57.0.14",
+        "npm:expo-notifications@~57.0.25",
+        "npm:expo-router@~57.0.31",
+        "npm:expo-splash-screen@~57.0.11",
+        "npm:expo-status-bar@~57.0.1",
+        "npm:expo-symbols@~57.0.3",
+        "npm:expo-system-ui@~57.0.4",
+        "npm:expo-web-browser@~57.0.3",
+        "npm:expo@~57.0.33",
+        "npm:react-dom@19.2.3",
+        "npm:react-native-gesture-handler@2.32",
+        "npm:react-native-reanimated@4.5.1",
+        "npm:react-native-safe-area-context@5.7",
+        "npm:react-native-screens@4.26",
+        "npm:react-native-svg@15.15.4",
+        "npm:react-native-url-polyfill@4",
+        "npm:react-native-web@0.21",
+        "npm:react-native-worklets@0.10.1",
+        "npm:react-native@0.86.3",
+        "npm:react@19.2.3",
+        "npm:supabase@^2.120.0",
+        "npm:typescript@~6.0.3"
+      ]
+    }
+  }
+}

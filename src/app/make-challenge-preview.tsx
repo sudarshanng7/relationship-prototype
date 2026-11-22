@@ -9,6 +9,12 @@ import { getThemedTokens, tokens } from "@/components/couply-tokens";
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useChallengePreview } from "@/context/ChallengePreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
+import { supabase } from "@/lib/supabase";
+import {
+  saveAnnoyanceReframe,
+  fetchAnnoyanceReframe,
+  type AnnoyanceReframeRow,
+} from "@/lib/annoyance-reframe";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
@@ -74,7 +80,7 @@ export default function MakeChallengePreviewScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const { displayName, partnerName, partnerRef } = useUserIdentity();
+  const { displayName, partnerName, partnerRef, coupleId, userId } = useUserIdentity();
   const { activeInvitation, shareInvitation, clearInvitation } =
     useChallengePreview();
 
@@ -110,6 +116,9 @@ export default function MakeChallengePreviewScreen() {
     reframeTone?: string;
     reframeText?: string;
     shareReframe?: string;
+    reframeId?: string;
+    topicKey?: string;
+    customTopicLabel?: string;
   }>();
 
   const initialIdea = typeof params.idea === "string" ? params.idea : "";
@@ -148,20 +157,62 @@ export default function MakeChallengePreviewScreen() {
   const [showPersonalConfirmation, setShowPersonalConfirmation] =
     useState<boolean>(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [existingReframe, setExistingReframe] = useState<AnnoyanceReframeRow | null>(null);
+  const [isLoadingExistingReframe, setIsLoadingExistingReframe] = useState<boolean>(Boolean(params.reframeId));
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    if (params.reframeId && userId) {
+      setIsLoadingExistingReframe(true);
+      setLoadError(null);
+      void fetchAnnoyanceReframe(supabase, params.reframeId, userId)
+        .then(({ data, error }) => {
+          if (!isMounted) return;
+          if (error) {
+            setLoadError(error.message || "Could not load existing reframe.");
+          } else if (data) {
+            setExistingReframe(data);
+          }
+        })
+        .catch((err: any) => {
+          if (!isMounted) return;
+          setLoadError(err?.message || "Could not load existing reframe.");
+        })
+        .finally(() => {
+          if (isMounted) {
+            setIsLoadingExistingReframe(false);
+          }
+        });
+    } else {
+      setIsLoadingExistingReframe(false);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [params.reframeId, userId]);
 
   const trimmedText = challengeText.trim();
   const effectiveTitle = trimmedText || "A small gentle pause";
   const isCustomProvided = trimmedText.length > 0;
 
-  function handleShareInvitation() {
+  async function handleShareInvitation() {
+    if (isSaving || isLoadingExistingReframe || Boolean(loadError)) return;
     const trimmed = challengeText.trim();
     if (!trimmed) {
       setValidationError("Please enter an idea first, or pick a suggestion above.");
       return;
     }
+    if (!coupleId || !userId) {
+      setSaveError("You must be signed in with an active couple connection to save and share an invitation.");
+      return;
+    }
     setValidationError(null);
+    setSaveError(null);
+    setIsSaving(true);
 
-    const invitationId = createdInvitationId || Date.now().toString();
     const isSharingLighter =
       isFromReframe &&
       shareLighterThought &&
@@ -170,6 +221,49 @@ export default function MakeChallengePreviewScreen() {
     const mappedParticipant: "partner" | "both" =
       participantChoice === "both" ? "both" : "partner";
 
+    const reframeId = (params.reframeId as string) || existingReframe?.id;
+    const topicKey = existingReframe?.topic_key || (params.topicKey as string) || "other";
+    const customTopicLabel =
+      existingReframe?.custom_topic_label !== undefined
+        ? existingReframe.custom_topic_label
+        : (params.customTopicLabel as string) || null;
+    const privateIrritationInput =
+      existingReframe?.private_irritation_input !== undefined
+        ? existingReframe.private_irritation_input
+        : undefined;
+    const reframeTone = isSharingLighter
+      ? (incomingReframeTone as any)
+      : existingReframe?.reframe_tone || undefined;
+    const reframeTextVal = isSharingLighter
+      ? lighterThoughtText.trim()
+      : existingReframe?.reframe_text || undefined;
+
+    const { data: savedData, error: saveErr } = await saveAnnoyanceReframe(supabase, {
+      id: reframeId || undefined,
+      coupleId,
+      authorId: userId,
+      topicKey,
+      customTopicLabel,
+      privateIrritationInput,
+      isPlayful: true,
+      challengeIdea: trimmed,
+      challengeParticipant: mappedParticipant,
+      challengeTimeframe: selectedTimeframe,
+      challengeReward: selectedReward,
+      status: "active",
+      sharedWithPartner: true,
+      reframeTone,
+      reframeText: reframeTextVal,
+      includeReframeWithPartner: isSharingLighter,
+    });
+
+    if (saveErr || !savedData) {
+      setSaveError(saveErr?.message || "Could not save challenge invitation. Please try again.");
+      setIsSaving(false);
+      return;
+    }
+
+    const invitationId = createdInvitationId || Date.now().toString();
     shareInvitation({
       id: invitationId,
       idea: trimmed,
@@ -186,16 +280,62 @@ export default function MakeChallengePreviewScreen() {
 
     setCreatedInvitationId(invitationId);
     setShowSharedConfirmation(true);
+    setIsSaving(false);
   }
 
-  function handleFinishPersonal() {
+  async function handleFinishPersonal() {
+    if (isSaving || isLoadingExistingReframe || Boolean(loadError)) return;
     const trimmed = challengeText.trim();
     if (!trimmed) {
       setValidationError("Please enter an idea first, or pick a suggestion above.");
       return;
     }
+    if (!coupleId || !userId) {
+      setSaveError("You must be signed in with an active couple connection to save a personal plan.");
+      return;
+    }
     setValidationError(null);
+    setSaveError(null);
+    setIsSaving(true);
+
+    const reframeId = (params.reframeId as string) || existingReframe?.id;
+    const topicKey = existingReframe?.topic_key || (params.topicKey as string) || "other";
+    const customTopicLabel =
+      existingReframe?.custom_topic_label !== undefined
+        ? existingReframe.custom_topic_label
+        : (params.customTopicLabel as string) || null;
+    const privateIrritationInput =
+      existingReframe?.private_irritation_input !== undefined
+        ? existingReframe.private_irritation_input
+        : undefined;
+
+    const { data: savedData, error: saveErr } = await saveAnnoyanceReframe(supabase, {
+      id: reframeId || undefined,
+      coupleId,
+      authorId: userId,
+      topicKey,
+      customTopicLabel,
+      privateIrritationInput,
+      isPlayful: true,
+      challengeIdea: trimmed,
+      challengeParticipant: "me",
+      challengeTimeframe: selectedTimeframe,
+      challengeReward: selectedReward,
+      status: "active",
+      sharedWithPartner: false,
+      reframeTone: existingReframe?.reframe_tone || undefined,
+      reframeText: existingReframe?.reframe_text || undefined,
+      includeReframeWithPartner: false,
+    });
+
+    if (saveErr || !savedData) {
+      setSaveError(saveErr?.message || "Could not save personal quest. Please try again.");
+      setIsSaving(false);
+      return;
+    }
+
     setShowPersonalConfirmation(true);
+    setIsSaving(false);
   }
 
   function handleReset() {
@@ -250,15 +390,14 @@ export default function MakeChallengePreviewScreen() {
               backLabel="‹ Back"
             />
 
-            {/* Development preview truth */}
+            {/* Review mode truth */}
             <CouplySectionCard variant="muted" style={styles.noticeCard}>
               <View style={styles.noticeRow}>
                 <View style={styles.noticeBadge}>
                   <Text style={styles.noticeBadgeText}>Preview</Text>
                 </View>
                 <Text style={styles.noticeText}>
-                  Local preview — everything here is temporary. Nothing has been
-                  sent or saved to a real partner.
+                  Preview — review your invitation before saving or sharing with your partner.
                 </Text>
               </View>
             </CouplySectionCard>
@@ -601,24 +740,42 @@ export default function MakeChallengePreviewScreen() {
                 </View>
               )}
 
+              {/* Load error if any */}
+              {loadError && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{loadError}</Text>
+                </View>
+              )}
+
+              {/* Persistence save error if any */}
+              {saveError && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{saveError}</Text>
+                </View>
+              )}
+
               {/* Finish Action: Participant-specific */}
               {participantChoice === "me" ? (
                 // Personal finish
                 <CouplyPrimaryButton
-                  label="Finish personal preview"
+                  label="Save personal plan"
                   onPress={handleFinishPersonal}
+                  disabled={isSaving || isLoadingExistingReframe || Boolean(loadError)}
+                  loading={isSaving || isLoadingExistingReframe}
                   style={styles.finishButton}
                 />
               ) : (
                 // Shared / Partner finish
                 <View style={styles.shareActionContainer}>
                   <CouplyPrimaryButton
-                    label="Share invitation in preview"
+                    label="Share invitation with partner"
                     onPress={handleShareInvitation}
+                    disabled={isSaving || isLoadingExistingReframe || Boolean(loadError)}
+                    loading={isSaving || isLoadingExistingReframe}
                     style={styles.finishButton}
                   />
                   <Text style={styles.prototypeNoticeText}>
-                    Local prototype only — nothing is sent to your partner’s device.
+                    When shared, this gentle invitation will appear in your shared space for your partner.
                   </Text>
                 </View>
               )}
@@ -634,7 +791,7 @@ export default function MakeChallengePreviewScreen() {
                   </Text>
                   <View style={styles.truthfulBox}>
                     <Text style={styles.truthfulText}>
-                      This is only a preview and has not been saved.
+                      Saved privately to your space. You can revisit it anytime.
                     </Text>
                   </View>
                   <CouplyPrimaryButton
@@ -649,18 +806,17 @@ export default function MakeChallengePreviewScreen() {
               {showSharedConfirmation && participantChoice !== "me" && (
                 <CouplySectionCard variant="lilac" style={styles.confirmationCard}>
                   <Text style={styles.confirmationOverline}>
-                    LOCAL PREVIEW ACTIVE
+                    INVITATION SAVED
                   </Text>
                   <Text style={styles.confirmationTitle}>
-                    Invitation shared in preview
+                    Invitation shared to your space
                   </Text>
                   <Text style={styles.confirmationBody}>
-                    In this browser session, you can now see how this small
-                    invitation would appear for {realPartnerName}.
+                    This small invitation has been saved to your shared space. {realPartnerName} will see it when they open Couply.
                   </Text>
                   <View style={styles.truthfulBox}>
                     <Text style={styles.truthfulText}>
-                      Nothing has been sent, saved, or shown to a real partner.
+                      Saved to your shared space. Your partner can accept or quietly decline.
                     </Text>
                   </View>
                   <View style={styles.confirmationActionsGroup}>

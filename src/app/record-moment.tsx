@@ -24,6 +24,7 @@ import { tokens } from "@/components/couply-tokens";
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
+import { triggerSharedMomentNotification } from "@/lib/notifications";
 import {
   RepairMemoryCandidate,
   SUPPORTED_FRICTION_CATEGORIES,
@@ -106,6 +107,7 @@ export default function RecordMomentScreen() {
   const [eventType, setEventType] = useState<EventType>(initialType);
 
   const [category, setCategory] = useState("");
+  const [customCategoryLabel, setCustomCategoryLabel] = useState("");
   const [intensity, setIntensity] = useState(3);
   const [privateNote, setPrivateNote] = useState("");
   const [sharedTopic, setSharedTopic] = useState("");
@@ -126,6 +128,7 @@ export default function RecordMomentScreen() {
     if (typeParam === "positive" || typeParam === "friction") {
       setEventType(typeParam);
       setCategory("");
+      setCustomCategoryLabel("");
       setIsReviewingOurs(false);
       // Reset repair memory state on route parameter change
       lookupRequestIdRef.current++;
@@ -191,6 +194,7 @@ export default function RecordMomentScreen() {
 
     // Categories differ between positive and friction moments.
     setCategory("");
+    setCustomCategoryLabel("");
     setIsReviewingOurs(false);
   }
 
@@ -198,7 +202,9 @@ export default function RecordMomentScreen() {
     eventType === "positive" ? positiveCategories : frictionCategories;
 
   const currentCategoryLabel =
-    categories.find((c) => c.value === category)?.label || category;
+    category === "other" && customCategoryLabel.trim()
+      ? customCategoryLabel.trim()
+      : categories.find((c) => c.value === category)?.label || category;
 
   const effectiveVisibility: Visibility = isPrivateReflectionMode
     ? "mine"
@@ -216,6 +222,11 @@ export default function RecordMomentScreen() {
 
     if (!category) {
       setStatus("Please choose a category.");
+      return;
+    }
+
+    if (category === "other" && !customCategoryLabel.trim()) {
+      setStatus("Please describe what it was about.");
       return;
     }
 
@@ -240,6 +251,14 @@ export default function RecordMomentScreen() {
       setStatus("Please choose a category.");
       return;
     }
+
+    if (category === "other" && !customCategoryLabel.trim()) {
+      setStatus("Please describe what it was about.");
+      return;
+    }
+
+    const trimmedCustomCategory =
+      category === "other" ? customCategoryLabel.trim().slice(0, 60) : null;
 
     setSaving(true);
     setStatus("Saving...");
@@ -266,6 +285,7 @@ export default function RecordMomentScreen() {
           p_private_note: privateNote.trim() || null,
           p_shared_topic:
             finalVisibility === "ours" ? sharedTopic.trim() || null : null,
+          p_custom_category_label: trimmedCustomCategory,
         },
       );
 
@@ -273,6 +293,10 @@ export default function RecordMomentScreen() {
 
       if (!eventId) {
         throw new Error("Moment could not be created.");
+      }
+
+      if (finalVisibility === "ours") {
+        void triggerSharedMomentNotification(supabase, eventId as string);
       }
 
       // Fetch the canonical saved row to guarantee exact category source
@@ -607,6 +631,9 @@ export default function RecordMomentScreen() {
                     ]}
                     onPress={() => {
                       setCategory(item.value);
+                      if (item.value !== "other") {
+                        setCustomCategoryLabel("");
+                      }
                       setIsReviewingOurs(false);
                     }}
                     accessibilityRole="button"
@@ -625,6 +652,26 @@ export default function RecordMomentScreen() {
                 );
               })}
             </View>
+
+            {category === "other" && (
+              <View style={styles.customCategoryWrap}>
+                <Text style={styles.customCategoryPrompt}>
+                  What was it about? (Required, up to 60 characters)
+                </Text>
+                <TextInput
+                  style={styles.customCategoryInput}
+                  value={customCategoryLabel}
+                  onChangeText={(text) => setCustomCategoryLabel(text.slice(0, 60))}
+                  placeholder="e.g. Packing for the trip, Sunday breakfast"
+                  placeholderTextColor={theme.mutedText}
+                  maxLength={60}
+                  accessibilityLabel="Custom category description"
+                />
+                <Text style={styles.charCounter}>
+                  {customCategoryLabel.trim().length}/60
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Friction intensity */}
@@ -1083,6 +1130,32 @@ const createStyles = (theme: ThemeColors) =>
     },
     sharedTopicInput: {
       minHeight: 90,
+    },
+    customCategoryWrap: {
+      marginTop: 12,
+      width: "100%",
+    },
+    customCategoryPrompt: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: theme.secondaryText,
+      marginBottom: 6,
+    },
+    customCategoryInput: {
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      borderWidth: 1.2,
+      borderColor: theme.border,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      fontSize: 14.5,
+      color: theme.primaryText,
+    },
+    charCounter: {
+      fontSize: 11,
+      color: theme.secondaryText,
+      marginTop: 4,
+      textAlign: "right",
     },
     visibilityCardsRow: {
       flexDirection: "row",

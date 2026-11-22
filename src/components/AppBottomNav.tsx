@@ -1,7 +1,16 @@
 import { tokens } from "@/components/couply-tokens";
 import { useTheme } from "@/context/ThemeContext";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  Keyboard,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type BottomNavTab = "rhythm" | "our_space" | "moments" | "settings";
 
@@ -32,15 +41,6 @@ const NAV_ITEMS: NavItemConfig[] = [
   { key: "moments", label: "Moments" },
   { key: "settings", label: "Settings" },
 ];
-
-const DEFAULT_THEME: Required<BottomNavThemeColors> = {
-  surface: tokens.colors.surface,
-  border: tokens.colors.border,
-  accent: tokens.colors.plum,
-  iconMuted: tokens.colors.textMuted,
-  selectedNavigation: tokens.colors.surfaceLilac,
-  secondaryText: tokens.colors.textSecondary,
-};
 
 function NavIcon({
   itemKey,
@@ -104,14 +104,49 @@ export function AppBottomNav({
   onPreviewPress,
 }: AppBottomNavProps) {
   const router = useRouter();
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
+  const insets = useSafeAreaInsets();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => setIsKeyboardVisible(true),
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setIsKeyboardVisible(false),
+    );
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // When keyboard is visible, hide navigation pill cleanly to avoid obstructing inputs
+  if (isKeyboardVisible) {
+    return null;
+  }
+
+  const isLight = mode === "light" || (!mode && theme.key === "light");
+  const isDim = mode === "dim";
+
+  // Translucent theme-aware background pill
+  const translucentBg = isLight
+    ? "rgba(255, 255, 255, 0.90)"
+    : isDim
+    ? "rgba(38, 30, 48, 0.90)"
+    : "rgba(26, 20, 32, 0.92)";
 
   const colors = {
-    surface: theme.surface,
+    surface: translucentBg,
     border: theme.border,
     accent: theme.primaryAccent,
     iconMuted: theme.iconMuted,
-    selectedNavigation: theme.selectedNavigation,
+    selectedNavigation: isLight
+      ? "rgba(110, 65, 109, 0.12)"
+      : "rgba(255, 255, 255, 0.12)",
     secondaryText: theme.secondaryText,
     ...themeColors,
   };
@@ -143,17 +178,28 @@ export function AppBottomNav({
     }
   };
 
+  // Safe area bottom inset calculation ensuring floating separation from home indicator
+  const bottomOffset = Math.max(12, insets.bottom + 8);
+
   return (
     <View
       style={[
-        styles.fixedBottomNav,
+        styles.floatingContainer,
         {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
+          bottom: bottomOffset,
         },
       ]}
+      pointerEvents="box-none"
     >
-      <View style={styles.bottomNavInner}>
+      <View
+        style={[
+          styles.floatingPill,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          },
+        ]}
+      >
         {NAV_ITEMS.map((item) => {
           const isActive = item.key === activeTab;
 
@@ -258,39 +304,40 @@ const navIconStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  fixedBottomNav: {
+  floatingContainer: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopWidth: 1,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 4,
+    left: 16,
+    right: 16,
+    alignItems: "center",
+    zIndex: 100,
   },
-  bottomNavInner: {
+  floatingPill: {
     width: "100%",
-    maxWidth: tokens.layout.appShell,
-    alignSelf: "center",
+    maxWidth: Math.min(tokens.layout.appShell, 480),
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingVertical: tokens.spacing.sm,
-    paddingHorizontal: tokens.spacing.sm,
+    borderRadius: 28,
+    borderWidth: 1,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 8,
   },
   navItem: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 5,
+    paddingVertical: 6,
     paddingHorizontal: 6,
     minHeight: 48,
-    borderRadius: tokens.radii.small + 2,
+    borderRadius: 20,
   },
   navItemLabel: {
     fontSize: tokens.typeScale.caption,
-    marginTop: 3,
+    marginTop: 2,
   },
 });

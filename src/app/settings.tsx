@@ -18,10 +18,17 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
   useWindowDimensions,
 } from "react-native";
+import {
+  fetchNotificationPreference,
+  updateNotificationPreference,
+  registerForPushNotificationsAsync,
+  unregisterDevicePushTokenAsync,
+} from "@/lib/notifications";
 
 function getAppearanceModeDescription(mode: AppearanceMode): string {
   switch (mode) {
@@ -54,6 +61,10 @@ export default function SettingsScreen() {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
 
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
+  const [isPushLoading, setIsPushLoading] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
+
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const effectivePartnerName = identity.partnerName;
@@ -70,6 +81,24 @@ export default function SettingsScreen() {
         if (isMounted && user?.email) {
           setUserEmail(user.email);
         }
+        if (isMounted && user?.id) {
+          const pref = await fetchNotificationPreference(supabase, user.id);
+          let hasDeviceToken = false;
+          try {
+            const { data: tokens } = await supabase
+              .from("user_device_push_tokens")
+              .select("id")
+              .eq("user_id", user.id)
+              .limit(1);
+            hasDeviceToken = Boolean(tokens && tokens.length > 0);
+          } catch {
+            // Ignore token lookup failure
+          }
+          if (isMounted) {
+            // Reconcile switch with both database preference and device registration
+            setPushNotificationsEnabled(pref && hasDeviceToken);
+          }
+        }
       } catch {
         // Safe fallback in-session
       }
@@ -79,6 +108,48 @@ export default function SettingsScreen() {
       isMounted = false;
     };
   }, []);
+
+  const handleToggleNotifications = async (value: boolean) => {
+    const userId = identity.userId;
+    if (!userId || isPushLoading) return;
+    setIsPushLoading(true);
+    setPushError(null);
+    try {
+      if (value) {
+        // Enable database preference only after a valid Expo push token has been generated and persisted
+        const regResult = await registerForPushNotificationsAsync(supabase, userId);
+        if (!regResult.success) {
+          setPushNotificationsEnabled(false);
+          setPushError(regResult.error || "Unable to register push notifications on this device.");
+          setIsPushLoading(false);
+          return;
+        }
+
+        const prefSuccess = await updateNotificationPreference(supabase, userId, true);
+        if (!prefSuccess) {
+          setPushNotificationsEnabled(false);
+          setPushError("Failed to update notification settings. Please try again.");
+          setIsPushLoading(false);
+          return;
+        }
+
+        setPushNotificationsEnabled(true);
+      } else {
+        // Turning off must delete the current device token as well as set preference to false
+        const unregResult = await unregisterDevicePushTokenAsync(supabase, userId);
+        const prefSuccess = await updateNotificationPreference(supabase, userId, false);
+
+        if (!unregResult.success || !prefSuccess) {
+          setPushError(unregResult.error || "Failed to fully remove notification registration.");
+        }
+        setPushNotificationsEnabled(false);
+      }
+    } catch (err: any) {
+      setPushError(err?.message || "An error occurred while updating notification settings.");
+    } finally {
+      setIsPushLoading(false);
+    }
+  };
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -94,6 +165,10 @@ export default function SettingsScreen() {
     setSignOutError(null);
 
     try {
+      if (identity.userId) {
+        await unregisterDevicePushTokenAsync(supabase, identity.userId).catch(() => {});
+      }
+
       const { error } = await supabase.auth.signOut({
         scope: "local",
       });
@@ -308,7 +383,36 @@ export default function SettingsScreen() {
                 </View>
               </View>
 
-              {/* 3. PRIVACY */}
+              {/* 3. NOTIFICATIONS */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Notifications</Text>
+
+                <View style={styles.sectionCard}>
+                  <View style={styles.switchRow}>
+                    <View style={styles.rowTextGroup}>
+                      <Text style={styles.rowHeading}>New shared moments</Text>
+                      <Text style={styles.rowSubtext}>
+                        Receive a private notification when your partner shares a moment. The notification will never include its details.
+                      </Text>
+                    </View>
+                    <Switch
+                      value={pushNotificationsEnabled}
+                      onValueChange={handleToggleNotifications}
+                      disabled={isPushLoading}
+                      trackColor={{ false: theme.border, true: theme.primaryAccent }}
+                      thumbColor="#FFFFFF"
+                      accessibilityLabel="New shared moments notification"
+                    />
+                  </View>
+                  {pushError ? (
+                    <View style={styles.notificationErrorContainer}>
+                      <Text style={styles.notificationErrorText}>{pushError}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+
+              {/* 4. PRIVACY */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Privacy</Text>
 
@@ -784,6 +888,29 @@ function createStyles(theme: ThemeColors) {
     },
     settingsRowPressed: {
       backgroundColor: theme.selectedNavigation,
+    },
+    switchRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      minHeight: 52,
+      gap: 12,
+    },
+    notificationErrorContainer: {
+      marginHorizontal: 16,
+      marginBottom: 12,
+      padding: 10,
+      backgroundColor: "rgba(220, 53, 69, 0.08)",
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: "rgba(220, 53, 69, 0.25)",
+    },
+    notificationErrorText: {
+      fontSize: 12.5,
+      color: theme.status.error.text,
+      lineHeight: 17,
     },
     rowTextGroup: {
       flex: 1,

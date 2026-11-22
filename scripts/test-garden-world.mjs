@@ -47,6 +47,8 @@ import {
   CANONICAL_SCENE_BOUNDS,
   EXPANDED_WORLD_BOUNDS,
   createCameraFromFit,
+  calculateInteractiveSafeViewport,
+  CANONICAL_GARDEN_INSETS,
   calculateZoomBounds,
   panCamera,
   zoomCameraAroundPoint,
@@ -7090,3 +7092,92 @@ test("40. Screen-space hit testing under scale 1.0, zoomed-in, zoomed-out, and t
 function gardenVisualQACDCGuarded(code) {
   return code.includes("if (!__DEV__)") && code.includes("<Redirect href=\"/garden\"");
 }
+
+// ----------------------------------------------------------------------------
+// Test 41: Interactive Safe Viewport & Camera Framing (Part 2 Mobile Alpha Batch 2)
+// ----------------------------------------------------------------------------
+test("41. Safe viewport calculations and camera framing at narrow Android widths", () => {
+  const narrow320 = { width: 320, height: 560 };
+  const android360 = { width: 360, height: 640 };
+
+  const safe320 = calculateInteractiveSafeViewport(narrow320, CANONICAL_GARDEN_INSETS);
+  assert.equal(safe320.insets.top, 68);
+  assert.equal(safe320.insets.bottom, 84);
+  assert.equal(safe320.width, 320 - 16 - 16);
+  assert.equal(safe320.height, 560 - 68 - 84);
+
+  const safe360 = calculateInteractiveSafeViewport(android360, CANONICAL_GARDEN_INSETS);
+  assert.equal(safe360.width, 360 - 32);
+  assert.equal(safe360.height, 640 - 152);
+
+  // Camera creation with safe_viewport fit strategy
+  const cam320 = createCameraFromFitStrategy(CANONICAL_SCENE_BOUNDS, narrow320, "safe_viewport");
+  const cam360 = createCameraFromFitStrategy(CANONICAL_SCENE_BOUNDS, android360, "safe_viewport");
+
+  assert.ok(cam320.zoom > 0);
+  assert.ok(cam360.zoom > 0);
+
+  // Canonical scene center should map to safe viewport center
+  const centerWorld = {
+    x: (CANONICAL_SCENE_BOUNDS.minX + CANONICAL_SCENE_BOUNDS.maxX) / 2,
+    y: (CANONICAL_SCENE_BOUNDS.minY + CANONICAL_SCENE_BOUNDS.maxY) / 2,
+  };
+  const expectedSafeCenterX = safe320.x + safe320.width / 2;
+  const expectedSafeCenterY = safe320.y + safe320.height / 2;
+  const screenCenter320 = worldToScreen(centerWorld, cam320, narrow320);
+  assert.ok(Math.abs(screenCenter320.x - expectedSafeCenterX) < 1, "Center X aligns with safe viewport center");
+  assert.ok(Math.abs(screenCenter320.y - expectedSafeCenterY) < 1, "Center Y aligns with safe viewport center");
+
+  // Bottommost point in scene bounds (y = 520) must be projected strictly ABOVE the bottom sliding strip
+  const bottomNodeWorld = { x: 400, y: CANONICAL_SCENE_BOUNDS.maxY };
+  const bottomScreen320 = worldToScreen(bottomNodeWorld, cam320, narrow320);
+  assert.ok(
+    bottomScreen320.y <= narrow320.height - safe320.insets.bottom,
+    `Bottommost node screen Y (${bottomScreen320.y}) must be <= visible bottom bound (${narrow320.height - safe320.insets.bottom})`
+  );
+
+  // Left and right edge nodes must be inside the safe viewport horizontal margins
+  const leftNodeWorld = { x: CANONICAL_SCENE_BOUNDS.minX, y: centerWorld.y };
+  const rightNodeWorld = { x: CANONICAL_SCENE_BOUNDS.maxX, y: centerWorld.y };
+  const leftScreen320 = worldToScreen(leftNodeWorld, cam320, narrow320);
+  const rightScreen320 = worldToScreen(rightNodeWorld, cam320, narrow320);
+
+  assert.ok(leftScreen320.x >= safe320.insets.left, `Left screen X (${leftScreen320.x}) >= safe left (${safe320.insets.left})`);
+  assert.ok(rightScreen320.x <= narrow320.width - safe320.insets.right, `Right screen X (${rightScreen320.x}) <= safe right`);
+
+  // Reset view behavior: re-creating camera produces deterministic, identical framing
+  const resetCam320 = createCameraFromFitStrategy(CANONICAL_SCENE_BOUNDS, narrow320, "safe_viewport");
+  assert.deepEqual(cam320, resetCam320, "Reset view produces identical camera framing");
+});
+
+test("42. Hit-testing consistency with strip open vs closed", () => {
+  const evA = createMockEvent("hit-safe-1", "positive_moment", "2026-03-01T10:00:00Z");
+  const scene = generateGardenSVGScene(COUPLE_A, 50, 8, false, undefined, "light", [evA]);
+  const world = buildGardenWorld(scene, {
+    coupleId: COUPLE_A,
+    totalGrowthUnits: 50,
+    careGrowthUnits: 8,
+    timeGrowthUnits: 42,
+    careEvents: [evA],
+  });
+
+  const earnedNode = Object.values(world.nodes).find(n => n.isEarned && n.sourceEvent?.id === "hit-safe-1");
+  assert.ok(earnedNode, "Must have earned node");
+
+  const viewport = { width: 360, height: 640 };
+  const cam = createCameraFromFitStrategy(CANONICAL_SCENE_BOUNDS, viewport, "safe_viewport");
+
+  const nodeCenterWorld = {
+    x: (earnedNode.worldBounds.minX + earnedNode.worldBounds.maxX) / 2,
+    y: (earnedNode.worldBounds.minY + earnedNode.worldBounds.maxY) / 2,
+  };
+  const screenPos = worldToScreen(nodeCenterWorld, cam, viewport);
+
+  // Screen pos is within safe viewport
+  const safe = calculateInteractiveSafeViewport(viewport, CANONICAL_GARDEN_INSETS);
+  assert.ok(screenPos.y >= safe.insets.top);
+  assert.ok(screenPos.y <= viewport.height - safe.insets.bottom);
+
+  const hit = resolveNodeAtScreenCoordinate(screenPos, world, cam, viewport);
+  assert.equal(hit?.id, earnedNode.id, "Tapping node within safe viewport hits correctly");
+});

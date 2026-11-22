@@ -122,9 +122,9 @@ export function GardenExplorer({
     return calculateZoomBounds(CANONICAL_SCENE_BOUNDS, viewport, 0, "viewport_cover");
   }, [viewport]);
 
-  // Pure canonical camera state initialized with continuous viewport cover
+  // Pure canonical camera state initialized with interactive safe viewport
   const [cameraState, setCameraState] = useState<GardenCameraState>(() => {
-    return createCameraFromFitStrategy(CANONICAL_SCENE_BOUNDS, { width: 360, height: 480 }, "viewport_cover");
+    return createCameraFromFitStrategy(CANONICAL_SCENE_BOUNDS, { width: 360, height: 480 }, "safe_viewport");
   });
 
   const cameraStateRef = useRef<GardenCameraState>(cameraState);
@@ -670,10 +670,10 @@ export function GardenExplorer({
     );
   }, [viewport, zoomLimits]);
 
-  // Reset View to continuous viewport cover
+  // Reset View to interactive safe viewport
   const handleResetView = useCallback(() => {
     setCameraState(
-      createCameraFromFitStrategy(CANONICAL_SCENE_BOUNDS, viewport, "viewport_cover")
+      createCameraFromFitStrategy(CANONICAL_SCENE_BOUNDS, viewport, "safe_viewport")
     );
     setSelectedNode(null);
     setSelectedMemoryIndex(-1);
@@ -771,7 +771,11 @@ export function GardenExplorer({
   // Theme-derived colors
   const cardBg = isLight ? "#FFFFFF" : isDim ? "#2A2232" : "#1A1420";
   const cardBorder = isLight ? "rgba(74, 55, 82, 0.12)" : "rgba(224, 214, 230, 0.15)";
-  const overlayBg = isLight ? "rgba(255, 255, 255, 0.94)" : "rgba(26, 20, 32, 0.94)";
+  const overlayBg = isLight
+    ? "rgba(255, 255, 255, 0.88)"
+    : isDim
+    ? "rgba(38, 30, 48, 0.88)"
+    : "rgba(26, 20, 32, 0.88)";
   const pillActiveBg = isLight ? "#2D1F33" : "#F4EFF6";
   const pillActiveText = isLight ? "#FFFFFF" : "#1A1420";
   const pillInactiveBg = isLight ? "rgba(45, 31, 51, 0.08)" : "rgba(255, 255, 255, 0.12)";

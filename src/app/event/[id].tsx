@@ -12,7 +12,7 @@ import { HelpfulnessQuestion } from "@/components/HelpfulnessQuestion";
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
-import { formatCategory } from "@/lib/event-heading";
+import { formatCategory, getCanonicalEventHeading } from "@/lib/event-heading";
 import {
   ArrivalResponseCode,
   SettlementResponseCode,
@@ -53,6 +53,7 @@ type RelationshipEvent = {
   creator_id: string;
   event_type: "positive" | "friction";
   category: string;
+  custom_category_label?: string | null;
   intensity: number | null;
   shared_topic: string | null;
   visibility: "mine" | "ours";
@@ -268,6 +269,7 @@ export default function EventDetailScreen() {
         creator_id,
         event_type,
         category,
+        custom_category_label,
         intensity,
         shared_topic,
         visibility,
@@ -560,7 +562,7 @@ export default function EventDetailScreen() {
             </View>
 
             <Text style={styles.categoryTitle}>
-              {formatCategory(event.category)}
+              {getCanonicalEventHeading(event)}
             </Text>
 
             {isSharedFriction && event.shared_topic ? (

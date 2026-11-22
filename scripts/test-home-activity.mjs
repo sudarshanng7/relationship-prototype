@@ -30,7 +30,7 @@ test("1. New partner friction moment within 24h wins over lower priority candida
     event_type: "friction",
     visibility: "ours",
     status: "open",
-    created_at: new Date(CURRENT_DATE_MS - 2 * 60 * 60 * 1000).toISOString(), // 2h ago
+    created_at: new Date(CURRENT_DATE_MS - 1 * 60 * 60 * 1000).toISOString(), // 1h ago
   };
 
   const goodEvent = {
@@ -40,7 +40,7 @@ test("1. New partner friction moment within 24h wins over lower priority candida
     event_type: "positive",
     visibility: "ours",
     status: null,
-    created_at: new Date(CURRENT_DATE_MS - 1 * 60 * 60 * 1000).toISOString(), // 1h ago
+    created_at: new Date(CURRENT_DATE_MS - 2 * 60 * 60 * 1000).toISOString(), // 2h ago
   };
 
   const candidate = deriveWhatMattersNowActivity({
@@ -53,12 +53,12 @@ test("1. New partner friction moment within 24h wins over lower priority candida
 
   assert.equal(candidate.kind, "shared_friction");
   assert.equal(candidate.sourceId, "friction-1");
-  assert.equal(candidate.priority, 3);
+  assert.equal(candidate.priority, 1);
   assert.equal(candidate.title, "Hello shared a moment");
   assert.equal(candidate.actionLabel, "Open when ready");
 });
 
-test("1b. Explicit reflection remains accessible while a shared moment is waiting", () => {
+test("1b. Explicit reflection does not hijack the single priority card", () => {
   const frictionEvent = {
     id: "friction-reflection-override",
     couple_id: COUPLE_ID,
@@ -78,10 +78,10 @@ test("1b. Explicit reflection remains accessible while a shared moment is waitin
     isReflectionActive: true,
   });
 
-  assert.equal(candidate.kind, "reflection");
-  assert.equal(candidate.actionLabel, "Reflect on today");
-  assert.equal(candidate.sourceId, "evening_reflection");
-  // Opening reflection must not mutate or resolve the waiting shared moment.
+  // What matters now preserves the single highest priority item
+  assert.equal(candidate.kind, "shared_friction");
+  assert.equal(candidate.priority, 1);
+  assert.equal(candidate.sourceId, "friction-reflection-override");
   assert.equal(frictionEvent.status, "open");
 });
 
@@ -109,7 +109,7 @@ test("2. New partner Good moment appears when no higher-priority action exists",
 
   assert.equal(candidate.kind, "shared_positive");
   assert.equal(candidate.sourceId, "good-2");
-  assert.equal(candidate.priority, 4);
+  assert.equal(candidate.priority, 1);
   assert.equal(candidate.title, "Hello shared something good");
   assert.equal(candidate.actionLabel, "See the moment");
 });
@@ -155,7 +155,7 @@ test("3. Repair response today on an October event uses today's response time an
   assert.equal(candidate.sourceId, "resp-today");
   assert.equal(candidate.targetEventId, "october-friction");
   assert.equal(candidate.occurredAt, todayResponseTime);
-  assert.equal(candidate.priority, 1);
+  assert.equal(candidate.priority, 2);
   assert.equal(candidate.route, "/event/october-friction?scope=ours");
   assert.equal(candidate.title, "Hello responded to your moment");
 });
@@ -207,9 +207,9 @@ test("4. Partner repair response outranks shared-list activity", () => {
     partnerName: "Hello",
   });
 
-  // Repair response (priority 1) beats shared-list task (priority 6) despite being older
+  // Repair response (tier 2) beats shared-list task (tier 3) despite being older
   assert.equal(candidate.kind, "repair_response");
-  assert.equal(candidate.priority, 1);
+  assert.equal(candidate.priority, 2);
   assert.equal(candidate.sourceId, "resp-1");
   assert.equal(candidate.targetEventId, "ev-repair");
 });
@@ -240,7 +240,7 @@ test("5. Shared-list activity appears when it is the best current candidate", ()
   });
 
   assert.equal(candidate.kind, "shared_list_added");
-  assert.equal(candidate.priority, 6);
+  assert.equal(candidate.priority, 3);
   assert.equal(candidate.sourceId, "task-groceries");
   assert.equal(candidate.title, "Hello added something to your shared list");
   assert.equal(candidate.actionLabel, "Open Shared List");
@@ -342,7 +342,7 @@ test("9. Eligible old event resurfaces after 72 hours for recipient", () => {
 
   assert.equal(candidate.kind, "resurfaced_moment");
   assert.equal(candidate.sourceId, "event-80h");
-  assert.equal(candidate.priority, 9);
+  assert.equal(candidate.priority, 3);
   assert.equal(candidate.title, "There is still room for this moment");
   assert.equal(candidate.actionLabel, "Return to the moment");
   assert.equal(candidate.isResurfaced, true);
@@ -400,7 +400,7 @@ test("11. Missing-action recipient may be reminded for the same 80h event", () =
 
   assert.equal(candidate.kind, "resurfaced_moment");
   assert.equal(candidate.sourceId, "event-creator-waiting");
-  assert.equal(candidate.priority, 9);
+  assert.equal(candidate.priority, 3);
 });
 
 // ----------------------------------------------------------------------------
@@ -1398,7 +1398,7 @@ test("Section 13.11: Revised repair response with a new updated_at becomes a new
   // Appears again because key `repair_response:resp-1:${revisedTime}` is a new activity version!
   assert.equal(tile.kind, "repair_response");
   assert.equal(tile.occurredAt, revisedTime);
-  assert.equal(tile.priority, 1);
+  assert.equal(tile.priority, 2);
 });
 
 // ----------------------------------------------------------------------------
@@ -1610,7 +1610,7 @@ test("Section 13.16: Unresolved friction becomes eligible for gentle resurfacing
   // After 24h opened cooldown and age >= 72h, it resurfaces gently!
   assert.equal(tile.kind, "resurfaced_moment");
   assert.equal(tile.sourceId, "friction-resurface-cooldown");
-  assert.equal(tile.priority, 9);
+  assert.equal(tile.priority, 3);
 });
 
 // ----------------------------------------------------------------------------
@@ -1869,10 +1869,10 @@ test("Section 13.22: New higher-priority partner activity replaces lower-priorit
     partnerName: "Hello",
   });
 
-  // Friction (priority 3) replaces good moment (priority 4)
+  // Friction (priority 1) replaces older good moment (priority 1) by timestamp
   assert.equal(tile.kind, "shared_friction");
   assert.equal(tile.sourceId, "friction-high-priority");
-  assert.equal(tile.priority, 3);
+  assert.equal(tile.priority, 1);
 });
 
 // ----------------------------------------------------------------------------
@@ -2731,4 +2731,254 @@ test("Hardening 9: Canonical valid receipt remains idempotent", () => {
   assert.equal(pass2.success, true);
   assert.equal(db.home_activity_receipts.length, 1);
   assert.equal(db.home_activity_receipts[0].activity_key, key);
+});
+
+// ============================================================================
+// Mobile Alpha Batch 2: Part 1 - Canonical Criteria Verification
+// ============================================================================
+
+test("Batch2 Part 1: Only one single highest-priority candidate is returned across competing categories", () => {
+  const friction = {
+    id: "friction-compete",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 30 * 60 * 1000).toISOString(),
+  };
+
+  const response = {
+    id: "response-compete",
+    event_id: "friction-compete",
+    couple_id: COUPLE_ID,
+    user_id: HELLO_USER_ID,
+    phase: "arrival",
+    response_code: "heard",
+    shared_at: new Date(CURRENT_DATE_MS - 20 * 60 * 1000).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS - 20 * 60 * 1000).toISOString(),
+  };
+
+  const task = {
+    id: "task-compete",
+    couple_id: COUPLE_ID,
+    created_by: HELLO_USER_ID,
+    title: "Weekend groceries",
+    category: "groceries",
+    status: "open",
+    completed_at: null,
+    created_at: new Date(CURRENT_DATE_MS - 5 * 60 * 1000).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS - 5 * 60 * 1000).toISOString(),
+  };
+
+  const tile = deriveWhatMattersNowActivity({
+    events: [friction],
+    repairResponses: [response],
+    tasks: [task],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+
+  // Single candidate selected: shared friction (priority 1) beats repair response (priority 2) and task (priority 3)
+  assert.equal(tile.kind, "shared_friction");
+  assert.equal(tile.priority, 1);
+  assert.equal(tile.sourceId, "friction-compete");
+});
+
+test("Batch2 Part 1: Completed item disappears and next eligible item takes its place", () => {
+  const goodEvent = {
+    id: "good-next-eligible",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "positive",
+    visibility: "ours",
+    status: null,
+    created_at: new Date(CURRENT_DATE_MS - 1 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const task = {
+    id: "task-next-eligible",
+    couple_id: COUPLE_ID,
+    created_by: HELLO_USER_ID,
+    title: "Book train tickets",
+    category: "travel",
+    status: "open",
+    completed_at: null,
+    created_at: new Date(CURRENT_DATE_MS - 2 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS - 2 * 60 * 60 * 1000).toISOString(),
+  };
+
+  // Initially good moment (priority 1) appears
+  const tile1 = deriveWhatMattersNowActivity({
+    events: [goodEvent],
+    tasks: [task],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(tile1.kind, "shared_positive");
+  assert.equal(tile1.priority, 1);
+
+  // User opens good moment -> seen receipt recorded
+  const goodReceipt = {
+    couple_id: COUPLE_ID,
+    user_id: WORLD_USER_ID,
+    activity_key: tile1.key,
+    activity_kind: "shared_positive",
+    source_id: "good-next-eligible",
+    attention_mode: "informational",
+    seen_at: new Date(CURRENT_DATE_MS).toISOString(),
+  };
+
+  // Good moment disappears; next eligible item (task, priority 3) takes its place!
+  const tile2 = deriveWhatMattersNowActivity({
+    events: [goodEvent],
+    tasks: [task],
+    receipts: [goodReceipt],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(tile2.kind, "shared_list_added");
+  assert.equal(tile2.priority, 3);
+  assert.equal(tile2.sourceId, "task-next-eligible");
+});
+
+test("Batch2 Part 1: Weekly reflection due appears at Priority 4 when due and disappears when completed", () => {
+  // When no higher priority items exist and reflection is due
+  const tileDue = deriveWhatMattersNowActivity({
+    events: [],
+    isWeeklyReflectionDue: true,
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(tileDue.kind, "weekly_reflection");
+  assert.equal(tileDue.priority, 4);
+  assert.equal(tileDue.actionLabel, "Take a quiet moment");
+
+  // When completed, reflection disappears and falls back to empty (priority 5)
+  const tileCompleted = deriveWhatMattersNowActivity({
+    events: [],
+    weeklyReflection: {
+      id: "weekly-1",
+      userId: WORLD_USER_ID,
+      weekStart: "2026-11-09T00:00:00.000Z",
+    },
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(tileCompleted.kind, "empty");
+  assert.equal(tileCompleted.priority, 5);
+});
+
+test("Batch2 Part 1: Shared moment receipt clears only for the viewing user", () => {
+  const goodEvent = {
+    id: "good-user-isolated",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "positive",
+    visibility: "ours",
+    status: null,
+    created_at: new Date(CURRENT_DATE_MS - 1 * 60 * 60 * 1000).toISOString(),
+  };
+
+  // World viewed the moment
+  const worldReceipt = {
+    couple_id: COUPLE_ID,
+    user_id: WORLD_USER_ID,
+    activity_key: `shared_positive:good-user-isolated:${normalizeIsoTimestamp(goodEvent.created_at)}`,
+    activity_kind: "shared_positive",
+    source_id: "good-user-isolated",
+    attention_mode: "informational",
+    seen_at: new Date(CURRENT_DATE_MS).toISOString(),
+  };
+
+  // For World: cleared (falls back to empty)
+  const worldTile = deriveWhatMattersNowActivity({
+    events: [goodEvent],
+    receipts: [worldReceipt],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(worldTile.kind, "empty");
+
+  // For another viewing user who has not seen it: still eligible and not cleared
+  const otherUserTile = deriveWhatMattersNowActivity({
+    events: [goodEvent],
+    receipts: [worldReceipt], // Contains only World's receipt
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: "other-user-uuid",
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(otherUserTile.kind, "shared_positive");
+  assert.equal(otherUserTile.priority, 1);
+});
+
+test("Batch2 Part 1: Deterministic tie-breaking orders by priority -> newest timestamp -> stable ID", () => {
+  const itemOld = {
+    key: "shared_positive:item-old:2026-11-13T12:00:00.000Z",
+    kind: "shared_positive",
+    sourceId: "item-old",
+    coupleId: COUPLE_ID,
+    actorId: HELLO_USER_ID,
+    occurredAt: "2026-11-13T12:00:00.000Z",
+    priority: 1,
+    actionable: false,
+    attentionMode: "informational",
+    route: "/event/item-old",
+    title: "Old item",
+    body: "",
+    actionLabel: "",
+  };
+
+  const itemNewA = {
+    key: "shared_positive:item-new-a:2026-11-13T18:00:00.000Z",
+    kind: "shared_positive",
+    sourceId: "item-new-a",
+    coupleId: COUPLE_ID,
+    actorId: HELLO_USER_ID,
+    occurredAt: "2026-11-13T18:00:00.000Z",
+    priority: 1,
+    actionable: false,
+    attentionMode: "informational",
+    route: "/event/item-new-a",
+    title: "New item A",
+    body: "",
+    actionLabel: "",
+  };
+
+  const itemNewB = {
+    key: "shared_positive:item-new-b:2026-11-13T18:00:00.000Z",
+    kind: "shared_positive",
+    sourceId: "item-new-b",
+    coupleId: COUPLE_ID,
+    actorId: HELLO_USER_ID,
+    occurredAt: "2026-11-13T18:00:00.000Z",
+    priority: 1,
+    actionable: false,
+    attentionMode: "informational",
+    route: "/event/item-new-b",
+    title: "New item B",
+    body: "",
+    actionLabel: "",
+  };
+
+  const sorted = sortCandidates([itemOld, itemNewB, itemNewA]);
+  // 1. Same priority (1)
+  // 2. 18:00 is newer than 12:00
+  // 3. Among 18:00 items, key '...item-new-a...' < '...item-new-b...'
+  assert.equal(sorted[0].key, itemNewA.key);
+  assert.equal(sorted[1].key, itemNewB.key);
+  assert.equal(sorted[2].key, itemOld.key);
 });
