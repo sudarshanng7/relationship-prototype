@@ -6,19 +6,12 @@
  * 2. Rolling 24-hour window for recent activities: `now - 24h <= occurredAt <= now`.
  * 3. Gentle resurfacing of older open shared friction moments (>= 72h, <= 14d, actionable,
  *    not snoozed, cooldown 24h, max 2 presentations / 7d).
- * 4. Deterministic priority order (1-11):
- *    - 1: Partner repair response requiring current-user action
- *    - 2: Both partners ready, current user is event creator and can complete reconnection
- *    - 3: Newly shared partner friction moment
- *    - 4: Newly shared partner Good moment
- *    - 5: Reconnection completed
- *    - 6: Meaningful partner shared-list activity (added or completed)
- *    - 7: Important date added by partner
- *    - 8: Qualifying activity created by current user
- *    - 9: Eligible gently resurfaced friction moment
- *    - Explicitly opened evening reflection temporarily owns the tile
- *    - 10: Existing evening-reflection candidate
- *    - 11: Calm empty state
+ * 4. Deterministic priority order (1-4):
+ *    - Priority 1: Unopened moment explicitly shared by partner (shared_friction [actionable], shared_positive [informational])
+ *    - Priority 2: Partner response or repair action requiring acknowledgement (repair_response [actionable], repair_both_ready [actionable], reconnection_completed [informational])
+ *    - Priority 3: Lower-priority shared activity (shared_list_added, shared_list_completed, important_date_added, self_shared_moment [informational])
+ *    - Priority 4: Calm empty state ("Nothing needs your attention right now", empty)
+ *    (Weekly reflection is maintained as a separate, standalone card and never enters What Matters Now; resurfaced moments never enter What Matters Now).
  * 5. Deterministic tie-breaking:
  *    - priority ascending
  *    - occurredAt descending (newest first)
@@ -89,7 +82,6 @@ export type HomeActivityKind =
   | "important_date_added"
   | "self_shared_moment"
   | "resurfaced_moment"
-  | "weekly_reflection"
   | "reflection"
   | "empty";
 
@@ -572,14 +564,27 @@ export function deriveResurfacedCandidate(
 
 /**
  * Pure selector deriving the single authoritative "What matters now" tile candidate.
- * Canonical 5-tier ranking:
- * 1. Unopened moment explicitly shared by the partner (friction or positive)
- * 2. Partner response or repair action requiring acknowledgement
- * 3. User-owned unresolved moment requiring follow-up / gentle resurfacing / partner lists & dates
- * 4. Weekly reflection currently available/due
- * 5. Quiet empty state
+ * Canonical priority hierarchy:
+ * - Priority 1: Unopened moment explicitly shared by partner (shared_friction [actionable], shared_positive [informational])
+ * - Priority 2: Partner response or repair action requiring acknowledgement (repair_response [actionable], repair_both_ready [actionable], reconnection_completed [informational])
+ * - Priority 3: Lower-priority shared activity (shared_list_added, shared_list_completed, important_date_added, self_shared_moment [informational])
+ * - Priority 4: Quiet calm empty state (empty)
  *
- * "Reflect on today" is permanently decoupled as an independent secondary action on Home.
+ * Sorting rules:
+ * 1. Lower numeric priority wins (Priority 1 > Priority 2 > Priority 3 > Priority 4).
+ * 2. Within the same priority, newest occurredAt timestamp wins.
+ * 3. If timestamps are identical, tie-break using stable candidate key ascending (localeCompare).
+ *
+ * Product constraints & non-backlog rules:
+ * - Resurfaced moments never enter What Matters Now.
+ * - Weekly reflection is excluded from What Matters Now and rendered only in its dedicated bottom tile.
+ * - What Matters Now does NOT act as a backlog queue:
+ *   - Each actionable stream (shared_friction, repair_response, repair_both_ready) selects its single newest eligible candidate before checking seen receipts.
+ *   - Informational activity selects its single newest eligible candidate before checking seen receipts.
+ *   - Opening an item suppresses that item and returns to the calm empty state rather than cycling through older unseen events from the same stream.
+ *   - A separate unseen candidate from another priority stream may still appear.
+ * - Historical moments remain untouched (status = 'open') and accessible through Moments / Our Space.
+ * - "Reflect on today" is permanently decoupled as an independent secondary action on Home.
  */
 export function deriveWhatMattersNowActivity(
   params: DeriveHomeActivityParams,
@@ -654,10 +659,16 @@ export function deriveWhatMattersNowActivity(
   }
 
   // ==========================================================================
-  // TIER 1: Unopened moment explicitly shared by the partner
+  // ACTIONABLE CANDIDATES (Tier 1 & Tier 2: Non-Backlog Selection)
   // ==========================================================================
+  // Determine the newest relevant candidate within each actionable stream.
+  // If the newest candidate has already been opened by the user, we do NOT
+  // fall back to older unseen moments from the same backlog, preventing
+  // inbox-style cycling through old unresolved moments while keeping genuinely
+  // pending actions accessible in Moments / Our Space.
 
-  // 1a. Newly shared partner friction moment
+  // 1. Newly shared partner friction moment (Actionable, Priority 1)
+  const rawSharedFrictionCandidates: HomeActivityCandidate[] = [];
   for (const ev of sharedEvents) {
     if (
       ev.event_type !== "friction" ||
@@ -674,16 +685,7 @@ export function deriveWhatMattersNowActivity(
       const normalizedTs = normalizeIsoTimestamp(ev.created_at);
       const key = `shared_friction:${ev.id}:${normalizedTs}`;
 
-      // Suppress immediate Home presentation once seen by recipient
-      const isSeen =
-        receiptsMap.has(normalizeActivityKey(key)) ||
-        Boolean(attentionByEventId.get(ev.id)?.last_opened_at);
-
-      if (isSeen) {
-        continue;
-      }
-
-      candidatesMap.set(key, {
+      rawSharedFrictionCandidates.push({
         key,
         kind: "shared_friction",
         sourceId: ev.id,
@@ -703,52 +705,27 @@ export function deriveWhatMattersNowActivity(
     }
   }
 
-  // 1b. Newly shared partner Good moment (Informational)
-  for (const ev of sharedEvents) {
-    if (ev.event_type !== "positive") {
-      continue;
-    }
-    if (currentUserId && ev.creator_id === currentUserId) {
-      continue;
-    }
+  if (rawSharedFrictionCandidates.length > 0) {
+    rawSharedFrictionCandidates.sort((a, b) => {
+      const timeA = new Date(a.occurredAt).getTime();
+      const timeB = new Date(b.occurredAt).getTime();
+      if (timeB !== timeA) return timeB - timeA;
+      return a.key.localeCompare(b.key);
+    });
 
-    if (isWithinPast24Hours(ev.created_at, nowMs)) {
-      const normalizedTs = normalizeIsoTimestamp(ev.created_at);
-      const key = `shared_positive:${ev.id}:${normalizedTs}`;
+    const newestFriction = rawSharedFrictionCandidates[0];
+    const isFrictionSeen =
+      receiptsMap.has(normalizeActivityKey(newestFriction.key)) ||
+      Boolean(attentionByEventId.get(newestFriction.sourceId)?.last_opened_at);
 
-      // Exclude once seen by current user
-      if (receiptsMap.has(normalizeActivityKey(key))) {
-        continue;
-      }
-
-      candidatesMap.set(key, {
-        key,
-        kind: "shared_positive",
-        sourceId: ev.id,
-        targetEventId: ev.id,
-        coupleId: ev.couple_id || coupleId || "",
-        actorId: ev.creator_id,
-        occurredAt: ev.created_at,
-        priority: 1,
-        actionable: false,
-        attentionMode: "informational",
-        route: `/event/${ev.id}?scope=ours`,
-        overline: "A SHARED MOMENT",
-        title: `${partnerLabel} shared something good`,
-        body: "A small piece of your shared story is waiting for you.",
-        actionLabel: "See the moment",
-        icon: "🌷",
-      });
+    if (!isFrictionSeen) {
+      candidatesMap.set(newestFriction.key, newestFriction);
     }
   }
 
-  // ==========================================================================
-  // TIER 2: Partner response or repair action requiring acknowledgement
-  // ==========================================================================
-
-  // 2a. Partner repair response requiring current-user action
+  // 2a. Partner repair response requiring current-user action (Actionable, Priority 2)
+  const rawRepairResponseCandidates: HomeActivityCandidate[] = [];
   for (const resp of repairResponses) {
-    // Must be partner's response
     if (currentUserId && resp.user_id === currentUserId) {
       continue;
     }
@@ -757,21 +734,25 @@ export function deriveWhatMattersNowActivity(
       continue;
     }
 
+    // If both partners are already ready on this event, it is represented by repair_both_ready
+    const eventResponses = repairResponses.filter((r) => r.event_id === resp.event_id);
+    const mySettlement = eventResponses.find(
+      (r) => r.phase === "settlement" && r.user_id === currentUserId,
+    );
+    if (
+      mySettlement?.response_code === "ready" &&
+      resp.phase === "settlement" &&
+      resp.response_code === "ready"
+    ) {
+      continue;
+    }
+
     const occurredAt = resp.updated_at || resp.shared_at;
     if (isWithinPast24Hours(occurredAt, nowMs)) {
       const normalizedTs = normalizeIsoTimestamp(occurredAt);
       const key = `repair_response:${resp.id}:${normalizedTs}`;
 
-      // Check actionable receipt cooldown: suppress for 24h after opening
-      const receipt = receiptsMap.get(normalizeActivityKey(key));
-      if (receipt) {
-        const seenAtMs = new Date(receipt.seen_at).getTime();
-        if (!isNaN(seenAtMs) && nowMs - seenAtMs < TWENTY_FOUR_HOURS_MS) {
-          continue;
-        }
-      }
-
-      candidatesMap.set(key, {
+      rawRepairResponseCandidates.push({
         key,
         kind: "repair_response",
         sourceId: resp.id,
@@ -792,7 +773,31 @@ export function deriveWhatMattersNowActivity(
     }
   }
 
-  // 2b. Both partners ready, current user is event creator (can complete)
+  if (rawRepairResponseCandidates.length > 0) {
+    rawRepairResponseCandidates.sort((a, b) => {
+      const timeA = new Date(a.occurredAt).getTime();
+      const timeB = new Date(b.occurredAt).getTime();
+      if (timeB !== timeA) return timeB - timeA;
+      return a.key.localeCompare(b.key);
+    });
+
+    const newestResponse = rawRepairResponseCandidates[0];
+    const responseReceipt = receiptsMap.get(
+      normalizeActivityKey(newestResponse.key),
+    );
+    const isResponseSeen = Boolean(
+      responseReceipt &&
+        nowMs - new Date(responseReceipt.seen_at).getTime() <
+          TWENTY_FOUR_HOURS_MS,
+    );
+
+    if (!isResponseSeen) {
+      candidatesMap.set(newestResponse.key, newestResponse);
+    }
+  }
+
+  // 2b. Both partners ready, current user is event creator (can complete) (Actionable, Priority 2)
+  const rawBothReadyCandidates: HomeActivityCandidate[] = [];
   for (const ev of sharedEvents) {
     if (
       ev.event_type !== "friction" ||
@@ -831,16 +836,7 @@ export function deriveWhatMattersNowActivity(
         const normalizedTs = normalizeIsoTimestamp(occurredAt);
         const key = `repair_both_ready:${ev.id}:${normalizedTs}`;
 
-        // Suppress for 24h after opening
-        const receipt = receiptsMap.get(normalizeActivityKey(key));
-        if (receipt) {
-          const seenAtMs = new Date(receipt.seen_at).getTime();
-          if (!isNaN(seenAtMs) && nowMs - seenAtMs < TWENTY_FOUR_HOURS_MS) {
-            continue;
-          }
-        }
-
-        candidatesMap.set(key, {
+        rawBothReadyCandidates.push({
           key,
           kind: "repair_both_ready",
           sourceId: ev.id,
@@ -862,7 +858,73 @@ export function deriveWhatMattersNowActivity(
     }
   }
 
-  // 2c. Reconnection completed (Informational)
+  if (rawBothReadyCandidates.length > 0) {
+    rawBothReadyCandidates.sort((a, b) => {
+      const timeA = new Date(a.occurredAt).getTime();
+      const timeB = new Date(b.occurredAt).getTime();
+      if (timeB !== timeA) return timeB - timeA;
+      return a.key.localeCompare(b.key);
+    });
+
+    const newestBothReady = rawBothReadyCandidates[0];
+    const bothReadyReceipt = receiptsMap.get(
+      normalizeActivityKey(newestBothReady.key),
+    );
+    const isBothReadySeen = Boolean(
+      bothReadyReceipt &&
+        nowMs - new Date(bothReadyReceipt.seen_at).getTime() <
+          TWENTY_FOUR_HOURS_MS,
+    );
+
+    if (!isBothReadySeen) {
+      candidatesMap.set(newestBothReady.key, newestBothReady);
+    }
+  }
+
+  // ==========================================================================
+  // INFORMATIONAL CANDIDATES (Non-Backlog Selection)
+  // ==========================================================================
+  // Collect all eligible informational items within the 24h rolling window.
+  // We determine the single newest relevant candidate across the backlog before
+  // applying seen/receipt suppression. If that newest candidate has already been
+  // opened by the current user, we do NOT fall back to an older unseen item.
+  const rawInformationalCandidates: HomeActivityCandidate[] = [];
+
+  // Newly shared partner Good moment (Informational, Priority 1)
+  for (const ev of sharedEvents) {
+    if (ev.event_type !== "positive") {
+      continue;
+    }
+    if (currentUserId && ev.creator_id === currentUserId) {
+      continue;
+    }
+
+    if (isWithinPast24Hours(ev.created_at, nowMs)) {
+      const normalizedTs = normalizeIsoTimestamp(ev.created_at);
+      const key = `shared_positive:${ev.id}:${normalizedTs}`;
+
+      rawInformationalCandidates.push({
+        key,
+        kind: "shared_positive",
+        sourceId: ev.id,
+        targetEventId: ev.id,
+        coupleId: ev.couple_id || coupleId || "",
+        actorId: ev.creator_id,
+        occurredAt: ev.created_at,
+        priority: 1,
+        actionable: false,
+        attentionMode: "informational",
+        route: `/event/${ev.id}?scope=ours`,
+        overline: "A SHARED MOMENT",
+        title: `${partnerLabel} shared something good`,
+        body: "A small piece of your shared story is waiting for you.",
+        actionLabel: "See the moment",
+        icon: "🌷",
+      });
+    }
+  }
+
+  // Reconnection completed (Informational, Priority 2)
   for (const outcome of outcomes) {
     if (!outcome.completed_at) continue;
     if (isWithinPast24Hours(outcome.completed_at, nowMs)) {
@@ -870,12 +932,7 @@ export function deriveWhatMattersNowActivity(
       const normalizedTs = normalizeIsoTimestamp(outcome.completed_at);
       const key = `reconnection_completed:${outcome.event_id}:${normalizedTs}`;
 
-      // Informational: exclude permanently once seen
-      if (receiptsMap.has(normalizeActivityKey(key))) {
-        continue;
-      }
-
-      candidatesMap.set(key, {
+      rawInformationalCandidates.push({
         key,
         kind: "reconnection_completed",
         sourceId: outcome.event_id,
@@ -896,36 +953,30 @@ export function deriveWhatMattersNowActivity(
     }
   }
 
-  // ==========================================================================
-  // TIER 3: User-owned unresolved moment / gentle resurfacing / partner lists & dates
-  // ==========================================================================
-
-  // 3a. Meaningful partner shared-list activity (added or completed)
+  // Meaningful partner shared-list activity (added or completed) (Informational, Priority 3)
   for (const task of tasks) {
     if (task.created_by && currentUserId && task.created_by !== currentUserId) {
       if (isWithinPast24Hours(task.created_at, nowMs)) {
         const normalizedTs = normalizeIsoTimestamp(task.created_at);
         const key = `shared_list_added:${task.id}:${normalizedTs}`;
 
-        if (!receiptsMap.has(normalizeActivityKey(key))) {
-          candidatesMap.set(key, {
-            key,
-            kind: "shared_list_added",
-            sourceId: task.id,
-            coupleId: task.couple_id || coupleId || "",
-            actorId: task.created_by,
-            occurredAt: task.created_at,
-            priority: 3,
-            actionable: false,
-            attentionMode: "informational",
-            route: "/shared-list",
-            overline: "SHARED LIST",
-            title: `${partnerLabel} added something to your shared list`,
-            body: "Your shared list has something new.",
-            actionLabel: "Open Shared List",
-            icon: "📝",
-          });
-        }
+        rawInformationalCandidates.push({
+          key,
+          kind: "shared_list_added",
+          sourceId: task.id,
+          coupleId: task.couple_id || coupleId || "",
+          actorId: task.created_by,
+          occurredAt: task.created_at,
+          priority: 3,
+          actionable: false,
+          attentionMode: "informational",
+          route: "/shared-list",
+          overline: "SHARED LIST",
+          title: `${partnerLabel} added something to your shared list`,
+          body: "Your shared list has something new.",
+          actionLabel: "Open Shared List",
+          icon: "📝",
+        });
       }
     }
 
@@ -937,131 +988,112 @@ export function deriveWhatMattersNowActivity(
           const normalizedTs = normalizeIsoTimestamp(task.completed_at);
           const key = `shared_list_completed:${task.id}:${normalizedTs}`;
 
-          if (!receiptsMap.has(normalizeActivityKey(key))) {
-            candidatesMap.set(key, {
-              key,
-              kind: "shared_list_completed",
-              sourceId: task.id,
-              coupleId: task.couple_id || coupleId || "",
-              actorId: task.created_by,
-              occurredAt: task.completed_at,
-              priority: 3,
-              actionable: false,
-              attentionMode: "informational",
-              route: "/shared-list",
-              overline: "SHARED LIST",
-              title: `${partnerLabel} completed an item on your shared list`,
-              body: "A shared task was marked as completed.",
-              actionLabel: "Open Shared List",
-              icon: "✓",
-            });
-          }
+          rawInformationalCandidates.push({
+            key,
+            kind: "shared_list_completed",
+            sourceId: task.id,
+            coupleId: task.couple_id || coupleId || "",
+            actorId: task.created_by,
+            occurredAt: task.completed_at,
+            priority: 3,
+            actionable: false,
+            attentionMode: "informational",
+            route: "/shared-list",
+            overline: "SHARED LIST",
+            title: `${partnerLabel} completed an item on your shared list`,
+            body: "A shared task was marked as completed.",
+            actionLabel: "Open Shared List",
+            icon: "✓",
+          });
         }
       }
     }
   }
 
-  // 3b. Important date added by partner
+  // Important date added by partner (Informational, Priority 3)
   for (const date of importantDates) {
     if (date.created_by && currentUserId && date.created_by !== currentUserId) {
       if (isWithinPast24Hours(date.created_at, nowMs)) {
         const normalizedTs = normalizeIsoTimestamp(date.created_at);
         const key = `important_date_added:${date.id}:${normalizedTs}`;
 
-        if (!receiptsMap.has(normalizeActivityKey(key))) {
-          candidatesMap.set(key, {
-            key,
-            kind: "important_date_added",
-            sourceId: date.id,
-            coupleId: date.couple_id || coupleId || "",
-            actorId: date.created_by,
-            occurredAt: date.created_at,
-            priority: 3,
-            actionable: false,
-            attentionMode: "informational",
-            route: "/profile",
-            overline: "IMPORTANT DATES",
-            title: `${partnerLabel} added an important date`,
-            body: "Another meaningful date now has a place in your shared space.",
-            actionLabel: "See Important Dates",
-            icon: "🗓️",
-          });
-        }
+        rawInformationalCandidates.push({
+          key,
+          kind: "important_date_added",
+          sourceId: date.id,
+          coupleId: date.couple_id || coupleId || "",
+          actorId: date.created_by,
+          occurredAt: date.created_at,
+          priority: 3,
+          actionable: false,
+          attentionMode: "informational",
+          route: "/profile",
+          overline: "IMPORTANT DATES",
+          title: `${partnerLabel} added an important date`,
+          body: "Another meaningful date now has a place in your shared space.",
+          actionLabel: "See Important Dates",
+          icon: "🗓️",
+        });
       }
     }
   }
 
-  // 3c. Qualifying activity created by current user
+  // Qualifying activity created by current user (Informational, Priority 3)
   for (const ev of sharedEvents) {
     if (currentUserId && ev.creator_id === currentUserId) {
       if (isWithinPast24Hours(ev.created_at, nowMs)) {
         const normalizedTs = normalizeIsoTimestamp(ev.created_at);
         const key = `self_shared_moment:${ev.id}:${normalizedTs}`;
 
-        if (!receiptsMap.has(normalizeActivityKey(key))) {
-          candidatesMap.set(key, {
-            key,
-            kind: "self_shared_moment",
-            sourceId: ev.id,
-            targetEventId: ev.id,
-            coupleId: ev.couple_id || coupleId || "",
-            actorId: currentUserId,
-            occurredAt: ev.created_at,
-            priority: 3,
-            actionable: false,
-            attentionMode: "informational",
-            route: `/event/${ev.id}?scope=ours`,
-            overline: "OUR SPACE",
-            title: `You shared a moment with ${partnerLabel}`,
-            body: "It now has a place in Our Space.",
-            actionLabel: "See the moment",
-          });
-        }
+        rawInformationalCandidates.push({
+          key,
+          kind: "self_shared_moment",
+          sourceId: ev.id,
+          targetEventId: ev.id,
+          coupleId: ev.couple_id || coupleId || "",
+          actorId: currentUserId,
+          occurredAt: ev.created_at,
+          priority: 3,
+          actionable: false,
+          attentionMode: "informational",
+          route: `/event/${ev.id}?scope=ours`,
+          overline: "OUR SPACE",
+          title: `You shared a moment with ${partnerLabel}`,
+          body: "It now has a place in Our Space.",
+          actionLabel: "See the moment",
+        });
       }
     }
   }
 
-  // 3d. Eligible gently resurfaced friction moment
-  const resurfaced = deriveResurfacedCandidate(params);
-  if (resurfaced) {
-    candidatesMap.set(resurfaced.key, resurfaced);
-  }
+  // Determine the newest relevant informational candidate across the backlog.
+  // If the newest candidate was already opened by the current user, do NOT
+  // fall back to an older unseen item from the same backlog.
+  if (rawInformationalCandidates.length > 0) {
+    rawInformationalCandidates.sort((a, b) => {
+      const timeA = new Date(a.occurredAt).getTime();
+      const timeB = new Date(b.occurredAt).getTime();
+      if (timeB !== timeA) {
+        return timeB - timeA;
+      }
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+      return a.key.localeCompare(b.key);
+    });
 
-  // ==========================================================================
-  // TIER 4: Weekly reflection available/due
-  // ==========================================================================
-  const shouldEvaluateWeeklyReflection =
-    params.isWeeklyReflectionDue === true ||
-    (params.weeklyReflection === null && params.isWeeklyReflectionDue !== false);
+    const newestInformational = rawInformationalCandidates[0];
+    const isNewestSeen = receiptsMap.has(
+      normalizeActivityKey(newestInformational.key),
+    );
 
-  if (coupleId && currentUserId && shouldEvaluateWeeklyReflection) {
-    const period = getWeeklyReflectionPeriod(nowMs);
-    const normalizedPeriodTs = normalizeIsoTimestamp(period.weekStart);
-    const weeklyReflectKey = `weekly_reflection:${period.weekKey}:${normalizedPeriodTs}`;
-    const isSeen = receiptsMap.has(normalizeActivityKey(weeklyReflectKey));
-    if (!isSeen) {
-      candidatesMap.set(weeklyReflectKey, {
-        key: weeklyReflectKey,
-        kind: "weekly_reflection",
-        sourceId: period.weekKey,
-        coupleId: coupleId || "",
-        actorId: currentUserId,
-        occurredAt: period.weekStart,
-        priority: 4,
-        actionable: true,
-        attentionMode: "actionable",
-        route: "/weekly-reflection",
-        overline: "YOUR WEEK, GENTLY",
-        title: "Your week, gently",
-        body: "A quiet place to notice what stayed with you this week.",
-        actionLabel: "Take a quiet moment",
-        icon: "🌿",
-      });
+    if (!isNewestSeen) {
+      candidatesMap.set(newestInformational.key, newestInformational);
     }
   }
 
   // ==========================================================================
-  // TIER 5: Quiet empty state
+  // CALM EMPTY STATE (Tier 4)
   // ==========================================================================
   const emptyOccurredAt = new Date(nowMs).toISOString();
   const emptyKey = `empty:calm:state`;
@@ -1072,7 +1104,7 @@ export function deriveWhatMattersNowActivity(
     coupleId: coupleId || "",
     actorId: null,
     occurredAt: emptyOccurredAt,
-    priority: 5,
+    priority: 4,
     actionable: false,
     attentionMode: "informational",
     route: "/events?scope=ours",

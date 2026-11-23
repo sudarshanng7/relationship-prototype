@@ -332,6 +332,22 @@ test("9. Eligible old event resurfaces after 72 hours for recipient", () => {
     created_at: new Date(CURRENT_DATE_MS - 80 * 60 * 60 * 1000).toISOString(), // 80h ago
   };
 
+  // Underlying attention-state/resurfacing candidate helper still works
+  const candidateResurfaced = deriveResurfacedCandidate({
+    events: [event80hAgo],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.ok(candidateResurfaced);
+  assert.equal(candidateResurfaced.kind, "resurfaced_moment");
+  assert.equal(candidateResurfaced.sourceId, "event-80h");
+  assert.equal(candidateResurfaced.title, "There is still room for this moment");
+  assert.equal(candidateResurfaced.actionLabel, "Return to the moment");
+  assert.equal(candidateResurfaced.isResurfaced, true);
+
+  // What Matters Now NEVER returns resurfaced_moment -> returns calm empty state
   const candidate = deriveWhatMattersNowActivity({
     events: [event80hAgo],
     nowMs: CURRENT_DATE_MS,
@@ -340,12 +356,8 @@ test("9. Eligible old event resurfaces after 72 hours for recipient", () => {
     partnerName: "Hello",
   });
 
-  assert.equal(candidate.kind, "resurfaced_moment");
-  assert.equal(candidate.sourceId, "event-80h");
-  assert.equal(candidate.priority, 3);
-  assert.equal(candidate.title, "There is still room for this moment");
-  assert.equal(candidate.actionLabel, "Return to the moment");
-  assert.equal(candidate.isResurfaced, true);
+  assert.equal(candidate.kind, "empty");
+  assert.notEqual(candidate.kind, "resurfaced_moment");
 });
 
 // ----------------------------------------------------------------------------
@@ -389,7 +401,19 @@ test("11. Missing-action recipient may be reminded for the same 80h event", () =
     created_at: new Date(CURRENT_DATE_MS - 80 * 60 * 60 * 1000).toISOString(),
   };
 
-  // Evaluated for Hello (recipient who has not responded yet)
+  // Underlying attention-state/resurfacing candidate helper still evaluates correctly
+  const candidateResurfaced = deriveResurfacedCandidate({
+    events: [event80hAgo],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: HELLO_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "World",
+  });
+  assert.ok(candidateResurfaced);
+  assert.equal(candidateResurfaced.kind, "resurfaced_moment");
+  assert.equal(candidateResurfaced.sourceId, "event-creator-waiting");
+
+  // What Matters Now NEVER returns resurfaced_moment -> returns calm empty state
   const candidate = deriveWhatMattersNowActivity({
     events: [event80hAgo],
     nowMs: CURRENT_DATE_MS,
@@ -398,9 +422,8 @@ test("11. Missing-action recipient may be reminded for the same 80h event", () =
     partnerName: "World",
   });
 
-  assert.equal(candidate.kind, "resurfaced_moment");
-  assert.equal(candidate.sourceId, "event-creator-waiting");
-  assert.equal(candidate.priority, 3);
+  assert.equal(candidate.kind, "empty");
+  assert.notEqual(candidate.kind, "resurfaced_moment");
 });
 
 // ----------------------------------------------------------------------------
@@ -505,7 +528,20 @@ test("14. One partner's snooze does not affect the other partner's attention sta
     last_opened_at: null,
   };
 
-  // When Hello evaluates, Hello has NO snooze -> Hello is reminded
+  // When Hello evaluates, Hello has NO snooze -> candidate helper yields resurfaced moment
+  const candidateResurfacedHello = deriveResurfacedCandidate({
+    events: [event],
+    attentionStates: [worldAttentionState],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: HELLO_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "World",
+  });
+  assert.ok(candidateResurfacedHello);
+  assert.equal(candidateResurfacedHello.kind, "resurfaced_moment");
+  assert.equal(candidateResurfacedHello.sourceId, "event-independent-snooze");
+
+  // But What Matters Now never returns resurfaced_moment -> returns calm empty state
   const candidateHello = deriveWhatMattersNowActivity({
     events: [event],
     attentionStates: [worldAttentionState], // contains World's attention state only
@@ -515,8 +551,8 @@ test("14. One partner's snooze does not affect the other partner's attention sta
     partnerName: "World",
   });
 
-  assert.equal(candidateHello.kind, "resurfaced_moment");
-  assert.equal(candidateHello.sourceId, "event-independent-snooze");
+  assert.equal(candidateHello.kind, "empty");
+  assert.notEqual(candidateHello.kind, "resurfaced_moment");
 });
 
 // ----------------------------------------------------------------------------
@@ -741,6 +777,24 @@ test("21. Resurfaced actions satisfy minimum 44px touch targets and wrapping lay
     created_at: new Date(CURRENT_DATE_MS - 80 * 60 * 60 * 1000).toISOString(),
   };
 
+  const candidateResurfaced = deriveResurfacedCandidate({
+    events: [event],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.ok(candidateResurfaced);
+  assert.equal(candidateResurfaced.isResurfaced, true);
+  assert.equal(candidateResurfaced.overline, "A MOMENT RESTING IN OUR SPACE");
+  assert.equal(candidateResurfaced.title, "There is still room for this moment");
+  assert.equal(
+    candidateResurfaced.body,
+    "There is no rush. Return whenever it feels right, or give it a little more room.",
+  );
+  assert.equal(candidateResurfaced.actionLabel, "Return to the moment");
+
+  // What Matters Now returns calm empty state
   const tile = deriveWhatMattersNowActivity({
     events: [event],
     nowMs: CURRENT_DATE_MS,
@@ -748,15 +802,7 @@ test("21. Resurfaced actions satisfy minimum 44px touch targets and wrapping lay
     coupleId: COUPLE_ID,
     partnerName: "Hello",
   });
-
-  assert.equal(tile.isResurfaced, true);
-  assert.equal(tile.overline, "A MOMENT RESTING IN OUR SPACE");
-  assert.equal(tile.title, "There is still room for this moment");
-  assert.equal(
-    tile.body,
-    "There is no rush. Return whenever it feels right, or give it a little more room.",
-  );
-  assert.equal(tile.actionLabel, "Return to the moment");
+  assert.equal(tile.kind, "empty");
 });
 
 // ----------------------------------------------------------------------------
@@ -1598,6 +1644,21 @@ test("Section 13.16: Unresolved friction becomes eligible for gentle resurfacing
     seen_at: new Date(CURRENT_DATE_MS - 25 * 60 * 60 * 1000).toISOString(),
   };
 
+  // Underlying candidate helper resurfaces it gently after 24h opened cooldown and age >= 72h
+  const candidateResurfaced = deriveResurfacedCandidate({
+    events: [frictionEvent],
+    receipts: [frictionReceipt],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.ok(candidateResurfaced);
+  assert.equal(candidateResurfaced.kind, "resurfaced_moment");
+  assert.equal(candidateResurfaced.sourceId, "friction-resurface-cooldown");
+  assert.equal(candidateResurfaced.priority, 3);
+
+  // What Matters Now never returns resurfaced_moment -> returns calm empty state
   const tile = deriveWhatMattersNowActivity({
     events: [frictionEvent],
     receipts: [frictionReceipt],
@@ -1607,10 +1668,8 @@ test("Section 13.16: Unresolved friction becomes eligible for gentle resurfacing
     partnerName: "Hello",
   });
 
-  // After 24h opened cooldown and age >= 72h, it resurfaces gently!
-  assert.equal(tile.kind, "resurfaced_moment");
-  assert.equal(tile.sourceId, "friction-resurface-cooldown");
-  assert.equal(tile.priority, 3);
+  assert.equal(tile.kind, "empty");
+  assert.notEqual(tile.kind, "resurfaced_moment");
 });
 
 // ----------------------------------------------------------------------------
@@ -1655,6 +1714,17 @@ test("Section 13.17: Explicit 'Not today' overrides the default opened cooldown"
     snoozed_until: new Date(CURRENT_DATE_MS - 1 * 60 * 60 * 1000).toISOString(), // expired 1h ago
   };
 
+  const candidateResurfaced = deriveResurfacedCandidate({
+    events: [frictionEvent],
+    attentionStates: [expiredSnooze],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.ok(candidateResurfaced);
+  assert.equal(candidateResurfaced.kind, "resurfaced_moment");
+
   const tileResurfaced = deriveWhatMattersNowActivity({
     events: [frictionEvent],
     attentionStates: [expiredSnooze],
@@ -1663,7 +1733,8 @@ test("Section 13.17: Explicit 'Not today' overrides the default opened cooldown"
     coupleId: COUPLE_ID,
     partnerName: "Hello",
   });
-  assert.equal(tileResurfaced.kind, "resurfaced_moment");
+  assert.equal(tileResurfaced.kind, "empty");
+  assert.notEqual(tileResurfaced.kind, "resurfaced_moment");
 });
 
 // ----------------------------------------------------------------------------
@@ -2787,7 +2858,7 @@ test("Batch2 Part 1: Only one single highest-priority candidate is returned acro
   assert.equal(tile.sourceId, "friction-compete");
 });
 
-test("Batch2 Part 1: Completed item disappears and next eligible item takes its place", () => {
+test("Batch2 Part 1: Completed informational item does not reveal older backlog items (returns calm empty state)", () => {
   const goodEvent = {
     id: "good-next-eligible",
     couple_id: COUPLE_ID,
@@ -2810,7 +2881,7 @@ test("Batch2 Part 1: Completed item disappears and next eligible item takes its 
     updated_at: new Date(CURRENT_DATE_MS - 2 * 60 * 60 * 1000).toISOString(),
   };
 
-  // Initially good moment (priority 1) appears
+  // Initially newest informational moment appears
   const tile1 = deriveWhatMattersNowActivity({
     events: [goodEvent],
     tasks: [task],
@@ -2820,7 +2891,7 @@ test("Batch2 Part 1: Completed item disappears and next eligible item takes its 
     partnerName: "Hello",
   });
   assert.equal(tile1.kind, "shared_positive");
-  assert.equal(tile1.priority, 1);
+  assert.equal(tile1.sourceId, "good-next-eligible");
 
   // User opens good moment -> seen receipt recorded
   const goodReceipt = {
@@ -2833,7 +2904,7 @@ test("Batch2 Part 1: Completed item disappears and next eligible item takes its 
     seen_at: new Date(CURRENT_DATE_MS).toISOString(),
   };
 
-  // Good moment disappears; next eligible item (task, priority 3) takes its place!
+  // Opened newest informational moment does NOT reveal older backlog item (task); returns calm empty state
   const tile2 = deriveWhatMattersNowActivity({
     events: [goodEvent],
     tasks: [task],
@@ -2843,13 +2914,93 @@ test("Batch2 Part 1: Completed item disappears and next eligible item takes its 
     coupleId: COUPLE_ID,
     partnerName: "Hello",
   });
-  assert.equal(tile2.kind, "shared_list_added");
-  assert.equal(tile2.priority, 3);
-  assert.equal(tile2.sourceId, "task-next-eligible");
+  assert.equal(tile2.kind, "empty");
+  assert.equal(tile2.priority, 4);
+
+  // A newly created event after the receipt appears normally
+  const newerTask = {
+    id: "task-newer-item",
+    couple_id: COUPLE_ID,
+    created_by: HELLO_USER_ID,
+    title: "Pick up dry cleaning",
+    category: "errands",
+    status: "open",
+    completed_at: null,
+    created_at: new Date(CURRENT_DATE_MS + 10 * 60 * 1000).toISOString(), // 10 min after receipt
+    updated_at: new Date(CURRENT_DATE_MS + 10 * 60 * 1000).toISOString(),
+  };
+
+  const tile3 = deriveWhatMattersNowActivity({
+    events: [goodEvent],
+    tasks: [task, newerTask],
+    receipts: [goodReceipt],
+    nowMs: CURRENT_DATE_MS + 15 * 60 * 1000,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(tile3.kind, "shared_list_added");
+  assert.equal(tile3.sourceId, "task-newer-item");
+
+  // Per-user isolation intact: Hello (partner) has not opened goodEvent, so Hello still sees it
+  const tilePartner = deriveWhatMattersNowActivity({
+    events: [
+      {
+        ...goodEvent,
+        creator_id: WORLD_USER_ID, // Shared by World to Hello
+      },
+    ],
+    tasks: [task],
+    receipts: [goodReceipt], // receipt belongs to WORLD_USER_ID
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: HELLO_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "World",
+  });
+  assert.equal(tilePartner.kind, "shared_positive");
+  assert.equal(tilePartner.sourceId, "good-next-eligible");
+
+  // Genuinely actionable partner responses / current repair actions still appear
+  const repairResp = {
+    id: "repair-actionable-resp",
+    event_id: "friction-active",
+    couple_id: COUPLE_ID,
+    user_id: HELLO_USER_ID,
+    phase: "arrival",
+    response_code: "ready",
+    shared_at: new Date(CURRENT_DATE_MS).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS).toISOString(),
+  };
+  const frictionActiveEvent = {
+    id: "friction-active",
+    couple_id: COUPLE_ID,
+    creator_id: WORLD_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 2 * 60 * 60 * 1000).toISOString(),
+  };
+  const tileActionable = deriveWhatMattersNowActivity({
+    events: [goodEvent, frictionActiveEvent],
+    tasks: [task],
+    repairResponses: [repairResp],
+    receipts: [goodReceipt],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(tileActionable.kind, "repair_response");
+
+  // Older events remain in Moments data unmodified
+  const allEvents = [goodEvent, frictionActiveEvent];
+  assert.equal(allEvents.length, 2);
+  assert.equal(allEvents[0].id, "good-next-eligible");
+  assert.equal(allEvents[1].id, "friction-active");
 });
 
-test("Batch2 Part 1: Weekly reflection due appears at Priority 4 when due and disappears when completed", () => {
-  // When no higher priority items exist and reflection is due
+test("Batch2 Part 1: Due or available weekly reflection does not enter What Matters Now", () => {
+  // When no higher priority items exist and reflection is due: returns calm empty state (priority 4), never weekly_reflection
   const tileDue = deriveWhatMattersNowActivity({
     events: [],
     isWeeklyReflectionDue: true,
@@ -2858,12 +3009,12 @@ test("Batch2 Part 1: Weekly reflection due appears at Priority 4 when due and di
     coupleId: COUPLE_ID,
     partnerName: "Hello",
   });
-  assert.equal(tileDue.kind, "weekly_reflection");
+  assert.notEqual(tileDue.kind, "weekly_reflection");
+  assert.equal(tileDue.kind, "empty");
   assert.equal(tileDue.priority, 4);
-  assert.equal(tileDue.actionLabel, "Take a quiet moment");
 
-  // When completed, reflection disappears and falls back to empty (priority 5)
-  const tileCompleted = deriveWhatMattersNowActivity({
+  // When weekly reflection record is present: selector still returns calm empty state
+  const tileWithRecord = deriveWhatMattersNowActivity({
     events: [],
     weeklyReflection: {
       id: "weekly-1",
@@ -2875,8 +3026,90 @@ test("Batch2 Part 1: Weekly reflection due appears at Priority 4 when due and di
     coupleId: COUPLE_ID,
     partnerName: "Hello",
   });
-  assert.equal(tileCompleted.kind, "empty");
-  assert.equal(tileCompleted.priority, 5);
+  assert.notEqual(tileWithRecord.kind, "weekly_reflection");
+  assert.equal(tileWithRecord.kind, "empty");
+  assert.equal(tileWithRecord.priority, 4);
+});
+
+test("Batch2 Part 1: Higher-priority shared moments appear normally even when weekly reflection is due", () => {
+  const goodEvent = {
+    id: "good-with-weekly-due",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "positive",
+    visibility: "ours",
+    status: null,
+    created_at: new Date(CURRENT_DATE_MS - 1 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const tile = deriveWhatMattersNowActivity({
+    events: [goodEvent],
+    isWeeklyReflectionDue: true,
+    weeklyReflection: null,
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(tile.kind, "shared_positive");
+  assert.equal(tile.priority, 1);
+  assert.equal(tile.sourceId, "good-with-weekly-due");
+});
+
+test("Batch2 Part 1: Standalone bottom weekly reflection tile remains present exactly once in home.tsx", async () => {
+  const fs = await import("node:fs");
+  const homeSource = fs.readFileSync("src/app/home.tsx", "utf8");
+
+  // Check that weeklyGentleCard style is referenced in the standalone section
+  const occurrences = (homeSource.match(/styles\.weeklyGentleCard/g) || []).length;
+  assert.ok(occurrences >= 1, "weeklyGentleCard style should be referenced in standalone section");
+
+  // Verify navigation to /weekly-reflection
+  assert.ok(
+    homeSource.includes("router.push(\"/weekly-reflection?from=my-rhythm\""),
+    "Must preserve navigation to /weekly-reflection"
+  );
+
+  // Verify gentle empty state copy
+  assert.ok(
+    homeSource.includes("Your weekly reflection will appear here when there’s enough from your week."),
+    "Must contain gentle empty state copy"
+  );
+
+  // Verify revisiting copy
+  assert.ok(
+    homeSource.includes("Your reflection is here whenever you want to revisit it."),
+    "Must contain revisiting reflection copy"
+  );
+
+  // Verify calm loading copy
+  assert.ok(
+    homeSource.includes("Loading your weekly reflection…"),
+    "Must contain calm loading copy"
+  );
+});
+
+test("Batch2 Part 1: Compact shared-moment presentation in What matters now", async () => {
+  const fs = await import("node:fs");
+  const homeSource = fs.readFileSync("src/app/home.tsx", "utf8");
+
+  // Verify 2-line cap on supporting text
+  assert.ok(
+    homeSource.includes("numberOfLines={2}"),
+    "Supporting text must be capped to 2 lines"
+  );
+
+  // Verify touch target minHeight >= 44
+  assert.ok(
+    homeSource.includes("minHeight: 44"),
+    "Must maintain at least 44x44 touch targets"
+  );
+
+  // Verify compact action affordance alignment
+  assert.ok(
+    homeSource.includes("alignSelf: \"flex-start\""),
+    "Action affordance must not stretch across full width"
+  );
 });
 
 test("Batch2 Part 1: Shared moment receipt clears only for the viewing user", () => {
@@ -2993,4 +3226,567 @@ test("create_relationship_moment 7-argument backward-compatibility wrapper contr
   assert.equal(emulate7ArgCompatibility("household"), null);
   assert.equal(emulate7ArgCompatibility("friction"), null);
   assert.equal(emulate7ArgCompatibility(null), null);
+});
+
+test("Batch2 Part 2: Resurfaced moments never enter What Matters Now across multiple scenarios", () => {
+  const friction72hAgo = {
+    id: "friction-old-unresponded",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 75 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const friction10DaysOld = {
+    id: "friction-10-days",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 10 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const tile = deriveWhatMattersNowActivity({
+    events: [friction72hAgo, friction10DaysOld],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+
+  // What Matters Now must never return resurfaced_moment
+  assert.notEqual(tile.kind, "resurfaced_moment");
+  assert.equal(tile.kind, "empty");
+  assert.equal(tile.priority, 4);
+
+  // Both moments remain intact in source events
+  assert.equal(friction72hAgo.status, "open");
+  assert.equal(friction10DaysOld.status, "open");
+});
+
+test("Batch2 Part 2: No unreachable resurfaced home UI remains in home.tsx", async () => {
+  const fs = await import("node:fs");
+  const homeSource = fs.readFileSync("src/app/home.tsx", "utf8");
+
+  assert.ok(!homeSource.includes("resurfacedMomentCard"), "resurfacedMomentCard style removed");
+  assert.ok(!homeSource.includes("handleOpenResurfacedMoment"), "handleOpenResurfacedMoment removed");
+  assert.ok(!homeSource.includes("handleSnoozeResurfacedMoment"), "handleSnoozeResurfacedMoment removed");
+  assert.ok(!homeSource.includes("Return to the moment"), "Return to the moment UI removed");
+  assert.ok(!homeSource.includes("Give it a week"), "Give it a week UI removed");
+});
+
+test("Batch3 Audit: Multiple partner friction moments - opening newest returns to empty, does not promote older friction moment", () => {
+  const frictionOld = {
+    id: "friction-old-4h",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 4 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const frictionNew = {
+    id: "friction-new-1h",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 1 * 60 * 60 * 1000).toISOString(),
+  };
+
+  // Step 1: Initial derivation selects the newest friction moment
+  const firstDerivation = deriveWhatMattersNowActivity({
+    events: [frictionOld, frictionNew],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(firstDerivation.kind, "shared_friction");
+  assert.equal(firstDerivation.sourceId, "friction-new-1h");
+  assert.equal(firstDerivation.actionable, true);
+
+  // Step 2: World opens the newest friction moment -> receipt recorded
+  const receiptNew = {
+    couple_id: COUPLE_ID,
+    user_id: WORLD_USER_ID,
+    activity_key: firstDerivation.key,
+    activity_kind: "shared_friction",
+    source_id: "friction-new-1h",
+    attention_mode: "actionable",
+    seen_at: new Date(CURRENT_DATE_MS).toISOString(),
+  };
+
+  const secondDerivation = deriveWhatMattersNowActivity({
+    events: [frictionOld, frictionNew],
+    receipts: [receiptNew],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+
+  // What Matters Now must return calm empty state - it must NOT promote the 4h old friction moment!
+  assert.equal(secondDerivation.kind, "empty");
+  assert.notEqual(secondDerivation.sourceId, "friction-old-4h");
+
+  // The older moment remains open in the source dataset
+  assert.equal(frictionOld.status, "open");
+
+  // Step 3: A third, genuinely brand-new friction moment is created 10 minutes ago
+  const frictionBrandNew = {
+    id: "friction-brand-new-10m",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 10 * 60 * 1000).toISOString(),
+  };
+
+  const thirdDerivation = deriveWhatMattersNowActivity({
+    events: [frictionOld, frictionNew, frictionBrandNew],
+    receipts: [receiptNew],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+
+  // The brand new friction moment is selected
+  assert.equal(thirdDerivation.kind, "shared_friction");
+  assert.equal(thirdDerivation.sourceId, "friction-brand-new-10m");
+});
+
+test("Batch3 Audit: Multiple partner repair responses - opening newest returns to empty, does not promote older response", () => {
+  const eventFriction = {
+    id: "friction-for-responses",
+    couple_id: COUPLE_ID,
+    creator_id: WORLD_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 48 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const responseOld = {
+    id: "resp-old-4h",
+    event_id: "friction-for-responses",
+    couple_id: COUPLE_ID,
+    user_id: HELLO_USER_ID,
+    status: "ready",
+    shared_at: new Date(CURRENT_DATE_MS - 4 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS - 4 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const eventFriction2 = {
+    id: "friction-for-responses-2",
+    couple_id: COUPLE_ID,
+    creator_id: WORLD_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 36 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const responseNew = {
+    id: "resp-new-1h",
+    event_id: "friction-for-responses-2",
+    couple_id: COUPLE_ID,
+    user_id: HELLO_USER_ID,
+    status: "ready",
+    shared_at: new Date(CURRENT_DATE_MS - 1 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS - 1 * 60 * 60 * 1000).toISOString(),
+  };
+
+  // Step 1: Initial derivation selects the newest response
+  const firstDerivation = deriveWhatMattersNowActivity({
+    events: [eventFriction, eventFriction2],
+    repairResponses: [responseOld, responseNew],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(firstDerivation.kind, "repair_response");
+  assert.equal(firstDerivation.sourceId, "resp-new-1h");
+
+  // Step 2: World opens the newest repair response -> receipt recorded
+  const receiptNew = {
+    couple_id: COUPLE_ID,
+    user_id: WORLD_USER_ID,
+    activity_key: firstDerivation.key,
+    activity_kind: "repair_response",
+    source_id: "resp-new-1h",
+    attention_mode: "actionable",
+    seen_at: new Date(CURRENT_DATE_MS).toISOString(),
+  };
+
+  const secondDerivation = deriveWhatMattersNowActivity({
+    events: [eventFriction, eventFriction2],
+    repairResponses: [responseOld, responseNew],
+    receipts: [receiptNew],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+
+  // What Matters Now returns empty - does NOT promote the older response
+  assert.equal(secondDerivation.kind, "empty");
+
+  // Step 3: A third, newer response arrives 15m ago on a third event
+  const eventFriction3 = {
+    id: "friction-for-responses-3",
+    couple_id: COUPLE_ID,
+    creator_id: WORLD_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 30 * 60 * 60 * 1000).toISOString(),
+  };
+  const responseBrandNew = {
+    id: "resp-brand-new-15m",
+    event_id: "friction-for-responses-3",
+    couple_id: COUPLE_ID,
+    user_id: HELLO_USER_ID,
+    status: "ready",
+    shared_at: new Date(CURRENT_DATE_MS - 15 * 60 * 1000).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS - 15 * 60 * 1000).toISOString(),
+  };
+
+  const thirdDerivation = deriveWhatMattersNowActivity({
+    events: [eventFriction, eventFriction2, eventFriction3],
+    repairResponses: [responseOld, responseNew, responseBrandNew],
+    receipts: [receiptNew],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+
+  assert.equal(thirdDerivation.kind, "repair_response");
+  assert.equal(thirdDerivation.sourceId, "resp-brand-new-15m");
+});
+
+test("Batch3 Audit: Multiple repair_both_ready moments - opening newest returns to empty, does not promote older", () => {
+  const event1 = {
+    id: "friction-both-1",
+    couple_id: COUPLE_ID,
+    creator_id: WORLD_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 48 * 60 * 60 * 1000).toISOString(),
+  };
+  const resp1User = {
+    id: "resp-both-1-user",
+    event_id: "friction-both-1",
+    couple_id: COUPLE_ID,
+    user_id: WORLD_USER_ID,
+    phase: "settlement",
+    response_code: "ready",
+    shared_at: new Date(CURRENT_DATE_MS - 5 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS - 5 * 60 * 60 * 1000).toISOString(),
+  };
+  const resp1Partner = {
+    id: "resp-both-1-partner",
+    event_id: "friction-both-1",
+    couple_id: COUPLE_ID,
+    user_id: HELLO_USER_ID,
+    phase: "settlement",
+    response_code: "ready",
+    shared_at: new Date(CURRENT_DATE_MS - 4 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS - 4 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const event2 = {
+    id: "friction-both-2",
+    couple_id: COUPLE_ID,
+    creator_id: WORLD_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 36 * 60 * 60 * 1000).toISOString(),
+  };
+  const resp2User = {
+    id: "resp-both-2-user",
+    event_id: "friction-both-2",
+    couple_id: COUPLE_ID,
+    user_id: WORLD_USER_ID,
+    phase: "settlement",
+    response_code: "ready",
+    shared_at: new Date(CURRENT_DATE_MS - 2 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS - 2 * 60 * 60 * 1000).toISOString(),
+  };
+  const resp2Partner = {
+    id: "resp-both-2-partner",
+    event_id: "friction-both-2",
+    couple_id: COUPLE_ID,
+    user_id: HELLO_USER_ID,
+    phase: "settlement",
+    response_code: "ready",
+    shared_at: new Date(CURRENT_DATE_MS - 1 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS - 1 * 60 * 60 * 1000).toISOString(),
+  };
+
+  // Step 1: Initial derivation selects event 2 (newer: 1h ago vs 4h ago)
+  const firstDerivation = deriveWhatMattersNowActivity({
+    events: [event1, event2],
+    repairResponses: [resp1User, resp1Partner, resp2User, resp2Partner],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(firstDerivation.kind, "repair_both_ready");
+  assert.equal(firstDerivation.sourceId, "friction-both-2");
+
+  // Step 2: User opens event 2's both_ready notification -> receipt recorded
+  const receipt2 = {
+    couple_id: COUPLE_ID,
+    user_id: WORLD_USER_ID,
+    activity_key: firstDerivation.key,
+    activity_kind: "repair_both_ready",
+    source_id: "friction-both-2",
+    attention_mode: "actionable",
+    seen_at: new Date(CURRENT_DATE_MS).toISOString(),
+  };
+
+  const secondDerivation = deriveWhatMattersNowActivity({
+    events: [event1, event2],
+    repairResponses: [resp1User, resp1Partner, resp2User, resp2Partner],
+    receipts: [receipt2],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+
+  // Returns empty - does NOT promote event 1
+  assert.equal(secondDerivation.kind, "empty");
+});
+
+test("Batch3 Audit: Actionable candidate priority isolation - partner repair response is not suppressed by viewing newer informational item", () => {
+  // Actionable repair response from partner (2h ago, Priority 2)
+  const eventFriction = {
+    id: "friction-actionable-isolated",
+    couple_id: COUPLE_ID,
+    creator_id: WORLD_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 3 * 60 * 60 * 1000).toISOString(),
+  };
+  const partnerResponse = {
+    id: "resp-partner-actionable",
+    event_id: "friction-actionable-isolated",
+    couple_id: COUPLE_ID,
+    user_id: HELLO_USER_ID,
+    status: "ready",
+    shared_at: new Date(CURRENT_DATE_MS - 2 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS - 2 * 60 * 60 * 1000).toISOString(),
+  };
+
+  // Informational shared positive moment from partner (30m ago, Priority 1)
+  const goodEvent = {
+    id: "good-newer-informational",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "positive",
+    visibility: "ours",
+    status: null,
+    created_at: new Date(CURRENT_DATE_MS - 30 * 60 * 1000).toISOString(),
+  };
+
+  // Step 1: Priority 1 (shared_positive) wins over Priority 2 (repair_response)
+  const firstDerivation = deriveWhatMattersNowActivity({
+    events: [eventFriction, goodEvent],
+    repairResponses: [partnerResponse],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(firstDerivation.kind, "shared_positive");
+  assert.equal(firstDerivation.priority, 1);
+  assert.equal(firstDerivation.sourceId, "good-newer-informational");
+
+  // Step 2: User opens/views the informational moment -> receipt recorded
+  const goodReceipt = {
+    couple_id: COUPLE_ID,
+    user_id: WORLD_USER_ID,
+    activity_key: firstDerivation.key,
+    activity_kind: "shared_positive",
+    source_id: "good-newer-informational",
+    attention_mode: "informational",
+    seen_at: new Date(CURRENT_DATE_MS).toISOString(),
+  };
+
+  const secondDerivation = deriveWhatMattersNowActivity({
+    events: [eventFriction, goodEvent],
+    repairResponses: [partnerResponse],
+    receipts: [goodReceipt],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+
+  // CRUCIAL: The partner's repair response is NOT suppressed! It is now shown as Priority 2
+  assert.equal(secondDerivation.kind, "repair_response");
+  assert.equal(secondDerivation.priority, 2);
+  assert.equal(secondDerivation.sourceId, "resp-partner-actionable");
+
+  // Step 3: User opens the repair response -> receipt recorded
+  const repairReceipt = {
+    couple_id: COUPLE_ID,
+    user_id: WORLD_USER_ID,
+    activity_key: secondDerivation.key,
+    activity_kind: "repair_response",
+    source_id: "resp-partner-actionable",
+    attention_mode: "actionable",
+    seen_at: new Date(CURRENT_DATE_MS).toISOString(),
+  };
+
+  const thirdDerivation = deriveWhatMattersNowActivity({
+    events: [eventFriction, goodEvent],
+    repairResponses: [partnerResponse],
+    receipts: [goodReceipt, repairReceipt],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+
+  // Now everything seen -> calm empty state
+  assert.equal(thirdDerivation.kind, "empty");
+});
+
+test("Batch3 Audit: Old moment edited/reopened does not become new Home notification, but revised partner response creates fresh activity version", () => {
+  // Old moment created 5 days ago (120h ago)
+  const oldFrictionEvent = {
+    id: "friction-5-days-ago",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open", // Reopened or touched recently
+    created_at: new Date(CURRENT_DATE_MS - 120 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const oldDerivation = deriveWhatMattersNowActivity({
+    events: [oldFrictionEvent],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  // Outside 24h rolling window based on created_at -> returns empty
+  assert.equal(oldDerivation.kind, "empty");
+
+  // However, for repair responses: partner created response 10h ago, user saw it, then partner updated response 1h ago
+  const partnerResponseV1 = {
+    id: "resp-revised",
+    event_id: "friction-5-days-ago",
+    couple_id: COUPLE_ID,
+    user_id: HELLO_USER_ID,
+    status: "ready",
+    shared_at: new Date(CURRENT_DATE_MS - 10 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(CURRENT_DATE_MS - 10 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const receiptV1 = {
+    couple_id: COUPLE_ID,
+    user_id: WORLD_USER_ID,
+    activity_key: `repair_response:resp-revised:${normalizeIsoTimestamp(partnerResponseV1.updated_at)}`,
+    activity_kind: "repair_response",
+    source_id: "resp-revised",
+    attention_mode: "actionable",
+    seen_at: new Date(CURRENT_DATE_MS - 9 * 60 * 60 * 1000).toISOString(),
+  };
+
+  // With V1 seen, returns empty
+  const derivationV1 = deriveWhatMattersNowActivity({
+    events: [oldFrictionEvent],
+    repairResponses: [partnerResponseV1],
+    receipts: [receiptV1],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(derivationV1.kind, "empty");
+
+  // Partner genuinely updates response 1h ago (new updated_at)
+  const partnerResponseV2 = {
+    ...partnerResponseV1,
+    updated_at: new Date(CURRENT_DATE_MS - 1 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const derivationV2 = deriveWhatMattersNowActivity({
+    events: [oldFrictionEvent],
+    repairResponses: [partnerResponseV2],
+    receipts: [receiptV1], // Only V1 key was seen
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+
+  // The genuine revision creates a fresh version key and surfaces as eligible
+  assert.equal(derivationV2.kind, "repair_response");
+  assert.equal(derivationV2.sourceId, "resp-revised");
+  assert.equal(derivationV2.occurredAt, partnerResponseV2.updated_at);
+});
+
+test("Batch3 Audit: Actionable receipt isolation between users", () => {
+  const frictionEvent = {
+    id: "friction-receipt-isolation",
+    couple_id: COUPLE_ID,
+    creator_id: HELLO_USER_ID,
+    event_type: "friction",
+    visibility: "ours",
+    status: "open",
+    created_at: new Date(CURRENT_DATE_MS - 2 * 60 * 60 * 1000).toISOString(),
+  };
+
+  // User A (World) saw and opened the moment
+  const worldReceipt = {
+    couple_id: COUPLE_ID,
+    user_id: WORLD_USER_ID,
+    activity_key: `shared_friction:friction-receipt-isolation:${normalizeIsoTimestamp(frictionEvent.created_at)}`,
+    activity_kind: "shared_friction",
+    source_id: "friction-receipt-isolation",
+    attention_mode: "actionable",
+    seen_at: new Date(CURRENT_DATE_MS).toISOString(),
+  };
+
+  // For World: cleared (returns empty)
+  const worldDerivation = deriveWhatMattersNowActivity({
+    events: [frictionEvent],
+    receipts: [worldReceipt],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: WORLD_USER_ID,
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(worldDerivation.kind, "empty");
+
+  // For another recipient User C in the couple: not cleared by World's receipt
+  const otherUserDerivation = deriveWhatMattersNowActivity({
+    events: [frictionEvent],
+    receipts: [worldReceipt],
+    nowMs: CURRENT_DATE_MS,
+    currentUserId: "other-user-uuid",
+    coupleId: COUPLE_ID,
+    partnerName: "Hello",
+  });
+  assert.equal(otherUserDerivation.kind, "shared_friction");
+  assert.equal(otherUserDerivation.sourceId, "friction-receipt-isolation");
 });

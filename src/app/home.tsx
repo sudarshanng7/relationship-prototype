@@ -463,7 +463,6 @@ export default function HomeScreen() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const mountedRef = useRef<boolean>(true);
   const hasLoadedOnceRef = useRef<boolean>(false);
-  const lastRecordedResurfacedKeyRef = useRef<string | null>(null);
   const isScreenFocusedRef = useRef<boolean>(true);
 
   useEffect(() => {
@@ -829,7 +828,6 @@ export default function HomeScreen() {
       void refreshHomeDataRef.current({ silent: hasLoadedOnceRef.current });
       return () => {
         isScreenFocusedRef.current = false;
-        lastRecordedResurfacedKeyRef.current = null;
       };
     }, []),
   );
@@ -1098,7 +1096,6 @@ export default function HomeScreen() {
         currentUserId: effectiveUserId,
         coupleId: effectiveCoupleId,
         partnerName: effectivePartnerName,
-        weeklyReflection,
       }),
     [
       relationshipEvents,
@@ -1113,65 +1110,7 @@ export default function HomeScreen() {
       effectiveUserId,
       effectiveCoupleId,
       effectivePartnerName,
-      weeklyReflection,
     ],
-  );
-
-  // Record gentle presentation when a resurfaced moment is rendered
-  useEffect(() => {
-    const targetEventId =
-      whatMattersNow.targetEventId || whatMattersNow.sourceId;
-    if (
-      whatMattersNow.kind === "resurfaced_moment" &&
-      whatMattersNow.isResurfaced &&
-      targetEventId &&
-      isScreenFocusedRef.current
-    ) {
-      if (lastRecordedResurfacedKeyRef.current !== whatMattersNow.key) {
-        lastRecordedResurfacedKeyRef.current = whatMattersNow.key;
-        void supabase
-          .rpc("mark_relationship_event_attention_presented", {
-            p_event_id: targetEventId,
-          })
-          .then(({ error }) => {
-            if (error && __DEV__) {
-              console.warn(
-                "mark_relationship_event_attention_presented failed:",
-                error.message,
-              );
-            }
-          });
-      }
-    }
-  }, [whatMattersNow]);
-
-  const handleOpenResurfacedMoment = useCallback(
-    async (
-      eventId: string,
-      targetRoute: string,
-      candidate?: HomeActivityCandidate,
-    ) => {
-      const targetEventId = candidate?.targetEventId || eventId;
-      if (candidate) {
-        setOptimisticSeenKeys((prev) => new Set(prev).add(candidate.key));
-        void markHomeActivitySeen({
-          supabase,
-          candidate,
-          coupleId: effectiveCoupleId,
-          userId: effectiveUserId,
-        });
-      }
-      if (targetEventId) {
-        try {
-          void supabase.rpc("mark_relationship_event_attention_opened", {
-            p_event_id: targetEventId,
-          });
-        } catch {}
-      }
-      const finalRoute = appendNavigationOrigin(targetRoute, "my-rhythm");
-      router.push(finalRoute as any);
-    },
-    [effectiveCoupleId, effectiveUserId, router],
   );
 
   const handleOpenActivityCard = useCallback(
@@ -1216,28 +1155,6 @@ export default function HomeScreen() {
     [effectiveCoupleId, effectiveUserId, router],
   );
 
-  const handleSnoozeResurfacedMoment = useCallback(
-    async (eventId: string, duration: "day" | "week") => {
-      try {
-        const { error } = await supabase.rpc(
-          "snooze_relationship_event_attention",
-          {
-            p_event_id: eventId,
-            p_duration: duration,
-          },
-        );
-        if (error && __DEV__) {
-          console.warn("snooze_relationship_event_attention:", error.message);
-        }
-      } catch (err) {
-        if (__DEV__) console.warn("snooze exception:", err);
-      } finally {
-        void refreshHomeDataRef.current({ silent: true });
-      }
-    },
-    [],
-  );
-
   const handleChallengeResponse = useCallback(
     async (action: "accept" | "dismiss") => {
       if (!activeDbChallenge || isRespondingToChallenge) return;
@@ -1273,8 +1190,7 @@ export default function HomeScreen() {
     if (
       !whatMattersNow.occurredAt ||
       whatMattersNow.kind === "empty" ||
-      whatMattersNow.kind === "reflection" ||
-      whatMattersNow.kind === "resurfaced_moment"
+      whatMattersNow.kind === "reflection"
     ) {
       return;
     }
@@ -1658,68 +1574,9 @@ export default function HomeScreen() {
               <Text style={styles.sectionOverline}>What matters now</Text>
             </View>
 
-            {/* Priority Candidate (Tier 1..5) - One and only one item shown */}
-            {whatMattersNow.kind === "resurfaced_moment" ? (
-              /* Tier 3: Resurfaced gentle moment */
-              <View style={styles.resurfacedMomentCard}>
-                <View style={styles.incomingMomentHeader}>
-                  <Text style={styles.resurfacedMomentOverline}>
-                    {whatMattersNow.overline || "A MOMENT RESTING IN OUR SPACE"}
-                  </Text>
-                </View>
-                <Text style={styles.incomingMomentHeading}>
-                  {whatMattersNow.title}
-                </Text>
-                <Text style={styles.incomingMomentBody}>
-                  {whatMattersNow.body}
-                </Text>
-                <View style={styles.resurfacedActionContainer}>
-                  <CouplyPrimaryButton
-                    label={whatMattersNow.actionLabel}
-                    onPress={() =>
-                      handleOpenResurfacedMoment(
-                        whatMattersNow.sourceId,
-                        whatMattersNow.route,
-                        whatMattersNow,
-                      )
-                    }
-                    accessibilityLabel={whatMattersNow.actionLabel}
-                    style={styles.resurfacedPrimaryBtn}
-                  />
-                  <View style={styles.resurfacedQuietRow}>
-                    <Pressable
-                      style={styles.resurfacedQuietBtn}
-                      onPress={() =>
-                        handleSnoozeResurfacedMoment(
-                          whatMattersNow.sourceId,
-                          "day",
-                        )
-                      }
-                      accessibilityRole="button"
-                      accessibilityLabel="Not today"
-                      accessibilityHint="Snooze this reminder for 24 hours"
-                    >
-                      <Text style={styles.resurfacedQuietText}>Not today</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.resurfacedQuietBtn}
-                      onPress={() =>
-                        handleSnoozeResurfacedMoment(
-                          whatMattersNow.sourceId,
-                          "week",
-                        )
-                      }
-                      accessibilityRole="button"
-                      accessibilityLabel="Give it a week"
-                      accessibilityHint="Snooze this reminder for seven days"
-                    >
-                      <Text style={styles.resurfacedQuietText}>Give it a week</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            ) : whatMattersNow.kind !== "empty" ? (
-              /* Tier 1..4: Actionable priority card */
+            {/* Priority Candidate (Tier 1..3) - One and only one item shown */}
+            {whatMattersNow.kind !== "empty" ? (
+              /* Compact activity-preview layout */
               <Pressable
                 style={({ pressed }) => [
                   styles.incomingMomentCard,
@@ -1742,7 +1599,11 @@ export default function HomeScreen() {
                 <Text style={styles.incomingMomentHeading}>
                   {whatMattersNow.title}
                 </Text>
-                <Text style={styles.incomingMomentBody}>
+                <Text
+                  style={styles.incomingMomentBody}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
                   {whatMattersNow.body}
                 </Text>
                 <View style={styles.incomingMomentActionRow}>
@@ -1754,7 +1615,7 @@ export default function HomeScreen() {
                 </View>
               </Pressable>
             ) : (
-              /* Tier 5: Calm empty state */
+              /* Tier 4: Calm empty state */
               <View style={styles.calmCheckInContent}>
                 <Text style={styles.calmCheckInOverline}>WHAT MATTERS NOW</Text>
                 <Text style={styles.calmCheckInHeading}>
@@ -2324,7 +2185,13 @@ export default function HomeScreen() {
             ]}
             onPress={handleWeeklyGentlePress}
             accessibilityRole="button"
-            accessibilityLabel="Look back at your week"
+            accessibilityLabel={
+              isWeeklyReflectionLoading
+                ? "Your week, gently. Loading your weekly reflection."
+                : weeklyReflection
+                ? "Your week, gently. Your reflection is here whenever you want to revisit it."
+                : "Your week, gently. Your weekly reflection will appear here when there’s enough from your week."
+            }
           >
             <View style={styles.weeklyGentleHeaderRow}>
               <View style={styles.sectionHeaderBubble}>
@@ -2335,13 +2202,19 @@ export default function HomeScreen() {
             <View style={styles.weeklyGentleBodyRow}>
               <Text style={styles.weeklyGentleContentText}>
                 {isWeeklyReflectionLoading
-                  ? "Loading…"
+                  ? "Loading your weekly reflection…"
                   : weeklyReflection
                   ? "Your reflection is here whenever you want to revisit it."
-                  : "A quiet place to notice what has mattered lately."}
+                  : "Your weekly reflection will appear here when there’s enough from your week."}
               </Text>
               <View style={styles.weeklyGentleAffordanceWrap}>
-                <Text style={styles.weeklyGentleAffordance}>Look back →</Text>
+                <Text style={styles.weeklyGentleAffordance}>
+                  {isWeeklyReflectionLoading
+                    ? "Loading…"
+                    : weeklyReflection
+                    ? "Revisit reflection →"
+                    : "Look back →"}
+                </Text>
               </View>
             </View>
           </Pressable>
@@ -3171,11 +3044,13 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
     incomingMomentCard: {
       backgroundColor: theme.sharedSurface,
       borderColor: theme.sharedBorder,
-      borderWidth: 1.2,
-      borderRadius: 16,
-      padding: 16,
-      gap: 8,
-      marginTop: 4,
+      borderWidth: 1,
+      borderRadius: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      gap: 4,
+      marginTop: 2,
+      minHeight: 44,
     },
     incomingMomentCardPressed: {
       backgroundColor: theme.border,
@@ -3187,89 +3062,43 @@ const createStyles = (theme: ThemeConfig | ThemeColors) =>
       gap: 6,
     },
     incomingMomentIcon: {
-      fontSize: 14,
+      fontSize: 12,
     },
     incomingMomentOverline: {
-      fontSize: 11.5,
-      fontWeight: "700",
-      letterSpacing: 0.8,
+      fontSize: 11,
+      fontWeight: "600",
+      letterSpacing: 0.6,
       color: theme.accent,
       textTransform: "uppercase",
     },
     incomingMomentHeading: {
-      fontSize: 16,
-      fontWeight: "700",
+      fontSize: 14.5,
+      fontWeight: "600",
       color: theme.primaryText,
-      letterSpacing: -0.2,
-      lineHeight: 22,
+      letterSpacing: -0.1,
+      lineHeight: 19,
     },
     incomingMomentBody: {
-      fontSize: 14,
+      fontSize: 13,
       color: theme.secondaryText,
-      lineHeight: 20,
+      lineHeight: 17,
     },
     incomingMomentActionRow: {
-      marginTop: 6,
-      flexDirection: "row",
+      marginTop: 4,
+      alignSelf: "flex-start",
     },
     incomingMomentActionBtn: {
       backgroundColor: theme.accent,
-      paddingVertical: 10,
-      paddingHorizontal: 16,
-      borderRadius: 12,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 10,
       alignItems: "center",
       justifyContent: "center",
+      minHeight: 32,
     },
     incomingMomentActionText: {
       color: theme.accentText,
-      fontSize: 13.5,
-      fontWeight: "600",
-    },
-
-    /* Resurfaced Gentle Moment Card */
-    resurfacedMomentCard: {
-      backgroundColor: theme.sharedSurface,
-      borderColor: theme.sharedBorder,
-      borderWidth: 1.2,
-      borderRadius: 16,
-      padding: 16,
-      gap: 10,
-      marginTop: 4,
-    },
-    resurfacedMomentOverline: {
-      fontSize: 11.5,
-      fontWeight: "700",
-      letterSpacing: 0.8,
-      color: theme.accent,
-      textTransform: "uppercase",
-    },
-    resurfacedActionContainer: {
-      marginTop: 6,
-      gap: 10,
-    },
-    resurfacedPrimaryBtn: {
-      minHeight: 44,
-    },
-    resurfacedQuietRow: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 10,
-      alignItems: "center",
-    },
-    resurfacedQuietBtn: {
-      minHeight: 44,
-      paddingVertical: 10,
-      paddingHorizontal: 16,
-      borderRadius: 12,
-      backgroundColor: theme.buttonSecondaryBg,
-      borderWidth: 1,
-      borderColor: theme.buttonSecondaryBorder,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    resurfacedQuietText: {
-      color: theme.secondaryText,
-      fontSize: 13.5,
+      fontSize: 12.5,
       fontWeight: "600",
     },
 
