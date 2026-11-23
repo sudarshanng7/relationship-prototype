@@ -55,3 +55,9 @@ supabase/snippets/
 google-services.json
 fcm-service-account.json
 *firebase-adminsdk*.json
+
+# Playwright test artifacts
+test-results/
+playwright-report/
+blob-report/
+playwright/.auth/
