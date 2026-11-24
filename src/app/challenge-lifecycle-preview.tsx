@@ -11,13 +11,21 @@ import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useChallengePreview } from "@/context/ChallengePreviewContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import {
+  completeAnnoyanceChallenge,
+  resolveChallengeOutcome,
+  fetchChallengeMemories,
+  type ChallengeMemoryRow,
+} from "@/lib/annoyance-reframe";
 import {
   Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
@@ -41,6 +49,15 @@ const TWEAK_OPTIONS: TweakOption[] = [
   "Later today",
   "Could we make it even simpler?",
 ];
+
+const MEMORY_REACTIONS = [
+  "That felt good",
+  "We should do this again",
+  "It surprised me",
+  "A small thing, but meaningful",
+] as const;
+
+type MemoryReaction = (typeof MEMORY_REACTIONS)[number];
 
 function getDisplayIcon(title: string): string {
   const lower = title.toLowerCase();
@@ -84,19 +101,25 @@ export default function ChallengeLifecyclePreviewScreen() {
     participant?: string;
     timeframe?: string;
     reward?: string;
+    fallbackReward?: string;
     reframeTone?: string;
     reframeText?: string;
     shareReframe?: string;
     source?: string;
+    id?: string;
+    from?: string;
   }>();
 
+  const isSharedChallenge = params.source === "what-matters-now" || Boolean(params.id);
   const isFromPreviewFlow =
     params.source === "home-preview" || params.source === "challenge-preview";
   const shouldUseActiveInvitation =
     Boolean(activeInvitation) && isFromPreviewFlow;
 
   const creatorLabel =
-    shouldUseActiveInvitation && activeInvitation
+    isSharedChallenge
+      ? partnerName || "Your partner"
+      : shouldUseActiveInvitation && activeInvitation
       ? activeInvitation.creatorName || displayName || "You"
       : displayName || "You";
 
@@ -122,6 +145,13 @@ export default function ChallengeLifecyclePreviewScreen() {
     ? "A small reset chosen together"
     : "A warm pause together";
 
+  const displayParticipant =
+    shouldUseActiveInvitation && activeInvitation
+      ? activeInvitation.participant
+      : params.participant === "both"
+      ? "both"
+      : "partner";
+
   const displayTimeframe =
     shouldUseActiveInvitation && activeInvitation
       ? activeInvitation.timeframe
@@ -130,12 +160,25 @@ export default function ChallengeLifecyclePreviewScreen() {
       ? params.timeframe
       : "Whenever / no rush";
 
-  const displayReward =
+  const rawReward =
     shouldUseActiveInvitation && activeInvitation
       ? activeInvitation.reward
       : typeof params.reward === "string" && params.reward.trim().length > 0
       ? params.reward
-      : "No reward — just the moment";
+      : "";
+
+  const displayReward =
+    rawReward.trim().length > 0 ? rawReward : "No reward — just the moment";
+
+  const rawFallback =
+    shouldUseActiveInvitation && activeInvitation
+      ? activeInvitation.fallbackReward
+      : typeof params.fallbackReward === "string" && params.fallbackReward.trim().length > 0
+      ? params.fallbackReward
+      : "";
+
+  const [persistedFallbackReward, setPersistedFallbackReward] = useState<string>(rawFallback || "");
+  const effectiveFallbackReward = persistedFallbackReward || rawFallback || "";
 
   const displayIcon = passedIdea ? getDisplayIcon(passedIdea) : "☕";
 
@@ -181,14 +224,73 @@ export default function ChallengeLifecyclePreviewScreen() {
     useState<ResponseState>(initialResponseState);
   const [selectedTweak, setSelectedTweak] = useState<TweakOption | null>(null);
   const [isCompleted, setIsCompleted] = useState(initialCompleted);
-  const [showSharedMemoryPreview, setShowSharedMemoryPreview] = useState(false);
+  const [isNotThisTime, setIsNotThisTime] = useState(false);
+  const [selectedReaction, setSelectedReaction] = useState<MemoryReaction | null>(null);
+  const [customMemoryNote, setCustomMemoryNote] = useState<string>("");
+  const [persistedMemories, setPersistedMemories] = useState<ChallengeMemoryRow[]>([]);
+  const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
+
+  // If viewing a real persisted challenge, fetch its real status, outcome and existing memories
+  useEffect(() => {
+    if (!params.id) return;
+    let isMounted = true;
+
+    async function loadPersistedChallenge() {
+      try {
+        const { data: reframe } = await supabase
+          .from("annoyance_reframes")
+          .select("id, status, fallback_reward, challenge_outcome, completed_at, completed_by")
+          .eq("id", params.id)
+          .maybeSingle();
+
+        if (reframe && isMounted) {
+          if (reframe.fallback_reward) {
+            setPersistedFallbackReward(reframe.fallback_reward);
+          }
+          if (reframe.challenge_outcome === "not_this_time") {
+            setIsNotThisTime(true);
+            setIsCompleted(false);
+          } else if (reframe.completed_at || reframe.challenge_outcome === "completed") {
+            setIsCompleted(true);
+            setIsNotThisTime(false);
+            setResponseState("in");
+          } else if (reframe.status === "resolved") {
+            setResponseState("in");
+          } else if (reframe.status === "dismissed") {
+            setResponseState("not_today");
+          }
+        }
+
+        const { data: memories } = await fetchChallengeMemories(supabase, params.id as string);
+        if (memories && isMounted) {
+          setPersistedMemories(memories);
+          // Pre-populate if current user already has a saved memory
+          const { data: { user } } = await supabase.auth.getUser();
+          const myMem = memories.find((m) => m.user_id === user?.id);
+          if (myMem) {
+            if (myMem.reaction) setSelectedReaction(myMem.reaction as MemoryReaction);
+            if (myMem.memory_note) setCustomMemoryNote(myMem.memory_note);
+          }
+        }
+      } catch {
+        // Fall back gracefully to preview state
+      }
+    }
+
+    void loadPersistedChallenge();
+    return () => {
+      isMounted = false;
+    };
+  }, [params.id]);
 
   function handleResetAll() {
     setPerspective("recipient");
     setResponseState("none");
     setSelectedTweak(null);
     setIsCompleted(false);
-    setShowSharedMemoryPreview(false);
+    setIsNotThisTime(false);
+    setSelectedReaction(null);
+    setCustomMemoryNote("");
     if (shouldUseActiveInvitation) {
       updateInvitationStatus("pending");
     }
@@ -226,10 +328,77 @@ export default function ChallengeLifecyclePreviewScreen() {
     setResponseState("time_passed");
   }
 
-  function handleComplete() {
+  async function handleComplete() {
     setIsCompleted(true);
+    setIsNotThisTime(false);
     if (shouldUseActiveInvitation) {
       updateInvitationStatus("completed");
+    }
+
+    if (params.id) {
+      setIsSubmittingCompletion(true);
+      try {
+        await resolveChallengeOutcome(supabase, {
+          reframeId: params.id,
+          outcome: "completed",
+          reaction: selectedReaction || null,
+          memoryNote: customMemoryNote.trim() || null,
+        });
+        const { data: memories } = await fetchChallengeMemories(supabase, params.id);
+        if (memories) {
+          setPersistedMemories(memories);
+        }
+      } catch (err) {
+        if (__DEV__) {
+          console.warn("Failed to persist completion:", err);
+        }
+      } finally {
+        setIsSubmittingCompletion(false);
+      }
+    }
+  }
+
+  async function handleNotThisTime() {
+    setIsNotThisTime(true);
+    setIsCompleted(false);
+
+    if (params.id) {
+      setIsSubmittingCompletion(true);
+      try {
+        await resolveChallengeOutcome(supabase, {
+          reframeId: params.id,
+          outcome: "not_this_time",
+        });
+      } catch (err) {
+        if (__DEV__) {
+          console.warn("Failed to record not this time:", err);
+        }
+      } finally {
+        setIsSubmittingCompletion(false);
+      }
+    }
+  }
+
+  async function handleSaveMemory() {
+    if (!params.id) return;
+    setIsSubmittingCompletion(true);
+    try {
+      await resolveChallengeOutcome(supabase, {
+        reframeId: params.id,
+        outcome: "completed",
+        reaction: selectedReaction || null,
+        memoryNote: customMemoryNote.trim() || null,
+      });
+      const { data: memories } = await fetchChallengeMemories(supabase, params.id);
+      if (memories) {
+        setPersistedMemories(memories);
+      }
+    } catch (err) {
+      if (__DEV__) {
+        console.warn("Failed to save memory:", err);
+      }
+    } finally {
+      setIsSubmittingCompletion(false);
     }
   }
 
@@ -251,58 +420,66 @@ export default function ChallengeLifecyclePreviewScreen() {
         <View style={styles.column}>
           {/* Header */}
           <CouplyHeader
-            title="A tiny invitation"
-            subtitle="A local preview of how a small invitation can stay light for both people."
+            title={isSharedChallenge ? "Shared invitation" : "A tiny invitation"}
+            subtitle={
+              isSharedChallenge
+                ? "Something small you can try together, whenever it feels right."
+                : "A local preview of how a small invitation can stay light for both people."
+            }
             onBack={handleBack}
             backLabel="‹ Back"
           />
 
-          {/* Purpose notice */}
-          <CouplySectionCard variant="muted" style={styles.purposeCard}>
-            <Text style={styles.purposeOverline}>
-              INVITATION EXPERIENCE PREVIEW
-            </Text>
-            <Text style={styles.purposeBody}>
-              Explore how this small invitation can stay optional and kind for
-              both people.
-            </Text>
-            <View style={styles.purposeTruthfulBox}>
-              <Text style={styles.purposeTruthfulText}>
-                Everything on this screen is a local preview in this browser
-                session. Nothing is sent, saved, or shown to {recipientLabel}.
+          {/* Purpose notice (Preview only) */}
+          {!isSharedChallenge && (
+            <CouplySectionCard variant="muted" style={styles.purposeCard}>
+              <Text style={styles.purposeOverline}>
+                INVITATION EXPERIENCE PREVIEW
               </Text>
-            </View>
-          </CouplySectionCard>
+              <Text style={styles.purposeBody}>
+                Explore how this small invitation can stay optional and kind for
+                both people.
+              </Text>
+              <View style={styles.purposeTruthfulBox}>
+                <Text style={styles.purposeTruthfulText}>
+                  Everything on this screen is a local preview in this browser
+                  session. Nothing is sent, saved, or shown to {recipientLabel}.
+                </Text>
+              </View>
+            </CouplySectionCard>
+          )}
 
-          {/* Perspective Switcher */}
-          <View style={styles.perspectiveSection}>
-            <View style={styles.perspectiveHeaderRow}>
-              <Text style={styles.perspectiveSectionTitle}>Viewpoint</Text>
-              <Text style={styles.perspectiveCaption}>
-                Explore each view without sending anything.
-              </Text>
+          {/* Perspective Switcher (Preview only) */}
+          {!isSharedChallenge && (
+            <View style={styles.perspectiveSection}>
+              <View style={styles.perspectiveHeaderRow}>
+                <Text style={styles.perspectiveSectionTitle}>Viewpoint</Text>
+                <Text style={styles.perspectiveCaption}>
+                  Explore each view without sending anything.
+                </Text>
+              </View>
+              <View style={styles.perspectiveCardsRow}>
+                <CouplyChoiceCard
+                  title={`Viewing as ${recipientCapitalized}`}
+                  description="Receiving the invitation"
+                  selected={perspective === "recipient"}
+                  onPress={() => setPerspective("recipient")}
+                  icon={<Text style={styles.perspectiveEmoji}>💌</Text>}
+                  accessibilityLabel={`View as ${recipientCapitalized}: Receiving the invitation`}
+                  style={styles.perspectiveCard}
+                />
+                <CouplyChoiceCard
+                  title={`Viewing as ${creatorLabel}`}
+                  description="Seeing the outcome"
+                  selected={perspective === "creator"}
+                  onPress={() => setPerspective("creator")}
+                  icon={<Text style={styles.perspectiveEmoji}>🙋</Text>}
+                  accessibilityLabel={`View as ${creatorLabel}: Seeing the outcome`}
+                  style={styles.perspectiveCard}
+                />
+              </View>
             </View>
-            <View style={styles.perspectiveCardsRow}>
-              <CouplyChoiceCard
-                title={`Viewing as ${recipientCapitalized}`}
-                description="Receiving the invitation"
-                selected={perspective === "recipient"}
-                onPress={() => setPerspective("recipient")}
-                icon={<Text style={styles.perspectiveEmoji}>💌</Text>}
-                accessibilityLabel={`View as ${recipientCapitalized}: Receiving the invitation`}
-                style={styles.perspectiveCard}
-              />
-              <CouplyChoiceCard
-                title={`Viewing as ${creatorLabel}`}
-                description="Seeing the outcome"
-                selected={perspective === "creator"}
-                onPress={() => setPerspective("creator")}
-                icon={<Text style={styles.perspectiveEmoji}>🙋</Text>}
-                accessibilityLabel={`View as ${creatorLabel}: Seeing the outcome`}
-                style={styles.perspectiveCard}
-              />
-            </View>
-          </View>
+          )}
 
           {/* Invitation Context Card */}
           <CouplySectionCard style={styles.invitationCard}>
@@ -342,90 +519,239 @@ export default function ChallengeLifecyclePreviewScreen() {
 
             <View style={styles.pillsRow}>
               <CouplyStatusPill label={displayTimeframe} variant="neutral" />
-              <CouplyStatusPill label={displayReward} variant="neutral" />
+              <CouplyStatusPill
+                label={displayParticipant === "both" ? "Both of us" : `For ${recipientCapitalized}`}
+                variant="neutral"
+              />
+            </View>
+
+            {/* Structured Reward Architecture Display */}
+            <View style={styles.rewardSummaryContainer}>
+              <View style={styles.rewardRow}>
+                <Text style={styles.rewardLeadEmoji}>🎁</Text>
+                <View style={styles.rewardTextCol}>
+                  <Text style={styles.rewardRowHeading}>
+                    {displayParticipant === "both"
+                      ? "If we do it"
+                      : perspective === "recipient"
+                      ? "If you do it"
+                      : `If ${recipientCapitalized} does it`}
+                  </Text>
+                  <Text style={styles.rewardRowBody}>{displayReward}</Text>
+                </View>
+              </View>
+
+              {Boolean(effectiveFallbackReward) && (
+                <View style={styles.rewardRow}>
+                  <Text style={styles.rewardLeadEmoji}>🍵</Text>
+                  <View style={styles.rewardTextCol}>
+                    <Text style={styles.rewardRowHeading}>If not this time</Text>
+                    <Text style={styles.rewardRowBody}>
+                      {displayParticipant === "both"
+                        ? effectiveFallbackReward
+                        : perspective === "recipient"
+                        ? `${creatorLabel}'s turn: ${effectiveFallbackReward}`
+                        : `Your turn: ${effectiveFallbackReward}`}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
           </CouplySectionCard>
 
-          {/* COMPLETED STATE (both perspectives) */}
-          {isCompleted ? (
-            <CouplySectionCard variant="lilac" style={styles.outcomeCard}>
+          {/* NOT THIS TIME STATE */}
+          {isNotThisTime ? (
+            <CouplySectionCard variant="muted" style={styles.outcomeCard}>
               <View style={styles.outcomeHeaderRow}>
-                <Text style={styles.outcomeEmoji}>✨</Text>
-                <Text style={styles.outcomeHeading}>A little win.</Text>
+                <Text style={styles.outcomeEmoji}>🌿</Text>
+                <View style={styles.outcomeTitleGroup}>
+                  <Text style={styles.outcomeOverline}>🌿 NOT THIS TIME</Text>
+                  <Text style={styles.outcomeHeading}>
+                    This one didn't happen — and that's okay.
+                  </Text>
+                </View>
               </View>
+
               <Text style={styles.outcomeBody}>
-                You two made a small moment feel lighter.
+                Challenges only stay fun when not doing them is completely safe.
               </Text>
 
-              {/* Keepsake memory preview */}
-              <View style={styles.memorySection}>
-                <Pressable
-                  style={[
-                    styles.memoryToggleButton,
-                    showSharedMemoryPreview && styles.memoryToggleButtonActive,
-                  ]}
-                  onPress={() =>
-                    setShowSharedMemoryPreview(!showSharedMemoryPreview)
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel="Preview as a shared good moment"
-                >
-                  <Text
-                    style={[
-                      styles.memoryToggleText,
-                      showSharedMemoryPreview && styles.memoryToggleTextActive,
-                    ]}
-                  >
-                    {showSharedMemoryPreview
-                      ? "✓ Previewing shared good moment"
-                      : "Preview as a shared good moment"}
+              {Boolean(effectiveFallbackReward) && (
+                <View style={styles.fallbackNoticeBox}>
+                  <Text style={styles.fallbackNoticeLabel}>
+                    {displayParticipant === "both"
+                      ? "Our reset"
+                      : `${creatorLabel}'s turn`}
                   </Text>
-                </Pressable>
-
-                {showSharedMemoryPreview && (
-                  <View style={styles.memoryCard}>
-                    <View style={styles.memoryCardHeader}>
-                      <CouplyStatusPill
-                        label="Ours · Shared"
-                        variant="positive"
-                      />
-                      <Text style={styles.memoryDate}>Just now</Text>
-                    </View>
-                    <Text style={styles.memoryTitle}>{displayTitle}</Text>
-                    <Text style={styles.memoryDetails}>
-                      {displayContext} · completed together
-                    </Text>
-                    <View style={styles.memoryTruthfulBox}>
-                      <Text style={styles.memoryTruthfulText}>
-                        This is only a visual preview in this browser session.
-                        No moment has been added to Our Space.
-                      </Text>
-                    </View>
-                  </View>
-                )}
-              </View>
+                  <Text style={styles.fallbackNoticeValue}>{effectiveFallbackReward}</Text>
+                </View>
+              )}
 
               <View style={styles.actionsStack}>
+                <CouplyPrimaryButton
+                  label="Leave it here"
+                  onPress={handleBack}
+                  style={styles.actionButton}
+                />
+                {!isSharedChallenge && (
+                  <CouplyQuietButton
+                    label="Start this preview again"
+                    variant="text"
+                    onPress={handleResetAll}
+                    style={styles.actionButton}
+                  />
+                )}
+              </View>
+            </CouplySectionCard>
+          ) : isCompleted ? (
+            /* COMPLETED STATE (both perspectives) */
+            <CouplySectionCard variant="lilac" style={styles.outcomeCard}>
+              <View style={styles.outcomeHeaderRow}>
+                <Text style={styles.outcomeEmoji}>🌿</Text>
+                <View style={styles.outcomeTitleGroup}>
+                  <Text style={styles.outcomeOverline}>🌿 SOMETHING BLOOMED</Text>
+                  <Text style={styles.outcomeHeading}>You did this together</Text>
+                </View>
+              </View>
+
+              {/* Challenge reference & Completed Reward */}
+              <View style={styles.challengeReferenceBox}>
+                <Text style={styles.challengeReferenceEmoji}>{displayIcon}</Text>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={styles.challengeReferenceTitle}>{displayTitle}</Text>
+                  <Text style={styles.completedRewardText}>
+                    {displayParticipant === "both"
+                      ? `Our reward: ${displayReward}`
+                      : `${recipientCapitalized}'s reward: ${displayReward}`}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.outcomeBody}>
+                A small thing you chose to make space for together.
+              </Text>
+
+              {/* Memory Ritual: Anything from this you'd like to keep? */}
+              <View style={styles.memoryRitualCard}>
+                <Text style={styles.memoryRitualPrompt}>
+                  Anything from this you’d like to keep?
+                </Text>
+
+                {/* 4 Quick reaction pills */}
+                <View style={styles.reactionsList}>
+                  {MEMORY_REACTIONS.map((reaction) => {
+                    const isSelected = selectedReaction === reaction;
+                    return (
+                      <Pressable
+                        key={reaction}
+                        style={[
+                          styles.reactionChip,
+                          isSelected && styles.reactionChipSelected,
+                        ]}
+                        onPress={() =>
+                          setSelectedReaction(isSelected ? null : reaction)
+                        }
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: isSelected }}
+                        accessibilityLabel={reaction}
+                      >
+                        <Text
+                          style={[
+                            styles.reactionChipText,
+                            isSelected && styles.reactionChipTextSelected,
+                          ]}
+                        >
+                          {reaction}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {/* Short optional free-text memory */}
+                <TextInput
+                  style={styles.customMemoryInput}
+                  placeholder="Add a few words…"
+                  placeholderTextColor={tokens.colors.textMuted}
+                  value={customMemoryNote}
+                  onChangeText={setCustomMemoryNote}
+                  maxLength={200}
+                  multiline
+                />
+
+                {/* Individual partner contribution indication */}
+                {(selectedReaction || customMemoryNote.trim().length > 0) && (
+                  <View style={styles.partnerMemoryPreviewBox}>
+                    <Text style={styles.partnerMemoryLabel}>
+                      {displayName || "You"} · Personal reflection
+                    </Text>
+                    {Boolean(selectedReaction) && (
+                      <Text style={styles.partnerMemoryQuote}>
+                        “{selectedReaction}”
+                      </Text>
+                    )}
+                    {customMemoryNote.trim().length > 0 && (
+                      <Text style={styles.partnerMemoryNote}>
+                        {customMemoryNote.trim()}
+                      </Text>
+                    )}
+                    {Boolean(params.id) && (
+                      <CouplyQuietButton
+                        label="Update memory"
+                        variant="soft"
+                        onPress={handleSaveMemory}
+                        disabled={isSubmittingCompletion}
+                        style={{ marginTop: 4, alignSelf: "flex-start" }}
+                      />
+                    )}
+                  </View>
+                )}
+
+                {/* Display other partner's memory if available */}
+                {persistedMemories.filter((m) => m.reaction || m.memory_note).map((mem) => {
+                  const isOtherPartner = mem.reaction !== selectedReaction || mem.memory_note !== customMemoryNote;
+                  if (!isOtherPartner) return null;
+                  return (
+                    <View key={mem.id} style={styles.partnerMemoryPreviewBox}>
+                      <Text style={styles.partnerMemoryLabel}>
+                        {partnerName || "Partner"} · Reflection
+                      </Text>
+                      {Boolean(mem.reaction) && (
+                        <Text style={styles.partnerMemoryQuote}>
+                          “{mem.reaction}”
+                        </Text>
+                      )}
+                      {Boolean(mem.memory_note) && (
+                        <Text style={styles.partnerMemoryNote}>
+                          {mem.memory_note}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* Primary CTA and Leave it here action */}
+              <View style={styles.actionsStack}>
+                <CouplyPrimaryButton
+                  label="🌱 See what grew"
+                  onPress={() => router.push("/garden")}
+                  style={styles.actionButton}
+                />
                 <CouplyQuietButton
-                  label={
-                    perspective === "recipient"
-                      ? `View as ${creatorLabel}`
-                      : `View as ${recipientCapitalized}`
-                  }
+                  label="Leave it here"
                   variant="soft"
-                  onPress={() =>
-                    setPerspective(
-                      perspective === "recipient" ? "creator" : "recipient",
-                    )
-                  }
+                  onPress={handleBack}
                   style={styles.actionButton}
                 />
-                <CouplyQuietButton
-                  label="Start this preview again"
-                  variant="text"
-                  onPress={handleResetAll}
-                  style={styles.actionButton}
-                />
+                {!isSharedChallenge && (
+                  <CouplyQuietButton
+                    label="Start this preview again"
+                    variant="text"
+                    onPress={handleResetAll}
+                    style={styles.actionButton}
+                  />
+                )}
               </View>
             </CouplySectionCard>
           ) : perspective === "recipient" ? (
@@ -462,7 +788,7 @@ export default function ChallengeLifecyclePreviewScreen() {
                       style={styles.recipientChoiceCard}
                     />
                     <CouplyChoiceCard
-                      title="Not today"
+                      title="Not this one"
                       description="A gentle, completely safe pass"
                       icon={<Text style={styles.choiceEmoji}>🌱</Text>}
                       onPress={handleDecline}
@@ -497,17 +823,27 @@ export default function ChallengeLifecyclePreviewScreen() {
                       style={styles.actionButton}
                     />
                     <CouplyQuietButton
-                      label={`View as ${creatorLabel}`}
+                      label="Not this time"
                       variant="soft"
-                      onPress={() => setPerspective("creator")}
+                      onPress={handleNotThisTime}
                       style={styles.actionButton}
                     />
-                    <CouplyQuietButton
-                      label="Start this preview again"
-                      variant="text"
-                      onPress={handleResetAll}
-                      style={styles.actionButton}
-                    />
+                    {!isSharedChallenge && (
+                      <CouplyQuietButton
+                        label={`View as ${creatorLabel}`}
+                        variant="soft"
+                        onPress={() => setPerspective("creator")}
+                        style={styles.actionButton}
+                      />
+                    )}
+                    {!isSharedChallenge && (
+                      <CouplyQuietButton
+                        label="Start this preview again"
+                        variant="text"
+                        onPress={handleResetAll}
+                        style={styles.actionButton}
+                      />
+                    )}
                   </View>
                 </CouplySectionCard>
               )}
@@ -734,6 +1070,12 @@ export default function ChallengeLifecyclePreviewScreen() {
                       style={styles.actionButton}
                     />
                     <CouplyQuietButton
+                      label="Not this time"
+                      variant="soft"
+                      onPress={handleNotThisTime}
+                      style={styles.actionButton}
+                    />
+                    <CouplyQuietButton
                       label="Start this preview again"
                       variant="text"
                       onPress={handleResetAll}
@@ -955,6 +1297,37 @@ const createStyles = (theme: ThemeColors) => {
     gap: tokens.spacing.sm,
     paddingTop: 4,
   },
+  rewardSummaryContainer: {
+    backgroundColor: tokens.colors.surfaceMuted,
+    borderRadius: tokens.radii.small,
+    padding: tokens.spacing.sm,
+    gap: tokens.spacing.sm,
+    marginTop: 4,
+  },
+  rewardRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: tokens.spacing.sm,
+  },
+  rewardLeadEmoji: {
+    fontSize: 18,
+    marginTop: 1,
+  },
+  rewardTextCol: {
+    flex: 1,
+    gap: 1,
+  },
+  rewardRowHeading: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+    textTransform: "uppercase",
+  },
+  rewardRowBody: {
+    fontSize: tokens.typeScale.caption + 1,
+    color: tokens.colors.text,
+    lineHeight: 17,
+  },
   stateContainer: {
     gap: tokens.spacing.md,
   },
@@ -1018,6 +1391,25 @@ const createStyles = (theme: ThemeColors) => {
     color: tokens.colors.textSecondary,
     lineHeight: 16,
   },
+  fallbackNoticeBox: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.small,
+    padding: tokens.spacing.md,
+    gap: 2,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+  },
+  fallbackNoticeLabel: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+    textTransform: "uppercase",
+  },
+  fallbackNoticeValue: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontWeight: "600",
+    color: tokens.colors.text,
+  },
   tweakList: {
     gap: 8,
     marginVertical: 4,
@@ -1069,6 +1461,117 @@ const createStyles = (theme: ThemeColors) => {
   },
   actionButton: {
     width: "100%",
+  },
+  outcomeTitleGroup: {
+    flex: 1,
+    gap: 2,
+  },
+  outcomeOverline: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+    letterSpacing: 0.8,
+  },
+  challengeReferenceBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: tokens.spacing.sm,
+    backgroundColor: tokens.colors.surface,
+    paddingVertical: tokens.spacing.sm,
+    paddingHorizontal: tokens.spacing.md,
+    borderRadius: tokens.radii.small,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+  },
+  challengeReferenceEmoji: {
+    fontSize: 20,
+  },
+  challengeReferenceTitle: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "600",
+    color: tokens.colors.text,
+    flex: 1,
+  },
+  completedRewardText: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.plum,
+    fontWeight: "500",
+  },
+  memoryRitualCard: {
+    backgroundColor: tokens.colors.surface,
+    padding: tokens.spacing.md,
+    borderRadius: tokens.radii.card,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    gap: tokens.spacing.sm,
+    marginTop: 4,
+  },
+  memoryRitualPrompt: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "600",
+    color: tokens.colors.text,
+  },
+  reactionsList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginVertical: 4,
+  },
+  reactionChip: {
+    minHeight: 38,
+    justifyContent: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: tokens.radii.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surface,
+  },
+  reactionChipSelected: {
+    borderColor: tokens.colors.plum,
+    backgroundColor: tokens.colors.surfaceLilac,
+  },
+  reactionChipText: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.text,
+  },
+  reactionChipTextSelected: {
+    fontWeight: "600",
+    color: tokens.colors.plum,
+  },
+  customMemoryInput: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radii.small,
+    padding: tokens.spacing.sm,
+    fontSize: tokens.typeScale.caption + 1,
+    color: tokens.colors.text,
+    backgroundColor: tokens.colors.surfaceMuted,
+    minHeight: 50,
+    textAlignVertical: "top",
+  },
+  partnerMemoryPreviewBox: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    padding: tokens.spacing.sm,
+    borderRadius: tokens.radii.small,
+    gap: 2,
+  },
+  partnerMemoryLabel: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+    textTransform: "uppercase",
+  },
+  partnerMemoryQuote: {
+    fontSize: tokens.typeScale.caption,
+    fontWeight: "600",
+    color: tokens.colors.text,
+    fontStyle: "italic",
+  },
+  partnerMemoryNote: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    lineHeight: 16,
   },
   memorySection: {
     marginVertical: 6,
@@ -1136,3 +1639,4 @@ const createStyles = (theme: ThemeColors) => {
   },
 });
 };
+

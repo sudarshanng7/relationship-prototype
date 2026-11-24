@@ -33,6 +33,7 @@ export type StoryEventKind =
   | "positive_moment"
   | "reconnection"
   | "important_date"
+  | "completed_challenge"
   | "time_growth"
   | "stage_transition"
   | "today";
@@ -47,6 +48,7 @@ export type StoryFrameType =
   | "SHARED CARE"
   | "RECONNECTION"
   | "IMPORTANT DATE"
+  | "SHARED CHALLENGE"
   | "GARDEN MILESTONE"
   | "TODAY";
 
@@ -74,6 +76,9 @@ export function getStoryFrameType(step: {
   if (step.eventKind === "important_date") {
     return "IMPORTANT DATE";
   }
+  if (step.eventKind === "completed_challenge") {
+    return "SHARED CHALLENGE";
+  }
   return "GARDEN MILESTONE";
 }
 
@@ -87,6 +92,8 @@ export function getFrameSpokenName(frameType: StoryFrameType): string {
       return "Reconnection";
     case "IMPORTANT DATE":
       return "Important Date";
+    case "SHARED CHALLENGE":
+      return "Shared Challenge";
     case "GARDEN MILESTONE":
       return "Garden Milestone";
     case "TODAY":
@@ -110,6 +117,8 @@ export function getStoryTitleFallback(eventKind?: StoryEventKind): string | null
       return "A shared moment";
     case "important_date":
       return "An important date";
+    case "completed_challenge":
+      return "A completed challenge";
     default:
       return null;
   }

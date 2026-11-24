@@ -76,6 +76,8 @@ export type HomeActivityKind =
   | "shared_positive"
   | "repair_response"
   | "repair_both_ready"
+  | "challenge_shared"
+  | "challenge_accepted"
   | "reconnection_completed"
   | "shared_list_added"
   | "shared_list_completed"
@@ -152,6 +154,23 @@ export interface HomeCoupleTask {
   updated_at: string;
 }
 
+export interface HomeSharedChallenge {
+  id: string;
+  couple_id?: string;
+  author_id: string;
+  challenge_idea?: string | null;
+  challenge_participant?: "me" | "partner" | "both" | null;
+  challenge_timeframe?: string | null;
+  challenge_reward?: string | null;
+  reframe_tone?: string | null;
+  reframe_text?: string | null;
+  include_reframe_with_partner?: boolean | null;
+  status: "draft" | "active" | "dismissed" | "resolved" | string;
+  shared_with_partner: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface HomeImportantDate {
   id: string;
   couple_id: string;
@@ -201,6 +220,7 @@ export interface DeriveHomeActivityParams {
   outcomes?: HomeRepairOutcome[];
   tasks?: HomeCoupleTask[];
   importantDates?: HomeImportantDate[];
+  challenges?: HomeSharedChallenge[];
   attentionStates?: HomeAttentionState[];
   receipts?: HomeActivityReceipt[];
   seenKeys?: Set<string>;
@@ -595,6 +615,7 @@ export function deriveWhatMattersNowActivity(
     outcomes = [],
     tasks = [],
     importantDates = [],
+    challenges = [],
     attentionStates = [],
     receipts = [],
     seenKeys,
@@ -878,6 +899,150 @@ export function deriveWhatMattersNowActivity(
 
     if (!isBothReadySeen) {
       candidatesMap.set(newestBothReady.key, newestBothReady);
+    }
+  }
+
+  // 2c. Newly shared partner challenge invitation (Actionable, Priority 2)
+  // Product principle: A shared challenge is a fresh invitation from your partner,
+  // not a persistent task or obligation. It is actionable (recipient can take a look),
+  // sits gently at Priority 2 alongside partner responses (below fresh friction Priority 1,
+  // above completed/routine activities Priority 3), and follows the non-backlog rule:
+  // only the single newest challenge is considered; once opened/seen, it returns to calm state.
+  const rawChallengeCandidates: HomeActivityCandidate[] = [];
+  for (const ch of challenges) {
+    if (ch.status !== "active" || !ch.shared_with_partner) {
+      continue;
+    }
+    // Recipient-only: only generate for the receiving partner, not the author
+    if (currentUserId && ch.author_id === currentUserId) {
+      continue;
+    }
+
+    const occurredAt = ch.updated_at || ch.created_at;
+    if (isWithinPast24Hours(occurredAt, nowMs)) {
+      const normalizedTs = normalizeIsoTimestamp(occurredAt);
+      const key = `challenge_shared:${ch.id}:${normalizedTs}`;
+
+      const ideaText = ch.challenge_idea?.trim();
+      const bodyText = ideaText
+        ? `"${ideaText}"`
+        : "Something small you can try together, whenever it feels right.";
+
+      const destinationRoute = `/challenge-lifecycle-preview?id=${ch.id}&idea=${encodeURIComponent(ideaText || "")}&participant=${encodeURIComponent(ch.challenge_participant || "both")}&timeframe=${encodeURIComponent(ch.challenge_timeframe || "")}&reward=${encodeURIComponent(ch.challenge_reward || "")}&shareReframe=${Boolean(ch.include_reframe_with_partner)}&reframeText=${encodeURIComponent(ch.reframe_text || "")}&reframeTone=${encodeURIComponent(ch.reframe_tone || "")}&source=what-matters-now`;
+
+      rawChallengeCandidates.push({
+        key,
+        kind: "challenge_shared",
+        sourceId: ch.id,
+        targetEventId: ch.id,
+        coupleId: ch.couple_id || coupleId || "",
+        actorId: ch.author_id,
+        occurredAt,
+        priority: 2,
+        actionable: true,
+        attentionMode: "actionable",
+        route: destinationRoute,
+        overline: "🌱 SOMETHING TOGETHER",
+        title: `${partnerLabel} shared a challenge with you`,
+        body: bodyText,
+        actionLabel: "Take a look",
+        icon: "🌱",
+      });
+    }
+  }
+
+  if (rawChallengeCandidates.length > 0) {
+    rawChallengeCandidates.sort((a, b) => {
+      const timeA = new Date(a.occurredAt).getTime();
+      const timeB = new Date(b.occurredAt).getTime();
+      if (timeB !== timeA) return timeB - timeA;
+      return a.key.localeCompare(b.key);
+    });
+
+    const newestChallenge = rawChallengeCandidates[0];
+    const challengeReceipt = receiptsMap.get(
+      normalizeActivityKey(newestChallenge.key),
+    );
+    const isChallengeSeen = Boolean(
+      challengeReceipt &&
+        nowMs - new Date(challengeReceipt.seen_at).getTime() <
+          TWENTY_FOUR_HOURS_MS,
+    );
+
+    if (!isChallengeSeen) {
+      candidatesMap.set(newestChallenge.key, newestChallenge);
+    }
+  }
+
+  // 2d. Reciprocal challenge acceptance acknowledgement (Actionable, Priority 2)
+  // When Partner A shares a challenge and Partner B accepts/joins it, Partner A
+  // (the author) receives a compact acknowledgement in What Matters Now:
+  // "🌿 SOMETHING MOVED FORWARD" / "{PartnerName} is in" / "See the challenge".
+  // Recipient-direction: strictly for the author (currentUserId === ch.author_id).
+  // Status: "resolved" represents acceptance/completion of the challenge.
+  const rawChallengeAcceptedCandidates: HomeActivityCandidate[] = [];
+  for (const ch of challenges) {
+    if (ch.status !== "resolved" || !ch.shared_with_partner) {
+      continue;
+    }
+    // Recipient-direction: only the author who initiated the challenge receives this acknowledgement
+    if (currentUserId && ch.author_id !== currentUserId) {
+      continue;
+    }
+
+    const occurredAt = ch.updated_at || ch.created_at;
+    if (isWithinPast24Hours(occurredAt, nowMs)) {
+      const normalizedTs = normalizeIsoTimestamp(occurredAt);
+      const key = `challenge_accepted:${ch.id}:${normalizedTs}`;
+
+      const ideaText = ch.challenge_idea?.trim();
+      const bodyText = ideaText
+        ? `"${ideaText}" is now something you can take on together.`
+        : "Your challenge is now something you can take on together.";
+
+      const destinationRoute = `/challenge-lifecycle-preview?id=${ch.id}&idea=${encodeURIComponent(ideaText || "")}&participant=${encodeURIComponent(ch.challenge_participant || "both")}&timeframe=${encodeURIComponent(ch.challenge_timeframe || "")}&reward=${encodeURIComponent(ch.challenge_reward || "")}&shareReframe=${Boolean(ch.include_reframe_with_partner)}&reframeText=${encodeURIComponent(ch.reframe_text || "")}&reframeTone=${encodeURIComponent(ch.reframe_tone || "")}&source=what-matters-now`;
+
+      rawChallengeAcceptedCandidates.push({
+        key,
+        kind: "challenge_accepted",
+        sourceId: ch.id,
+        targetEventId: ch.id,
+        coupleId: ch.couple_id || coupleId || "",
+        actorId: null,
+        occurredAt,
+        priority: 2,
+        actionable: true,
+        attentionMode: "actionable",
+        route: destinationRoute,
+        overline: "🌿 SOMETHING MOVED FORWARD",
+        title: `${partnerLabel} is in`,
+        body: bodyText,
+        actionLabel: "See the challenge",
+        icon: "🌿",
+      });
+    }
+  }
+
+  if (rawChallengeAcceptedCandidates.length > 0) {
+    rawChallengeAcceptedCandidates.sort((a, b) => {
+      const timeA = new Date(a.occurredAt).getTime();
+      const timeB = new Date(b.occurredAt).getTime();
+      if (timeB !== timeA) return timeB - timeA;
+      return a.key.localeCompare(b.key);
+    });
+
+    const newestAccepted = rawChallengeAcceptedCandidates[0];
+    const acceptedReceipt = receiptsMap.get(
+      normalizeActivityKey(newestAccepted.key),
+    );
+    const isAcceptedSeen = Boolean(
+      acceptedReceipt &&
+        nowMs - new Date(acceptedReceipt.seen_at).getTime() <
+          TWENTY_FOUR_HOURS_MS,
+    );
+
+    if (!isAcceptedSeen) {
+      candidatesMap.set(newestAccepted.key, newestAccepted);
     }
   }
 

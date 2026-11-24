@@ -6,6 +6,7 @@ export type ChallengeInvitationPreview = {
   participant: "me" | "partner" | "both";
   timeframe: string;
   reward: string;
+  fallbackReward?: string;
   creatorName: string;
   partnerName?: string;
   reframeTone?: string;
@@ -52,6 +53,7 @@ export function ChallengePreviewProvider({
       participant: invitation.participant,
       timeframe: invitation.timeframe,
       reward: invitation.reward,
+      fallbackReward: invitation.fallbackReward,
       creatorName: invitation.creatorName,
       partnerName: invitation.partnerName,
       reframeTone: invitation.reframeTone,

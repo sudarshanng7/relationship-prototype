@@ -30,7 +30,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-type ParticipantKey = "me" | "sam" | "both";
+type ParticipantKey = "partner" | "both";
 
 interface ParticipantOption {
   key: ParticipantKey;
@@ -41,39 +41,56 @@ interface ParticipantOption {
 
 const SUGGESTED_IDEAS = [
   {
+    title: "Plan our next date",
+    icon: "🕯️",
+    hint: "Choose a time and place for us",
+  },
+  {
+    title: "Cook dinner together without phones",
+    icon: "🍝",
+    hint: "Quiet time in the kitchen",
+  },
+  {
     title: "Brew a cup of tea together",
     icon: "🫖",
     hint: "A warm 5-minute pause",
-  },
-  {
-    title: "Five quiet minutes with no screens",
-    icon: "🛋️",
-    hint: "Just a gentle pause to exhale",
   },
   {
     title: "Step outside for fresh air",
     icon: "🌱",
     hint: "A quick breath of air together",
   },
-  {
-    title: "Put on one relaxing song",
-    icon: "🎵",
-    hint: "A tiny mood reset",
-  },
 ];
 
-const TIMEFRAME_OPTIONS = [
-  "Today",
-  "Tomorrow",
-  "This weekend",
-  "No rush / Whenever",
+const COMPLETION_REWARDS_PARTNER = [
+  { label: "Breakfast in bed", icon: "☕" },
+  { label: "Movie choice tonight", icon: "🍿" },
+  { label: "Dinner of your choice", icon: "🍝" },
+  { label: "A relaxing massage", icon: "💆" },
+  { label: "Sleep-in morning", icon: "🛌" },
+  { label: "Choose the playlist", icon: "🎵" },
+  { label: "Something sweet", icon: "❤️" },
 ];
 
-const REWARD_OPTIONS = [
-  { label: "No reward — just the moment", icon: "🌱" },
-  { label: "Coffee together", icon: "☕" },
-  { label: "Pick tonight’s film", icon: "🎬" },
-  { label: "A relaxed five minutes", icon: "🛋️" },
+const COMPLETION_REWARDS_BOTH = [
+  { label: "Choose a special dessert together", icon: "🍰" },
+  { label: "Pick a film we both love", icon: "🍿" },
+  { label: "A quiet morning together", icon: "☕" },
+  { label: "Cook a cozy meal together", icon: "🍝" },
+];
+
+const FALLBACK_REWARDS_PARTNER = [
+  { label: "I choose the movie", icon: "🎬" },
+  { label: "I choose dinner", icon: "🍝" },
+  { label: "I get a massage", icon: "💆" },
+  { label: "I control the playlist", icon: "🎵" },
+  { label: "I choose our next activity", icon: "🌿" },
+];
+
+const FALLBACK_REWARDS_BOTH = [
+  { label: "Try something easier together", icon: "🌿" },
+  { label: "A gentle 5-minute sofa pause", icon: "🛋️" },
+  { label: "Put on one relaxing song", icon: "🎵" },
 ];
 
 export default function MakeChallengePreviewScreen() {
@@ -88,24 +105,18 @@ export default function MakeChallengePreviewScreen() {
 
   const participantOptions: ParticipantOption[] = [
     {
-      key: "sam",
-      label: partnerName ? `Invite ${partnerName}` : "Invite partner",
+      key: "partner",
+      label: partnerName ? `For ${partnerName}` : "My partner",
       icon: "💌",
       description: partnerName
-        ? `A gentle, optional invitation for ${partnerName}`
-        : "A gentle, optional invitation for your partner",
+        ? `A small challenge just for ${partnerName}.`
+        : "A small challenge just for them.",
     },
     {
       key: "both",
       label: "Both of us",
       icon: "🤝",
-      description: "Something to choose together",
-    },
-    {
-      key: "me",
-      label: "For me",
-      icon: "🙋",
-      description: "A personal reset for your own peace of mind",
+      description: "Something you’ll try together.",
     },
   ];
 
@@ -123,11 +134,7 @@ export default function MakeChallengePreviewScreen() {
 
   const initialIdea = typeof params.idea === "string" ? params.idea : "";
   const initialParticipant: ParticipantKey =
-    params.participant === "me" ||
-    params.participant === "sam" ||
-    params.participant === "both"
-      ? params.participant
-      : "sam";
+    params.participant === "both" ? "both" : "partner";
 
   const incomingReframeText =
     typeof params.reframeText === "string" ? params.reframeText : "";
@@ -140,10 +147,10 @@ export default function MakeChallengePreviewScreen() {
   const [challengeText, setChallengeText] = useState(initialIdea);
   const [participantChoice, setParticipantChoice] =
     useState<ParticipantKey>(initialParticipant);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<string>("Today");
-  const [selectedReward, setSelectedReward] = useState<string>(
-    "No reward — just the moment",
-  );
+  const [selectedReward, setSelectedReward] = useState<string>("Breakfast in bed");
+  const [customRewardText, setCustomRewardText] = useState<string>("");
+  const [selectedFallbackReward, setSelectedFallbackReward] = useState<string>("I choose the movie");
+  const [customFallbackText, setCustomFallbackText] = useState<string>("");
   const [shareLighterThought, setShareLighterThought] =
     useState(initialShareReframe);
   const [lighterThoughtText, setLighterThoughtText] =
@@ -197,6 +204,8 @@ export default function MakeChallengePreviewScreen() {
   const trimmedText = challengeText.trim();
   const effectiveTitle = trimmedText || "A small gentle pause";
   const isCustomProvided = trimmedText.length > 0;
+  const effectiveReward = customRewardText.trim() || selectedReward;
+  const effectiveFallbackReward = customFallbackText.trim() || selectedFallbackReward;
 
   async function handleShareInvitation() {
     if (isSaving || isLoadingExistingReframe || Boolean(loadError)) return;
@@ -238,6 +247,9 @@ export default function MakeChallengePreviewScreen() {
       ? lighterThoughtText.trim()
       : existingReframe?.reframe_text || undefined;
 
+    const finalCompletionReward = customRewardText.trim() || selectedReward;
+    const finalFallbackReward = customFallbackText.trim() || selectedFallbackReward;
+
     const { data: savedData, error: saveErr } = await saveAnnoyanceReframe(supabase, {
       id: reframeId || undefined,
       coupleId,
@@ -248,8 +260,9 @@ export default function MakeChallengePreviewScreen() {
       isPlayful: true,
       challengeIdea: trimmed,
       challengeParticipant: mappedParticipant,
-      challengeTimeframe: selectedTimeframe,
-      challengeReward: selectedReward,
+      challengeTimeframe: "Whenever",
+      challengeReward: finalCompletionReward,
+      fallbackReward: finalFallbackReward,
       status: "active",
       sharedWithPartner: true,
       reframeTone,
@@ -268,8 +281,9 @@ export default function MakeChallengePreviewScreen() {
       id: invitationId,
       idea: trimmed,
       participant: mappedParticipant,
-      timeframe: selectedTimeframe,
-      reward: selectedReward,
+      timeframe: "Whenever",
+      reward: finalCompletionReward,
+      fallbackReward: finalFallbackReward,
       creatorName: displayName?.trim() || "You",
       partnerName: partnerName?.trim() || undefined,
       reframeTone: isSharingLighter ? incomingReframeTone : undefined,
@@ -283,66 +297,13 @@ export default function MakeChallengePreviewScreen() {
     setIsSaving(false);
   }
 
-  async function handleFinishPersonal() {
-    if (isSaving || isLoadingExistingReframe || Boolean(loadError)) return;
-    const trimmed = challengeText.trim();
-    if (!trimmed) {
-      setValidationError("Please enter an idea first, or pick a suggestion above.");
-      return;
-    }
-    if (!coupleId || !userId) {
-      setSaveError("You must be signed in with an active couple connection to save a personal plan.");
-      return;
-    }
-    setValidationError(null);
-    setSaveError(null);
-    setIsSaving(true);
-
-    const reframeId = (params.reframeId as string) || existingReframe?.id;
-    const topicKey = existingReframe?.topic_key || (params.topicKey as string) || "other";
-    const customTopicLabel =
-      existingReframe?.custom_topic_label !== undefined
-        ? existingReframe.custom_topic_label
-        : (params.customTopicLabel as string) || null;
-    const privateIrritationInput =
-      existingReframe?.private_irritation_input !== undefined
-        ? existingReframe.private_irritation_input
-        : undefined;
-
-    const { data: savedData, error: saveErr } = await saveAnnoyanceReframe(supabase, {
-      id: reframeId || undefined,
-      coupleId,
-      authorId: userId,
-      topicKey,
-      customTopicLabel,
-      privateIrritationInput,
-      isPlayful: true,
-      challengeIdea: trimmed,
-      challengeParticipant: "me",
-      challengeTimeframe: selectedTimeframe,
-      challengeReward: selectedReward,
-      status: "active",
-      sharedWithPartner: false,
-      reframeTone: existingReframe?.reframe_tone || undefined,
-      reframeText: existingReframe?.reframe_text || undefined,
-      includeReframeWithPartner: false,
-    });
-
-    if (saveErr || !savedData) {
-      setSaveError(saveErr?.message || "Could not save personal quest. Please try again.");
-      setIsSaving(false);
-      return;
-    }
-
-    setShowPersonalConfirmation(true);
-    setIsSaving(false);
-  }
-
   function handleReset() {
     setChallengeText("");
-    setParticipantChoice("sam");
-    setSelectedTimeframe("Today");
-    setSelectedReward("No reward — just the moment");
+    setParticipantChoice("partner");
+    setSelectedReward("Breakfast in bed");
+    setCustomRewardText("");
+    setSelectedFallbackReward("I choose the movie");
+    setCustomFallbackText("");
     setShareLighterThought(false);
     setLighterThoughtText(incomingReframeText);
     setShowSharedConfirmation(false);
@@ -472,12 +433,12 @@ export default function MakeChallengePreviewScreen() {
               </CouplySectionCard>
             )}
 
-            {/* SECTION 1: Your tiny idea */}
+            {/* SECTION 1: What should happen? */}
             <CouplySectionCard style={styles.sectionCard}>
               <Text style={styles.sectionNumber}>1 OF 4</Text>
-              <Text style={styles.sectionHeading}>Your tiny idea</Text>
+              <Text style={styles.sectionHeading}>What should happen?</Text>
               <Text style={styles.sectionHelper}>
-                Keep it small, specific, and easy to decline.
+                Write a small, playful challenge you’d love to see happen.
               </Text>
 
               <View style={styles.inputContainer}>
@@ -490,7 +451,7 @@ export default function MakeChallengePreviewScreen() {
                       setValidationError(null);
                     }
                   }}
-                  placeholder="e.g. Brew a fresh cup of tea, or take a 5-minute quiet walk..."
+                  placeholder="Write your challenge…"
                   placeholderTextColor={tokens.colors.textMuted}
                   multiline
                   maxLength={120}
@@ -538,13 +499,12 @@ export default function MakeChallengePreviewScreen() {
               </View>
             </CouplySectionCard>
 
-            {/* SECTION 2: Who is it for? */}
+            {/* SECTION 2: Who's taking this on? */}
             <CouplySectionCard style={styles.sectionCard}>
               <Text style={styles.sectionNumber}>2 OF 4</Text>
-              <Text style={styles.sectionHeading}>Who is it for?</Text>
+              <Text style={styles.sectionHeading}>Who’s taking this on?</Text>
               <Text style={styles.sectionHelper}>
-                An invitation is always optional. It is never a task for someone
-                else to complete.
+                An invitation is always optional. Choose whether this is for your partner or for both of you.
               </Text>
 
               <View style={styles.participantsList}>
@@ -559,7 +519,6 @@ export default function MakeChallengePreviewScreen() {
                       onPress={() => {
                         setParticipantChoice(item.key);
                         setShowSharedConfirmation(false);
-                        setShowPersonalConfirmation(false);
                       }}
                       icon={
                         <Text style={styles.participantIcon}>{item.icon}</Text>
@@ -572,51 +531,24 @@ export default function MakeChallengePreviewScreen() {
               </View>
             </CouplySectionCard>
 
-            {/* SECTION 3: A little context */}
+            {/* SECTION 3: If completed & If not this time */}
             <CouplySectionCard style={styles.sectionCard}>
               <Text style={styles.sectionNumber}>3 OF 4</Text>
-              <Text style={styles.sectionHeading}>A little context</Text>
+              <Text style={styles.sectionHeading}>
+                {participantChoice === "both"
+                  ? "What do you both get?"
+                  : `What does ${realPartnerName} get?`}
+              </Text>
               <Text style={styles.sectionHelper}>
-                No urgency or deadlines. Invitations can simply expire quietly.
+                A playful reward if this happens.
               </Text>
 
-              {/* Timing */}
-              <Text style={styles.subHeading}>When would this feel nice?</Text>
               <View style={styles.chipsRow}>
-                {TIMEFRAME_OPTIONS.map((timeframe) => {
-                  const isSelected = selectedTimeframe === timeframe;
-                  return (
-                    <Pressable
-                      key={timeframe}
-                      style={[
-                        styles.chip,
-                        isSelected && styles.chipSelected,
-                      ]}
-                      onPress={() => setSelectedTimeframe(timeframe)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: isSelected }}
-                      accessibilityLabel={timeframe}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          isSelected && styles.chipTextSelected,
-                        ]}
-                      >
-                        {timeframe}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {/* Reward */}
-              <Text style={[styles.subHeading, { marginTop: 14 }]}>
-                Add an optional small reward?
-              </Text>
-              <View style={styles.chipsRow}>
-                {REWARD_OPTIONS.map((reward) => {
-                  const isSelected = selectedReward === reward.label;
+                {(participantChoice === "both"
+                  ? COMPLETION_REWARDS_BOTH
+                  : COMPLETION_REWARDS_PARTNER
+                ).map((reward) => {
+                  const isSelected = selectedReward === reward.label && !customRewardText;
                   return (
                     <Pressable
                       key={reward.label}
@@ -624,7 +556,10 @@ export default function MakeChallengePreviewScreen() {
                         styles.chip,
                         isSelected && styles.chipSelected,
                       ]}
-                      onPress={() => setSelectedReward(reward.label)}
+                      onPress={() => {
+                        setSelectedReward(reward.label);
+                        setCustomRewardText("");
+                      }}
                       accessibilityRole="button"
                       accessibilityState={{ selected: isSelected }}
                       accessibilityLabel={reward.label}
@@ -642,93 +577,131 @@ export default function MakeChallengePreviewScreen() {
                   );
                 })}
               </View>
+
+              <TextInput
+                style={styles.customTextInput}
+                placeholder="Or write your own completion reward…"
+                placeholderTextColor={tokens.colors.textMuted}
+                value={customRewardText}
+                onChangeText={setCustomRewardText}
+                maxLength={80}
+              />
+
+              {/* Fallback outcome */}
+              <View style={{ marginTop: tokens.spacing.md, gap: tokens.spacing.sm }}>
+                <Text style={styles.sectionHeading}>
+                  {participantChoice === "both"
+                    ? "What happens instead?"
+                    : "What do you get instead?"}
+                </Text>
+                <Text style={styles.sectionHelper}>
+                  If not this time, keep it gentle and fun.
+                </Text>
+
+                <View style={styles.chipsRow}>
+                  {(participantChoice === "both"
+                    ? FALLBACK_REWARDS_BOTH
+                    : FALLBACK_REWARDS_PARTNER
+                  ).map((fallback) => {
+                    const isSelected = selectedFallbackReward === fallback.label && !customFallbackText;
+                    return (
+                      <Pressable
+                        key={fallback.label}
+                        style={[
+                          styles.chip,
+                          isSelected && styles.chipSelected,
+                        ]}
+                        onPress={() => {
+                          setSelectedFallbackReward(fallback.label);
+                          setCustomFallbackText("");
+                        }}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: isSelected }}
+                        accessibilityLabel={fallback.label}
+                      >
+                        <Text style={styles.chipEmoji}>{fallback.icon}</Text>
+                        <Text
+                          style={[
+                            styles.chipText,
+                            isSelected && styles.chipTextSelected,
+                          ]}
+                        >
+                          {fallback.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <TextInput
+                  style={styles.customTextInput}
+                  placeholder="Or write your own fallback reward…"
+                  placeholderTextColor={tokens.colors.textMuted}
+                  value={customFallbackText}
+                  onChangeText={setCustomFallbackText}
+                  maxLength={80}
+                />
+              </View>
             </CouplySectionCard>
 
-            {/* SECTION 4: What they would see */}
+            {/* SECTION 4: Challenge Preview */}
             <CouplySectionCard style={styles.sectionCard}>
               <Text style={styles.sectionNumber}>4 OF 4</Text>
-              <Text style={styles.sectionHeading}>What they would see</Text>
+              <Text style={styles.sectionHeading}>Review your challenge</Text>
               <Text style={styles.sectionHelper}>
-                Here is how this tiny invitation will feel. Notice how light and
-                calm it stays.
+                Everything important is visible right here before sending.
               </Text>
 
-              {/* Preview card */}
+              {/* Summary card with task + outcome + reward */}
               <View style={styles.previewBox}>
                 <View style={styles.previewHeaderRow}>
                   <Text style={styles.previewIcon}>
-                    {participantChoice === "me"
-                      ? "🌱"
-                      : participantChoice === "sam"
-                      ? "💌"
-                      : "🤝"}
+                    {participantChoice === "both" ? "🤝" : "🌱"}
                   </Text>
                   <View style={styles.previewHeaderTextGroup}>
                     <Text style={styles.previewOverline}>
-                      {participantChoice === "me"
-                        ? "A personal reset"
-                        : participantChoice === "sam"
-                        ? `A tiny invitation for ${realPartnerName}`
-                        : "A shared invitation"}
+                      🌱 YOUR CHALLENGE
                     </Text>
                     <Text style={styles.previewChallengeTitle}>
                       {effectiveTitle}
                     </Text>
+                    <Text style={styles.previewTargetText}>
+                      {participantChoice === "both"
+                        ? "For both of you"
+                        : `For ${realPartnerName}`}
+                    </Text>
                   </View>
                 </View>
 
-                {!isCustomProvided && (
-                  <View style={styles.sampleHintBox}>
-                    <Text style={styles.sampleHintText}>
-                      Sample placeholder text shown above. Type your own idea in
-                      step 1 anytime.
+                <View style={styles.rewardSummaryStack}>
+                  {/* If completed block */}
+                  <View style={styles.rewardBlockCompleted}>
+                    <Text style={styles.rewardBlockLabel}>
+                      {participantChoice === "both"
+                        ? "IF YOU DO IT"
+                        : `IF ${realPartnerName.toUpperCase()} DOES IT`}
+                    </Text>
+                    <Text style={styles.rewardBlockText}>
+                      🎁 {customRewardText.trim() || selectedReward}
                     </Text>
                   </View>
-                )}
 
-                <View style={styles.summaryTable}>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Participant</Text>
-                    <Text style={styles.summaryValue}>
-                      {participantChoice === "me"
-                        ? "Just me"
-                        : participantChoice === "sam"
-                        ? realPartnerName
-                        : "Both of us"}
+                  {/* If not this time block */}
+                  <View style={styles.rewardBlockFallback}>
+                    <Text style={styles.rewardBlockLabelFallback}>
+                      IF NOT THIS TIME
+                    </Text>
+                    <Text style={styles.rewardBlockTextFallback}>
+                      🌿 {customFallbackText.trim() || selectedFallbackReward}
                     </Text>
                   </View>
-                  <View style={styles.summaryDivider} />
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Timing</Text>
-                    <Text style={styles.summaryValue}>{selectedTimeframe}</Text>
-                  </View>
-                  <View style={styles.summaryDivider} />
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Reward</Text>
-                    <Text style={styles.summaryValue}>{selectedReward}</Text>
-                  </View>
-                  {isFromReframe && (
-                    <>
-                      <View style={styles.summaryDivider} />
-                      <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>Lighter thought</Text>
-                        <Text style={styles.summaryValue}>
-                          {shareLighterThought
-                            ? incomingReframeTone || "Included"
-                            : "Private"}
-                        </Text>
-                      </View>
-                    </>
-                  )}
                 </View>
 
                 <View style={styles.reassuranceBox}>
                   <Text style={styles.reassuranceText}>
-                    {participantChoice === "sam"
-                      ? `${realPartnerName} can choose to join, suggest a tweak, or quietly let it pass. No countdowns, streaks, or notifications are created.`
-                      : participantChoice === "both"
-                      ? "Both of you choose this together. Shared moments feel lightest when both feel free to decline easily."
-                      : "A quiet personal commitment, just for your own peace of mind."}
+                    {participantChoice === "both"
+                      ? "Something you try together. If it doesn't happen, decline easily without penalties."
+                      : `${realPartnerName} can join or let it pass with zero pressure or streaks.`}
                   </Text>
                 </View>
               </View>
@@ -754,69 +727,37 @@ export default function MakeChallengePreviewScreen() {
                 </View>
               )}
 
-              {/* Finish Action: Participant-specific */}
-              {participantChoice === "me" ? (
-                // Personal finish
+              {/* Finish Action */}
+              <View style={styles.shareActionContainer}>
                 <CouplyPrimaryButton
-                  label="Save personal plan"
-                  onPress={handleFinishPersonal}
+                  label="Send challenge"
+                  onPress={handleShareInvitation}
                   disabled={isSaving || isLoadingExistingReframe || Boolean(loadError)}
                   loading={isSaving || isLoadingExistingReframe}
                   style={styles.finishButton}
                 />
-              ) : (
-                // Shared / Partner finish
-                <View style={styles.shareActionContainer}>
-                  <CouplyPrimaryButton
-                    label="Share invitation with partner"
-                    onPress={handleShareInvitation}
-                    disabled={isSaving || isLoadingExistingReframe || Boolean(loadError)}
-                    loading={isSaving || isLoadingExistingReframe}
-                    style={styles.finishButton}
-                  />
-                  <Text style={styles.prototypeNoticeText}>
-                    When shared, this gentle invitation will appear in your shared space for your partner.
-                  </Text>
-                </View>
-              )}
-
-              {/* Personal completion confirmation */}
-              {showPersonalConfirmation && participantChoice === "me" && (
-                <CouplySectionCard variant="lilac" style={styles.confirmationCard}>
-                  <Text style={styles.confirmationTitle}>
-                    Your tiny plan is ready
-                  </Text>
-                  <Text style={styles.confirmationBody}>
-                    Keep it close and return to it whenever it feels useful.
-                  </Text>
-                  <View style={styles.truthfulBox}>
-                    <Text style={styles.truthfulText}>
-                      Saved privately to your space. You can revisit it anytime.
-                    </Text>
-                  </View>
-                  <CouplyPrimaryButton
-                    label="Go to My Rhythm"
-                    onPress={() => router.push("/home")}
-                    style={styles.confirmationAction}
-                  />
-                </CouplySectionCard>
-              )}
+                <Text style={styles.prototypeNoticeText}>
+                  {participantChoice === "both"
+                    ? "Shared with your partner in your shared space."
+                    : `Sent directly to ${realPartnerName} to review quietly.`}
+                </Text>
+              </View>
 
               {/* Shared confirmation card */}
-              {showSharedConfirmation && participantChoice !== "me" && (
+              {showSharedConfirmation && (
                 <CouplySectionCard variant="lilac" style={styles.confirmationCard}>
                   <Text style={styles.confirmationOverline}>
-                    INVITATION SAVED
+                    CHALLENGE READY
                   </Text>
                   <Text style={styles.confirmationTitle}>
-                    Invitation shared to your space
+                    Challenge sent to your space
                   </Text>
                   <Text style={styles.confirmationBody}>
-                    This small invitation has been saved to your shared space. {realPartnerName} will see it when they open Couply.
+                    This playful invitation is now live. {realPartnerName} will see it when they open Couply.
                   </Text>
                   <View style={styles.truthfulBox}>
                     <Text style={styles.truthfulText}>
-                      Saved to your shared space. Your partner can accept or quietly decline.
+                      Saved with completion reward and fallback reward.
                     </Text>
                   </View>
                   <View style={styles.confirmationActionsGroup}>
@@ -841,38 +782,37 @@ export default function MakeChallengePreviewScreen() {
               )}
             </CouplySectionCard>
 
-            {/* Exploratory lifecycle preview link: Partner/Both only */}
-            {participantChoice !== "me" && (
-              <CouplySectionCard variant="muted" style={styles.lifecycleCard}>
-                <Text style={styles.lifecycleTitle}>
-                  Curious what happens next?
-                </Text>
-                <Text style={styles.lifecycleBody}>
-                  Explore the lifecycle preview to see how waiting, accepted,
-                  declined, and expired states feel.
-                </Text>
-                <CouplyQuietButton
-                  label="Preview recipient experience ›"
-                  variant="soft"
-                  onPress={() => {
-                    const isSharing = isFromReframe && shareLighterThought;
-                    router.push({
-                      pathname: "/challenge-lifecycle-preview",
-                      params: {
-                        idea: challengeText.trim(),
-                        participant: participantChoice,
-                        timeframe: selectedTimeframe,
-                        reward: selectedReward,
-                        reframeTone: incomingReframeTone,
-                        reframeText: isSharing ? lighterThoughtText.trim() : "",
-                        shareReframe: isSharing ? "true" : "false",
-                      },
-                    } as any);
-                  }}
-                  style={styles.lifecycleButton}
-                />
-              </CouplySectionCard>
-            )}
+            {/* Exploratory lifecycle preview link: Partner/Both */}
+            <CouplySectionCard variant="muted" style={styles.lifecycleCard}>
+              <Text style={styles.lifecycleTitle}>
+                Curious what happens next?
+              </Text>
+              <Text style={styles.lifecycleBody}>
+                Explore the lifecycle preview to see how waiting, accepted,
+                declined, and expired states feel.
+              </Text>
+              <CouplyQuietButton
+                label="Preview recipient experience ›"
+                variant="soft"
+                onPress={() => {
+                  const isSharing = isFromReframe && shareLighterThought;
+                  router.push({
+                    pathname: "/challenge-lifecycle-preview",
+                    params: {
+                      idea: challengeText.trim(),
+                      participant: participantChoice,
+                      timeframe: "Whenever / no rush",
+                      reward: effectiveReward,
+                      fallbackReward: effectiveFallbackReward,
+                      reframeTone: incomingReframeTone,
+                      reframeText: isSharing ? lighterThoughtText.trim() : "",
+                      shareReframe: isSharing ? "true" : "false",
+                    },
+                  } as any);
+                }}
+                style={styles.lifecycleButton}
+              />
+            </CouplySectionCard>
 
             {/* Reset */}
             <View style={styles.resetRow}>
@@ -1229,6 +1169,64 @@ const createStyles = (theme: ThemeColors) => {
     fontSize: tokens.typeScale.caption - 0.5,
     color: tokens.colors.textMuted,
     lineHeight: 16,
+  },
+  customTextInput: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radii.small,
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.text,
+    marginTop: 6,
+  },
+  previewTargetText: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    fontWeight: "500",
+    marginTop: 2,
+  },
+  rewardSummaryStack: {
+    gap: 8,
+  },
+  rewardBlockCompleted: {
+    backgroundColor: tokens.colors.surfaceLilac,
+    borderRadius: tokens.radii.small,
+    padding: tokens.spacing.sm + 2,
+    borderWidth: 1,
+    borderColor: tokens.colors.plum,
+    gap: 2,
+  },
+  rewardBlockLabel: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    color: tokens.colors.plum,
+    letterSpacing: 0.6,
+  },
+  rewardBlockText: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "600",
+    color: tokens.colors.text,
+  },
+  rewardBlockFallback: {
+    backgroundColor: tokens.colors.surfaceMuted,
+    borderRadius: tokens.radii.small,
+    padding: tokens.spacing.sm + 2,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    gap: 2,
+  },
+  rewardBlockLabelFallback: {
+    fontSize: tokens.typeScale.overline,
+    fontWeight: "700",
+    color: tokens.colors.textMuted,
+    letterSpacing: 0.6,
+  },
+  rewardBlockTextFallback: {
+    fontSize: tokens.typeScale.body,
+    fontWeight: "500",
+    color: tokens.colors.textSecondary,
   },
   errorBox: {
     backgroundColor: tokens.colors.surfaceBlush,

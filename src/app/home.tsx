@@ -20,6 +20,7 @@ import {
   type HomeCoupleTask,
   type HomeImportantDate,
   type HomeAttentionState,
+  type HomeSharedChallenge,
   TWENTY_FOUR_HOURS_MS,
 } from "@/lib/home-activity";
 import { supabase } from "@/lib/supabase";
@@ -403,6 +404,7 @@ export default function HomeScreen() {
   const [spacesSummaryError, setSpacesSummaryError] = useState<string | null>(
     null,
   );
+  const [dbChallenges, setDbChallenges] = useState<HomeSharedChallenge[]>([]);
   const [activeDbChallenge, setActiveDbChallenge] =
     useState<HomeActiveSharedChallenge | null>(null);
   const [isRespondingToChallenge, setIsRespondingToChallenge] =
@@ -589,6 +591,7 @@ export default function HomeScreen() {
           setOursEvents([]);
           setIsSpacesSummaryLoading(false);
           setOptimisticSeenKeys(new Set());
+          setDbChallenges([]);
           setActiveDbChallenge(null);
           setIsIdentityLoading(false);
           return false;
@@ -610,6 +613,7 @@ export default function HomeScreen() {
           receiptsRes,
           mineReflectionsRes,
           challengesRes,
+          authorChallengesRes,
         ] = await Promise.all([
           supabase.rpc("get_partner_display_name"),
           supabase
@@ -671,6 +675,12 @@ export default function HomeScreen() {
             .eq("user_id", user.id),
           fetchCanonicalMineReflections(supabase, user.id),
           fetchActivePartnerAnnoyanceChallenges(supabase, activeCoupleId),
+          supabase
+            .from("annoyance_reframes")
+            .select("id, couple_id, author_id, challenge_idea, challenge_participant, challenge_timeframe, challenge_reward, reframe_tone, reframe_text, include_reframe_with_partner, status, shared_with_partner, created_at, updated_at")
+            .eq("couple_id", activeCoupleId)
+            .eq("author_id", user.id)
+            .order("updated_at", { ascending: false }),
         ]);
 
         if (!mountedRef.current) return false;
@@ -764,10 +774,12 @@ export default function HomeScreen() {
           setActivityReceipts(receiptsRes.data as HomeActivityReceipt[]);
         }
 
+        const allRelevantChallenges: HomeSharedChallenge[] = [];
         if (!challengesRes.error && challengesRes.data) {
-          const dbChallenges = challengesRes.data as any[];
-          if (dbChallenges.length > 0) {
-            const latest = dbChallenges[0];
+          const partnerChallenges = challengesRes.data as any[];
+          allRelevantChallenges.push(...(partnerChallenges as HomeSharedChallenge[]));
+          if (partnerChallenges.length > 0) {
+            const latest = partnerChallenges[0];
             setActiveDbChallenge({
               id: latest.id,
               authorId: latest.author_id,
@@ -787,6 +799,12 @@ export default function HomeScreen() {
         } else {
           setActiveDbChallenge(null);
         }
+
+        if (!authorChallengesRes.error && authorChallengesRes.data) {
+          allRelevantChallenges.push(...(authorChallengesRes.data as HomeSharedChallenge[]));
+        }
+
+        setDbChallenges(allRelevantChallenges);
 
         setNowMs(Date.now());
         return true;
@@ -1089,6 +1107,7 @@ export default function HomeScreen() {
         outcomes: repairOutcomes,
         tasks: coupleTasks,
         importantDates,
+        challenges: dbChallenges,
         attentionStates,
         receipts: activityReceipts,
         seenKeys: optimisticSeenKeys,
@@ -1103,6 +1122,7 @@ export default function HomeScreen() {
       repairOutcomes,
       coupleTasks,
       importantDates,
+      dbChallenges,
       attentionStates,
       activityReceipts,
       optimisticSeenKeys,
@@ -1937,119 +1957,40 @@ export default function HomeScreen() {
             )}
           </CouplySectionCard>
 
-          {/* Active Challenge Invitation (Database-Backed Real Partner Experience) or Preview */}
-          {(activeDbChallenge || hasPendingChallengePreview) && (
+          {/* Local in-memory Challenge Invitation Preview (only when previewing without active DB challenge) */}
+          {(!activeDbChallenge && hasPendingChallengePreview) && (
             <CouplySectionCard
               variant="lilac"
               style={styles.invitationPreviewCard}
             >
               <View style={styles.invitationPreviewHeader}>
                 <Text style={styles.invitationPreviewOverline}>
-                  {activeDbChallenge
-                    ? activeDbChallenge.isFromPartner
-                      ? `INVITATION FROM ${partnerName?.toUpperCase() || "YOUR PARTNER"}`
-                      : `INVITATION SHARED WITH ${partnerName?.toUpperCase() || "YOUR PARTNER"}`
-                    : "INVITATION PREVIEW"}
+                  INVITATION PREVIEW
                 </Text>
               </View>
               <Text style={styles.invitationPreviewHeading}>
-                {activeDbChallenge
-                  ? activeDbChallenge.isFromPartner
-                    ? `${partnerName || "Your partner"} shared an invitation: "${activeDbChallenge.idea}"`
-                    : `Your invitation is waiting for ${partnerName || "your partner"}: "${activeDbChallenge.idea}"`
-                  : challengeRecipientHeading}
+                {challengeRecipientHeading}
               </Text>
-
-              {activeDbChallenge &&
-              activeDbChallenge.includeReframeWithPartner &&
-              activeDbChallenge.reframeText ? (
-                <View style={styles.invitationWarmNoteBox}>
-                  <Text style={styles.invitationWarmNoteText}>
-                    "{activeDbChallenge.reframeText}"
-                  </Text>
-                </View>
-              ) : null}
-
-              {activeDbChallenge &&
-              (activeDbChallenge.timeframe ||
-                (activeDbChallenge.reward &&
-                  activeDbChallenge.reward !==
-                    "No reward — just the moment")) ? (
-                <View style={styles.invitationDetailsRow}>
-                  {activeDbChallenge.timeframe ? (
-                    <Text style={styles.invitationDetailTag}>
-                      ⏳ {activeDbChallenge.timeframe}
-                    </Text>
-                  ) : null}
-                  {activeDbChallenge.reward &&
-                  activeDbChallenge.reward !==
-                    "No reward — just the moment" ? (
-                    <Text style={styles.invitationDetailTag}>
-                      🎁 {activeDbChallenge.reward}
-                    </Text>
-                  ) : null}
-                </View>
-              ) : null}
-
-              {challengeActionError ? (
-                <View style={styles.challengeActionErrorBox}>
-                  <Text style={styles.challengeActionErrorText}>
-                    {challengeActionError}
-                  </Text>
-                </View>
-              ) : null}
-
-              {activeDbChallenge?.isFromPartner ? (
-                // Real Partner Response Action: "I'm in" / "Not today"
-                <View style={styles.invitationResponseActionRow}>
-                  <CouplyPrimaryButton
-                    label="I'm in"
-                    onPress={() => handleChallengeResponse("accept")}
-                    disabled={isRespondingToChallenge}
-                    loading={isRespondingToChallenge}
-                    accessibilityLabel="Accept invitation"
-                    style={styles.invitationAcceptBtn}
-                  />
-                  <CouplyQuietButton
-                    label="Not today"
-                    variant="soft"
-                    onPress={() => handleChallengeResponse("dismiss")}
-                    disabled={isRespondingToChallenge}
-                    accessibilityLabel="Dismiss invitation"
-                    style={styles.invitationDismissBtn}
-                  />
-                </View>
-              ) : activeDbChallenge ? (
-                // Author waiting view
-                <Text style={styles.invitationPreviewBody}>
-                  Shared with {partnerName || "your partner"}. They can choose
-                  to accept or quietly let it pass.
-                </Text>
-              ) : (
-                // Local in-memory preview fallback
-                <>
-                  <Text style={styles.invitationPreviewBody}>
-                    See how this invitation would appear for your partner.
-                  </Text>
-                  <View style={styles.invitationPreviewActionRow}>
-                    <CouplyPrimaryButton
-                      label="Open recipient view"
-                      onPress={() =>
-                        router.push({
-                          pathname: "/challenge-lifecycle-preview",
-                          params: { source: "home-preview" },
-                        })
-                      }
-                      accessibilityLabel="Open recipient view"
-                      style={styles.invitationPreviewActionBtn}
-                    />
-                  </View>
-                  <Text style={styles.invitationPreviewTruthfulNote}>
-                    Only active in this browser session. Nothing has been sent or
-                    saved.
-                  </Text>
-                </>
-              )}
+              <Text style={styles.invitationPreviewBody}>
+                See how this invitation would appear for your partner.
+              </Text>
+              <View style={styles.invitationPreviewActionRow}>
+                <CouplyPrimaryButton
+                  label="Open recipient view"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/challenge-lifecycle-preview",
+                      params: { source: "home-preview" },
+                    })
+                  }
+                  accessibilityLabel="Open recipient view"
+                  style={styles.invitationPreviewActionBtn}
+                />
+              </View>
+              <Text style={styles.invitationPreviewTruthfulNote}>
+                Only active in this browser session. Nothing has been sent or
+                saved.
+              </Text>
             </CouplySectionCard>
           )}
 

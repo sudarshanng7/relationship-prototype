@@ -150,7 +150,8 @@ export interface GardenMemorySource {
   sourceType:
     | "shared_positive"
     | "completed_reconnection"
-    | "important_date";
+    | "important_date"
+    | "completed_challenge";
   sourceId: string;
   coupleId: string;
   occurredAt: string;

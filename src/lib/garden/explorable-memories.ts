@@ -35,7 +35,7 @@ export interface ExplorableMemoryItem {
   anchor: Point2D;
   scenicRegion?: ScenicRegion;
   chronologicalTimestamp: string;
-  memoryType: "Shared Good Moment" | "Reconnection" | "Important Date";
+  memoryType: "Shared Good Moment" | "Reconnection" | "Important Date" | "Completed Challenge";
   botanicalRepresentation:
     | "Shared Moment Growth"
     | "Reconnection Shoot"

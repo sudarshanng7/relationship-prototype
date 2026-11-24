@@ -128,7 +128,7 @@ function mixSeed(seed: number): number {
 }
 
 export function getCareFeatureId(
-  kind: "positive_moment" | "reconnection" | "important_date",
+  kind: "positive_moment" | "reconnection" | "important_date" | "completed_challenge",
   eventId: string
 ): string {
   const hash = stableEventHash(eventId);
@@ -137,6 +137,9 @@ export function getCareFeatureId(
   }
   if (kind === "positive_moment") {
     return `care-positive-${hash}`;
+  }
+  if (kind === "completed_challenge") {
+    return `care-challenge-${hash}`;
   }
   return `care-important-date-${hash}`;
 }
@@ -157,7 +160,7 @@ export function createPRNG(seed: number) {
 
 export type GardenCareEvent = {
   id: string;
-  kind: "positive_moment" | "reconnection" | "important_date";
+  kind: "positive_moment" | "reconnection" | "important_date" | "completed_challenge";
   occurredAt: string;
   category?: string | null;
   createdAt?: string | null;

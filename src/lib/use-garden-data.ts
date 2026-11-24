@@ -19,7 +19,7 @@ import {
 export type { GardenCareEvent };
 
 export interface LatestGardenEvent {
-  kind: "positive_moment" | "reconnection" | "important_date";
+  kind: "positive_moment" | "reconnection" | "important_date" | "completed_challenge";
   headline: string;
   subtext: string;
   timestamp: string;
@@ -40,6 +40,7 @@ export interface GardenDataState {
   positiveCount: number;
   reconnectedCount: number;
   importantDatesCount: number;
+  completedChallengesCount?: number;
   careSignals: GardenCareSignals;
   careEvents: GardenCareEvent[];
   newGrowthNotice: string | null;
@@ -172,15 +173,25 @@ export function useGardenData(coupleId: string | null) {
           .lte("event_date", todayUtcStr)
           .order("event_date", { ascending: false });
 
+        // 5. Fetch completed shared challenges (status = 'resolved' AND completed_at IS NOT NULL)
+        const { data: completedChallenges, error: challengesError } = await supabase
+          .from("annoyance_reframes")
+          .select("id, completed_at, created_at, challenge_idea, status, shared_with_partner")
+          .eq("couple_id", coupleId)
+          .eq("shared_with_partner", true)
+          .not("completed_at", "is", null)
+          .order("completed_at", { ascending: false });
+
         // Partial-failure safety: if any required query fails, return error state
         // without fabricating zero events or calculating misleading growth.
-        if (coupleError || positiveError || reconnectedError || datesError) {
+        if (coupleError || positiveError || reconnectedError || datesError || challengesError) {
           if (__DEV__) {
             console.warn("Shared Garden query issue:", {
               couple: coupleError?.message,
               positive: positiveError?.message,
               reconnected: reconnectedError?.message,
               dates: datesError?.message,
+              challenges: challengesError?.message,
             });
           }
           if (mountedRef.current) {
@@ -235,6 +246,20 @@ export function useGardenData(coupleId: string | null) {
               ? normalizeTimestamp(row.created_at, nowIso)
               : null,
             displayTitle: row.label ? row.label.trim() : null,
+          });
+        }
+
+        for (const row of completedChallenges || []) {
+          const safeTs = normalizeTimestamp(row.completed_at, nowIso);
+          const ideaTitle = row.challenge_idea ? row.challenge_idea.trim() : "Shared challenge";
+          eventMap.set(`completed_challenge:${row.id}`, {
+            id: row.id,
+            kind: "completed_challenge",
+            occurredAt: safeTs,
+            createdAt: row.created_at
+              ? normalizeTimestamp(row.created_at, nowIso)
+              : null,
+            displayTitle: ideaTitle,
           });
         }
 
@@ -384,6 +409,18 @@ export function useGardenData(coupleId: string | null) {
             subtext:
               "A small garden detail now remembers one of your meaningful dates.",
             timestamp: topDate.event_date,
+          });
+        }
+
+        if (completedChallenges && completedChallenges.length > 0) {
+          const topChallenge = completedChallenges[0];
+          const timeMs = new Date(topChallenge.completed_at).getTime();
+          candidates.push({
+            timeMs,
+            kind: "completed_challenge",
+            headline: "Shared challenge bloomed",
+            subtext: "Something you completed together left a calm bloom in your garden.",
+            timestamp: topChallenge.completed_at,
           });
         }
 
@@ -539,6 +576,27 @@ export function useGardenData(coupleId: string | null) {
           oldRow?.visibility === "ours";
 
         if (isPositive || isReconnected || wasPositive || wasReconnected) {
+          scheduleSilentRefresh();
+        }
+      }
+    );
+
+    channel.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "annoyance_reframes",
+        filter: `couple_id=eq.${coupleId}`,
+      },
+      (payload) => {
+        const newRow = payload.new as any;
+        const oldRow = payload.old as any;
+        if (
+          Boolean(newRow?.completed_at) ||
+          Boolean(oldRow?.completed_at) ||
+          payload.eventType === "DELETE"
+        ) {
           scheduleSilentRefresh();
         }
       }

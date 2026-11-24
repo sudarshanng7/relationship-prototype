@@ -21,10 +21,46 @@ export interface AnnoyanceReframeRow {
   challenge_participant?: "me" | "partner" | "both" | null;
   challenge_timeframe?: string | null;
   challenge_reward?: string | null;
+  fallback_reward?: string | null;
+  challenge_outcome?: "completed" | "not_this_time" | null;
+  outcome_recorded_at?: string | null;
+  outcome_recorded_by?: string | null;
+  completed_at?: string | null;
+  completed_by?: string | null;
   created_at: string;
   updated_at: string;
   // Author-only joined field
   private_irritation_input?: string | null;
+}
+
+export interface ChallengeMemoryRow {
+  id: string;
+  reframe_id: string;
+  couple_id: string;
+  user_id: string;
+  reaction?: string | null;
+  memory_note?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ChallengeReaction =
+  | "That felt good"
+  | "We should do this again"
+  | "It surprised me"
+  | "A small thing, but meaningful";
+
+export interface CompleteAnnoyanceChallengeInput {
+  reframeId: string;
+  reaction?: ChallengeReaction | string | null;
+  memoryNote?: string | null;
+}
+
+export interface ResolveChallengeOutcomeInput {
+  reframeId: string;
+  outcome: "completed" | "not_this_time";
+  reaction?: ChallengeReaction | string | null;
+  memoryNote?: string | null;
 }
 
 export interface SaveAnnoyanceReframeInput {
@@ -45,6 +81,7 @@ export interface SaveAnnoyanceReframeInput {
   challengeParticipant?: "me" | "partner" | "both" | null;
   challengeTimeframe?: string | null;
   challengeReward?: string | null;
+  fallbackReward?: string | null;
   clearReframeText?: boolean;
   clearPrivateNote?: boolean;
 }
@@ -122,6 +159,7 @@ export async function saveAnnoyanceReframe(
         p_event_id: input.eventId || null,
         p_clear_reframe_text: Boolean(input.clearReframeText),
         p_clear_private_note: Boolean(input.clearPrivateNote),
+        p_fallback_reward: input.fallbackReward || null,
       },
     );
 
@@ -255,3 +293,106 @@ export async function fetchActivePartnerAnnoyanceChallenges(
     };
   }
 }
+
+/**
+ * Completes an accepted challenge, recording completion timestamp/actor and optional memory reflection.
+ */
+export async function completeAnnoyanceChallenge(
+  supabase: SupabaseClient,
+  input: CompleteAnnoyanceChallengeInput,
+): Promise<{
+  success: boolean;
+  completedAt?: string;
+  completedBy?: string;
+  error: Error | null;
+}> {
+  try {
+    const trimmedNote = input.memoryNote ? input.memoryNote.trim() : null;
+    const { data, error } = await supabase.rpc("complete_annoyance_challenge", {
+      p_reframe_id: input.reframeId,
+      p_reaction: input.reaction || null,
+      p_memory_note: trimmedNote,
+    });
+
+    if (error) {
+      return { success: false, error: new Error(error.message) };
+    }
+
+    return {
+      success: true,
+      completedAt: data?.completed_at,
+      completedBy: data?.completed_by,
+      error: null,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
+
+/**
+ * Resolves a challenge outcome: 'completed' (blooming + optional memory) or 'not_this_time' (calm closure with fallback reward).
+ */
+export async function resolveChallengeOutcome(
+  supabase: SupabaseClient,
+  input: ResolveChallengeOutcomeInput,
+): Promise<{
+  success: boolean;
+  outcome?: "completed" | "not_this_time";
+  completedAt?: string;
+  error: Error | null;
+}> {
+  try {
+    const trimmedNote = input.memoryNote ? input.memoryNote.trim() : null;
+    const { data, error } = await supabase.rpc("resolve_challenge_outcome", {
+      p_reframe_id: input.reframeId,
+      p_outcome: input.outcome,
+      p_reaction: input.reaction || null,
+      p_memory_note: trimmedNote,
+    });
+
+    if (error) {
+      return { success: false, error: new Error(error.message) };
+    }
+
+    return {
+      success: true,
+      outcome: data?.outcome,
+      completedAt: data?.completed_at,
+      error: null,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
+
+/**
+ * Fetches all shared memories recorded for a specific challenge.
+ */
+export async function fetchChallengeMemories(
+  supabase: SupabaseClient,
+  reframeId: string,
+): Promise<{ data: ChallengeMemoryRow[]; error: Error | null }> {
+  try {
+    const { data, error } = await supabase.rpc("get_challenge_memories", {
+      p_reframe_id: reframeId,
+    });
+
+    if (error) {
+      return { data: [], error: new Error(error.message) };
+    }
+
+    return { data: (data || []) as ChallengeMemoryRow[], error: null };
+  } catch (err: any) {
+    return {
+      data: [],
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
+

@@ -825,6 +825,17 @@ export function calculateAuthoritativeFoundation(
           category: record.category ?? null,
           displayTitle: record.displayTitle || record.label || null,
         });
+      } else if (kind === "completed_challenge" || record.completed_at || record.completedAt) {
+        seenIds.add(rawId);
+        eligiblePositiveMoments += 1; // Completed challenges bloom with care contribution
+        uniqueCareEvents.push({
+          id: rawId,
+          kind: "completed_challenge",
+          occurredAt: record.occurredAt || record.completed_at || record.completedAt || new Date().toISOString(),
+          createdAt: record.createdAt || record.created_at || null,
+          category: record.category ?? null,
+          displayTitle: record.displayTitle || record.challenge_idea || null,
+        });
       } else {
         excludedOrIneligibleEvents += 1;
       }
