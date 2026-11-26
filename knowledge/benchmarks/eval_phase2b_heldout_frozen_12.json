@@ -1,0 +1,271 @@
+[
+  {
+    "id": "phase2b_heldout_001",
+    "dataset": "held_out_evaluation_phase2b",
+    "input": "eating dinner at a snail pace",
+    "expectedMeaning": "Partner eats their evening meal extremely slowly",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedParentFrame": "frame_parent_opinions_disagreements",
+    "acceptableAlternativeFrames": [
+      "frame_parent_opinions_disagreements",
+      "frame_parent_domestic_chores"
+    ],
+    "expectedAction": "eat",
+    "expectedTarget": "dinner",
+    "expectedPolarity": "delayed",
+    "expectedModifier": "slowly",
+    "expectedSensitivity": "ordinary_quirk",
+    "expectedOutcome": "playful_angles",
+    "eligibilityCriteria": {
+      "mustHaveHumor": true,
+      "requiresTargetRealization": false,
+      "disallowGenericFiller": true
+    }
+  },
+  {
+    "id": "phase2b_heldout_002",
+    "dataset": "held_out_evaluation_phase2b",
+    "input": "swallowing whole meals in under two minutes",
+    "expectedMeaning": "Partner consumes food in an unusually rushed or hasty manner",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedParentFrame": "frame_parent_opinions_disagreements",
+    "acceptableAlternativeFrames": [
+      "frame_parent_opinions_disagreements"
+    ],
+    "expectedAction": "swallow",
+    "expectedTarget": "meals",
+    "expectedPolarity": "excessive",
+    "expectedModifier": "fast",
+    "expectedSensitivity": "ordinary_quirk",
+    "expectedOutcome": "playful_angles",
+    "eligibilityCriteria": {
+      "mustHaveHumor": true,
+      "requiresTargetRealization": false,
+      "disallowGenericFiller": true
+    }
+  },
+  {
+    "id": "phase2b_heldout_003",
+    "dataset": "held_out_evaluation_phase2b",
+    "input": "forgets the scheduled dentist appointment",
+    "expectedMeaning": "Partner omitted or forgot an agreed calendar or medical engagement",
+    "expectedFrame": "frame_punctuality_departure_delay",
+    "expectedParentFrame": "frame_parent_timing_scheduling",
+    "acceptableAlternativeFrames": [
+      "frame_parent_timing_scheduling",
+      "frame_parent_domestic_chores"
+    ],
+    "expectedAction": "forget",
+    "expectedTarget": "dentist appointment",
+    "expectedPolarity": "omitted_forgotten",
+    "expectedModifier": null,
+    "expectedSensitivity": "ordinary_quirk",
+    "expectedOutcome": "playful_angles",
+    "eligibilityCriteria": {
+      "mustHaveHumor": true,
+      "requiresTargetRealization": true,
+      "disallowGenericFiller": true
+    }
+  },
+  {
+    "id": "phase2b_heldout_004",
+    "dataset": "held_out_evaluation_phase2b",
+    "input": "completely forgot about our dinner reservation tonight",
+    "expectedMeaning": "Partner overlooked a joint social/dining commitment made in advance",
+    "expectedFrame": "frame_decision_preference_mismatch",
+    "expectedParentFrame": "frame_parent_timing_scheduling",
+    "acceptableAlternativeFrames": [
+      "frame_parent_timing_scheduling",
+      "frame_parent_leisure_travel_money"
+    ],
+    "expectedAction": "forget",
+    "expectedTarget": "dinner reservation",
+    "expectedPolarity": "omitted_forgotten",
+    "expectedModifier": "complete",
+    "expectedSensitivity": "ordinary_quirk",
+    "expectedOutcome": "playful_angles",
+    "eligibilityCriteria": {
+      "mustHaveHumor": true,
+      "requiresTargetRealization": true,
+      "disallowGenericFiller": true
+    }
+  },
+  {
+    "id": "phase2b_heldout_005",
+    "dataset": "held_out_evaluation_phase2b",
+    "input": "streaming movies on the couch past 2am",
+    "expectedMeaning": "Partner indulges in prolonged late-night media consumption",
+    "expectedFrame": "frame_subjective_preference_contrast",
+    "expectedParentFrame": "frame_parent_opinions_disagreements",
+    "acceptableAlternativeFrames": [
+      "frame_parent_opinions_disagreements",
+      "frame_parent_leisure_travel_money",
+      "frame_sleep_duvet_alarm"
+    ],
+    "expectedAction": "stream",
+    "expectedTarget": "movies",
+    "expectedPolarity": "excessive",
+    "expectedModifier": "late",
+    "expectedSensitivity": "ordinary_quirk",
+    "expectedOutcome": "playful_angles",
+    "eligibilityCriteria": {
+      "mustHaveHumor": true,
+      "requiresTargetRealization": false,
+      "disallowGenericFiller": true
+    }
+  },
+  {
+    "id": "phase2b_heldout_006",
+    "dataset": "held_out_evaluation_phase2b",
+    "input": "keeping the television blasting news in the bedroom until 1am",
+    "expectedMeaning": "Active television audio kept on late at night impacting bedroom environment",
+    "expectedFrame": "frame_sleep_acoustics",
+    "expectedParentFrame": "frame_parent_sleep_bodily",
+    "acceptableAlternativeFrames": [
+      "frame_parent_sleep_bodily",
+      "frame_subjective_preference_contrast"
+    ],
+    "expectedAction": "keep",
+    "expectedTarget": "television",
+    "expectedPolarity": "excessive",
+    "expectedModifier": "loud",
+    "expectedSensitivity": "ordinary_quirk",
+    "expectedOutcome": "playful_angles",
+    "eligibilityCriteria": {
+      "mustHaveHumor": true,
+      "requiresTargetRealization": true,
+      "disallowGenericFiller": true
+    }
+  },
+  {
+    "id": "phase2b_heldout_007",
+    "dataset": "held_out_evaluation_phase2b",
+    "input": "strolls through the crosswalk like we have unlimited hours",
+    "expectedMeaning": "Partner moves or walks at an unhurried, leisurely pace during departure or transit",
+    "expectedFrame": "frame_punctuality_departure_delay",
+    "expectedParentFrame": "frame_parent_timing_scheduling",
+    "acceptableAlternativeFrames": [
+      "frame_parent_timing_scheduling"
+    ],
+    "expectedAction": "walk",
+    "expectedTarget": null,
+    "expectedPolarity": "delayed",
+    "expectedModifier": "slowly",
+    "expectedSensitivity": "ordinary_quirk",
+    "expectedOutcome": "playful_angles",
+    "eligibilityCriteria": {
+      "mustHaveHumor": true,
+      "requiresTargetRealization": false,
+      "disallowGenericFiller": true
+    }
+  },
+  {
+    "id": "phase2b_heldout_008",
+    "dataset": "held_out_evaluation_phase2b",
+    "input": "speaks in full lecture volume right inside the quiet bookstore",
+    "expectedMeaning": "Excessive vocal projection in a quiet public or home setting",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedParentFrame": "frame_parent_communication_voice",
+    "acceptableAlternativeFrames": [
+      "frame_parent_communication_voice"
+    ],
+    "expectedAction": "speak",
+    "expectedTarget": "voice",
+    "expectedPolarity": "excessive",
+    "expectedModifier": "loudly",
+    "expectedSensitivity": "ordinary_quirk",
+    "expectedOutcome": "playful_angles",
+    "eligibilityCriteria": {
+      "mustHaveHumor": true,
+      "requiresTargetRealization": false,
+      "disallowGenericFiller": true
+    }
+  },
+  {
+    "id": "phase2b_heldout_009",
+    "dataset": "held_out_evaluation_phase2b",
+    "input": "refuses to listen when I say stop pushing me",
+    "expectedMeaning": "Explicit boundary violation and refusal of autonomy",
+    "expectedFrame": "frame_boundary_safety_protection",
+    "expectedParentFrame": "frame_parent_boundaries_emotions",
+    "acceptableAlternativeFrames": [
+      "frame_parent_boundaries_emotions"
+    ],
+    "expectedAction": "refuse",
+    "expectedTarget": "boundaries",
+    "expectedPolarity": "active",
+    "expectedModifier": null,
+    "expectedSensitivity": "boundary_concern",
+    "expectedOutcome": "respectful_reflection",
+    "eligibilityCriteria": {
+      "mustHaveHumor": false,
+      "requiresTargetRealization": false,
+      "disallowGenericFiller": true
+    }
+  },
+  {
+    "id": "phase2b_heldout_010",
+    "dataset": "held_out_evaluation_phase2b",
+    "input": "glances at his watch twenty times while I am talking about my day",
+    "expectedMeaning": "Impatience and divided attention during an interpersonal sharing conversation",
+    "expectedFrame": "frame_attention_distraction",
+    "expectedParentFrame": "frame_parent_attention_digital",
+    "acceptableAlternativeFrames": [
+      "frame_parent_attention_digital",
+      "frame_conversational_interruption"
+    ],
+    "expectedAction": "glance",
+    "expectedTarget": "watch",
+    "expectedPolarity": "repeated",
+    "expectedModifier": "frequent",
+    "expectedSensitivity": "ordinary_quirk",
+    "expectedOutcome": "playful_angles",
+    "eligibilityCriteria": {
+      "mustHaveHumor": true,
+      "requiresTargetRealization": false,
+      "disallowGenericFiller": true
+    }
+  },
+  {
+    "id": "phase2b_heldout_011",
+    "dataset": "held_out_evaluation_phase2b",
+    "input": "uses half a bar of soap for one single hand wash",
+    "expectedMeaning": "Excessive consumption of household hygiene supplies",
+    "expectedFrame": "frame_houseplant_pet_care",
+    "expectedParentFrame": "frame_parent_domestic_chores",
+    "acceptableAlternativeFrames": [
+      "frame_parent_domestic_chores"
+    ],
+    "expectedAction": "use",
+    "expectedTarget": "soap",
+    "expectedPolarity": "excessive",
+    "expectedModifier": "excessive",
+    "expectedSensitivity": "ordinary_quirk",
+    "expectedOutcome": "playful_angles",
+    "eligibilityCriteria": {
+      "mustHaveHumor": true,
+      "requiresTargetRealization": true,
+      "disallowGenericFiller": true
+    }
+  },
+  {
+    "id": "phase2b_heldout_012",
+    "dataset": "held_out_evaluation_phase2b",
+    "input": "blatantly ignoring agreed household rules",
+    "expectedMeaning": "Vague interpersonal friction lacking specific observable action or physical entity",
+    "expectedFrame": "frame_unknown_uninterpretable",
+    "expectedParentFrame": null,
+    "acceptableAlternativeFrames": [],
+    "expectedAction": null,
+    "expectedTarget": null,
+    "expectedPolarity": "active",
+    "expectedModifier": null,
+    "expectedSensitivity": "ordinary_quirk",
+    "expectedOutcome": "clarification_needed",
+    "eligibilityCriteria": {
+      "mustHaveHumor": false,
+      "requiresTargetRealization": false,
+      "disallowGenericFiller": true
+    }
+  }
+]

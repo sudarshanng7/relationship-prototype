@@ -1908,6 +1908,49 @@
     ],
     "sourceIds": [
       "purple-garden-original"
+    ],
+    "compatiblePolarities": [
+      "omitted_forgotten",
+      "active",
+      "repeated"
+    ],
+    "triggers": [
+      "put",
+      "placed",
+      "left",
+      "set down",
+      "belongings",
+      "stuff",
+      "keys",
+      "glasses",
+      "phone"
+    ],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Placing or searching",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action of placing, setting down or forgetting"
+      },
+      {
+        "id": "target",
+        "name": "Misplaced belonging",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "place"
+        ],
+        "required": false,
+        "description": "Target belonging or item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_home_organization",
+      "frame_object_displacement"
     ]
   },
   {
@@ -1915,7 +1958,7 @@
     "name": "Active room or bathroom illumination left on",
     "description": "Maintaining lights or illumination in an active on-state after leaving",
     "isAbstractParent": false,
-    "parentFrameId": "frame_parent_technology_devices",
+    "parentFrameId": "frame_parent_appliances_climate",
     "acceptableAlternativeFrames": [
       "frame_light_climate_control"
     ],
@@ -1928,6 +1971,46 @@
     ],
     "sourceIds": [
       "purple-garden-original"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "omitted_forgotten"
+    ],
+    "triggers": [
+      "lights",
+      "lamps",
+      "lighting",
+      "leaving on",
+      "switched on",
+      "burning"
+    ],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Leaving illuminated",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Leaving or keeping lights turned on"
+      },
+      {
+        "id": "target",
+        "name": "Light source or room",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "place"
+        ],
+        "required": false,
+        "description": "Target light, lamp, bathroom or room"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_appliances_climate",
+      "frame_light_climate_control"
     ]
   },
   {
@@ -1935,7 +2018,7 @@
     "name": "Morning alarm ringing unstopped or forgotten switch-off",
     "description": "Forgetting to switch off or deactivate an alarm once awake",
     "isAbstractParent": false,
-    "parentFrameId": "frame_parent_bodily_sleep",
+    "parentFrameId": "frame_parent_sleep_bodily",
     "acceptableAlternativeFrames": [
       "frame_sleep_duvet_alarm"
     ],
@@ -1948,6 +2031,49 @@
     ],
     "sourceIds": [
       "purple-garden-original"
+    ],
+    "compatiblePolarities": [
+      "omitted_forgotten",
+      "active",
+      "delayed"
+    ],
+    "triggers": [
+      "alarm",
+      "alarms",
+      "switch off",
+      "turn off",
+      "stop",
+      "deactivate",
+      "shut off",
+      "ringing"
+    ],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Alarm deactivation omission",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Failing to switch off or deactivate alarm"
+      },
+      {
+        "id": "target",
+        "name": "Alarm device",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "time",
+          "activity"
+        ],
+        "required": false,
+        "description": "Target alarm or phone"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_sleep_bodily",
+      "frame_sleep_duvet_alarm"
     ]
   }
 ]

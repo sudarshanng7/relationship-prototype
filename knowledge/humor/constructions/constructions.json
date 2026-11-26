@@ -603,7 +603,8 @@
     "humorFamily": "gentle_personification",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "delayed"
+      "delayed",
+      "repeated"
     ],
     "requiredRoles": [
       "target"
@@ -635,7 +636,8 @@
     "humorFamily": "gentle_personification",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "delayed"
+      "delayed",
+      "repeated"
     ],
     "requiredRoles": [
       "target"
@@ -667,7 +669,8 @@
     "humorFamily": "situational_exaggeration",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "delayed"
+      "delayed",
+      "repeated"
     ],
     "requiredRoles": [
       "target"
@@ -699,7 +702,8 @@
     "humorFamily": "playful_comparison",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "delayed"
+      "delayed",
+      "repeated"
     ],
     "requiredRoles": [
       "target"
@@ -731,7 +735,8 @@
     "humorFamily": "playful_comparison",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "delayed"
+      "delayed",
+      "repeated"
     ],
     "requiredRoles": [
       "target"
@@ -763,7 +768,8 @@
     "humorFamily": "situational_exaggeration",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "delayed"
+      "delayed",
+      "repeated"
     ],
     "requiredRoles": [
       "target"
@@ -795,7 +801,8 @@
     "humorFamily": "everyday_irony",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "delayed"
+      "delayed",
+      "repeated"
     ],
     "requiredRoles": [
       "target"
@@ -827,7 +834,8 @@
     "humorFamily": "everyday_irony",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "delayed"
+      "delayed",
+      "repeated"
     ],
     "requiredRoles": [
       "target"
@@ -859,7 +867,8 @@
     "humorFamily": "situational_exaggeration",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "delayed"
+      "delayed",
+      "repeated"
     ],
     "requiredRoles": [
       "target"
@@ -1787,7 +1796,8 @@
       "omitted_forgotten",
       "negated",
       "delayed",
-      "repeated"
+      "repeated",
+      "active"
     ],
     "requiredRoles": [
       "target"
@@ -1821,7 +1831,8 @@
       "omitted_forgotten",
       "negated",
       "delayed",
-      "repeated"
+      "repeated",
+      "active"
     ],
     "requiredRoles": [
       "target"
@@ -1855,7 +1866,8 @@
       "omitted_forgotten",
       "negated",
       "delayed",
-      "repeated"
+      "repeated",
+      "active"
     ],
     "requiredRoles": [
       "target"
@@ -1889,7 +1901,8 @@
       "omitted_forgotten",
       "negated",
       "delayed",
-      "repeated"
+      "repeated",
+      "active"
     ],
     "requiredRoles": [
       "target"
@@ -1923,7 +1936,8 @@
       "omitted_forgotten",
       "negated",
       "delayed",
-      "repeated"
+      "repeated",
+      "active"
     ],
     "requiredRoles": [
       "target"
@@ -1957,7 +1971,8 @@
       "omitted_forgotten",
       "negated",
       "delayed",
-      "repeated"
+      "repeated",
+      "active"
     ],
     "requiredRoles": [
       "target"
@@ -1991,7 +2006,8 @@
       "omitted_forgotten",
       "negated",
       "delayed",
-      "repeated"
+      "repeated",
+      "active"
     ],
     "requiredRoles": [
       "target"
@@ -2025,7 +2041,8 @@
       "omitted_forgotten",
       "negated",
       "delayed",
-      "repeated"
+      "repeated",
+      "active"
     ],
     "requiredRoles": [
       "target"
@@ -2059,7 +2076,8 @@
       "omitted_forgotten",
       "negated",
       "delayed",
-      "repeated"
+      "repeated",
+      "active"
     ],
     "requiredRoles": [
       "target"
@@ -2091,7 +2109,8 @@
     "humorFamily": "everyday_irony",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "repeated"
+      "repeated",
+      "incomplete"
     ],
     "requiredRoles": [
       "target"
@@ -2123,7 +2142,8 @@
     "humorFamily": "everyday_irony",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "repeated"
+      "repeated",
+      "incomplete"
     ],
     "requiredRoles": [
       "target"
@@ -2155,7 +2175,8 @@
     "humorFamily": "situational_exaggeration",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "repeated"
+      "repeated",
+      "incomplete"
     ],
     "requiredRoles": [
       "target"
@@ -2187,7 +2208,8 @@
     "humorFamily": "playful_comparison",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "repeated"
+      "repeated",
+      "incomplete"
     ],
     "requiredRoles": [
       "target"
@@ -2219,7 +2241,8 @@
     "humorFamily": "playful_comparison",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "repeated"
+      "repeated",
+      "incomplete"
     ],
     "requiredRoles": [
       "target"
@@ -2251,7 +2274,8 @@
     "humorFamily": "situational_exaggeration",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "repeated"
+      "repeated",
+      "incomplete"
     ],
     "requiredRoles": [
       "target"
@@ -2283,7 +2307,8 @@
     "humorFamily": "observational_warmth",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "repeated"
+      "repeated",
+      "incomplete"
     ],
     "requiredRoles": [
       "target"
@@ -2315,7 +2340,8 @@
     "humorFamily": "observational_warmth",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "repeated"
+      "repeated",
+      "incomplete"
     ],
     "requiredRoles": [
       "target"
@@ -2347,7 +2373,8 @@
     "humorFamily": "situational_exaggeration",
     "compatiblePolarities": [
       "omitted_forgotten",
-      "repeated"
+      "repeated",
+      "incomplete"
     ],
     "requiredRoles": [
       "target"
@@ -2677,7 +2704,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "delayed"
     ],
     "requiredRoles": [
       "target",
@@ -2711,7 +2739,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "delayed"
     ],
     "requiredRoles": [
       "target",
@@ -2745,7 +2774,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "delayed"
     ],
     "requiredRoles": [
       "target",
@@ -2779,7 +2809,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "delayed"
     ],
     "requiredRoles": [
       "target",
@@ -2813,7 +2844,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "delayed"
     ],
     "requiredRoles": [
       "target",
@@ -2847,7 +2879,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "delayed"
     ],
     "requiredRoles": [
       "target",
@@ -2881,7 +2914,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "delayed"
     ],
     "requiredRoles": [
       "target",
@@ -2915,7 +2949,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "delayed"
     ],
     "requiredRoles": [
       "target",
@@ -2949,7 +2984,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "delayed"
     ],
     "requiredRoles": [
       "target",
@@ -3262,7 +3298,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "excessive"
+      "excessive",
+      "delayed"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -3293,7 +3330,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "excessive"
+      "excessive",
+      "delayed"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -3324,7 +3362,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "excessive"
+      "excessive",
+      "delayed"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -3355,7 +3394,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "excessive"
+      "excessive",
+      "delayed"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -3386,7 +3426,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "excessive"
+      "excessive",
+      "delayed"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -3417,7 +3458,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "excessive"
+      "excessive",
+      "delayed"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -3448,7 +3490,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "excessive"
+      "excessive",
+      "delayed"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -3479,7 +3522,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "excessive"
+      "excessive",
+      "delayed"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -3510,7 +3554,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "excessive"
+      "excessive",
+      "delayed"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -3853,7 +3898,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "The {target} is waiting calmly in case anyone wants to press go\u2014or switch off\u2014in a moment.",
+    "grammarTemplate": "The {target} is waiting calmly in case anyone wants to press go—or switch off—in a moment.",
     "tone": "gentle",
     "sensitivityRestrictions": [
       "ordinary_quirk"
@@ -4450,7 +4495,8 @@
     "compatiblePolarities": [
       "delayed",
       "repeated",
-      "excessive"
+      "excessive",
+      "active"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4481,7 +4527,8 @@
     "compatiblePolarities": [
       "delayed",
       "repeated",
-      "excessive"
+      "excessive",
+      "active"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4512,7 +4559,8 @@
     "compatiblePolarities": [
       "delayed",
       "repeated",
-      "excessive"
+      "excessive",
+      "active"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4543,7 +4591,8 @@
     "compatiblePolarities": [
       "delayed",
       "repeated",
-      "excessive"
+      "excessive",
+      "active"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4574,7 +4623,8 @@
     "compatiblePolarities": [
       "delayed",
       "repeated",
-      "excessive"
+      "excessive",
+      "active"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4605,7 +4655,8 @@
     "compatiblePolarities": [
       "delayed",
       "repeated",
-      "excessive"
+      "excessive",
+      "active"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4636,7 +4687,8 @@
     "compatiblePolarities": [
       "delayed",
       "repeated",
-      "excessive"
+      "excessive",
+      "active"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4667,7 +4719,8 @@
     "compatiblePolarities": [
       "delayed",
       "repeated",
-      "excessive"
+      "excessive",
+      "active"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4698,7 +4751,8 @@
     "compatiblePolarities": [
       "delayed",
       "repeated",
-      "excessive"
+      "excessive",
+      "active"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4729,7 +4783,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "negated"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4760,7 +4815,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "negated"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4791,7 +4847,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "negated"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4822,7 +4879,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "negated"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4853,7 +4911,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "negated"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4884,7 +4943,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "negated"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4915,7 +4975,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "negated"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4946,7 +5007,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "negated"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -4977,7 +5039,8 @@
     "compatiblePolarities": [
       "active",
       "repeated",
-      "omitted_forgotten"
+      "omitted_forgotten",
+      "negated"
     ],
     "requiredRoles": [],
     "supportedConceptTypes": [
@@ -5574,21 +5637,20 @@
     ]
   },
   {
-    "id": "pgc3_172_comp_habit_warmth_gentle",
+    "id": "pgc3_172_comp_slow_pacing_gentle",
     "structuralPatternId": "v3_comp_habit_warmth_gentle",
-    "name": "Grounded Everyday Habit (gentle)",
+    "name": "Mindful Slow Pace (gentle)",
     "patternName": "comp_habit_warmth",
-    "humorOpportunity": "compositional_habit",
-    "mechanismId": "mech_observational_parody",
+    "humorOpportunity": "slow_progress",
+    "mechanismId": "mech_zen_minimalism",
     "humorFamily": "observational_warmth",
     "compatiblePolarities": [
       "active",
       "repeated",
       "excessive",
       "incomplete",
-      "negated",
-      "omitted_forgotten",
-      "delayed"
+      "delayed",
+      "omitted_forgotten"
     ],
     "requiredRoles": [
       "target"
@@ -5601,7 +5663,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "A cozy everyday rhythm around {target} quietly adding its own personality to the house.",
+    "grammarTemplate": "Approaching {action} the {target} with deep, reverent patience, letting every single second be savored.",
     "tone": "gentle",
     "sensitivityRestrictions": [
       "ordinary_quirk"
@@ -5611,21 +5673,92 @@
     ]
   },
   {
-    "id": "pgc3_173_comp_habit_warmth_playful",
+    "id": "pgc3_173_comp_slow_pacing_playful",
     "structuralPatternId": "v3_comp_habit_warmth_playful",
-    "name": "Grounded Everyday Habit (playful)",
+    "name": "Mindful Slow Pace (playful)",
     "patternName": "comp_habit_warmth",
-    "humorOpportunity": "compositional_habit",
-    "mechanismId": "mech_observational_parody",
+    "humorOpportunity": "slow_progress",
+    "mechanismId": "mech_playful_milestone",
+    "humorFamily": "playful_comparison",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "delayed",
+      "omitted_forgotten"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "Treating {action} the {target} like a tranquil meditation retreat where clocks and schedules simply cease to exist.",
+    "tone": "playful",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_174_comp_slow_pacing_exaggerated",
+    "structuralPatternId": "v3_comp_habit_warmth_exaggerated",
+    "name": "Mindful Slow Pace (exaggerated)",
+    "patternName": "comp_habit_warmth",
+    "humorOpportunity": "slow_progress",
+    "mechanismId": "mech_time_dilation",
+    "humorFamily": "situational_exaggeration",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "delayed",
+      "omitted_forgotten"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "Turning {action} the {target} into an epic, multigenerational saga that might outlast the current geological era.",
+    "tone": "exaggerated",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_175_comp_fast_pacing_gentle",
+    "structuralPatternId": "v3_comp_habit_comp_gentle",
+    "name": "High Speed Momentum (gentle)",
+    "patternName": "comp_habit_comp",
+    "humorOpportunity": "fast_progress",
+    "mechanismId": "mech_comic_escalation",
     "humorFamily": "observational_warmth",
     "compatiblePolarities": [
       "active",
       "repeated",
       "excessive",
       "incomplete",
-      "negated",
-      "omitted_forgotten",
-      "delayed"
+      "delayed",
+      "omitted_forgotten"
     ],
     "requiredRoles": [
       "target"
@@ -5638,81 +5771,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "Apparently handling {target} follows an unwritten personal tradition that nobody wrote down.",
-    "tone": "playful",
-    "sensitivityRestrictions": [
-      "ordinary_quirk"
-    ],
-    "sourceIds": [
-      "purple-garden-original"
-    ]
-  },
-  {
-    "id": "pgc3_174_comp_habit_warmth_exaggerated",
-    "structuralPatternId": "v3_comp_habit_warmth_exaggerated",
-    "name": "Grounded Everyday Habit (exaggerated)",
-    "patternName": "comp_habit_warmth",
-    "humorOpportunity": "compositional_habit",
-    "mechanismId": "mech_observational_parody",
-    "humorFamily": "situational_exaggeration",
-    "compatiblePolarities": [
-      "active",
-      "repeated",
-      "excessive",
-      "incomplete",
-      "negated",
-      "omitted_forgotten",
-      "delayed"
-    ],
-    "requiredRoles": [
-      "target"
-    ],
-    "supportedConceptTypes": [
-      "action",
-      "physical_object",
-      "ingredient",
-      "activity",
-      "behavior"
-    ],
-    "compatibleModifiers": [],
-    "grammarTemplate": "The {target} taking center stage in today's unforgettable little household comedy.",
-    "tone": "exaggerated",
-    "sensitivityRestrictions": [
-      "ordinary_quirk"
-    ],
-    "sourceIds": [
-      "purple-garden-original"
-    ]
-  },
-  {
-    "id": "pgc3_175_comp_habit_comp_gentle",
-    "structuralPatternId": "v3_comp_habit_comp_gentle",
-    "name": "Unscripted Home Rhythm (gentle)",
-    "patternName": "comp_habit_comp",
-    "humorOpportunity": "compositional_habit",
-    "mechanismId": "mech_harmless_personification",
-    "humorFamily": "playful_comparison",
-    "compatiblePolarities": [
-      "active",
-      "repeated",
-      "excessive",
-      "incomplete",
-      "negated",
-      "omitted_forgotten",
-      "delayed"
-    ],
-    "requiredRoles": [
-      "target"
-    ],
-    "supportedConceptTypes": [
-      "action",
-      "physical_object",
-      "ingredient",
-      "activity",
-      "behavior"
-    ],
-    "compatibleModifiers": [],
-    "grammarTemplate": "One tiny everyday chapter where {target} keeps shared routines delightfully unpredictable.",
+    "grammarTemplate": "Powering through {action} the {target} with impressive velocity, finishing before anyone even has a chance to pull up a chair.",
     "tone": "gentle",
     "sensitivityRestrictions": [
       "ordinary_quirk"
@@ -5722,11 +5781,527 @@
     ]
   },
   {
-    "id": "pgc3_176_comp_habit_comp_playful",
+    "id": "pgc3_176_comp_fast_pacing_playful",
     "structuralPatternId": "v3_comp_habit_comp_playful",
-    "name": "Unscripted Home Rhythm (playful)",
+    "name": "High Speed Momentum (playful)",
     "patternName": "comp_habit_comp",
-    "humorOpportunity": "compositional_habit",
+    "humorOpportunity": "fast_progress",
+    "mechanismId": "mech_olympic_sporting",
+    "humorFamily": "playful_comparison",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "delayed",
+      "omitted_forgotten"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "Approaching {action} the {target} like a Formula 1 pit stop where every microsecond counts toward a new house record.",
+    "tone": "playful",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_177_comp_fast_pacing_exaggerated",
+    "structuralPatternId": "v3_comp_habit_comp_exaggerated",
+    "name": "High Speed Momentum (exaggerated)",
+    "patternName": "comp_habit_comp",
+    "humorOpportunity": "fast_progress",
+    "mechanismId": "mech_situational_exaggeration",
+    "humorFamily": "situational_exaggeration",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "delayed",
+      "omitted_forgotten"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "Cruising through {action} the {target} at supersonic speed, leaving a comedic gust of wind where the plate used to be.",
+    "tone": "exaggerated",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_178_comp_excess_quantity_gentle",
+    "structuralPatternId": "v3_comp_habit_irony_gentle",
+    "name": "Abundant Generous Quantity (gentle)",
+    "patternName": "comp_habit_irony",
+    "humorOpportunity": "excessive_quantity",
+    "mechanismId": "mech_architectural_wonder",
+    "humorFamily": "observational_warmth",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "delayed",
+      "omitted_forgotten"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "Someone clearly believes {target} works best in generous quantities.",
+    "tone": "gentle",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_179_comp_excess_quantity_playful",
+    "structuralPatternId": "v3_comp_habit_irony_playful",
+    "name": "Abundant Generous Quantity (playful)",
+    "patternName": "comp_habit_irony",
+    "humorOpportunity": "excessive_quantity",
+    "mechanismId": "mech_unexpected_profession",
+    "humorFamily": "everyday_irony",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "delayed",
+      "omitted_forgotten"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "Treating {target} like a renewable resource nobody on earth will ever run out of.",
+    "tone": "playful",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_180_comp_excess_quantity_exaggerated",
+    "structuralPatternId": "v3_comp_habit_irony_exaggerated",
+    "name": "Abundant Generous Quantity (exaggerated)",
+    "patternName": "comp_habit_irony",
+    "humorOpportunity": "excessive_quantity",
+    "mechanismId": "mech_absurd_measurement",
+    "humorFamily": "situational_exaggeration",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "delayed",
+      "omitted_forgotten"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "Using enough {target} per round to make the {substance_container} wonder what it did to deserve this.",
+    "tone": "exaggerated",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_207_excess_beverage_gentle",
+    "structuralPatternId": "v3_excess_beverage_gentle",
+    "name": "Generous Pour Into Drink (gentle)",
+    "patternName": "excess_beverage_pour",
+    "humorOpportunity": "excessive_quantity",
+    "mechanismId": "mech_architectural_wonder",
+    "humorFamily": "observational_warmth",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "requiredRoles": [
+      "additive",
+      "beverage"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "That {beverage} quietly accepted its new identity as a warm glass of {substance} with a faint {beverage} memory.",
+    "tone": "gentle",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_208_excess_beverage_playful",
+    "structuralPatternId": "v3_excess_beverage_playful",
+    "name": "Generous Pour Into Drink (playful)",
+    "patternName": "excess_beverage_pour",
+    "humorOpportunity": "excessive_quantity",
+    "mechanismId": "mech_unexpected_profession",
+    "humorFamily": "playful_comparison",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "requiredRoles": [
+      "additive",
+      "beverage"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "At this ratio the {beverage} is basically {substance} that once stood near some {beverage_origin}.",
+    "tone": "playful",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_209_excess_beverage_exaggerated",
+    "structuralPatternId": "v3_excess_beverage_exaggerated",
+    "name": "Generous Pour Into Drink (exaggerated)",
+    "patternName": "excess_beverage_pour",
+    "humorOpportunity": "excessive_quantity",
+    "mechanismId": "mech_absurd_measurement",
+    "humorFamily": "situational_exaggeration",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "requiredRoles": [
+      "additive",
+      "beverage"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "Enough {substance} in that {beverage} to officially reclassify it as a {substance} lake with barely a trace of {beverage} left.",
+    "tone": "exaggerated",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_210_excess_substance_dest_gentle",
+    "structuralPatternId": "v3_excess_substance_dest_gentle",
+    "name": "Generous Application To Surface (gentle)",
+    "patternName": "excess_substance_dest",
+    "humorOpportunity": "excessive_quantity",
+    "mechanismId": "mech_architectural_wonder",
+    "humorFamily": "observational_warmth",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "That {destination} got a truly generous coat of {substance} — not a single spot was left wondering.",
+    "tone": "gentle",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_211_excess_substance_dest_playful",
+    "structuralPatternId": "v3_excess_substance_dest_playful",
+    "name": "Generous Application To Surface (playful)",
+    "patternName": "excess_substance_dest",
+    "humorOpportunity": "excessive_quantity",
+    "mechanismId": "mech_unexpected_profession",
+    "humorFamily": "playful_comparison",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "The {destination} is now wearing more {substance} than it probably signed up for.",
+    "tone": "playful",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_212_excess_substance_dest_exaggerated",
+    "structuralPatternId": "v3_excess_substance_dest_exaggerated",
+    "name": "Generous Application To Surface (exaggerated)",
+    "patternName": "excess_substance_dest",
+    "humorOpportunity": "excessive_quantity",
+    "mechanismId": "mech_absurd_measurement",
+    "humorFamily": "situational_exaggeration",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "That {destination} is now carrying enough {substance} to pass as {excess_image}.",
+    "tone": "exaggerated",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_213_excess_general_gentle",
+    "structuralPatternId": "v3_excess_general_gentle",
+    "name": "Generous Use General (gentle)",
+    "patternName": "excess_general",
+    "humorOpportunity": "excessive_quantity",
+    "mechanismId": "mech_architectural_wonder",
+    "humorFamily": "observational_warmth",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "A warm personal commitment to never letting {target} go to waste by using plenty every time.",
+    "tone": "gentle",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_214_excess_general_playful",
+    "structuralPatternId": "v3_excess_general_playful",
+    "name": "Generous Use General (playful)",
+    "patternName": "excess_general",
+    "humorOpportunity": "excessive_quantity",
+    "mechanismId": "mech_unexpected_profession",
+    "humorFamily": "playful_comparison",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "The {target} disappears so fast it must think it has somewhere important to be.",
+    "tone": "playful",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_215_excess_general_exaggerated",
+    "structuralPatternId": "v3_excess_general_exaggerated",
+    "name": "Generous Use General (exaggerated)",
+    "patternName": "excess_general",
+    "humorOpportunity": "excessive_quantity",
+    "mechanismId": "mech_absurd_measurement",
+    "humorFamily": "situational_exaggeration",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "At this rate the household should probably buy {target} in bulk — industrial bulk.",
+    "tone": "exaggerated",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_181_comp_insufficient_quantity_gentle",
+    "structuralPatternId": "v3_comp_mock_authority_rare_gentle",
+    "name": "Minimalist Micro Quantity (gentle)",
+    "patternName": "comp_mock_authority_rare",
+    "humorOpportunity": "insufficient_quantity",
+    "mechanismId": "mech_understatement_minimalism",
+    "humorFamily": "observational_warmth",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "delayed",
+      "omitted_forgotten"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "Using just enough {target} to technically say it was included.",
+    "tone": "gentle",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_182_comp_insufficient_quantity_playful",
+    "structuralPatternId": "v3_comp_mock_authority_rare_playful",
+    "name": "Minimalist Micro Quantity (playful)",
+    "patternName": "comp_mock_authority_rare",
+    "humorOpportunity": "insufficient_quantity",
     "mechanismId": "mech_harmless_personification",
     "humorFamily": "playful_comparison",
     "compatiblePolarities": [
@@ -5734,9 +6309,8 @@
       "repeated",
       "excessive",
       "incomplete",
-      "negated",
-      "omitted_forgotten",
-      "delayed"
+      "delayed",
+      "omitted_forgotten"
     ],
     "requiredRoles": [
       "target"
@@ -5749,7 +6323,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "Funny how ordinary life with {target} always comes with an affectionate little twist.",
+    "grammarTemplate": "The {target} made a brief guest appearance and then politely excused itself.",
     "tone": "playful",
     "sensitivityRestrictions": [
       "ordinary_quirk"
@@ -5759,231 +6333,20 @@
     ]
   },
   {
-    "id": "pgc3_177_comp_habit_comp_exaggerated",
-    "structuralPatternId": "v3_comp_habit_comp_exaggerated",
-    "name": "Unscripted Home Rhythm (exaggerated)",
-    "patternName": "comp_habit_comp",
-    "humorOpportunity": "compositional_habit",
-    "mechanismId": "mech_harmless_personification",
-    "humorFamily": "situational_exaggeration",
-    "compatiblePolarities": [
-      "active",
-      "repeated",
-      "excessive",
-      "incomplete",
-      "negated",
-      "omitted_forgotten",
-      "delayed"
-    ],
-    "requiredRoles": [
-      "target"
-    ],
-    "supportedConceptTypes": [
-      "action",
-      "physical_object",
-      "ingredient",
-      "activity",
-      "behavior"
-    ],
-    "compatibleModifiers": [],
-    "grammarTemplate": "Another memorable episode in the ongoing domestic adventures starring our trusty {target}.",
-    "tone": "exaggerated",
-    "sensitivityRestrictions": [
-      "ordinary_quirk"
-    ],
-    "sourceIds": [
-      "purple-garden-original"
-    ]
-  },
-  {
-    "id": "pgc3_178_comp_habit_irony_gentle",
-    "structuralPatternId": "v3_comp_habit_irony_gentle",
-    "name": "Small Home Signature (gentle)",
-    "patternName": "comp_habit_irony",
-    "humorOpportunity": "compositional_habit",
-    "mechanismId": "mech_understatement_minimalism",
-    "humorFamily": "everyday_irony",
-    "compatiblePolarities": [
-      "active",
-      "repeated",
-      "excessive",
-      "incomplete",
-      "negated",
-      "omitted_forgotten",
-      "delayed"
-    ],
-    "requiredRoles": [
-      "target"
-    ],
-    "supportedConceptTypes": [
-      "action",
-      "physical_object",
-      "ingredient",
-      "activity",
-      "behavior"
-    ],
-    "compatibleModifiers": [],
-    "grammarTemplate": "Those tiny repeatable quirks with {target} give home life its warm unmistakable personality.",
-    "tone": "gentle",
-    "sensitivityRestrictions": [
-      "ordinary_quirk"
-    ],
-    "sourceIds": [
-      "purple-garden-original"
-    ]
-  },
-  {
-    "id": "pgc3_179_comp_habit_irony_playful",
-    "structuralPatternId": "v3_comp_habit_irony_playful",
-    "name": "Small Home Signature (playful)",
-    "patternName": "comp_habit_irony",
-    "humorOpportunity": "compositional_habit",
-    "mechanismId": "mech_understatement_minimalism",
-    "humorFamily": "everyday_irony",
-    "compatiblePolarities": [
-      "active",
-      "repeated",
-      "excessive",
-      "incomplete",
-      "negated",
-      "omitted_forgotten",
-      "delayed"
-    ],
-    "requiredRoles": [
-      "target"
-    ],
-    "supportedConceptTypes": [
-      "action",
-      "physical_object",
-      "ingredient",
-      "activity",
-      "behavior"
-    ],
-    "compatibleModifiers": [],
-    "grammarTemplate": "Consistent energy around {target} keeping every ordinary week playfully lively.",
-    "tone": "playful",
-    "sensitivityRestrictions": [
-      "ordinary_quirk"
-    ],
-    "sourceIds": [
-      "purple-garden-original"
-    ]
-  },
-  {
-    "id": "pgc3_180_comp_habit_irony_exaggerated",
-    "structuralPatternId": "v3_comp_habit_irony_exaggerated",
-    "name": "Small Home Signature (exaggerated)",
-    "patternName": "comp_habit_irony",
-    "humorOpportunity": "compositional_habit",
-    "mechanismId": "mech_understatement_minimalism",
-    "humorFamily": "situational_exaggeration",
-    "compatiblePolarities": [
-      "active",
-      "repeated",
-      "excessive",
-      "incomplete",
-      "negated",
-      "omitted_forgotten",
-      "delayed"
-    ],
-    "requiredRoles": [
-      "target"
-    ],
-    "supportedConceptTypes": [
-      "action",
-      "physical_object",
-      "ingredient",
-      "activity",
-      "behavior"
-    ],
-    "compatibleModifiers": [],
-    "grammarTemplate": "If household walls could chuckle, they'd definitely grin at this signature {target} routine.",
-    "tone": "exaggerated",
-    "sensitivityRestrictions": [
-      "ordinary_quirk"
-    ],
-    "sourceIds": [
-      "purple-garden-original"
-    ]
-  },
-  {
-    "id": "pgc3_181_comp_mock_authority_rare_gentle",
-    "structuralPatternId": "v3_comp_mock_authority_rare_gentle",
-    "name": "Mock Bulletin Rare (gentle)",
-    "patternName": "comp_mock_authority_rare",
-    "humorOpportunity": "compositional_habit",
-    "mechanismId": "mech_royal_proclamation",
-    "humorFamily": "occasional_mock_authority",
-    "compatiblePolarities": [
-      "active",
-      "repeated",
-      "excessive"
-    ],
-    "requiredRoles": [
-      "target"
-    ],
-    "supportedConceptTypes": [
-      "action",
-      "physical_object",
-      "ingredient",
-      "activity",
-      "behavior"
-    ],
-    "compatibleModifiers": [],
-    "grammarTemplate": "A lighthearted home headline celebrating today's quirky episode with the {target}.",
-    "tone": "gentle",
-    "sensitivityRestrictions": [
-      "ordinary_quirk"
-    ],
-    "sourceIds": [
-      "purple-garden-original"
-    ]
-  },
-  {
-    "id": "pgc3_182_comp_mock_authority_rare_playful",
-    "structuralPatternId": "v3_comp_mock_authority_rare_playful",
-    "name": "Mock Bulletin Rare (playful)",
-    "patternName": "comp_mock_authority_rare",
-    "humorOpportunity": "compositional_habit",
-    "mechanismId": "mech_royal_proclamation",
-    "humorFamily": "occasional_mock_authority",
-    "compatiblePolarities": [
-      "active",
-      "repeated",
-      "excessive"
-    ],
-    "requiredRoles": [
-      "target"
-    ],
-    "supportedConceptTypes": [
-      "action",
-      "physical_object",
-      "ingredient",
-      "activity",
-      "behavior"
-    ],
-    "compatibleModifiers": [],
-    "grammarTemplate": "Unofficial living-room minutes politely note that the {target} sparked fresh comedic debate today.",
-    "tone": "playful",
-    "sensitivityRestrictions": [
-      "ordinary_quirk"
-    ],
-    "sourceIds": [
-      "purple-garden-original"
-    ]
-  },
-  {
-    "id": "pgc3_183_comp_mock_authority_rare_exaggerated",
+    "id": "pgc3_183_comp_insufficient_quantity_exaggerated",
     "structuralPatternId": "v3_comp_mock_authority_rare_exaggerated",
-    "name": "Mock Bulletin Rare (exaggerated)",
+    "name": "Minimalist Micro Quantity (exaggerated)",
     "patternName": "comp_mock_authority_rare",
-    "humorOpportunity": "compositional_habit",
-    "mechanismId": "mech_royal_proclamation",
-    "humorFamily": "occasional_mock_authority",
+    "humorOpportunity": "insufficient_quantity",
+    "mechanismId": "mech_quantum_mechanics",
+    "humorFamily": "situational_exaggeration",
     "compatiblePolarities": [
       "active",
       "repeated",
-      "excessive"
+      "excessive",
+      "incomplete",
+      "delayed",
+      "omitted_forgotten"
     ],
     "requiredRoles": [
       "target"
@@ -5996,7 +6359,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "Breaking household bulletin: local committee grants honorary VIP status to today's {target} moment.",
+    "grammarTemplate": "You would need an electron microscope to confirm any {target} was actually involved.",
     "tone": "exaggerated",
     "sensitivityRestrictions": [
       "ordinary_quirk"
@@ -6061,7 +6424,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "Honoring personal pace without pressure\u2014your comfort and choice always come first.",
+    "grammarTemplate": "Honoring personal pace without pressure—your comfort and choice always come first.",
     "tone": "playful",
     "sensitivityRestrictions": [
       "boundary_concern",
@@ -6642,6 +7005,339 @@
     "sensitivity": [
       "ordinary_quirk"
     ],
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_204_comp_habit_general_gentle",
+    "structuralPatternId": "v3_comp_habit_general_gentle",
+    "name": "Grounded Everyday Habit (gentle)",
+    "patternName": "comp_habit_general",
+    "humorOpportunity": "compositional_habit",
+    "mechanismId": "mech_observational_parody",
+    "humorFamily": "observational_warmth",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten",
+      "delayed"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "A charming unscripted ritual while {action} the {target}, quietly bringing its own distinctive character to the day.",
+    "tone": "gentle",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_205_comp_habit_general_playful",
+    "structuralPatternId": "v3_comp_habit_general_playful",
+    "name": "Grounded Everyday Habit (playful)",
+    "patternName": "comp_habit_general",
+    "humorOpportunity": "compositional_habit",
+    "mechanismId": "mech_observational_parody",
+    "humorFamily": "observational_warmth",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten",
+      "delayed"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "Handling the {target} according to an unofficial personal playbook that seems to evolve with every passing week.",
+    "tone": "playful",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_206_comp_habit_general_exaggerated",
+    "structuralPatternId": "v3_comp_habit_general_exaggerated",
+    "name": "Grounded Everyday Habit (exaggerated)",
+    "patternName": "comp_habit_general",
+    "humorOpportunity": "compositional_habit",
+    "mechanismId": "mech_observational_parody",
+    "humorFamily": "situational_exaggeration",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten",
+      "delayed"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "The {target} starring in today's delightfully quirky domestic episode with unmistakable leading-role energy.",
+    "tone": "exaggerated",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_216_comp_habit_contextual_gentle",
+    "structuralPatternId": "v3_comp_habit_contextual_gentle",
+    "name": "Contextual Everyday Habit (gentle)",
+    "patternName": "comp_habit_contextual",
+    "humorOpportunity": "compositional_habit",
+    "mechanismId": "mech_observational_parody",
+    "humorFamily": "observational_warmth",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten",
+      "delayed"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "A personal tradition involving the {target} that unfolds with quiet sincerity every single time.",
+    "tone": "gentle",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_217_comp_habit_contextual_playful",
+    "structuralPatternId": "v3_comp_habit_contextual_playful",
+    "name": "Contextual Everyday Habit (playful)",
+    "patternName": "comp_habit_contextual",
+    "humorOpportunity": "compositional_habit",
+    "mechanismId": "mech_observational_parody",
+    "humorFamily": "everyday_irony",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten",
+      "delayed"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "The {target} getting its own regular feature slot in the ongoing domestic production that nobody auditioned for.",
+    "tone": "playful",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_218_comp_habit_contextual_exaggerated",
+    "structuralPatternId": "v3_comp_habit_contextual_exaggerated",
+    "name": "Contextual Everyday Habit (exaggerated)",
+    "patternName": "comp_habit_contextual",
+    "humorOpportunity": "compositional_habit",
+    "mechanismId": "mech_scale_acoustic_distortion",
+    "humorFamily": "situational_exaggeration",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten",
+      "delayed"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "At this point the {target} has its own recurring storyline, complete with character development and a loyal audience of one.",
+    "tone": "exaggerated",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_219_comp_habit_action_gentle",
+    "structuralPatternId": "v3_comp_habit_action_gentle",
+    "name": "Action-Focused Everyday Habit (gentle)",
+    "patternName": "comp_habit_action",
+    "humorOpportunity": "compositional_habit",
+    "mechanismId": "mech_timing_anticlimax",
+    "humorFamily": "gentle_personification",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten",
+      "delayed"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "There is a certain commitment to {action} the {target} that comes from deep personal conviction.",
+    "tone": "gentle",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_220_comp_habit_action_playful",
+    "structuralPatternId": "v3_comp_habit_action_playful",
+    "name": "Action-Focused Everyday Habit (playful)",
+    "patternName": "comp_habit_action",
+    "humorOpportunity": "compositional_habit",
+    "mechanismId": "mech_observational_parody",
+    "humorFamily": "mock_authority",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten",
+      "delayed"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "Apparently {action} the {target} follows an unwritten personal tradition that nobody else was consulted on.",
+    "tone": "playful",
+    "sensitivityRestrictions": [
+      "ordinary_quirk"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "pgc3_221_comp_habit_action_exaggerated",
+    "structuralPatternId": "v3_comp_habit_action_exaggerated",
+    "name": "Action-Focused Everyday Habit (exaggerated)",
+    "patternName": "comp_habit_action",
+    "humorOpportunity": "compositional_habit",
+    "mechanismId": "mech_scale_acoustic_distortion",
+    "humorFamily": "situational_exaggeration",
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten",
+      "delayed"
+    ],
+    "requiredRoles": [
+      "target"
+    ],
+    "supportedConceptTypes": [
+      "action",
+      "physical_object",
+      "ingredient",
+      "activity",
+      "behavior"
+    ],
+    "compatibleModifiers": [],
+    "grammarTemplate": "The {target} getting such dedicated {action} that future archaeologists will study this as a cultural practice.",
+    "tone": "exaggerated",
     "sensitivityRestrictions": [
       "ordinary_quirk"
     ],
