@@ -1,0 +1,1548 @@
+[
+  {
+    "id": "eval_0001",
+    "input": "talking too loud on the phone",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "action:speaking",
+      "device:phone",
+      "intensity:excessive"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0002",
+    "input": "speaking very loudly during a phone call in the hallway",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "action:speaking",
+      "device:phone",
+      "intensity:excessive"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0003",
+    "input": "screaming on the conference call while I am trying to focus",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "action:speaking",
+      "context:work_concentration",
+      "intensity:excessive"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "eval_0004",
+    "input": "conversational decibels increase suddenly during evening chat",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "action:speaking",
+      "intensity:excessive"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0005",
+    "input": "making tea with just water and namesake milk",
+    "expectedFrame": "frame_beverage_preparation",
+    "expectedRoles": [
+      "beverage:tea",
+      "substance:water",
+      "quantity:negligible"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0006",
+    "input": "brewing coffee with barely any milk",
+    "expectedFrame": "frame_beverage_preparation",
+    "expectedRoles": [
+      "beverage:coffee",
+      "quantity:negligible"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0007",
+    "input": "prepared soup with almost zero salt and strictly hot water",
+    "expectedFrame": "frame_beverage_preparation",
+    "expectedRoles": [
+      "substance:water",
+      "quantity:negligible"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0008",
+    "input": "tea consists of nothing but hot water and an imaginary splash of milk",
+    "expectedFrame": "frame_beverage_preparation",
+    "expectedRoles": [
+      "beverage:tea",
+      "quantity:negligible"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0009",
+    "input": "yoga is not an exercise",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "subject:yoga",
+      "category:exercise",
+      "negation:propositional"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0010",
+    "input": "running is not a real sport",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "subject:running",
+      "category:sport",
+      "negation:propositional"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0011",
+    "input": "stretching does not count as physical workout",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "subject:stretching",
+      "category:workout",
+      "negation:propositional"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0012",
+    "input": "claims that video gaming qualifies as high-speed mental athletics",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "subject:gaming",
+      "category:athletics"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0013",
+    "input": "Not washing big utensils ever",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedRoles": [
+      "action:washing",
+      "target:utensils",
+      "scale:large",
+      "frequency:never"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0014",
+    "input": "refusing to wash the large pots in the sink basin",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedRoles": [
+      "action:washing",
+      "target:pots",
+      "scale:large",
+      "frequency:never"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0015",
+    "input": "washes all the small teaspoons but abandons the heavy cast iron skillet",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedRoles": [
+      "action:washing",
+      "target:skillet",
+      "scope:exception"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0016",
+    "input": "leaving dirty greasy pans soaking for three days straight",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedRoles": [
+      "action:washing",
+      "duration:excessive"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0017",
+    "input": "wardrobe drawers are always half opened",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "container:drawer",
+      "state:half_open",
+      "frequency:always"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0018",
+    "input": "leaving closet doors slightly ajar every single morning",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "container:closet",
+      "state:half_open"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0019",
+    "input": "kitchen cabinets pulled open and never pushed shut",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "container:cabinet",
+      "state:open",
+      "frequency:never"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0020",
+    "input": "snoring like a revving chainsaw all night long",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "behavior:snoring",
+      "intensity:excessive"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0021",
+    "input": "burping loudly right after finishing dinner",
+    "expectedFrame": "frame_beverage_preparation",
+    "expectedRoles": [
+      "behavior:burping",
+      "context:shared_mealtime"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0022",
+    "input": "stealing the entire duvet and leaving me shivering at 3 AM",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "behavior:duvet_theft",
+      "context:bedtime_rest"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0023",
+    "input": "hitting the alarm snooze button eight times every morning",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "action:snooze",
+      "frequency:recurring",
+      "context:morning_routine"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0024",
+    "input": "leaving every single bathroom light blazing all night",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "target:light",
+      "state:on",
+      "context:bedtime_rest"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0025",
+    "input": "setting the air conditioner to Arctic sub-zero temperatures",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "target:ac",
+      "intensity:excessive"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0026",
+    "input": "taking forty-five minutes to put on shoes when we are already late",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "action:shoes",
+      "duration:excessive",
+      "context:departure_rush"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0027",
+    "input": "waiting by the front door with car keys while partner looks for sunglasses",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "context:departure_rush"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0028",
+    "input": "Sometimes too pushy to act on something I do not want to act",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:refusal",
+      "unwanted_pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0029",
+    "input": "I clearly said no to going out and they kept demanding and pushing",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:refusal",
+      "unwanted_pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0030",
+    "input": "Mocking other person all the time in front of family",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "behavior:mocking",
+      "sensitivity:contempt"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0031",
+    "input": "feeling physically intimidated when voices get raised",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "safety:intimidation"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "eval_0032",
+    "input": "Insists on doing household their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0033",
+    "input": "Partner always forgets about the cleaning upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0034",
+    "input": "Leaves home items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0035",
+    "input": "Claims appliances does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0036",
+    "input": "Insists on doing furniture their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0037",
+    "input": "Partner always forgets about the energy, upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0038",
+    "input": "Leaves cooking items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0039",
+    "input": "Claims eating does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0040",
+    "input": "Insists on doing beverages their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0041",
+    "input": "Partner always forgets about the shopping upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0042",
+    "input": "Leaves health, items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0043",
+    "input": "Claims personal does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0044",
+    "input": "Insists on doing speaking, their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0045",
+    "input": "Partner always forgets about the listening upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0046",
+    "input": "Leaves humor, items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0047",
+    "input": "Claims opinions does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0048",
+    "input": "Insists on doing decision-making their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0049",
+    "input": "Partner always forgets about the bodily upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0050",
+    "input": "Leaves sleep items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0051",
+    "input": "Claims punctuality does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0052",
+    "input": "Insists on doing planning their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0053",
+    "input": "Partner always forgets about the work upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0054",
+    "input": "Leaves digital items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0055",
+    "input": "Claims hobbies does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0056",
+    "input": "Insists on doing quality their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0057",
+    "input": "Partner always forgets about the affection upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0058",
+    "input": "Leaves friends items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0059",
+    "input": "Claims family does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0060",
+    "input": "Insists on doing celebrations their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0061",
+    "input": "Partner always forgets about the travel upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0062",
+    "input": "Leaves money items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0063",
+    "input": "Claims shared does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0064",
+    "input": "Insists on doing parenting their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0065",
+    "input": "Partner always forgets about the pets upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0066",
+    "input": "Leaves emotional items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0067",
+    "input": "Claims personal does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0068",
+    "input": "Insists on doing household their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0069",
+    "input": "Partner always forgets about the cleaning upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0070",
+    "input": "Leaves home items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0071",
+    "input": "Claims appliances does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0072",
+    "input": "Insists on doing furniture their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0073",
+    "input": "Partner always forgets about the energy, upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0074",
+    "input": "Leaves cooking items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0075",
+    "input": "Claims eating does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0076",
+    "input": "Insists on doing beverages their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0077",
+    "input": "Partner always forgets about the shopping upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0078",
+    "input": "Leaves health, items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0079",
+    "input": "Claims personal does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0080",
+    "input": "Insists on doing speaking, their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0081",
+    "input": "Partner always forgets about the listening upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0082",
+    "input": "Leaves humor, items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0083",
+    "input": "Claims opinions does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0084",
+    "input": "Insists on doing decision-making their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0085",
+    "input": "Partner always forgets about the bodily upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0086",
+    "input": "Leaves sleep items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0087",
+    "input": "Claims punctuality does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0088",
+    "input": "Insists on doing planning their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0089",
+    "input": "Partner always forgets about the work upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0090",
+    "input": "Leaves digital items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0091",
+    "input": "Claims hobbies does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0092",
+    "input": "Insists on doing quality their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0093",
+    "input": "Partner always forgets about the affection upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0094",
+    "input": "Leaves friends items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0095",
+    "input": "Claims family does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0096",
+    "input": "Insists on doing celebrations their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0097",
+    "input": "Partner always forgets about the travel upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0098",
+    "input": "Leaves money items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0099",
+    "input": "Claims shared does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0100",
+    "input": "Insists on doing parenting their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0101",
+    "input": "Partner always forgets about the pets upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0102",
+    "input": "Leaves emotional items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0103",
+    "input": "Claims personal does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0104",
+    "input": "Insists on doing household their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0105",
+    "input": "Partner always forgets about the cleaning upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0106",
+    "input": "Leaves home items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0107",
+    "input": "Claims appliances does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0108",
+    "input": "Insists on doing furniture their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0109",
+    "input": "Partner always forgets about the energy, upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0110",
+    "input": "Leaves cooking items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0111",
+    "input": "Claims eating does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0112",
+    "input": "Insists on doing beverages their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0113",
+    "input": "Partner always forgets about the shopping upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0114",
+    "input": "Leaves health, items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0115",
+    "input": "Claims personal does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0116",
+    "input": "Insists on doing speaking, their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0117",
+    "input": "Partner always forgets about the listening upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0118",
+    "input": "Leaves humor, items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0119",
+    "input": "Claims opinions does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0120",
+    "input": "Insists on doing decision-making their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0121",
+    "input": "Partner always forgets about the bodily upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0122",
+    "input": "Leaves sleep items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0123",
+    "input": "Claims punctuality does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0124",
+    "input": "Insists on doing planning their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0125",
+    "input": "Partner always forgets about the work upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0126",
+    "input": "Leaves digital items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0127",
+    "input": "Claims hobbies does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0128",
+    "input": "Insists on doing quality their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0129",
+    "input": "Partner always forgets about the affection upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0130",
+    "input": "Leaves friends items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0131",
+    "input": "Claims family does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0132",
+    "input": "Insists on doing celebrations their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0133",
+    "input": "Partner always forgets about the travel upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0134",
+    "input": "Leaves money items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0135",
+    "input": "Claims shared does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0136",
+    "input": "Insists on doing parenting their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0137",
+    "input": "Partner always forgets about the pets upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0138",
+    "input": "Leaves emotional items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0139",
+    "input": "Claims personal does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0140",
+    "input": "Insists on doing household their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0141",
+    "input": "Partner always forgets about the cleaning upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0142",
+    "input": "Leaves home items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0143",
+    "input": "Claims appliances does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0144",
+    "input": "Insists on doing furniture their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0145",
+    "input": "Partner always forgets about the energy, upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0146",
+    "input": "Leaves cooking items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0147",
+    "input": "Claims eating does not matter in our weekly routine",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedRoles": [
+      "opinion:dismissal"
+    ],
+    "expectedOutcome": "clarification_needed",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0148",
+    "input": "Insists on doing beverages their exact way and won't accept my no",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "boundary:pressure"
+    ],
+    "expectedOutcome": "respectful_reflection",
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "eval_0149",
+    "input": "Partner always forgets about the shopping upkeep when weekend comes",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedRoles": [
+      "routine:omission"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "eval_0150",
+    "input": "Leaves health, items spread across the table instead of putting away",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedRoles": [
+      "clutter:displacement"
+    ],
+    "expectedOutcome": "playful_angles",
+    "sensitivity": "ordinary_quirk"
+  }
+]

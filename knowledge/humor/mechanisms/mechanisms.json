@@ -1,0 +1,1804 @@
+[
+  {
+    "id": "mech_understatement_minimalism",
+    "name": "Comic Understatement & Culinary Minimalism",
+    "description": "Portraying a negligible or symbolic amount as a conscious aesthetic or molecular gastronomy statement.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "negligible_ingredient",
+      "symbolic_gesture",
+      "minimal_effort"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "has_quantity",
+      "used_in"
+    ],
+    "compatibleConceptTypes": [
+      "ingredient",
+      "substance",
+      "physical_object"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "gentle",
+      "playful",
+      "exaggerated"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "serious_safety_violation",
+      "medical_dietary_emergency"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_fictional_administration"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose",
+      "const_dietary_avant_garde"
+    ],
+    "sourceIds": [
+      "purple-garden-original",
+      "relationship-research-peer-reviewed"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_scale_acoustic_distortion",
+    "name": "Acoustic Scale & Broadcasting Distortion",
+    "description": "Reframing elevated conversational decibels as an accidental public broadcast, stadium concert, or interplanetary transmission.",
+    "theoreticalBasis": "benign_violation",
+    "compatibleSituationTypes": [
+      "loud_speaking",
+      "phone_call_volume",
+      "decibel_spike"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone"
+    ],
+    "requiredSemanticRelations": [
+      "has_property",
+      "occurs_during"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "sensory_experience",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [],
+    "compatibleTones": [
+      "gentle",
+      "playful",
+      "exaggerated"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abusive_screaming",
+      "domestic_intimidation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_public_broadcasting",
+      "meta_telephony_satellites"
+    ],
+    "constructionIds": [
+      "const_whole_neighborhood_update",
+      "const_no_satellite_required"
+    ],
+    "sourceIds": [
+      "purple-garden-original",
+      "verbnet-cu"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_fictional_jurisdiction_incredulity",
+    "name": "Fictional Jurisdiction & Supreme Athletic Committee",
+    "description": "Treating a playful contrarian opinion as an authoritative legislative decree or Olympic committee dispute.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "categorical_disagreement",
+      "opinion_debate"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_evaluating_concept_proposition"
+    ],
+    "requiredSemanticRelations": [
+      "contrasts_with",
+      "is_a"
+    ],
+    "compatibleConceptTypes": [
+      "activity",
+      "opinion",
+      "abstract_concept"
+    ],
+    "incompatibleConceptTypes": [],
+    "compatibleTones": [
+      "gentle",
+      "playful",
+      "exaggerated"
+    ],
+    "humorIntensity": 4,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "invalidating_medical_disability"
+    ],
+    "metaphorFamilyIds": [
+      "meta_fictional_administration",
+      "meta_olympic_committee"
+    ],
+    "constructionIds": [
+      "const_olympic_ruling",
+      "const_sweat_tax_audit"
+    ],
+    "sourceIds": [
+      "purple-garden-original",
+      "relationship-research-peer-reviewed"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_archaeological_monument_soak",
+    "name": "Monumental Architecture & The Infinite Soak",
+    "description": "Reframing unwashed bulky pots or large utensils as historical domestic monuments or artisanal soaking exhibits.",
+    "theoreticalBasis": "observational",
+    "compatibleSituationTypes": [
+      "selective_chore_avoidance",
+      "unwashed_dishes"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_washing_kitchenware",
+      "frame_selective_chore_avoidance"
+    ],
+    "requiredSemanticRelations": [
+      "contrasts_with",
+      "has_property"
+    ],
+    "compatibleConceptTypes": [
+      "physical_object",
+      "action"
+    ],
+    "incompatibleConceptTypes": [],
+    "compatibleTones": [
+      "gentle",
+      "playful",
+      "exaggerated"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "squalor_neglect"
+    ],
+    "metaphorFamilyIds": [
+      "meta_historical_monument",
+      "meta_tactical_diplomacy"
+    ],
+    "constructionIds": [
+      "const_cast_iron_sanctuary",
+      "const_size_based_amnesty"
+    ],
+    "sourceIds": [
+      "purple-garden-original",
+      "relationship-research-peer-reviewed"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_observational_parody",
+    "name": "Everyday Observational Parody",
+    "description": "Comedic reframing through everyday observational parody.",
+    "theoreticalBasis": "observational",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_timing_anticlimax",
+    "name": "Timing Mismatch & Domestic Anticlimax",
+    "description": "Comedic reframing through timing mismatch & domestic anticlimax.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_harmless_personification",
+    "name": "Harmless Object Personification",
+    "description": "Comedic reframing through harmless object personification.",
+    "theoreticalBasis": "play_mirth",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "gentle",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_comic_escalation",
+    "name": "Micro-Drama & Epic Escalation",
+    "description": "Comedic reframing through micro-drama & epic escalation.",
+    "theoreticalBasis": "benign_violation",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "exaggerated",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_unexpected_profession",
+    "name": "Unexpected Domestic Occupation",
+    "description": "Comedic reframing through unexpected domestic occupation.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_absurd_measurement",
+    "name": "Absurd Units of Relational Measurement",
+    "description": "Comedic reframing through absurd units of relational measurement.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "exaggerated",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_playful_milestone",
+    "name": "Mock Ceremonial Milestone",
+    "description": "Comedic reframing through mock ceremonial milestone.",
+    "theoreticalBasis": "play_mirth",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_miniature_expedition",
+    "name": "Living Room Miniature Expedition",
+    "description": "Comedic reframing through living room miniature expedition.",
+    "theoreticalBasis": "play_mirth",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "gentle",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_genre_noir_mystery",
+    "name": "Domestic Detective & Noir Investigation",
+    "description": "Comedic reframing through domestic detective & noir investigation.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_sci_fi_anomaly",
+    "name": "Interplanetary Domestic Anomaly",
+    "description": "Comedic reframing through interplanetary domestic anomaly.",
+    "theoreticalBasis": "benign_violation",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "exaggerated",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_olympic_sporting",
+    "name": "The Living Room Decathlon",
+    "description": "Comedic reframing through the living room decathlon.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_peace_summit",
+    "name": "Kitchen Counter Diplomatic Summit",
+    "description": "Comedic reframing through kitchen counter diplomatic summit.",
+    "theoreticalBasis": "play_mirth",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "gentle",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_botanical_patience",
+    "name": "Botanical Time Scale & Ancient Patience",
+    "description": "Comedic reframing through botanical time scale & ancient patience.",
+    "theoreticalBasis": "relief",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "gentle",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_silent_film_farce",
+    "name": "Slapstick & Silent Film Stage Directions",
+    "description": "Comedic reframing through slapstick & silent film stage directions.",
+    "theoreticalBasis": "play_mirth",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_museum_curation",
+    "name": "Curatorial Preservation of Daily Artifacts",
+    "description": "Comedic reframing through curatorial preservation of daily artifacts.",
+    "theoreticalBasis": "observational",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "gentle",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_weather_forecast",
+    "name": "Domestic Micro-Climate Meteorological Warning",
+    "description": "Comedic reframing through domestic micro-climate meteorological warning.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "exaggerated",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_airline_safety",
+    "name": "Living Room Flight Attendant Safety Briefing",
+    "description": "Comedic reframing through living room flight attendant safety briefing.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_quantum_mechanics",
+    "name": "Quantum Superposition of Belongings",
+    "description": "Comedic reframing through quantum superposition of belongings.",
+    "theoreticalBasis": "benign_violation",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "exaggerated",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_culinary_patrol",
+    "name": "Michelin Guide Kitchen Inspection",
+    "description": "Comedic reframing through michelin guide kitchen inspection.",
+    "theoreticalBasis": "observational",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_whisper_monastery",
+    "name": "Vow of Acoustic Silence & Monastic Quiet",
+    "description": "Comedic reframing through vow of acoustic silence & monastic quiet.",
+    "theoreticalBasis": "relief",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "gentle",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_soundtrack_drama",
+    "name": "Cinematic Orchestral Score for Mundane Tasks",
+    "description": "Comedic reframing through cinematic orchestral score for mundane tasks.",
+    "theoreticalBasis": "play_mirth",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_postal_tracking",
+    "name": "Courier Tracking for Missing Everyday Items",
+    "description": "Comedic reframing through courier tracking for missing everyday items.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_bedtime_negotiation",
+    "name": "United Nations Bedtime Treaty Negotiation",
+    "description": "Comedic reframing through united nations bedtime treaty negotiation.",
+    "theoreticalBasis": "observational",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "gentle",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_secret_agent_covert",
+    "name": "Covert Agent Operational Discretion",
+    "description": "Comedic reframing through covert agent operational discretion.",
+    "theoreticalBasis": "play_mirth",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_time_dilation",
+    "name": "Domestic General Relativity & Time Dilation",
+    "description": "Comedic reframing through domestic general relativity & time dilation.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "exaggerated",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_astronomical_orbit",
+    "name": "Orbital Mechanics of Shared Clutter",
+    "description": "Comedic reframing through orbital mechanics of shared clutter.",
+    "theoreticalBasis": "benign_violation",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "exaggerated",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_wildlife_documentary",
+    "name": "Attenborough Wildlife Narration in the Kitchen",
+    "description": "Comedic reframing through attenborough wildlife narration in the kitchen.",
+    "theoreticalBasis": "observational",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_zen_minimalism",
+    "name": "Zen Garden Philosophy of Unfinished Chores",
+    "description": "Comedic reframing through zen garden philosophy of unfinished chores.",
+    "theoreticalBasis": "relief",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "gentle",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_royal_proclamation",
+    "name": "His Majesty's Kitchen Decree & Royal Charter",
+    "description": "Comedic reframing through his majesty's kitchen decree & royal charter.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "exaggerated",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_jurassic_preservation",
+    "name": "Fossilized Relics of Yesterday's Snack",
+    "description": "Comedic reframing through fossilized relics of yesterday's snack.",
+    "theoreticalBasis": "benign_violation",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "playful",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_architectural_wonder",
+    "name": "The Eighth Wonder of Domestic Engineering",
+    "description": "Comedic reframing through the eighth wonder of domestic engineering.",
+    "theoreticalBasis": "incongruity",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "exaggerated",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  },
+  {
+    "id": "mech_telepathic_bids",
+    "name": "Telepathic Signal Transmission Across Couches",
+    "description": "Comedic reframing through telepathic signal transmission across couches.",
+    "theoreticalBasis": "relief",
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "sensory_contrast",
+      "habitual_quirk"
+    ],
+    "compatibleSemanticFrames": [
+      "frame_speaking_on_phone",
+      "frame_beverage_preparation"
+    ],
+    "requiredSemanticRelations": [
+      "associated_with"
+    ],
+    "compatibleConceptTypes": [
+      "action",
+      "physical_object",
+      "behavior"
+    ],
+    "incompatibleConceptTypes": [
+      "person"
+    ],
+    "compatibleTones": [
+      "gentle",
+      "playful"
+    ],
+    "humorIntensity": 3,
+    "allowedSensitivityLevels": [
+      "ordinary_quirk",
+      "mild_interpersonal"
+    ],
+    "prohibitedConditions": [
+      "abuse",
+      "boundary_violation"
+    ],
+    "metaphorFamilyIds": [
+      "meta_culinary_minimalism",
+      "meta_public_broadcasting"
+    ],
+    "constructionIds": [
+      "const_homeopathic_dose"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ],
+    "implementationStatus": "runtime_verified"
+  }
+]

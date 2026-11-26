@@ -9,16 +9,23 @@ import { getThemedTokens, tokens } from "@/components/couply-tokens";
 import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { saveAnnoyanceReframe } from "@/lib/annoyance-reframe";
+import { setDraftPrivateReflectionNote } from "@/lib/draft-reflection-store";
+import {
+  generateLighterAnglesHybrid,
+  generateLocalSemanticAngles,
+  type ReframeAngles,
+  type ReframeOutcome,
+} from "@/lib/reframe-generator";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
@@ -33,14 +40,8 @@ interface IrritationPreset {
   key: SampleKey;
   label: string;
   emoji: string;
-  reframes: Record<
-    ToneKey,
-    {
-      toneLabel: string;
-      icon: string;
-      text: string;
-    }
-  >;
+  canonicalText: string;
+  reframes: ReframeAngles;
 }
 
 const SAMPLE_IRRITATIONS: IrritationPreset[] = [
@@ -48,90 +49,24 @@ const SAMPLE_IRRITATIONS: IrritationPreset[] = [
     key: "coffee_mug",
     label: "The unwashed coffee mug",
     emoji: "☕",
-    reframes: {
-      gentle: {
-        toneLabel: "Gentle and cute",
-        icon: "🌷",
-        text: "One little mug is waiting for its journey home.",
-      },
-      playful: {
-        toneLabel: "More playful",
-        icon: "🏛️",
-        text: "The kitchen museum has acquired a new exhibit: Mug, Untouched.",
-      },
-      exaggerated: {
-        toneLabel: "Slightly exaggerated",
-        icon: "📢",
-        text: "Alert: the mug has declared independence from the dishwasher.",
-      },
-    },
+    canonicalText: "The unwashed coffee mug left on the table",
+    reframes: generateLocalSemanticAngles("coffee mug left on table", 0),
   },
   {
     key: "socks",
     label: "The disappearing socks",
     emoji: "🧦",
-    reframes: {
-      gentle: {
-        toneLabel: "Gentle and cute",
-        icon: "🌸",
-        text: "A lonely sock looking for its missing twin.",
-      },
-      playful: {
-        toneLabel: "More playful",
-        icon: "🧺",
-        text: "The dryer has accepted its customary tax of one single sock.",
-      },
-      exaggerated: {
-        toneLabel: "Slightly exaggerated",
-        icon: "🌀",
-        text: "Breaking news: secret underground sock portal discovered in laundry room.",
-      },
-    },
+    canonicalText: "The disappearing socks missing their pair",
+    reframes: generateLocalSemanticAngles("disappearing socks in laundry", 0),
   },
   {
     key: "directions",
     label: "The direction debate",
     emoji: "🧭",
-    reframes: {
-      gentle: {
-        toneLabel: "Gentle and cute",
-        icon: "🗺️",
-        text: "Two explorers with two slightly different maps.",
-      },
-      playful: {
-        toneLabel: "More playful",
-        icon: "🚗",
-        text: "Taking the scenic detour to test the car’s suspension.",
-      },
-      exaggerated: {
-        toneLabel: "Slightly exaggerated",
-        icon: "🗳️",
-        text: "The GPS was politely voted out by the executive passenger council.",
-      },
-    },
+    canonicalText: "The direction debate and taking scenic routes",
+    reframes: generateLocalSemanticAngles("direction debate and navigation detour", 0),
   },
 ];
-
-const CUSTOM_REFRAMES: Record<
-  ToneKey,
-  { toneLabel: string; icon: string; text: string }
-> = {
-  gentle: {
-    toneLabel: "Gentle and cute",
-    icon: "🌱",
-    text: "A small moment that just needs a quiet breath and a little kindness.",
-  },
-  playful: {
-    toneLabel: "More playful",
-    icon: "🎭",
-    text: "A classic plot twist in today's shared domestic adventure.",
-  },
-  exaggerated: {
-    toneLabel: "Slightly exaggerated",
-    icon: "🔭",
-    text: "Scientists confirm this domestic anomaly is officially unprecedented in history.",
-  },
-};
 
 export default function PlayfulReframeScreen() {
   const router = useRouter();
@@ -142,21 +77,107 @@ export default function PlayfulReframeScreen() {
   const [selectedSampleKey, setSelectedSampleKey] =
     useState<SampleKey>("coffee_mug");
   const [customText, setCustomText] = useState("");
+  const [canonicalStage1Text, setCanonicalStage1Text] = useState<string>("");
   const [consentChoice, setConsentChoice] = useState<ConsentChoice>("try");
   const [selectedTone, setSelectedTone] = useState<ToneKey | null>(null);
-  const [shareLighterThought, setShareLighterThought] = useState(false);
   const [lighterThoughtCustomText, setLighterThoughtCustomText] = useState<
     string | null
   >(null);
+
+  // Stage 2 generation state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedAngles, setGeneratedAngles] = useState<ReframeAngles | null>(null);
+  const [reframeOutcome, setReframeOutcome] = useState<ReframeOutcome | null>(null);
+  const [generationSeed, setGenerationSeed] = useState(0);
+  const [generationError, setGenerationError] = useState(false);
+  const [clarificationAttemptCount, setClarificationAttemptCount] = useState(0);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const textInputRef = useRef<TextInput>(null);
+
+  function handleFocusAndEditDescription() {
+    setSelectedTone(null);
+    if (!isCustomActive && currentPreset.canonicalText) {
+      setCustomText(currentPreset.canonicalText);
+    }
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: 180, animated: true });
+      textInputRef.current?.focus();
+    }, 100);
+  }
 
   const isCustomActive = customText.trim().length > 0;
   const currentPreset = SAMPLE_IRRITATIONS.find(
     (item) => item.key === selectedSampleKey,
   )!;
 
-  const currentReframes = isCustomActive
-    ? CUSTOM_REFRAMES
-    : currentPreset.reframes;
+  // The canonical text for generation: either custom text (when active) or preset description
+  const activeInputText = isCustomActive ? customText.trim() : currentPreset.canonicalText;
+
+  // If canonicalStage1Text changes, we invalidate generatedAngles until next continue/load
+  const isStale = canonicalStage1Text !== activeInputText && canonicalStage1Text !== "";
+
+  // Trigger generation function
+  async function triggerGeneration(textToGenerate: string, seed: number) {
+    setIsGenerating(true);
+    setGenerationError(false);
+    try {
+      const res = await generateLighterAnglesHybrid(supabase, {
+        text: textToGenerate,
+        seedModifier: seed,
+        mode: "local_only",
+      });
+      setGeneratedAngles(res.angles);
+      if (res.outcome) {
+        setReframeOutcome(res.outcome);
+        if (res.outcome.type === "clarification_needed") {
+          setClarificationAttemptCount((prev) => prev + 1);
+        } else {
+          setClarificationAttemptCount(0);
+        }
+      }
+      setCanonicalStage1Text(textToGenerate);
+    } catch {
+      // Fallback locally
+      const fallback = generateLocalSemanticAngles(textToGenerate, seed);
+      setGeneratedAngles(fallback);
+      setReframeOutcome(null);
+      setCanonicalStage1Text(textToGenerate);
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  // Initial load for preset
+  useEffect(() => {
+    if (!generatedAngles && !isCustomActive) {
+      setGeneratedAngles(currentPreset.reframes);
+      setCanonicalStage1Text(currentPreset.canonicalText);
+    }
+  }, [currentPreset, isCustomActive, generatedAngles]);
+
+  // When user clicks "Continue to lighter angles" or edits
+  async function handleContinueToStage2() {
+    setSelectedTone(null);
+    setLighterThoughtCustomText(null);
+    await triggerGeneration(activeInputText, 0);
+  }
+
+  // Regenerate option: "Try three new angles"
+  async function handleRegenerate() {
+    if (isGenerating) return;
+    const nextSeed = generationSeed + 1;
+    setGenerationSeed(nextSeed);
+    setSelectedTone(null);
+    setLighterThoughtCustomText(null);
+    await triggerGeneration(canonicalStage1Text || activeInputText, nextSeed);
+  }
+
+  const currentReframes: ReframeAngles =
+    generatedAngles ||
+    (isCustomActive
+      ? generateLocalSemanticAngles(customText, 0)
+      : currentPreset.reframes);
 
   const selectedReframe = selectedTone ? currentReframes[selectedTone] : null;
   const selectedToneLabel = selectedReframe?.toneLabel ?? "";
@@ -195,7 +216,7 @@ export default function PlayfulReframeScreen() {
           isPlayful: true,
           reframeTone: selectedTone,
           reframeText: effectiveLighterThought.trim(),
-          includeReframeWithPartner: shareLighterThought,
+          includeReframeWithPartner: false,
           status: "draft",
         });
         if (res.data?.id) {
@@ -210,11 +231,11 @@ export default function PlayfulReframeScreen() {
       pathname: "/make-challenge-preview",
       params: {
         idea: getStarterIdea(),
-        participant: "sam",
+        participant: "partner",
         source: "reframe",
         reframeTone: selectedToneLabel,
         reframeText: effectiveLighterThought.trim(),
-        shareReframe: shareLighterThought ? "true" : "false",
+        shareReframe: "false",
         reframeId: savedId,
         topicKey: isCustomActive ? "other" : selectedSampleKey,
         customTopicLabel: isCustomActive ? customText.trim().slice(0, 60) : "",
@@ -243,7 +264,15 @@ export default function PlayfulReframeScreen() {
   }
 
   function handleRecordFrictionMoment() {
-    router.push("/record-moment?type=friction");
+    const note = isCustomActive ? customText.trim() : currentPreset.canonicalText;
+    setDraftPrivateReflectionNote(note || null);
+    router.push({
+      pathname: "/record-moment",
+      params: {
+        type: "friction",
+        visibility: "mine",
+      },
+    });
   }
 
   return (
@@ -253,6 +282,7 @@ export default function PlayfulReframeScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={[
             styles.scrollContent,
             { flexGrow: 1, paddingBottom: 110 },
@@ -335,6 +365,7 @@ export default function PlayfulReframeScreen() {
                 Or describe it your way
               </Text>
               <TextInput
+                ref={textInputRef}
                 style={styles.textInput}
                 value={customText}
                 onChangeText={(text) => {
@@ -350,16 +381,67 @@ export default function PlayfulReframeScreen() {
                 Preview only — this raw text is never shared.
               </Text>
             </View>
+
+            {/* If custom text is active and not yet generated or stale, show button to generate */}
+            {isCustomActive && isStale && (
+              <View style={styles.stage1ContinueWrapper}>
+                <CouplyPrimaryButton
+                  label={isGenerating ? "Finding lighter angles…" : "See lighter angles"}
+                  onPress={handleContinueToStage2}
+                  disabled={isGenerating || customText.trim().length === 0}
+                  style={styles.stage1ContinueButton}
+                />
+              </View>
+            )}
           </CouplySectionCard>
 
           {/* STAGE 2: Choose a lighter angle */}
           <CouplySectionCard style={styles.stageCard}>
             <Text style={styles.stageNumber}>STAGE 2 OF 3</Text>
-            <Text style={styles.stageTitle}>Choose a lighter angle</Text>
-            <Text style={styles.stageSubtitle}>
-              Some moments just need gentle care. Pick a perspective that feels
-              easiest to smile at.
+            <Text style={styles.stageTitle}>
+              {reframeOutcome?.type === "clarification_needed"
+                ? "A little more context"
+                : reframeOutcome?.type === "understood_unavailable_humor"
+                ? "A moment of perspective"
+                : reframeOutcome?.type === "respectful_reflection"
+                ? "A safe, respectful pause"
+                : "Choose a lighter angle"}
             </Text>
+            <Text style={styles.stageSubtitle}>
+              {reframeOutcome?.type === "clarification_needed"
+                ? "We want to understand your moment accurately before finding a lighter side."
+                : reframeOutcome?.type === "understood_unavailable_humor"
+                ? "We understand what happened, and we want to handle it thoughtfully."
+                : reframeOutcome?.type === "respectful_reflection"
+                ? "Some moments deserve quiet reflection rather than humor."
+                : "Some moments just need gentle care. Pick a perspective that feels easiest to smile at."}
+            </Text>
+
+            {/* Loading Indicator */}
+            {isGenerating && (
+              <View style={styles.loadingWrapper}>
+                <ActivityIndicator size="small" color={tokens.colors.plum} />
+                <Text style={styles.loadingText}>Finding a lighter angle… 🌱</Text>
+              </View>
+            )}
+
+            {/* Error / Offline Retry Card */}
+            {generationError && !isGenerating && (
+              <View style={styles.generationErrorWrapper}>
+                <Text style={styles.generationErrorTitle}>
+                  We couldn't reach the lighter angles service just now.
+                </Text>
+                <Text style={styles.generationErrorBody}>
+                  Local semantic angles are ready below, or you can try generating again.
+                </Text>
+                <CouplyQuietButton
+                  label="Try again"
+                  onPress={() => triggerGeneration(activeInputText, generationSeed)}
+                  variant="soft"
+                  style={styles.retryButton}
+                />
+              </View>
+            )}
 
             {/* "Not today" path */}
             {consentChoice === "not_today" && (
@@ -390,32 +472,138 @@ export default function PlayfulReframeScreen() {
             )}
 
             {/* Tone Choices & Alternatives */}
-            {consentChoice === "try" && (
+            {consentChoice === "try" && !isGenerating && (
               <>
-                <View style={styles.tonesList}>
-                  {(["gentle", "playful", "exaggerated"] as const).map(
-                    (toneKey) => {
-                      const item = currentReframes[toneKey];
-                      const isSelected = selectedTone === toneKey;
+                {reframeOutcome?.type === "respectful_reflection" ? (
+                  <View style={styles.alternativeCard}>
+                    <Text style={styles.alternativeHeading}>
+                      Not every moment needs a lighter angle
+                    </Text>
+                    <Text style={styles.alternativeBody}>
+                      Some things deserve to be taken seriously. You can leave this as a private reflection if that feels right.
+                    </Text>
+                    <View style={styles.alternativeActionRow}>
+                      <Pressable
+                        style={[styles.alternativeQuietButton, styles.alternativeActionHalf]}
+                        onPress={handleFocusAndEditDescription}
+                      >
+                        <Text style={styles.alternativeQuietButtonText}>Edit my reflection</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.alternativeQuietButton, styles.alternativeActionHalf, styles.alternativeActionPrimary]}
+                        onPress={handleRecordFrictionMoment}
+                      >
+                        <Text style={[styles.alternativeQuietButtonText, styles.alternativeActionPrimaryText]}>Continue anyway</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : reframeOutcome?.type === "understood_unavailable_humor" ? (
+                  <View style={styles.alternativeCard}>
+                    <Text style={styles.alternativeHeading}>
+                      {reframeOutcome.continuationTitle || "Let's leave this one as it is."}
+                    </Text>
+                    <Text style={styles.alternativeBody}>
+                      {reframeOutcome.continuationBody || "We don't have a lighter angle that quite fits this moment yet."}
+                    </Text>
+                    <View style={styles.alternativeActionRow}>
+                      <Pressable
+                        style={[styles.alternativeQuietButton, styles.alternativeActionHalf]}
+                        onPress={handleFocusAndEditDescription}
+                      >
+                        <Text style={styles.alternativeQuietButtonText}>Edit my description</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.alternativeQuietButton, styles.alternativeActionHalf, styles.alternativeActionPrimary]}
+                        onPress={handleRecordFrictionMoment}
+                      >
+                        <Text style={[styles.alternativeQuietButtonText, styles.alternativeActionPrimaryText]}>Continue anyway</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : reframeOutcome?.type === "clarification_needed" && clarificationAttemptCount > 1 ? (
+                  <View style={styles.alternativeCard}>
+                    <Text style={styles.alternativeHeading}>
+                      Every moment is different.
+                    </Text>
+                    <Text style={styles.alternativeBody}>
+                      We don't have a lighter angle for this one just yet, but your moment still matters.
+                    </Text>
+                    <View style={styles.alternativeActionRow}>
+                      <Pressable
+                        style={[styles.alternativeQuietButton, styles.alternativeActionHalf]}
+                        onPress={handleFocusAndEditDescription}
+                      >
+                        <Text style={styles.alternativeQuietButtonText}>Edit my description</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.alternativeQuietButton, styles.alternativeActionHalf, styles.alternativeActionPrimary]}
+                        onPress={handleRecordFrictionMoment}
+                      >
+                        <Text style={[styles.alternativeQuietButtonText, styles.alternativeActionPrimaryText]}>Continue anyway</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : reframeOutcome?.type === "clarification_needed" ? (
+                  <View style={styles.alternativeCard}>
+                    <Text style={styles.alternativeHeading}>
+                      A little more about this moment?
+                    </Text>
+                    <Text style={styles.alternativeBody}>
+                      If you'd like, add a small detail and we'll see if there's a lighter side to it.
+                    </Text>
+                    <View style={styles.alternativeActionRow}>
+                      <Pressable
+                        style={[styles.alternativeQuietButton, styles.alternativeActionHalf]}
+                        onPress={handleFocusAndEditDescription}
+                      >
+                        <Text style={styles.alternativeQuietButtonText}>Add a little detail</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.alternativeQuietButton, styles.alternativeActionHalf, styles.alternativeActionPrimary]}
+                        onPress={handleRecordFrictionMoment}
+                      >
+                        <Text style={[styles.alternativeQuietButtonText, styles.alternativeActionPrimaryText]}>Continue anyway</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : (
+                  <>
+                    <View style={styles.tonesList}>
+                      {(["gentle", "playful", "exaggerated"] as const).map(
+                        (toneKey) => {
+                          const item = currentReframes[toneKey];
+                          const isSelected = selectedTone === toneKey;
 
-                      return (
-                        <CouplyChoiceCard
-                          key={toneKey}
-                          title={item.toneLabel}
-                          description={item.text}
-                          selected={isSelected}
-                          onPress={() => {
-                            setSelectedTone(toneKey);
-                            setLighterThoughtCustomText(null);
-                          }}
-                          icon={<Text style={styles.toneIcon}>{item.icon}</Text>}
-                          accessibilityLabel={`${item.toneLabel}: ${item.text}`}
-                          style={styles.toneChoiceCard}
-                        />
-                      );
-                    },
-                  )}
-                </View>
+                          return (
+                            <CouplyChoiceCard
+                              key={toneKey}
+                              title={item.toneLabel}
+                              description={item.text}
+                              selected={isSelected}
+                              onPress={() => {
+                                setSelectedTone(toneKey);
+                                setLighterThoughtCustomText(null);
+                              }}
+                              icon={<Text style={styles.toneIcon}>{item.icon}</Text>}
+                              accessibilityLabel={`${item.toneLabel}: ${item.text}`}
+                              style={styles.toneChoiceCard}
+                            />
+                          );
+                        },
+                      )}
+                    </View>
+
+                    {/* Regenerate Option: "Try three new angles" */}
+                    <View style={styles.regenerateWrapper}>
+                      <CouplyQuietButton
+                        label="Try three new angles"
+                        onPress={handleRegenerate}
+                        variant="soft"
+                        style={styles.regenerateButton}
+                      />
+                    </View>
+                  </>
+                )}
 
                 {/* Subtle divider and caption */}
                 <View style={styles.careDividerBlock}>
@@ -500,42 +688,11 @@ export default function PlayfulReframeScreen() {
                 </View>
               </View>
 
-              {/* Lighter thought toggle */}
-              <View style={styles.switchContainer}>
-                <Pressable
-                  style={styles.switchRow}
-                  onPress={() => setShareLighterThought((prev) => !prev)}
-                  accessible={false}
-                >
-                  <View style={styles.switchTextGroup}>
-                    <Text style={styles.switchTitle}>
-                      {shareLighterThought
-                        ? "Include your lighter thought"
-                        : "Keep this lighter thought private"}
-                    </Text>
-                    <Text style={styles.switchBody}>
-                      {shareLighterThought
-                        ? "Your edited lighter thought can appear with the invitation."
-                        : "It stays only with you. Your original irritation is never shared."}
-                    </Text>
-                  </View>
-                  <Switch
-                    value={shareLighterThought}
-                    onValueChange={setShareLighterThought}
-                    trackColor={{
-                      false: tokens.colors.border,
-                      true: tokens.colors.plum,
-                    }}
-                    thumbColor={theme.primaryActionText}
-                    accessibilityRole="switch"
-                    accessibilityLabel={
-                      shareLighterThought
-                        ? "Include your lighter thought"
-                        : "Keep this lighter thought private"
-                    }
-                    accessibilityState={{ checked: shareLighterThought }}
-                  />
-                </Pressable>
+              {/* Privacy notice for lighter thought */}
+              <View style={styles.cautionNotice}>
+                <Text style={styles.cautionNoticeText}>
+                  This lighter thought stays completely private to you as gentle inspiration.
+                </Text>
               </View>
 
               {/* Clear endings */}
@@ -878,23 +1035,38 @@ const createStyles = (theme: ThemeColors) => {
     lineHeight: 18,
   },
   alternativeActionRow: {
-    marginTop: 4,
+    marginTop: 8,
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "stretch",
   },
   alternativeQuietButton: {
-    alignSelf: "flex-start",
+    flex: 1,
     minHeight: 44,
     justifyContent: "center",
+    alignItems: "center",
     backgroundColor: tokens.colors.surface,
     borderWidth: 1,
     borderColor: tokens.colors.borderSoft,
     borderRadius: tokens.radii.small,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
+  },
+  alternativeActionHalf: {
+    flex: 1,
+  },
+  alternativeActionPrimary: {
+    backgroundColor: tokens.colors.plum,
+    borderColor: tokens.colors.plum,
   },
   alternativeQuietButtonText: {
     fontSize: tokens.typeScale.body,
     fontWeight: "600",
     color: tokens.colors.plum,
+    textAlign: "center",
+  },
+  alternativeActionPrimaryText: {
+    color: tokens.colors.surface,
   },
   notTodayConsentButton: {
     width: "100%",
@@ -904,6 +1076,51 @@ const createStyles = (theme: ThemeColors) => {
     flexDirection: "row",
     gap: 8,
     marginTop: 4,
+  },
+  stage1ContinueWrapper: {
+    marginTop: 8,
+  },
+  stage1ContinueButton: {
+    width: "100%",
+  },
+  loadingWrapper: {
+    paddingVertical: tokens.spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: tokens.typeScale.body,
+    color: tokens.colors.plum,
+    fontWeight: "500",
+  },
+  generationErrorWrapper: {
+    padding: tokens.spacing.md,
+    borderRadius: tokens.radii.card,
+    backgroundColor: tokens.colors.surfaceMuted,
+    gap: 6,
+    marginBottom: tokens.spacing.sm,
+  },
+  generationErrorTitle: {
+    fontSize: tokens.typeScale.bodyLarge,
+    fontWeight: "600",
+    color: tokens.colors.text,
+  },
+  generationErrorBody: {
+    fontSize: tokens.typeScale.caption,
+    color: tokens.colors.textSecondary,
+    lineHeight: 16,
+  },
+  retryButton: {
+    alignSelf: "flex-start",
+    marginTop: 4,
+  },
+  regenerateWrapper: {
+    alignItems: "center",
+    marginVertical: tokens.spacing.xs,
+  },
+  regenerateButton: {
+    alignSelf: "center",
   },
 });
 };

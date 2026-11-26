@@ -1,0 +1,1402 @@
+[
+  {
+    "id": "p41_ev_001",
+    "category": "clear_ordinary_annoyance",
+    "input": "talking too loud on the phone",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedModifier": "excessive",
+    "expectedContext": "ctx_phone_call",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_002",
+    "category": "clear_ordinary_annoyance",
+    "input": "making tea with just water and namesake milk",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_beverage_preparation",
+    "expectedModifier": "minimal",
+    "expectedContext": "ctx_kitchen_prep",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_003",
+    "category": "clear_ordinary_annoyance",
+    "input": "Not washing big utensils ever",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedModifier": "large",
+    "expectedContext": "ctx_sink_cleanup",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_004",
+    "category": "clear_ordinary_annoyance",
+    "input": "Wardrobe drawers are always half opened",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedModifier": "half",
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_005",
+    "category": "clear_ordinary_annoyance",
+    "input": "dish washer is not started after dinner",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_006",
+    "category": "clear_ordinary_annoyance",
+    "input": "leaving wet bath towels piled on the bed",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_01_household_chores_action",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_007",
+    "category": "clear_ordinary_annoyance",
+    "input": "putting empty milk cartons back inside the fridge",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_beverage_preparation",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_008",
+    "category": "clear_ordinary_annoyance",
+    "input": "leaving the bathroom light blazing all night",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_06_energy_climate_discrepancy",
+    "expectedModifier": null,
+    "expectedContext": "ctx_bedtime_rest",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_009",
+    "category": "clear_ordinary_annoyance",
+    "input": "dropping slippers right in the middle of the hallway",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedModifier": null,
+    "expectedContext": "ctx_shared_living_space",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_010",
+    "category": "clear_ordinary_annoyance",
+    "input": "snoring loudly right beside me at 2 AM",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_19_sleep_routines_discrepancy",
+    "expectedModifier": "excessive",
+    "expectedContext": "ctx_bedtime_rest",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_011",
+    "category": "clear_ordinary_annoyance",
+    "input": "burping right after dinner at the table",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_19_sleep_routines_discrepancy",
+    "expectedModifier": null,
+    "expectedContext": "ctx_shared_mealtime",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_012",
+    "category": "clear_ordinary_annoyance",
+    "input": "taking forty-five minutes to find shoes before leaving",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_20_punctuality_prep_delay",
+    "expectedModifier": "prolonged",
+    "expectedContext": "ctx_departure_departure_rush",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_013",
+    "category": "clear_ordinary_annoyance",
+    "input": "scrolling through notifications during dinner together",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_14_listening_attention_mismatch",
+    "expectedModifier": null,
+    "expectedContext": "ctx_shared_mealtime",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_014",
+    "category": "clear_ordinary_annoyance",
+    "input": "leaving greasy frying pans soaking for three days",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedModifier": "prolonged",
+    "expectedContext": "ctx_sink_cleanup",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_015",
+    "category": "clear_ordinary_annoyance",
+    "input": "setting the ac down to freezing temperatures",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_06_energy_climate_discrepancy",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_016",
+    "category": "clear_ordinary_annoyance",
+    "input": "leaving kitchen cabinet doors half open every morning",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedModifier": "half",
+    "expectedContext": "ctx_morning_routine",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_017",
+    "category": "clear_ordinary_annoyance",
+    "input": "hitting the alarm snooze seven times before waking",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_19_sleep_routines_discrepancy",
+    "expectedModifier": null,
+    "expectedContext": "ctx_morning_routine",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_018",
+    "category": "clear_ordinary_annoyance",
+    "input": "stealing the whole duvet in the middle of sleep",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_19_sleep_routines_discrepancy",
+    "expectedModifier": null,
+    "expectedContext": "ctx_bedtime_rest",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_019",
+    "category": "clear_ordinary_annoyance",
+    "input": "leaving delivery cardboard boxes sitting beside the sofa",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedModifier": null,
+    "expectedContext": "ctx_shared_living_space",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_020",
+    "category": "clear_ordinary_annoyance",
+    "input": "leaving one square of toilet roll on the empty tube",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_01_household_chores_action",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_021",
+    "category": "clear_ordinary_annoyance",
+    "input": "forgetting to water the thirsty houseplant on the sill",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_34_pets_plants_action",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_022",
+    "category": "clear_ordinary_annoyance",
+    "input": "leaving clean laundry folded on the chair all week",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_01_household_chores_action",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_023",
+    "category": "clear_ordinary_annoyance",
+    "input": "scattering toast crumbs across the sofa cushions",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedModifier": null,
+    "expectedContext": "ctx_shared_living_space",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_024",
+    "category": "clear_ordinary_annoyance",
+    "input": "leaving keys in a brand new mystery hiding spot",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_025",
+    "category": "clear_ordinary_annoyance",
+    "input": "letting coffee mugs pile up beside the desk",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_026",
+    "category": "unfamiliar_combination",
+    "input": "brewing espresso with barely any oat milk",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_beverage_preparation",
+    "expectedModifier": "minimal",
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_027",
+    "category": "unfamiliar_combination",
+    "input": "scrubbing only the tiny spoons while ignoring the skillet",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_028",
+    "category": "unfamiliar_combination",
+    "input": "whining softly while wiping down the microwave",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_029",
+    "category": "unfamiliar_combination",
+    "input": "whispering funny comments while I am on a work Zoom call",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedModifier": null,
+    "expectedContext": "ctx_work_concentration",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_030",
+    "category": "unfamiliar_combination",
+    "input": "rinsing the blender poorly and leaving smoothie rings inside",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_031",
+    "category": "unfamiliar_combination",
+    "input": "everything except the heavy cast iron pans gets washed",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedModifier": "except",
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_032",
+    "category": "unfamiliar_combination",
+    "input": "griping endlessly about the kettle placement on the counter",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_16_opinions_disagreements_mismatch",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_033",
+    "category": "unfamiliar_combination",
+    "input": "simmering soup with zero salt and only hot tap water",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_beverage_preparation",
+    "expectedModifier": "minimal",
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_034",
+    "category": "unfamiliar_combination",
+    "input": "leaving muddy trainers parked next to the clean laundry basket",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_035",
+    "category": "unfamiliar_combination",
+    "input": "talking loudly to mom on speaker while I study at the desk",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedModifier": "excessive",
+    "expectedContext": "ctx_work_concentration",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_036",
+    "category": "unfamiliar_combination",
+    "input": "forgetting to close the refrigerator door while pouring cereal",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_037",
+    "category": "unfamiliar_combination",
+    "input": "dropping wet tea bags directly inside the clean sink",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedModifier": null,
+    "expectedContext": "ctx_sink_cleanup",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_038",
+    "category": "unfamiliar_combination",
+    "input": "folding napkins neatly while leaving big saucepans unwashed",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedModifier": "large",
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_039",
+    "category": "unfamiliar_combination",
+    "input": "chopping onions at midnight right before we go to sleep",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_19_sleep_routines_discrepancy",
+    "expectedModifier": null,
+    "expectedContext": "ctx_bedtime_rest",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_040",
+    "category": "unfamiliar_combination",
+    "input": "tapping spoons noisily on the mug during morning quiet",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedModifier": null,
+    "expectedContext": "ctx_morning_routine",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_041",
+    "category": "unfamiliar_combination",
+    "input": "leaving the toaster unplugged every morning after breakfast",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_01_household_chores_action",
+    "expectedModifier": null,
+    "expectedContext": "ctx_morning_routine",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_042",
+    "category": "unfamiliar_combination",
+    "input": "walking the dog right before dinner gets cold on the table",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_34_pets_plants_action",
+    "expectedModifier": null,
+    "expectedContext": "ctx_shared_mealtime",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_043",
+    "category": "unfamiliar_combination",
+    "input": "shouting scores from the couch while I concentrate on email",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedModifier": "excessive",
+    "expectedContext": "ctx_work_concentration",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_044",
+    "category": "unfamiliar_combination",
+    "input": "borrowing my warm slippers to step onto the wet balcony",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_01_household_chores_action",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_045",
+    "category": "unfamiliar_combination",
+    "input": "leaving open yogurt tubs sitting on the kitchen counter",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_046",
+    "category": "unfamiliar_combination",
+    "input": "blaring music from the bathroom shower at six in the morning",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedModifier": "excessive",
+    "expectedContext": "ctx_morning_routine",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_047",
+    "category": "unfamiliar_combination",
+    "input": "stacking empty pizza boxes beside the wardrobe door",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_048",
+    "category": "unfamiliar_combination",
+    "input": "staring at tablet videos while brushing teeth past midnight",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_14_listening_attention_mismatch",
+    "expectedModifier": null,
+    "expectedContext": "ctx_bedtime_rest",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_049",
+    "category": "unfamiliar_combination",
+    "input": "grumbling quietly when asked to rinse the coffee pot",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_washing_kitchenware",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_050",
+    "category": "unfamiliar_combination",
+    "input": "packing three extra suitcases for a two-day weekend trip",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_20_punctuality_prep_delay",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_051",
+    "category": "mild_interpersonal_habit",
+    "input": "interrupting mid-sentence whenever getting excited about an idea",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_052",
+    "category": "mild_interpersonal_habit",
+    "input": "nodding automatically without actually hearing what I asked",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_053",
+    "category": "mild_interpersonal_habit",
+    "input": "speaking louder and louder whenever a phone call gets animated",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedModifier": "excessive",
+    "expectedContext": "ctx_phone_call",
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_054",
+    "category": "mild_interpersonal_habit",
+    "input": "making goofy faces right in the middle of a serious talk",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_13_speaking_voice_discrepancy",
+    "expectedModifier": null,
+    "expectedContext": "ctx_serious_conversation",
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_055",
+    "category": "mild_interpersonal_habit",
+    "input": "conversational decibels rise sharply every time friends visit",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedModifier": "excessive",
+    "expectedContext": "ctx_guests_present",
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_056",
+    "category": "mild_interpersonal_habit",
+    "input": "checking work notifications every three minutes during dinner",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_14_listening_attention_mismatch",
+    "expectedModifier": null,
+    "expectedContext": "ctx_shared_mealtime",
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_057",
+    "category": "mild_interpersonal_habit",
+    "input": "teasing me gently about mismatched wool socks",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_058",
+    "category": "mild_interpersonal_habit",
+    "input": "telling the ending of the movie before I finish watching it",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_059",
+    "category": "mild_interpersonal_habit",
+    "input": "keeping the hallway conversation going with shoes on at the door",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_20_punctuality_prep_delay",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_060",
+    "category": "mild_interpersonal_habit",
+    "input": "ignoring GPS directions even when running ten minutes behind",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_20_punctuality_prep_delay",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_061",
+    "category": "mild_interpersonal_habit",
+    "input": "answering phone questions with a delayed three-second pause",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_062",
+    "category": "mild_interpersonal_habit",
+    "input": "changing dinner plans twice after menus are already open",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_063",
+    "category": "mild_interpersonal_habit",
+    "input": "talking over my sentence during lively kitchen storytelling",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_speaking_on_phone",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_064",
+    "category": "mild_interpersonal_habit",
+    "input": "starting a deep debate right when I am half asleep in bed",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_19_sleep_routines_discrepancy",
+    "expectedModifier": null,
+    "expectedContext": "ctx_bedtime_rest",
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_065",
+    "category": "mild_interpersonal_habit",
+    "input": "whispering punchlines while trying to listen to an audiobook",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_066",
+    "category": "mild_interpersonal_habit",
+    "input": "critiquing the spice level after volunteering zero prep help",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_067",
+    "category": "mild_interpersonal_habit",
+    "input": "asking what happened in the show after scrolling for ten minutes",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_14_listening_attention_mismatch",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_068",
+    "category": "mild_interpersonal_habit",
+    "input": "leaving unread messages unanswered while sitting right nearby",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_069",
+    "category": "mild_interpersonal_habit",
+    "input": "turning grocery shopping into a surprise mystery snack tour",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_070",
+    "category": "mild_interpersonal_habit",
+    "input": "giving enthusiastic running commentary while I cook soup",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_beverage_preparation",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "mild_interpersonal"
+  },
+  {
+    "id": "p41_ev_071",
+    "category": "ordinary_preference",
+    "input": "prefers soft butter left on the counter rather than chilled",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_072",
+    "category": "ordinary_preference",
+    "input": "never decides where to eat for Friday dinner",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_073",
+    "category": "ordinary_preference",
+    "input": "likes sleeping with two windows wide open in freezing winter",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_19_sleep_routines_discrepancy",
+    "expectedModifier": null,
+    "expectedContext": "ctx_bedtime_rest",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_074",
+    "category": "ordinary_preference",
+    "input": "prefers bright overhead lights while I love soft cozy lamps",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_06_energy_climate_discrepancy",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_075",
+    "category": "ordinary_preference",
+    "input": "thinks crunchy peanut butter is vastly superior to smooth",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_076",
+    "category": "ordinary_preference",
+    "input": "wants to leave every party two hours earlier than planned",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_077",
+    "category": "ordinary_preference",
+    "input": "loves spicy extra garlic while I prefer mild flavors",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_078",
+    "category": "ordinary_preference",
+    "input": "never puts cushions back in neat rows on the sofa",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_open_drawer_organization",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_079",
+    "category": "ordinary_preference",
+    "input": "buys unexpected supermarket off-brands to test taste",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_080",
+    "category": "ordinary_preference",
+    "input": "keeps the thermostat higher than my comfortable level",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_06_energy_climate_discrepancy",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_081",
+    "category": "ordinary_preference",
+    "input": "prefers folding shirts in rolls instead of flat squares",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_01_household_chores_action",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_082",
+    "category": "ordinary_preference",
+    "input": "likes hot water with barely any tea steep time",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": "frame_beverage_preparation",
+    "expectedModifier": "minimal",
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_083",
+    "category": "ordinary_preference",
+    "input": "wants to watch action thrillers instead of cozy comedies",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_084",
+    "category": "ordinary_preference",
+    "input": "insists morning walks are better before coffee than after",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": "ctx_morning_routine",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_085",
+    "category": "ordinary_preference",
+    "input": "prefers quiet morning silence rather than early small talk",
+    "expectedOutcome": "playful_angles",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": "ctx_morning_routine",
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_086",
+    "category": "ambiguous_or_proposition",
+    "input": "yoga is not an exercise",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedModifier": "not",
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_087",
+    "category": "ambiguous_or_proposition",
+    "input": "running is not a real sport",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedModifier": "not",
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_088",
+    "category": "ambiguous_or_proposition",
+    "input": "stretching does not count as fitness",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedModifier": "not",
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_089",
+    "category": "ambiguous_or_proposition",
+    "input": "Not getting out",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_090",
+    "category": "ambiguous_or_proposition",
+    "input": "the toaster again",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_091",
+    "category": "ambiguous_or_proposition",
+    "input": "stuff happens all the time",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_092",
+    "category": "ambiguous_or_proposition",
+    "input": "that spoon thing",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_093",
+    "category": "ambiguous_or_proposition",
+    "input": "claims cleaning does not matter",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_094",
+    "category": "ambiguous_or_proposition",
+    "input": "pilates is not a proper workout",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedModifier": "not",
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_095",
+    "category": "ambiguous_or_proposition",
+    "input": "something vaguely weird occurs",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_096",
+    "category": "ambiguous_or_proposition",
+    "input": "chess is not a sport",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedModifier": "not",
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_097",
+    "category": "ambiguous_or_proposition",
+    "input": "it happens again",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_098",
+    "category": "ambiguous_or_proposition",
+    "input": "the drawer",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_099",
+    "category": "ambiguous_or_proposition",
+    "input": "blargle florp",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": "frame_unknown_uninterpretable",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_100",
+    "category": "ambiguous_or_proposition",
+    "input": "zqxw widget",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": "frame_unknown_uninterpretable",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_101",
+    "category": "ambiguous_or_proposition",
+    "input": "claims groceries do not count",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_102",
+    "category": "ambiguous_or_proposition",
+    "input": "walking does not count as cardio",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": "frame_evaluating_concept_proposition",
+    "expectedModifier": "not",
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_103",
+    "category": "ambiguous_or_proposition",
+    "input": "those keys",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_104",
+    "category": "ambiguous_or_proposition",
+    "input": "out of it today",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_105",
+    "category": "ambiguous_or_proposition",
+    "input": "snorgle wump",
+    "expectedOutcome": "clarification_needed",
+    "expectedFrame": "frame_unknown_uninterpretable",
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "ordinary_quirk"
+  },
+  {
+    "id": "p41_ev_106",
+    "category": "explicit_unwanted_pressure",
+    "input": "Sometimes too pushy to act on something I do not want to act",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_107",
+    "category": "explicit_unwanted_pressure",
+    "input": "I clearly said no to going out and they kept demanding",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_108",
+    "category": "explicit_unwanted_pressure",
+    "input": "I do not want to go and they keep insisting",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_109",
+    "category": "explicit_unwanted_pressure",
+    "input": "Refuses to stop when I explicitly say no",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_110",
+    "category": "explicit_unwanted_pressure",
+    "input": "Insists on doing it their way and won't accept my no",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_111",
+    "category": "explicit_unwanted_pressure",
+    "input": "Keeps pressuring me even after I asked them to stop",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_112",
+    "category": "explicit_unwanted_pressure",
+    "input": "Does not take no for an answer when I want quiet time",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_113",
+    "category": "explicit_unwanted_pressure",
+    "input": "Uses guilt trips whenever I say I am not comfortable",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_114",
+    "category": "explicit_unwanted_pressure",
+    "input": "Pushing me to act when I already said I need space",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_115",
+    "category": "explicit_unwanted_pressure",
+    "input": "Keeps insisting even when I decline politely",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_116",
+    "category": "explicit_unwanted_pressure",
+    "input": "Disrespecting my personal boundary about privacy",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_117",
+    "category": "explicit_unwanted_pressure",
+    "input": "Mocking me in a humiliating way in front of others",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_118",
+    "category": "explicit_unwanted_pressure",
+    "input": "Calling me stupid during an argument",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_119",
+    "category": "explicit_unwanted_pressure",
+    "input": "Mocking everyone constantly and won't stop when asked",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_120",
+    "category": "explicit_unwanted_pressure",
+    "input": "Forcing me to do something I clearly refused",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_121",
+    "category": "explicit_unwanted_pressure",
+    "input": "Won't accept my no about sharing personal family details",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_122",
+    "category": "explicit_unwanted_pressure",
+    "input": "Belittling my feelings when I ask to slow down",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_123",
+    "category": "explicit_unwanted_pressure",
+    "input": "Keeps pushing after I said I am tired and not interested",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_124",
+    "category": "explicit_unwanted_pressure",
+    "input": "Pressuring me into lending money when I said no",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_125",
+    "category": "explicit_unwanted_pressure",
+    "input": "Pushing boundaries repeatedly after clear refusal",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "boundary_concern"
+  },
+  {
+    "id": "p41_ev_126",
+    "category": "serious_concern",
+    "input": "He threatened me and I am terrified for my safety",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_127",
+    "category": "serious_concern",
+    "input": "Locked me out of the house late at night",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_128",
+    "category": "serious_concern",
+    "input": "Destroyed my belongings in anger and I feel scared",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_129",
+    "category": "serious_concern",
+    "input": "Forcing me to give them all my money",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_130",
+    "category": "serious_concern",
+    "input": "Feeling physically intimidated when voices get raised",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_131",
+    "category": "serious_concern",
+    "input": "Scared of how angry and violent they get",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_132",
+    "category": "serious_concern",
+    "input": "Hit me during an argument last evening",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_133",
+    "category": "serious_concern",
+    "input": "Threatening to leave me stranded on the highway",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_134",
+    "category": "serious_concern",
+    "input": "Coercive control over where I am allowed to go",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_135",
+    "category": "serious_concern",
+    "input": "I feel unsafe in my own apartment tonight",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_136",
+    "category": "serious_concern",
+    "input": "Punched the wall right beside my head in anger",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_137",
+    "category": "serious_concern",
+    "input": "Stalking my phone location and reading messages without consent",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_138",
+    "category": "serious_concern",
+    "input": "Slapped my arm when I tried to leave the room",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_139",
+    "category": "serious_concern",
+    "input": "Abusive yelling that makes me fear for my safety",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  },
+  {
+    "id": "p41_ev_140",
+    "category": "serious_concern",
+    "input": "Sexual pressure after I explicitly said no repeatedly",
+    "expectedOutcome": "respectful_reflection",
+    "expectedFrame": null,
+    "expectedModifier": null,
+    "expectedContext": null,
+    "sensitivity": "serious_unsafe"
+  }
+]

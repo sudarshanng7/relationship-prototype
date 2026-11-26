@@ -1,0 +1,772 @@
+[
+  {
+    "id": "sit_01_unwashed_cups_plates",
+    "cat": 1,
+    "name": "Unwashed cups, mugs, and plates",
+    "frame": "frame_dish_soaking_omission",
+    "opp": "dish_soak_omission",
+    "pols": [
+      "omitted_forgotten",
+      "active"
+    ],
+    "sample": "leaves unwashed mugs by the sink"
+  },
+  {
+    "id": "sit_02_avoiding_large_cookware",
+    "cat": 1,
+    "name": "Avoiding washing large pots and pans",
+    "frame": "frame_selective_chore_avoidance",
+    "opp": "selective_chore_avoidance",
+    "pols": [
+      "negated",
+      "avoided"
+    ],
+    "sample": "refuses to wash the large pots in the sink"
+  },
+  {
+    "id": "sit_03_dishes_soaking",
+    "cat": 1,
+    "name": "Leaving dishes soaking indefinitely",
+    "frame": "frame_dish_soaking_omission",
+    "opp": "dish_soak_omission",
+    "pols": [
+      "delayed",
+      "omitted_forgotten"
+    ],
+    "sample": "leaves dirty pans soaking in the sink for days"
+  },
+  {
+    "id": "sit_04_vigorous_cleaning",
+    "cat": 1,
+    "name": "Excessive or energetic scrubbing",
+    "frame": "frame_active_cleaning_scrubbing",
+    "opp": "active_cleaning_vigor",
+    "pols": [
+      "active",
+      "excessive"
+    ],
+    "sample": "scrubbing the counter so hard it shakes"
+  },
+  {
+    "id": "sit_05_laundry_in_washer",
+    "cat": 1,
+    "name": "Wet laundry left inside washing machine",
+    "frame": "frame_appliance_unstarted",
+    "opp": "unstarted_appliance",
+    "pols": [
+      "omitted_forgotten"
+    ],
+    "sample": "leaves wet laundry inside the washing machine overnight"
+  },
+  {
+    "id": "sit_06_forgetting_bins",
+    "cat": 1,
+    "name": "Forgetting to empty or take out bins",
+    "frame": "frame_parent_domestic_chores",
+    "opp": "compositional_habit",
+    "pols": [
+      "omitted_forgotten"
+    ],
+    "sample": "forgets to take the trash bin out on collection day"
+  },
+  {
+    "id": "sit_07_open_drawers_cupboards",
+    "cat": 2,
+    "name": "Drawers and cupboards left open",
+    "frame": "frame_open_drawer_organization",
+    "opp": "partial_closure",
+    "pols": [
+      "incomplete",
+      "active"
+    ],
+    "sample": "wardrobe drawers are always half opened"
+  },
+  {
+    "id": "sit_08_clothes_on_chair",
+    "cat": 2,
+    "name": "Clothes draped on chairs or bedroom floor",
+    "frame": "frame_object_displacement",
+    "opp": "object_displacement",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "drops worn shirts on the bedroom chair instead of closet"
+  },
+  {
+    "id": "sit_09_shoes_entrance",
+    "cat": 2,
+    "name": "Shoes and slippers left in unexpected places",
+    "frame": "frame_object_displacement",
+    "opp": "object_displacement",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "slippers left right in the middle of the hallway"
+  },
+  {
+    "id": "sit_10_leaving_packaging",
+    "cat": 2,
+    "name": "Leaving delivery boxes and packaging unflattened",
+    "frame": "frame_object_displacement",
+    "opp": "object_displacement",
+    "pols": [
+      "omitted_forgotten",
+      "active"
+    ],
+    "sample": "leaves empty parcel delivery boxes next to the sofa"
+  },
+  {
+    "id": "sit_11_sofa_cushions_blankets",
+    "cat": 2,
+    "name": "Sofa cushions and blankets tangled",
+    "frame": "frame_object_displacement",
+    "opp": "object_displacement",
+    "pols": [
+      "incomplete",
+      "repeated"
+    ],
+    "sample": "leaves couch blankets tangled in a ball after watching tv"
+  },
+  {
+    "id": "sit_12_searching_for_keys",
+    "cat": 3,
+    "name": "Searching for keys, wallet or phone",
+    "frame": "frame_object_displacement",
+    "opp": "object_displacement",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "spending twenty minutes looking for car keys"
+  },
+  {
+    "id": "sit_13_forgot_where_put_items",
+    "cat": 3,
+    "name": "Forgetting about items personally placed",
+    "frame": "frame_object_displacement",
+    "opp": "object_displacement",
+    "pols": [
+      "omitted_forgotten",
+      "repeated"
+    ],
+    "sample": "forgetting about the stuff that has been put by her only"
+  },
+  {
+    "id": "sit_14_looking_for_nearby_item",
+    "cat": 3,
+    "name": "Looking for something that is already in hand or nearby",
+    "frame": "frame_object_displacement",
+    "opp": "object_displacement",
+    "pols": [
+      "repeated"
+    ],
+    "sample": "searching the room for glasses while wearing them"
+  },
+  {
+    "id": "sit_15_bathroom_lights_on",
+    "cat": 4,
+    "name": "Leaving bathroom lights or lamps on",
+    "frame": "frame_light_climate_control",
+    "opp": "unstarted_appliance",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "keeping the bathroom lights on all night"
+  },
+  {
+    "id": "sit_16_tv_left_running",
+    "cat": 4,
+    "name": "Leaving television on with nobody watching",
+    "frame": "frame_light_climate_control",
+    "opp": "unstarted_appliance",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "leaves the living room tv playing to an empty room"
+  },
+  {
+    "id": "sit_17_thermostat_ac_debate",
+    "cat": 4,
+    "name": "Different heating and AC temperature preferences",
+    "frame": "frame_light_climate_control",
+    "opp": "micro_climate",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "turning the thermostat down until the living room feels freezing"
+  },
+  {
+    "id": "sit_18_fridge_empty_container",
+    "cat": 4,
+    "name": "Returning empty carton or bottle to fridge",
+    "frame": "frame_empty_container_fridge",
+    "opp": "empty_container_fridge",
+    "pols": [
+      "omitted_forgotten",
+      "active"
+    ],
+    "sample": "she puts empty bottles back inside the fridge"
+  },
+  {
+    "id": "sit_19_appliance_loaded_unstarted",
+    "cat": 4,
+    "name": "Loading dishwasher or washer but forgetting to start",
+    "frame": "frame_appliance_unstarted",
+    "opp": "unstarted_appliance",
+    "pols": [
+      "omitted_forgotten",
+      "incomplete"
+    ],
+    "sample": "fills the dishwasher completely full but forgets to turn it on"
+  },
+  {
+    "id": "sit_20_toothpaste_cap_tube",
+    "cat": 5,
+    "name": "Toothpaste tube squeezing and leaving cap off",
+    "frame": "frame_parent_home_organization",
+    "opp": "compositional_habit",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "squeezing the toothpaste tube from the middle without closing cap"
+  },
+  {
+    "id": "sit_21_wet_towels_bathroom",
+    "cat": 5,
+    "name": "Wet bath towels left crumpled",
+    "frame": "frame_object_displacement",
+    "opp": "object_displacement",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "dropping wet towels on the floor after showering"
+  },
+  {
+    "id": "sit_22_shower_takes_forever",
+    "cat": 5,
+    "name": "Taking very long showers and using hot water",
+    "frame": "frame_punctuality_departure_delay",
+    "opp": "timing_delay",
+    "pols": [
+      "excessive",
+      "repeated"
+    ],
+    "sample": "taking forty-five minutes in the shower every evening"
+  },
+  {
+    "id": "sit_23_namesake_milk_tea",
+    "cat": 6,
+    "name": "Unusual tea or coffee ingredient proportions",
+    "frame": "frame_beverage_preparation",
+    "opp": "negligible_quantity",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "making tea with just water and namesake milk"
+  },
+  {
+    "id": "sit_24_overcomplicating_recipes",
+    "cat": 6,
+    "name": "Overcomplicating simple weeknight cooking",
+    "frame": "frame_parent_home_organization",
+    "opp": "compositional_habit",
+    "pols": [
+      "excessive",
+      "active"
+    ],
+    "sample": "using twelve pans to make simple scrambled eggs"
+  },
+  {
+    "id": "sit_25_cooking_tasting_ritual",
+    "cat": 6,
+    "name": "Constantly tasting food while preparing",
+    "frame": "frame_parent_home_organization",
+    "opp": "compositional_habit",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "tasting the pasta sauce twelve times while cooking"
+  },
+  {
+    "id": "sit_26_stealing_fries_plate",
+    "cat": 7,
+    "name": "Stealing fries or eating from partner plate",
+    "frame": "frame_parent_domestic_chores",
+    "opp": "compositional_habit",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "says not hungry then eats half of my fries"
+  },
+  {
+    "id": "sit_27_eating_last_slice",
+    "cat": 7,
+    "name": "Finishing the last snack or cake slice",
+    "frame": "frame_parent_domestic_chores",
+    "opp": "compositional_habit",
+    "pols": [
+      "omitted_forgotten",
+      "active"
+    ],
+    "sample": "finishes the last piece of chocolate cake without asking"
+  },
+  {
+    "id": "sit_28_leaving_one_sip",
+    "cat": 7,
+    "name": "Leaving exactly one sip or crumb in container",
+    "frame": "frame_empty_container_fridge",
+    "opp": "empty_container_fridge",
+    "pols": [
+      "incomplete",
+      "active"
+    ],
+    "sample": "puts milk back in the fridge with one tiny sip left"
+  },
+  {
+    "id": "sit_29_snoring_bedtime_noises",
+    "cat": 8,
+    "name": "Snoring, burping or loud nighttime sleep acoustics",
+    "frame": "frame_sleep_acoustics",
+    "opp": "bodily_habit",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "burping and snoring loudly in bed"
+  },
+  {
+    "id": "sit_30_stealing_blankets",
+    "cat": 8,
+    "name": "Rolling over and taking all the duvet blankets",
+    "frame": "frame_sleep_duvet_alarm",
+    "opp": "sleep_disruption",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "rolls like a burrito and takes all the duvet in the night"
+  },
+  {
+    "id": "sit_31_falling_asleep_movie",
+    "cat": 8,
+    "name": "Falling asleep 10 minutes into chosen movie",
+    "frame": "frame_sleep_duvet_alarm",
+    "opp": "sleep_disruption",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "picks the movie then falls fast asleep after ten minutes"
+  },
+  {
+    "id": "sit_32_alarm_ringing_unstopped",
+    "cat": 9,
+    "name": "Alarm ringing and forgotten to switch off",
+    "frame": "frame_sleep_duvet_alarm",
+    "opp": "alarm_delay",
+    "pols": [
+      "active",
+      "repeated",
+      "omitted_forgotten"
+    ],
+    "sample": "forgets to off the alarm in the mornings"
+  },
+  {
+    "id": "sit_33_multiple_snooze_alarms",
+    "cat": 9,
+    "name": "Setting six sequential alarms and snoozing them",
+    "frame": "frame_sleep_duvet_alarm",
+    "opp": "alarm_delay",
+    "pols": [
+      "repeated",
+      "excessive"
+    ],
+    "sample": "sets six different phone alarms five minutes apart"
+  },
+  {
+    "id": "sit_34_slow_morning_boot",
+    "cat": 9,
+    "name": "Taking a very long time to wake up and speak",
+    "frame": "frame_punctuality_departure_delay",
+    "opp": "timing_delay",
+    "pols": [
+      "delayed",
+      "repeated"
+    ],
+    "sample": "wandering around like a zombie before having first coffee"
+  },
+  {
+    "id": "sit_35_loud_phone_speaking",
+    "cat": 10,
+    "name": "Speaking loudly on speakerphone or calls",
+    "frame": "frame_speaking_on_phone",
+    "opp": "excessive_volume",
+    "pols": [
+      "active",
+      "excessive"
+    ],
+    "sample": "talking too loud on the phone"
+  },
+  {
+    "id": "sit_36_conversational_decibel",
+    "cat": 10,
+    "name": "Conversational volume increasing during excitement",
+    "frame": "frame_speaking_on_phone",
+    "opp": "excessive_volume",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "the conversational decibel increases when telling a story"
+  },
+  {
+    "id": "sit_37_repeating_same_story",
+    "cat": 10,
+    "name": "Telling the exact same story to the same friends",
+    "frame": "frame_conversational_interruption",
+    "opp": "compositional_habit",
+    "pols": [
+      "repeated"
+    ],
+    "sample": "telling the same holiday story for the fourth time this week"
+  },
+  {
+    "id": "sit_38_silly_noise_serious_moment",
+    "cat": 11,
+    "name": "Making funny noises or faces during serious moments",
+    "frame": "frame_serious_mood_contrast",
+    "opp": "context_interruption",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "making weird noise in serious situations"
+  },
+  {
+    "id": "sit_39_bad_puns_wordplay",
+    "cat": 11,
+    "name": "Telling terrible puns and giggling at them",
+    "frame": "frame_serious_mood_contrast",
+    "opp": "compositional_habit",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "making dad jokes and laughing at them before finishing"
+  },
+  {
+    "id": "sit_40_crying_at_movies",
+    "cat": 12,
+    "name": "Crying or tearing up during movie scenes or commercials",
+    "frame": "frame_emotional_cinematic_expressiveness",
+    "opp": "cinematic_emotional_experience",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "crying over a movies scene"
+  },
+  {
+    "id": "sit_41_emotional_fictional_attachment",
+    "cat": 12,
+    "name": "Getting deeply invested in fictional characters",
+    "frame": "frame_emotional_cinematic_expressiveness",
+    "opp": "cinematic_emotional_experience",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "crying because a cartoon dog got lost in a film"
+  },
+  {
+    "id": "sit_42_watches_boring_videos",
+    "cat": 13,
+    "name": "Watching niche or boring videos constantly",
+    "frame": "frame_subjective_preference_contrast",
+    "opp": "subjective_entertainment_contrast",
+    "pols": [
+      "repeated",
+      "excessive"
+    ],
+    "sample": "watches boring videos all the time"
+  },
+  {
+    "id": "sit_43_opinion_proposition_exercise",
+    "cat": 13,
+    "name": "Categorical claims about fitness or hobbies",
+    "frame": "frame_evaluating_concept_proposition",
+    "opp": "preference_difference",
+    "pols": [
+      "negated",
+      "active"
+    ],
+    "sample": "yoga is not an exercise"
+  },
+  {
+    "id": "sit_44_dinner_indecision_debate",
+    "cat": 14,
+    "name": "Endless deliberation over dinner or takeout choices",
+    "frame": "frame_decision_preference_mismatch",
+    "opp": "indecision",
+    "pols": [
+      "repeated",
+      "delayed"
+    ],
+    "sample": "we take forever deciding what to eat for dinner"
+  },
+  {
+    "id": "sit_45_anything_is_fine_response",
+    "cat": 14,
+    "name": "Saying anything is fine then vetoing options",
+    "frame": "frame_decision_preference_mismatch",
+    "opp": "indecision",
+    "pols": [
+      "repeated"
+    ],
+    "sample": "says anything is fine then rejects five restaurant choices"
+  },
+  {
+    "id": "sit_46_funny_nicknames",
+    "cat": 15,
+    "name": "Inventing absurd pet names and greetings",
+    "frame": "frame_parent_communication_voice",
+    "opp": "compositional_habit",
+    "pols": [
+      "repeated"
+    ],
+    "sample": "making up ridiculous names for the cat and for me"
+  },
+  {
+    "id": "sit_47_cute_repetitive_rituals",
+    "cat": 15,
+    "name": "Harmless affectionate teasing and little routines",
+    "frame": "frame_parent_communication_voice",
+    "opp": "compositional_habit",
+    "pols": [
+      "repeated"
+    ],
+    "sample": "doing a silly little dance every time food arrives"
+  },
+  {
+    "id": "sit_48_finger_tapping_humming",
+    "cat": 16,
+    "name": "Constant finger tapping or melodic humming",
+    "frame": "frame_sleep_acoustics",
+    "opp": "bodily_habit",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "tapping fingers rhythmically on the desk all day"
+  },
+  {
+    "id": "sit_49_random_house_singing",
+    "cat": 16,
+    "name": "Making up songs about what they are doing",
+    "frame": "frame_sleep_acoustics",
+    "opp": "bodily_habit",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "singing narration about making tea in the kitchen"
+  },
+  {
+    "id": "sit_50_phone_scrolling_bed_dinner",
+    "cat": 17,
+    "name": "Scrolling on phone during dinner or before sleep",
+    "frame": "frame_attention_distraction",
+    "opp": "attention_distraction",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "scrolling on the phone in bed in the dark"
+  },
+  {
+    "id": "sit_51_hundred_browser_tabs",
+    "cat": 17,
+    "name": "Having eighty browser tabs open on phone",
+    "frame": "frame_attention_distraction",
+    "opp": "compositional_habit",
+    "pols": [
+      "excessive"
+    ],
+    "sample": "has ninety open tabs on their phone browser and refuses to close them"
+  },
+  {
+    "id": "sit_52_rewatching_same_shows",
+    "cat": 18,
+    "name": "Rewatching the same comfort TV show repeatedly",
+    "frame": "frame_subjective_preference_contrast",
+    "opp": "subjective_entertainment_contrast",
+    "pols": [
+      "repeated",
+      "excessive"
+    ],
+    "sample": "rewatching the same sitcom for the eighth time instead of new shows"
+  },
+  {
+    "id": "sit_53_intense_hobby_absorption",
+    "cat": 18,
+    "name": "Becoming deeply absorbed in niche hobby details",
+    "frame": "frame_parent_home_organization",
+    "opp": "compositional_habit",
+    "pols": [
+      "excessive"
+    ],
+    "sample": "explaining mechanical keyboard switches for forty minutes"
+  },
+  {
+    "id": "sit_54_departure_door_delay",
+    "cat": 19,
+    "name": "Getting ready slowly and waiting by the door",
+    "frame": "frame_punctuality_departure_delay",
+    "opp": "timing_delay",
+    "pols": [
+      "delayed",
+      "repeated"
+    ],
+    "sample": "ready by the front door while partner puts on shoes for twenty minutes"
+  },
+  {
+    "id": "sit_55_last_minute_packing",
+    "cat": 19,
+    "name": "Packing bags ten minutes before departure",
+    "frame": "frame_travel_navigation_packing",
+    "opp": "timing_delay",
+    "pols": [
+      "delayed",
+      "active"
+    ],
+    "sample": "packing the suitcase five minutes before the taxi arrives"
+  },
+  {
+    "id": "sit_56_buying_another_mug",
+    "cat": 20,
+    "name": "Buying another ceramic mug or notebook",
+    "frame": "frame_decision_preference_mismatch",
+    "opp": "compositional_habit",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "buys another cute coffee mug when the cupboard is already overflowing"
+  },
+  {
+    "id": "sit_57_browsing_every_supermarket_aisle",
+    "cat": 20,
+    "name": "Browsing every single aisle for a two-item errand",
+    "frame": "frame_punctuality_departure_delay",
+    "opp": "timing_delay",
+    "pols": [
+      "excessive",
+      "active"
+    ],
+    "sample": "went for milk and spent an hour exploring the bakery aisle"
+  },
+  {
+    "id": "sit_58_direction_debate_gps",
+    "cat": 21,
+    "name": "Debating directions versus navigation GPS",
+    "frame": "frame_travel_navigation_packing",
+    "opp": "preference_difference",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "arguing with the GPS and taking an accidental scenic detour"
+  },
+  {
+    "id": "sit_59_overpacking_weekend_bags",
+    "cat": 21,
+    "name": "Packing two huge suitcases for a two-day weekend trip",
+    "frame": "frame_travel_navigation_packing",
+    "opp": "compositional_habit",
+    "pols": [
+      "excessive"
+    ],
+    "sample": "packing five outfits for an overnight visit to parents"
+  },
+  {
+    "id": "sit_60_talking_during_focus",
+    "cat": 22,
+    "name": "Talking or asking questions while partner is in deep work",
+    "frame": "frame_serious_mood_contrast",
+    "opp": "context_interruption",
+    "pols": [
+      "active",
+      "repeated"
+    ],
+    "sample": "asking casual questions while I am wearing noise cancelling headphones"
+  },
+  {
+    "id": "sit_61_desk_mug_collection",
+    "cat": 22,
+    "name": "Accumulating five coffee mugs on the home office desk",
+    "frame": "frame_object_displacement",
+    "opp": "object_displacement",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "leaving four empty coffee mugs around the work desk"
+  },
+  {
+    "id": "sit_62_long_goodbyes_party",
+    "cat": 23,
+    "name": "Taking forty-five minutes to say goodbye at the door",
+    "frame": "frame_punctuality_departure_delay",
+    "opp": "timing_delay",
+    "pols": [
+      "delayed",
+      "repeated"
+    ],
+    "sample": "saying goodbye at the hallway door for forty-five minutes"
+  },
+  {
+    "id": "sit_63_taking_hundred_photos",
+    "cat": 23,
+    "name": "Stopping to take twenty group photos from every angle",
+    "frame": "frame_punctuality_departure_delay",
+    "opp": "compositional_habit",
+    "pols": [
+      "excessive"
+    ],
+    "sample": "making everyone pose for twenty photos before we can eat"
+  },
+  {
+    "id": "sit_64_forgetting_to_water_plants",
+    "cat": 24,
+    "name": "Forgetting to water houseplants until they droop",
+    "frame": "frame_houseplant_pet_care",
+    "opp": "care_routine",
+    "pols": [
+      "omitted_forgotten",
+      "repeated"
+    ],
+    "sample": "houseplants are dry and drooping because we forgot to water them"
+  },
+  {
+    "id": "sit_65_talking_to_pets_voice",
+    "cat": 24,
+    "name": "Using exaggerated baby voices with the dog or cat",
+    "frame": "frame_houseplant_pet_care",
+    "opp": "compositional_habit",
+    "pols": [
+      "repeated",
+      "active"
+    ],
+    "sample": "using a dramatic squeaky voice when greeting the cat at the door"
+  }
+]

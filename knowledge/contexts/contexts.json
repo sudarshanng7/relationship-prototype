@@ -1,0 +1,119 @@
+[
+  {
+    "id": "ctx_phone_call",
+    "name": "Phone conversation / remote audio call",
+    "category": "interaction",
+    "expectedAtmosphere": "Focused conversational exchange, often inducing unconscious volume projection.",
+    "associatedDomains": ["dom_13_speaking_voice", "dom_23_digital_devices", "dom_22_work_study"],
+    "triggers": ["on the phone", "phone call", "calling", "on speaker", "mobile call", "on telephone", "talking to mom"],
+    "sourceIds": ["verbnet-cu", "open-english-wordnet", "purple-garden-original"]
+  },
+  {
+    "id": "ctx_kitchen_prep",
+    "name": "Kitchen preparation / culinary ritual",
+    "category": "location",
+    "expectedAtmosphere": "Domestic food or drink making with established sensory and ingredient expectations.",
+    "associatedDomains": ["dom_07_cooking_preparation", "dom_09_beverages_ingredients", "dom_01_household_chores"],
+    "triggers": ["making tea", "making chai", "in the kitchen", "brewing coffee", "brewing espresso", "cooking dinner", "at the stove", "making breakfast", "cook soup", "simmering"],
+    "sourceIds": ["wikidata", "purple-garden-original"]
+  },
+  {
+    "id": "ctx_sink_cleanup",
+    "name": "Kitchen sink / post-meal cleanup",
+    "category": "location",
+    "expectedAtmosphere": "Restorative chore area where dirty items accumulate and require soapy friction.",
+    "associatedDomains": ["dom_01_household_chores", "dom_02_cleaning_hygiene", "dom_04_appliances_technology"],
+    "triggers": ["at the sink", "in the sink", "clean sink", "washing dishes", "washing utensils", "washing big utensils", "big utensils", "dish cleaning", "frying pans soaking"],
+    "sourceIds": ["open-english-wordnet", "purple-garden-original"]
+  },
+  {
+    "id": "ctx_fitness_workout",
+    "name": "Exercise / physical wellness session",
+    "category": "situational_expectation",
+    "expectedAtmosphere": "Physical exertion, mindfulness, bodily movement, or fitness routine.",
+    "associatedDomains": ["dom_11_health_exercise", "dom_16_opinions_disagreements"],
+    "triggers": ["working out", "yoga class", "on the mat", "at the gym", "going for a run", "fitness routine"],
+    "sourceIds": ["open-english-wordnet", "purple-garden-original"]
+  },
+  {
+    "id": "ctx_shared_living_space",
+    "name": "Shared household common room",
+    "category": "location",
+    "expectedAtmosphere": "Relaxed communal co-existence where domestic habits meet mutual sensory tolerance.",
+    "associatedDomains": ["dom_03_home_organization", "dom_05_furniture_belongings", "dom_18_bodily_habits"],
+    "triggers": ["in the living room", "on the couch", "beside the sofa", "sofa cushions", "at home", "around the house", "in the hallway", "middle of the hallway"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "ctx_bedtime_rest",
+    "name": "Bedroom night rest and sleep",
+    "category": "timing",
+    "expectedAtmosphere": "Low sensory stimulation, darkness, winding down, quiet breathing.",
+    "associatedDomains": ["dom_19_sleep_routines", "dom_18_bodily_habits", "dom_06_energy_climate"],
+    "triggers": ["in bed", "going to sleep", "go to sleep", "at night", "all night", "at 2 am", "at 3 am", "midnight", "middle of sleep", "lights out", "sleeping", "half asleep"],
+    "sourceIds": ["relationship-research-peer-reviewed", "open-english-wordnet"]
+  },
+  {
+    "id": "ctx_morning_routine",
+    "name": "Morning waking and preparation routine",
+    "category": "timing",
+    "expectedAtmosphere": "Gradual awakening, low sensory tolerance, caffeine seeking, time sensitivity.",
+    "associatedDomains": ["dom_19_sleep_routines", "dom_20_punctuality_prep", "dom_09_beverages_ingredients"],
+    "triggers": ["in the morning", "every morning", "during morning", "morning walks", "morning silence", "waking up", "before waking", "after breakfast", "before coffee", "morning rush", "six in the morning"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "ctx_evening_wind_down",
+    "name": "Evening decompression and relaxation",
+    "category": "timing",
+    "expectedAtmosphere": "Post-work unwinding, dimming lights, shared sofa leisure, low demand.",
+    "associatedDomains": ["dom_25_quality_time", "dom_24_hobbies_leisure", "dom_19_sleep_routines"],
+    "triggers": ["in the evening", "after dinner", "watching tv", "unwinding", "late night"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "ctx_work_concentration",
+    "name": "Deep focus work or study session",
+    "category": "timing",
+    "expectedAtmosphere": "High cognitive concentration, minimal interruption, acoustic silence.",
+    "associatedDomains": ["dom_22_work_study", "dom_14_listening_attention"],
+    "triggers": ["while i work", "work zoom call", "zoom call", "study at the desk", "concentrate on", "focusing", "working from home", "studying", "trying to concentrate", "trying to work", "on laptop"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "ctx_shared_mealtime",
+    "name": "Shared dining / mealtime presence",
+    "category": "interaction",
+    "expectedAtmosphere": "Mutual sensory and social engagement, screen-free presence, synchronous rhythm.",
+    "associatedDomains": ["dom_08_eating_habits", "dom_25_quality_time", "dom_23_digital_devices"],
+    "triggers": ["at dinner", "during dinner", "after dinner at the table", "before dinner", "at the table", "during lunch", "eating together", "over breakfast"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "ctx_serious_conversation",
+    "name": "Vulnerable or serious relationship discussion",
+    "category": "interaction",
+    "expectedAtmosphere": "Emotional sensitivity, attentiveness, respectful tone, no humor dismissal.",
+    "associatedDomains": ["dom_14_listening_attention", "dom_35_emotional_expectations", "dom_36_boundaries_safety"],
+    "triggers": ["serious conversation", "serious talk", "serious situation", "trying to talk", "discussing feelings", "discussing something important"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "ctx_departure_departure_rush",
+    "name": "Leaving the house / departure rush",
+    "category": "timing",
+    "expectedAtmosphere": "Time pressure, gathering items, locking doors, promptness synchronization.",
+    "associatedDomains": ["dom_20_punctuality_prep", "dom_30_travel_transport"],
+    "triggers": ["before leaving", "running out the door", "getting ready to go", "about to leave", "running ten minutes behind"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "ctx_guests_present",
+    "name": "Hosting guests or in public company",
+    "category": "interaction",
+    "expectedAtmosphere": "Heightened social awareness, face-saving, collective etiquette.",
+    "associatedDomains": ["dom_27_friends_social", "dom_28_family_relatives"],
+    "triggers": ["in front of guests", "when friends are over", "friends visit", "with company", "in public"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  }
+]

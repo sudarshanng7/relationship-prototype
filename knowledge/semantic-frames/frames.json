@@ -1,0 +1,1953 @@
+[
+  {
+    "id": "frame_parent_domestic_chores",
+    "name": "Domestic upkeep and cleaning chores",
+    "description": "Parent semantic category for domestic upkeep and cleaning chores.",
+    "isAbstractParent": true,
+    "parentFrameId": null,
+    "acceptableAlternativeFrames": [],
+    "relatedDomains": [
+      "dom_01_household_chores",
+      "dom_02_cleaning_hygiene"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten",
+      "delayed",
+      "avoided"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Observable behavior"
+      },
+      {
+        "id": "target",
+        "name": "Target entity",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity"
+        ],
+        "required": false,
+        "description": "Affected item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_parent_home_organization",
+    "name": "Home storage, clutter, and object placement",
+    "description": "Parent semantic category for home storage, clutter, and object placement.",
+    "isAbstractParent": true,
+    "parentFrameId": null,
+    "acceptableAlternativeFrames": [],
+    "relatedDomains": [
+      "dom_03_home_organization",
+      "dom_05_furniture_belongings"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "incomplete",
+      "negated",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Observable behavior"
+      },
+      {
+        "id": "target",
+        "name": "Target entity",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity"
+        ],
+        "required": false,
+        "description": "Affected item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_parent_appliances_climate",
+    "name": "Household appliances, lighting, and climate settings",
+    "description": "Parent semantic category for household appliances, lighting, and climate settings.",
+    "isAbstractParent": true,
+    "parentFrameId": null,
+    "acceptableAlternativeFrames": [],
+    "relatedDomains": [
+      "dom_04_appliances_technology",
+      "dom_06_energy_climate"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Observable behavior"
+      },
+      {
+        "id": "target",
+        "name": "Target entity",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity"
+        ],
+        "required": false,
+        "description": "Affected item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_parent_culinary_beverages",
+    "name": "Cooking, food prep, eating, and beverage ratios",
+    "description": "Parent semantic category for cooking, food prep, eating, and beverage ratios.",
+    "isAbstractParent": true,
+    "parentFrameId": null,
+    "acceptableAlternativeFrames": [],
+    "relatedDomains": [
+      "dom_07_cooking_preparation",
+      "dom_08_eating_habits",
+      "dom_09_beverages_ingredients"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Observable behavior"
+      },
+      {
+        "id": "target",
+        "name": "Target entity",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity"
+        ],
+        "required": false,
+        "description": "Affected item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_parent_communication_voice",
+    "name": "Speaking voice, conversational volume, and humor",
+    "description": "Parent semantic category for speaking voice, conversational volume, and humor.",
+    "isAbstractParent": true,
+    "parentFrameId": null,
+    "acceptableAlternativeFrames": [],
+    "relatedDomains": [
+      "dom_13_speaking_voice",
+      "dom_15_humor_teasing"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Observable behavior"
+      },
+      {
+        "id": "target",
+        "name": "Target entity",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity"
+        ],
+        "required": false,
+        "description": "Affected item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_parent_attention_digital",
+    "name": "Listening attention, interruptions, and digital distraction",
+    "description": "Parent semantic category for listening attention, interruptions, and digital distraction.",
+    "isAbstractParent": true,
+    "parentFrameId": null,
+    "acceptableAlternativeFrames": [],
+    "relatedDomains": [
+      "dom_14_listening_attention",
+      "dom_22_work_study",
+      "dom_23_digital_devices"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "negated",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Observable behavior"
+      },
+      {
+        "id": "target",
+        "name": "Target entity",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity"
+        ],
+        "required": false,
+        "description": "Affected item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_parent_sleep_bodily",
+    "name": "Sleep routines, bedtime rhythms, and bodily acoustics",
+    "description": "Parent semantic category for sleep routines, bedtime rhythms, and bodily acoustics.",
+    "isAbstractParent": true,
+    "parentFrameId": null,
+    "acceptableAlternativeFrames": [],
+    "relatedDomains": [
+      "dom_18_bodily_habits",
+      "dom_19_sleep_routines"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Observable behavior"
+      },
+      {
+        "id": "target",
+        "name": "Target entity",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity"
+        ],
+        "required": false,
+        "description": "Affected item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_parent_timing_scheduling",
+    "name": "Punctuality, preparation delays, and shared scheduling",
+    "description": "Parent semantic category for punctuality, preparation delays, and shared scheduling.",
+    "isAbstractParent": true,
+    "parentFrameId": null,
+    "acceptableAlternativeFrames": [],
+    "relatedDomains": [
+      "dom_20_punctuality_prep",
+      "dom_21_planning_scheduling"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "delayed",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Observable behavior"
+      },
+      {
+        "id": "target",
+        "name": "Target entity",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity"
+        ],
+        "required": false,
+        "description": "Affected item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_parent_opinions_disagreements",
+    "name": "Opinions, preferences, and categorical disagreements",
+    "description": "Parent semantic category for opinions, preferences, and categorical disagreements.",
+    "isAbstractParent": true,
+    "parentFrameId": null,
+    "acceptableAlternativeFrames": [],
+    "relatedDomains": [
+      "dom_11_health_exercise",
+      "dom_16_opinions_disagreements",
+      "dom_17_decision_making"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "negated",
+      "delayed"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Observable behavior"
+      },
+      {
+        "id": "target",
+        "name": "Target entity",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity"
+        ],
+        "required": false,
+        "description": "Affected item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_parent_leisure_travel_money",
+    "name": "Shopping, hobbies, travel, social events, and spending",
+    "description": "Parent semantic category for shopping, hobbies, travel, social events, and spending.",
+    "isAbstractParent": true,
+    "parentFrameId": null,
+    "acceptableAlternativeFrames": [],
+    "relatedDomains": [
+      "dom_10_shopping_groceries",
+      "dom_12_grooming_care",
+      "dom_24_hobbies_leisure",
+      "dom_25_quality_time",
+      "dom_26_affection_appreciation",
+      "dom_27_friends_social",
+      "dom_28_family_relatives",
+      "dom_29_celebrations_dates",
+      "dom_30_travel_transport",
+      "dom_31_money_spending",
+      "dom_32_commitments_fairness",
+      "dom_33_parenting_caregiving"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Observable behavior"
+      },
+      {
+        "id": "target",
+        "name": "Target entity",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity"
+        ],
+        "required": false,
+        "description": "Affected item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_parent_pets_plants_care",
+    "name": "Pet care and houseplant maintenance",
+    "description": "Parent semantic category for pet care and houseplant maintenance.",
+    "isAbstractParent": true,
+    "parentFrameId": null,
+    "acceptableAlternativeFrames": [],
+    "relatedDomains": [
+      "dom_34_pets_plants"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "negated",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Observable behavior"
+      },
+      {
+        "id": "target",
+        "name": "Target entity",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity"
+        ],
+        "required": false,
+        "description": "Affected item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_parent_boundaries_emotions",
+    "name": "Personal boundaries, emotional expectations, and safety",
+    "description": "Parent semantic category for personal boundaries, emotional expectations, and safety.",
+    "isAbstractParent": true,
+    "parentFrameId": null,
+    "acceptableAlternativeFrames": [],
+    "relatedDomains": [
+      "dom_35_emotional_expectations",
+      "dom_36_boundaries_safety"
+    ],
+    "compatiblePolarities": [
+      "refused",
+      "negated",
+      "repeated",
+      "excessive"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Observable behavior"
+      },
+      {
+        "id": "target",
+        "name": "Target entity",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity"
+        ],
+        "required": false,
+        "description": "Affected item"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_washing_kitchenware",
+    "name": "Washing kitchenware and cookware cleanup",
+    "description": "Washing kitchenware and cookware cleanup",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_domestic_chores",
+    "acceptableAlternativeFrames": [
+      "frame_parent_domestic_chores",
+      "frame_active_cleaning_scrubbing",
+      "frame_selective_chore_avoidance",
+      "frame_dish_soaking_omission"
+    ],
+    "relatedDomains": [
+      "dom_01_household_chores",
+      "dom_02_cleaning_hygiene"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "incomplete",
+      "negated",
+      "omitted_forgotten",
+      "delayed",
+      "avoided"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_domestic_chores"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_active_cleaning_scrubbing",
+    "name": "Actively scrubbing, wiping, or rinsing cookware",
+    "description": "Actively scrubbing, wiping, or rinsing cookware",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_washing_kitchenware",
+    "acceptableAlternativeFrames": [
+      "frame_washing_kitchenware",
+      "frame_parent_domestic_chores"
+    ],
+    "relatedDomains": [
+      "dom_01_household_chores",
+      "dom_02_cleaning_hygiene"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_washing_kitchenware"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_selective_chore_avoidance",
+    "name": "Selective omission or refusal of large cookware washing",
+    "description": "Selective omission or refusal of large cookware washing",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_washing_kitchenware",
+    "acceptableAlternativeFrames": [
+      "frame_washing_kitchenware",
+      "frame_parent_domestic_chores"
+    ],
+    "relatedDomains": [
+      "dom_01_household_chores",
+      "dom_32_commitments_fairness"
+    ],
+    "compatiblePolarities": [
+      "negated",
+      "incomplete",
+      "avoided",
+      "refused"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_washing_kitchenware"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_dish_soaking_omission",
+    "name": "Leaving pots, pans, or dishes unwashed/soaking in sink",
+    "description": "Leaving pots, pans, or dishes unwashed/soaking in sink",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_washing_kitchenware",
+    "acceptableAlternativeFrames": [
+      "frame_washing_kitchenware",
+      "frame_parent_domestic_chores"
+    ],
+    "relatedDomains": [
+      "dom_01_household_chores"
+    ],
+    "compatiblePolarities": [
+      "omitted_forgotten",
+      "delayed"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_washing_kitchenware"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_laundry_upkeep",
+    "name": "Laundry folding, wet towels, and clothes storage",
+    "description": "Laundry folding, wet towels, and clothes storage",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_domestic_chores",
+    "acceptableAlternativeFrames": [
+      "frame_parent_domestic_chores",
+      "frame_object_displacement"
+    ],
+    "relatedDomains": [
+      "dom_01_household_chores",
+      "dom_03_home_organization"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "incomplete",
+      "negated",
+      "omitted_forgotten",
+      "delayed"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_domestic_chores"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_appliance_unstarted",
+    "name": "Household appliance loaded or ready but left unstarted/unplugged",
+    "description": "Household appliance loaded or ready but left unstarted/unplugged",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_appliances_climate",
+    "acceptableAlternativeFrames": [
+      "frame_parent_appliances_climate",
+      "frame_parent_domestic_chores"
+    ],
+    "relatedDomains": [
+      "dom_04_appliances_technology",
+      "dom_01_household_chores"
+    ],
+    "compatiblePolarities": [
+      "negated",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_appliances_climate"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_light_climate_control",
+    "name": "Leaving lights on or extreme thermostat/AC temperature settings",
+    "description": "Leaving lights on or extreme thermostat/AC temperature settings",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_appliances_climate",
+    "acceptableAlternativeFrames": [
+      "frame_parent_appliances_climate"
+    ],
+    "relatedDomains": [
+      "dom_06_energy_climate"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_appliances_climate"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_open_drawer_organization",
+    "name": "Leaving drawers, wardrobe doors, or cabinets open or ajar",
+    "description": "Leaving drawers, wardrobe doors, or cabinets open or ajar",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_home_organization",
+    "acceptableAlternativeFrames": [
+      "frame_parent_home_organization",
+      "frame_object_displacement"
+    ],
+    "relatedDomains": [
+      "dom_03_home_organization",
+      "dom_05_furniture_belongings"
+    ],
+    "compatiblePolarities": [
+      "incomplete",
+      "repeated",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_home_organization"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_object_displacement",
+    "name": "Everyday objects or crumbs left outside expected storage spots",
+    "description": "Everyday objects or crumbs left outside expected storage spots",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_home_organization",
+    "acceptableAlternativeFrames": [
+      "frame_parent_home_organization",
+      "frame_open_drawer_organization"
+    ],
+    "relatedDomains": [
+      "dom_03_home_organization",
+      "dom_05_furniture_belongings"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_home_organization"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_beverage_preparation",
+    "name": "Preparing tea, coffee, espresso, or soup with specific ingredient ratios",
+    "description": "Preparing tea, coffee, espresso, or soup with specific ingredient ratios",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_culinary_beverages",
+    "acceptableAlternativeFrames": [
+      "frame_parent_culinary_beverages"
+    ],
+    "relatedDomains": [
+      "dom_09_beverages_ingredients",
+      "dom_07_cooking_preparation"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "incomplete",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_culinary_beverages"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_empty_container_fridge",
+    "name": "Placing empty beverage cartons or bottles back inside refrigerator",
+    "description": "Placing empty beverage cartons or bottles back inside refrigerator",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_culinary_beverages",
+    "acceptableAlternativeFrames": [
+      "frame_parent_culinary_beverages",
+      "frame_object_displacement"
+    ],
+    "relatedDomains": [
+      "dom_09_beverages_ingredients",
+      "dom_04_appliances_technology"
+    ],
+    "compatiblePolarities": [
+      "omitted_forgotten",
+      "repeated"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_culinary_beverages"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_speaking_on_phone",
+    "name": "Speaking loudly or broadcasting on telephone, speaker, or voice call",
+    "description": "Speaking loudly or broadcasting on telephone, speaker, or voice call",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_communication_voice",
+    "acceptableAlternativeFrames": [
+      "frame_parent_communication_voice"
+    ],
+    "relatedDomains": [
+      "dom_13_speaking_voice",
+      "dom_23_digital_devices"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_communication_voice"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_serious_mood_contrast",
+    "name": "Playful noises, teasing, or singing clashing with serious mood or work",
+    "description": "Playful noises, teasing, or singing clashing with serious mood or work",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_communication_voice",
+    "acceptableAlternativeFrames": [
+      "frame_parent_communication_voice",
+      "frame_parent_attention_digital"
+    ],
+    "relatedDomains": [
+      "dom_13_speaking_voice",
+      "dom_15_humor_teasing",
+      "dom_14_listening_attention"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_communication_voice"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_attention_distraction",
+    "name": "Phone scrolling, screen distraction, or tuned-out listening",
+    "description": "Phone scrolling, screen distraction, or tuned-out listening",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_attention_digital",
+    "acceptableAlternativeFrames": [
+      "frame_parent_attention_digital"
+    ],
+    "relatedDomains": [
+      "dom_14_listening_attention",
+      "dom_23_digital_devices"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "omitted_forgotten"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_attention_digital"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_conversational_interruption",
+    "name": "Interrupting mid-sentence or talking over someone",
+    "description": "Interrupting mid-sentence or talking over someone",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_attention_digital",
+    "acceptableAlternativeFrames": [
+      "frame_parent_attention_digital",
+      "frame_parent_communication_voice"
+    ],
+    "relatedDomains": [
+      "dom_14_listening_attention",
+      "dom_13_speaking_voice"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_attention_digital"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_sleep_acoustics",
+    "name": "Nighttime snoring, burping, or loud bodily habits",
+    "description": "Nighttime snoring, burping, or loud bodily habits",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_sleep_bodily",
+    "acceptableAlternativeFrames": [
+      "frame_parent_sleep_bodily"
+    ],
+    "relatedDomains": [
+      "dom_18_bodily_habits",
+      "dom_19_sleep_routines"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_sleep_bodily"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_sleep_duvet_alarm",
+    "name": "Bedtime duvet sharing, snoozing alarms, or late lights",
+    "description": "Bedtime duvet sharing, snoozing alarms, or late lights",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_sleep_bodily",
+    "acceptableAlternativeFrames": [
+      "frame_parent_sleep_bodily"
+    ],
+    "relatedDomains": [
+      "dom_19_sleep_routines"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive",
+      "delayed"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_sleep_bodily"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_punctuality_departure_delay",
+    "name": "Prolonged getting ready, missing shoes/keys, or delayed departure",
+    "description": "Prolonged getting ready, missing shoes/keys, or delayed departure",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_timing_scheduling",
+    "acceptableAlternativeFrames": [
+      "frame_parent_timing_scheduling"
+    ],
+    "relatedDomains": [
+      "dom_20_punctuality_prep",
+      "dom_21_planning_scheduling"
+    ],
+    "compatiblePolarities": [
+      "delayed",
+      "repeated",
+      "excessive"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_timing_scheduling"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_evaluating_concept_proposition",
+    "name": "Categorical claims or negated definitions requiring shared context",
+    "description": "Categorical claims or negated definitions requiring shared context",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_opinions_disagreements",
+    "acceptableAlternativeFrames": [
+      "frame_parent_opinions_disagreements"
+    ],
+    "relatedDomains": [
+      "dom_16_opinions_disagreements",
+      "dom_11_health_exercise"
+    ],
+    "compatiblePolarities": [
+      "negated",
+      "active"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_opinions_disagreements"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_decision_preference_mismatch",
+    "name": "Meal indecision, off-brand grocery picks, or differing everyday tastes",
+    "description": "Meal indecision, off-brand grocery picks, or differing everyday tastes",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_opinions_disagreements",
+    "acceptableAlternativeFrames": [
+      "frame_parent_opinions_disagreements",
+      "frame_parent_leisure_travel_money"
+    ],
+    "relatedDomains": [
+      "dom_17_decision_making",
+      "dom_10_shopping_groceries"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "delayed",
+      "incomplete"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_opinions_disagreements"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_houseplant_pet_care",
+    "name": "Watering houseplants or tending pets on shared schedule",
+    "description": "Watering houseplants or tending pets on shared schedule",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_pets_plants_care",
+    "acceptableAlternativeFrames": [
+      "frame_parent_pets_plants_care"
+    ],
+    "relatedDomains": [
+      "dom_34_pets_plants"
+    ],
+    "compatiblePolarities": [
+      "omitted_forgotten",
+      "negated",
+      "delayed",
+      "repeated"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_pets_plants_care"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_travel_navigation_packing",
+    "name": "GPS route debates, driving detours, and trip packing habits",
+    "description": "GPS route debates, driving detours, and trip packing habits",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_leisure_travel_money",
+    "acceptableAlternativeFrames": [
+      "frame_parent_leisure_travel_money"
+    ],
+    "relatedDomains": [
+      "dom_30_travel_transport"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "excessive",
+      "repeated"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_leisure_travel_money"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_boundary_safety_protection",
+    "name": "Explicit refusal, unwanted insistence, verbal harm, or unsafe conduct",
+    "description": "Explicit refusal, unwanted insistence, verbal harm, or unsafe conduct",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_boundaries_emotions",
+    "acceptableAlternativeFrames": [
+      "frame_parent_boundaries_emotions"
+    ],
+    "relatedDomains": [
+      "dom_36_boundaries_safety",
+      "dom_35_emotional_expectations"
+    ],
+    "compatiblePolarities": [
+      "refused",
+      "negated",
+      "repeated",
+      "excessive"
+    ],
+    "triggers": [],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Action or behavior",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "Action"
+      },
+      {
+        "id": "target",
+        "name": "Target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "ingredient",
+          "activity",
+          "place"
+        ],
+        "required": false,
+        "description": "Target"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_boundaries_emotions"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_emotional_cinematic_expressiveness",
+    "name": "Emotional tears, crying, or deep sensitivity over films, songs, or fiction",
+    "description": "Getting tearful, crying, or deeply moved during movie scenes, songs, or stories.",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_boundaries_emotions",
+    "acceptableAlternativeFrames": [
+      "frame_parent_boundaries_emotions",
+      "frame_parent_leisure_travel_money"
+    ],
+    "relatedDomains": [
+      "dom_35_emotional_expectations",
+      "dom_24_hobbies_leisure"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "triggers": [
+      "crying",
+      "cries",
+      "tearing up",
+      "emotional",
+      "sobbing"
+    ],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Emotional expression",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "crying/sobbing/tearing"
+      },
+      {
+        "id": "trigger",
+        "name": "Cinematic or musical trigger",
+        "acceptedConceptTypes": [
+          "interpersonal_interaction",
+          "activity"
+        ],
+        "required": false,
+        "description": "movie/film/scene/song"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_boundaries_emotions"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_subjective_preference_contrast",
+    "name": "Subjective entertainment or taste preferences",
+    "description": "Watching niche videos, repeating favorite shows, or harmless disagreements on what is boring or fun.",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_opinions_disagreements",
+    "acceptableAlternativeFrames": [
+      "frame_parent_opinions_disagreements",
+      "frame_parent_leisure_travel_money"
+    ],
+    "relatedDomains": [
+      "dom_16_opinions_disagreements",
+      "dom_24_hobbies_leisure"
+    ],
+    "compatiblePolarities": [
+      "active",
+      "repeated",
+      "excessive"
+    ],
+    "triggers": [
+      "watch",
+      "watches",
+      "watching",
+      "boring",
+      "video",
+      "videos"
+    ],
+    "roles": [
+      {
+        "id": "action",
+        "name": "Consuming or watching",
+        "acceptedConceptTypes": [
+          "action",
+          "behavior"
+        ],
+        "required": false,
+        "description": "watching/listening"
+      },
+      {
+        "id": "target",
+        "name": "Content target",
+        "acceptedConceptTypes": [
+          "physical_object",
+          "activity"
+        ],
+        "required": false,
+        "description": "videos/clips/shows"
+      }
+    ],
+    "compatibleModifiers": [],
+    "relatedFrames": [
+      "frame_parent_opinions_disagreements"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_misplaced_belonging_retrieval",
+    "name": "Remembering or searching for items placed earlier by oneself",
+    "description": "Forgetting the location or status of personal belongings previously set down",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_home_organization",
+    "acceptableAlternativeFrames": [
+      "frame_parent_home_organization",
+      "frame_object_displacement"
+    ],
+    "relatedDomains": [
+      "dom_03_home_organization",
+      "dom_05_furniture_belongings"
+    ],
+    "coreConcepts": [
+      "cidx_3",
+      "cidx_11"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_active_illumination_persistence",
+    "name": "Active room or bathroom illumination left on",
+    "description": "Maintaining lights or illumination in an active on-state after leaving",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_technology_devices",
+    "acceptableAlternativeFrames": [
+      "frame_light_climate_control"
+    ],
+    "relatedDomains": [
+      "dom_04_appliances_technology",
+      "dom_06_energy_climate"
+    ],
+    "coreConcepts": [
+      "cidx_4"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "frame_alarm_switch_off_omission",
+    "name": "Morning alarm ringing unstopped or forgotten switch-off",
+    "description": "Forgetting to switch off or deactivate an alarm once awake",
+    "isAbstractParent": false,
+    "parentFrameId": "frame_parent_bodily_sleep",
+    "acceptableAlternativeFrames": [
+      "frame_sleep_duvet_alarm"
+    ],
+    "relatedDomains": [
+      "dom_19_sleep_routines",
+      "dom_20_punctuality_prep"
+    ],
+    "coreConcepts": [
+      "cidx_52"
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  }
+]

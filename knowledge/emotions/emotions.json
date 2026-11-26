@@ -1,0 +1,101 @@
+[
+  {
+    "id": "emo_mild_amusement",
+    "name": "Mild amusement / fond bemusement",
+    "valence": "positive",
+    "arousal": "low",
+    "interpersonalRelevance": "Seeing partner's idiosyncrasy as an endearing chapter of shared domestic life.",
+    "mayCooccurWithDomains": ["dom_15_humor_teasing", "dom_25_quality_time", "dom_03_home_organization"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "emo_affectionate_resignation",
+    "name": "Affectionate resignation",
+    "valence": "positive",
+    "arousal": "low",
+    "interpersonalRelevance": "Accepting that a partner has their signature ritual without letting it erode affection.",
+    "mayCooccurWithDomains": ["dom_03_home_organization", "dom_09_beverages_ingredients", "dom_26_affection_appreciation"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "emo_sensory_overload",
+    "name": "Sensory overload / acoustic weariness",
+    "valence": "negative",
+    "arousal": "medium",
+    "interpersonalRelevance": "Auditory fatigue caused by sudden high decibels, chewing, or loud calls.",
+    "mayCooccurWithDomains": ["dom_13_speaking_voice", "dom_18_bodily_habits", "dom_22_work_study"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "emo_chore_fatigue",
+    "name": "Domestic asymmetry / chore fatigue",
+    "valence": "negative",
+    "arousal": "low",
+    "interpersonalRelevance": "The feeling of noticing leftover heavy items or selective avoidance at the sink.",
+    "mayCooccurWithDomains": ["dom_01_household_chores", "dom_32_commitments_fairness"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "emo_playful_incredulity",
+    "name": "Playful incredulity / debate spark",
+    "valence": "mixed",
+    "arousal": "medium",
+    "interpersonalRelevance": "The entertaining disbelief when partner makes a bold or absurd definitive claim.",
+    "mayCooccurWithDomains": ["dom_16_opinions_disagreements", "dom_11_health_exercise", "dom_09_beverages_ingredients"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "emo_irritation_friction",
+    "name": "Mild irritation / friction spark",
+    "valence": "negative",
+    "arousal": "medium",
+    "interpersonalRelevance": "Transient annoyance triggered by unexpected interruption, delay, or mess.",
+    "mayCooccurWithDomains": ["dom_14_listening_attention", "dom_20_punctuality_prep", "dom_02_cleaning_hygiene"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "emo_frustration_repetition",
+    "name": "Frustration over repeated habits",
+    "valence": "negative",
+    "arousal": "medium",
+    "interpersonalRelevance": "Accumulated tension when a small friction recurs despite prior discussions.",
+    "mayCooccurWithDomains": ["dom_01_household_chores", "dom_03_home_organization", "dom_19_sleep_routines"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "emo_disappointment_expectations",
+    "name": "Quiet disappointment / unmet bid",
+    "valence": "negative",
+    "arousal": "low",
+    "interpersonalRelevance": "Feeling let down when a shared ritual, date, or expectation dissolves.",
+    "mayCooccurWithDomains": ["dom_25_quality_time", "dom_29_celebrations_dates", "dom_35_emotional_expectations"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "emo_relief_decompression",
+    "name": "Relief and decompression",
+    "valence": "positive",
+    "arousal": "low",
+    "interpersonalRelevance": "Comfort when a tension resolves into a gentle reframe or shared smile.",
+    "mayCooccurWithDomains": ["dom_25_quality_time", "dom_26_affection_appreciation"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "emo_feeling_unheard",
+    "name": "Feeling unheard or dismissed",
+    "valence": "negative",
+    "arousal": "medium",
+    "interpersonalRelevance": "Emotional distance arising when communication bids are tuned out.",
+    "mayCooccurWithDomains": ["dom_14_listening_attention", "dom_35_emotional_expectations"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  },
+  {
+    "id": "emo_gratitude_warmth",
+    "name": "Spontaneous gratitude and tenderness",
+    "valence": "positive",
+    "arousal": "low",
+    "interpersonalRelevance": "Noticing quiet partner kindness or mutual accommodation.",
+    "mayCooccurWithDomains": ["dom_26_affection_appreciation", "dom_32_commitments_fairness"],
+    "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+  }
+]

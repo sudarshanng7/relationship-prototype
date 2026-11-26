@@ -1216,8 +1216,24 @@ export default function ProfileScreen() {
     });
 
     if (error) {
-      console.error(error);
-      setConnectionStatus(error.message);
+      // Expected business validation handling: map database/RPC errors to friendly UI states
+      const rawMsg = error.message || "";
+      if (rawMsg.includes("You already belong to a relationship space")) {
+        setConnectionStatus("You already belong to a relationship space.");
+      } else if (rawMsg.includes("This invite has expired")) {
+        setConnectionStatus("This invite has expired. Please ask your partner for a fresh invite.");
+      } else if (rawMsg.includes("already has two members")) {
+        setConnectionStatus("This relationship space is already complete with two members.");
+      } else if (
+        rawMsg.includes("Invalid or unavailable invite code") ||
+        error.code === "P0001"
+      ) {
+        // Honest generic message: covers nonexistent code, already accepted/used code,
+        // or code no longer in pending status (which the backend cannot distinguish)
+        setConnectionStatus("That invite code doesn't seem to be available. Check the code with your partner or ask them to create a new invite.");
+      } else {
+        setConnectionStatus("Could not connect with that invite. Please check the code and try again.");
+      }
       return;
     }
 

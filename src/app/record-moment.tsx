@@ -25,6 +25,7 @@ import { ThemeColors, useTheme } from "@/context/ThemeContext";
 import { useUserIdentity } from "@/context/UserIdentityContext";
 import { supabase } from "@/lib/supabase";
 import { triggerSharedMomentNotification } from "@/lib/notifications";
+import { consumeDraftPrivateReflectionNote } from "@/lib/draft-reflection-store";
 import {
   RepairMemoryCandidate,
   SUPPORTED_FRICTION_CATEGORIES,
@@ -67,6 +68,7 @@ export default function RecordMomentScreen() {
     type?: string | string[];
     visibility?: string | string[];
     lockType?: string | string[];
+    initialNote?: string | string[];
   }>();
 
   const typeParam = Array.isArray(params.type) ? params.type[0] : params.type;
@@ -76,6 +78,9 @@ export default function RecordMomentScreen() {
   const lockTypeParam = Array.isArray(params.lockType)
     ? params.lockType[0]
     : params.lockType;
+  const initialNoteParam = Array.isArray(params.initialNote)
+    ? params.initialNote[0]
+    : params.initialNote;
 
   const isPrivateReflectionMode = visibilityParam === "mine";
   const isSharedMomentMode = visibilityParam === "ours";
@@ -109,7 +114,10 @@ export default function RecordMomentScreen() {
   const [category, setCategory] = useState("");
   const [customCategoryLabel, setCustomCategoryLabel] = useState("");
   const [intensity, setIntensity] = useState(3);
-  const [privateNote, setPrivateNote] = useState("");
+  const [privateNote, setPrivateNote] = useState(() => {
+    const draft = consumeDraftPrivateReflectionNote();
+    return draft || initialNoteParam || "";
+  });
   const [sharedTopic, setSharedTopic] = useState("");
   const [saving, setSaving] = useState(false);
 

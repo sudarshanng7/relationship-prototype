@@ -1,0 +1,222 @@
+[
+  {
+    "id": "cat_01_household_chores",
+    "num": 1,
+    "name": "Household chores and cleaning",
+    "domains": [
+      "dom_01_household_chores",
+      "dom_02_cleaning_hygiene"
+    ]
+  },
+  {
+    "id": "cat_02_tidiness_organization",
+    "num": 2,
+    "name": "Tidiness and organization",
+    "domains": [
+      "dom_03_home_organization",
+      "dom_05_furniture_belongings"
+    ]
+  },
+  {
+    "id": "cat_03_forgetfulness_belongings",
+    "num": 3,
+    "name": "Forgetfulness and misplaced belongings",
+    "domains": [
+      "dom_03_home_organization",
+      "dom_05_furniture_belongings",
+      "dom_32_commitments_fairness"
+    ]
+  },
+  {
+    "id": "cat_04_lighting_appliances_temp",
+    "num": 4,
+    "name": "Lighting, appliances and temperature",
+    "domains": [
+      "dom_04_appliances_technology",
+      "dom_06_energy_climate"
+    ]
+  },
+  {
+    "id": "cat_05_bathroom_grooming",
+    "num": 5,
+    "name": "Bathroom and grooming habits",
+    "domains": [
+      "dom_02_cleaning_hygiene",
+      "dom_12_grooming_care"
+    ]
+  },
+  {
+    "id": "cat_06_cooking_food_prep",
+    "num": 6,
+    "name": "Cooking and food preparation",
+    "domains": [
+      "dom_07_cooking_preparation",
+      "dom_09_beverages_ingredients"
+    ]
+  },
+  {
+    "id": "cat_07_eating_sharing_food",
+    "num": 7,
+    "name": "Eating, drinking and sharing food",
+    "domains": [
+      "dom_08_eating_habits",
+      "dom_09_beverages_ingredients"
+    ]
+  },
+  {
+    "id": "cat_08_sleep_bedtime",
+    "num": 8,
+    "name": "Sleep and bedtime habits",
+    "domains": [
+      "dom_18_bodily_habits",
+      "dom_19_sleep_routines"
+    ]
+  },
+  {
+    "id": "cat_09_morning_alarms",
+    "num": 9,
+    "name": "Morning routines and alarms",
+    "domains": [
+      "dom_19_sleep_routines",
+      "dom_20_punctuality_prep"
+    ]
+  },
+  {
+    "id": "cat_10_speaking_conversation",
+    "num": 10,
+    "name": "Speaking and conversational habits",
+    "domains": [
+      "dom_13_speaking_voice",
+      "dom_14_listening_attention"
+    ]
+  },
+  {
+    "id": "cat_11_humor_teasing_timing",
+    "num": 11,
+    "name": "Humor, teasing and comic timing",
+    "domains": [
+      "dom_15_humor_teasing",
+      "dom_13_speaking_voice"
+    ]
+  },
+  {
+    "id": "cat_12_emotional_expressive_quirks",
+    "num": 12,
+    "name": "Emotional and expressive quirks",
+    "domains": [
+      "dom_35_emotional_expectations",
+      "dom_24_hobbies_leisure"
+    ]
+  },
+  {
+    "id": "cat_13_opinions_tastes_preferences",
+    "num": 13,
+    "name": "Opinions, tastes and preferences",
+    "domains": [
+      "dom_16_opinions_disagreements",
+      "dom_24_hobbies_leisure"
+    ]
+  },
+  {
+    "id": "cat_14_decision_making_indecision",
+    "num": 14,
+    "name": "Decision-making and indecision",
+    "domains": [
+      "dom_17_decision_making",
+      "dom_08_eating_habits",
+      "dom_21_planning_scheduling"
+    ]
+  },
+  {
+    "id": "cat_15_affectionate_playful_habits",
+    "num": 15,
+    "name": "Affectionate and playful habits",
+    "domains": [
+      "dom_26_affection_appreciation",
+      "dom_15_humor_teasing"
+    ]
+  },
+  {
+    "id": "cat_16_personal_bodily_habits",
+    "num": 16,
+    "name": "Personal and bodily habits",
+    "domains": [
+      "dom_18_bodily_habits",
+      "dom_12_grooming_care"
+    ]
+  },
+  {
+    "id": "cat_17_phones_technology_digital",
+    "num": 17,
+    "name": "Phones, technology and digital habits",
+    "domains": [
+      "dom_23_digital_devices",
+      "dom_14_listening_attention"
+    ]
+  },
+  {
+    "id": "cat_18_entertainment_hobbies_fitness",
+    "num": 18,
+    "name": "Entertainment, hobbies and fitness",
+    "domains": [
+      "dom_24_hobbies_leisure",
+      "dom_11_health_exercise"
+    ]
+  },
+  {
+    "id": "cat_19_punctuality_prep_planning",
+    "num": 19,
+    "name": "Punctuality, preparation and planning",
+    "domains": [
+      "dom_20_punctuality_prep",
+      "dom_21_planning_scheduling"
+    ]
+  },
+  {
+    "id": "cat_20_shopping_spending_errands",
+    "num": 20,
+    "name": "Shopping, spending preferences and errands",
+    "domains": [
+      "dom_10_shopping_groceries",
+      "dom_31_money_spending"
+    ]
+  },
+  {
+    "id": "cat_21_travel_driving_navigation",
+    "num": 21,
+    "name": "Travel, driving and navigation",
+    "domains": [
+      "dom_30_travel_transport",
+      "dom_21_planning_scheduling"
+    ]
+  },
+  {
+    "id": "cat_22_work_study_concentration",
+    "num": 22,
+    "name": "Work, study and concentration",
+    "domains": [
+      "dom_22_work_study",
+      "dom_14_listening_attention"
+    ]
+  },
+  {
+    "id": "cat_23_social_family_celebrations",
+    "num": 23,
+    "name": "Social life, family and celebrations",
+    "domains": [
+      "dom_27_friends_social",
+      "dom_28_family_relatives",
+      "dom_29_celebrations_dates"
+    ]
+  },
+  {
+    "id": "cat_24_caregiving_pets_plants",
+    "num": 24,
+    "name": "Caregiving, pets, plants and shared routines",
+    "domains": [
+      "dom_33_parenting_caregiving",
+      "dom_34_pets_plants",
+      "dom_32_commitments_fairness"
+    ]
+  }
+]

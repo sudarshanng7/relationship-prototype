@@ -107,7 +107,9 @@ export default function LoginScreen() {
       });
 
       if (error) {
-        console.error(error);
+        if (__DEV__) {
+          console.warn("[Auth] Sign in rejected:", error.message);
+        }
         setStatus(error.message);
         return;
       }
@@ -152,7 +154,9 @@ export default function LoginScreen() {
       });
 
       if (error) {
-        console.error(error);
+        if (__DEV__) {
+          console.warn("[Auth] Sign in rejected:", error.message);
+        }
         setStatus(error.message);
         return;
       }

@@ -1,0 +1,792 @@
+[
+  {
+    "id": "meta_culinary_minimalism",
+    "name": "Molecular & Avant-Garde Culinary Minimalism",
+    "domain": "dom_09_beverages_ingredients",
+    "sourceDomain": "high-end fine dining / avant-garde chemistry",
+    "targetDomain": "making tea / kitchen preparation",
+    "imageryKeywords": [
+      "molecular gastronomy",
+      "whisper of dairy",
+      "homeopathic splash",
+      "artistic restraint",
+      "micro-dose"
+    ],
+    "compatibleSituationTypes": [
+      "negligible_ingredient",
+      "beverage_ratio"
+    ],
+    "exampleAnalogies": [
+      "The milk wasn't poured, it was telepathically whispered across the kitchen counter.",
+      "A modern tea art installation featuring 99.8% water and an honorary memory of a dairy farm."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_public_broadcasting",
+    "name": "Public Address & Planetary Telecommunications",
+    "domain": "dom_13_speaking_voice",
+    "sourceDomain": "municipal sirens / satellite relays / stadium PA systems",
+    "targetDomain": "routine phone conversations",
+    "imageryKeywords": [
+      "broadcast tower",
+      "satellite uplink",
+      "citywide briefing",
+      "no microphone needed",
+      "space station"
+    ],
+    "compatibleSituationTypes": [
+      "loud_speaking",
+      "phone_call"
+    ],
+    "exampleAnalogies": [
+      "No cell tower necessary; the entire postal district is currently staying informed.",
+      "A casual phone conversation calibrated to reach the international space station."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_fictional_administration",
+    "name": "Fictional High Bureaucracy & Regulatory Boards",
+    "domain": "dom_16_opinions_disagreements",
+    "sourceDomain": "high tribunals / supreme boards of standards / ministerial gazettes",
+    "targetDomain": "everyday relationship debates",
+    "imageryKeywords": [
+      "official gazette",
+      "department of definitions",
+      "supreme court of cardio",
+      "regulatory decree",
+      "accreditation board"
+    ],
+    "compatibleSituationTypes": [
+      "categorical_disagreement",
+      "opinion_debate"
+    ],
+    "exampleAnalogies": [
+      "The Supreme Ministry of Physical Exertion is still deliberating this historic verdict.",
+      "An emergency session of the Domestic Classification Board has been called."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_historical_monument",
+    "name": "Historical Monuments & The Eternal Sanctuary",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "archaeological digs / national heritage monuments / sacred resting grounds",
+    "targetDomain": "large kitchen pots and utensils soaking in the sink",
+    "imageryKeywords": [
+      "heritage site",
+      "unbroken vigil",
+      "monumental cookware",
+      "soaking ritual",
+      "diplomatic immunity"
+    ],
+    "compatibleSituationTypes": [
+      "unwashed_dishes",
+      "selective_chore_avoidance"
+    ],
+    "exampleAnalogies": [
+      "The large soup pot has officially declared sovereign diplomatic immunity in the sink basin.",
+      "A historic iron landmark quietly meditating through its third consecutive overnight soak."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_expedition_travel",
+    "name": "Arctic Expedition & Jungle Exploration",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "wilderness exploration",
+    "targetDomain": "crossing the messy living room",
+    "imageryKeywords": [
+      "base camp",
+      "sherpa",
+      "canteen",
+      "snow boots"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a wilderness exploration in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_cinema_noir",
+    "name": "Film Noir & Gritty Private Eye",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "1940s detective film",
+    "targetDomain": "finding missing keys or socks",
+    "imageryKeywords": [
+      "detective",
+      "trenchcoat",
+      "mystery",
+      "clues"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a 1940s detective film in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_sports_broadcasting",
+    "name": "Live Sports Play-by-Play Color Commentary",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "sports arena broadcast",
+    "targetDomain": "partner preparing dinner",
+    "imageryKeywords": [
+      "color commentator",
+      "instant replay",
+      "referee",
+      "stadium"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a sports arena broadcast in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_high_court",
+    "name": "Supreme Appellate Court of Domestic Habits",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "appellate judiciary",
+    "targetDomain": "disagreeing over thermostat or definitions",
+    "imageryKeywords": [
+      "dissenting opinion",
+      "bench ruling",
+      "brief",
+      "precedent"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a appellate judiciary in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_space_mission",
+    "name": "NASA Mission Control & Space Launch",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "mission control console",
+    "targetDomain": "leaving the house on time",
+    "imageryKeywords": [
+      "countdown",
+      "ignition",
+      "abort sequence",
+      "telemetry"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a mission control console in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_ancient_rome",
+    "name": "Roman Senate & Forum Speeches",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "ancient classical republic",
+    "targetDomain": "discussing weekend plans",
+    "imageryKeywords": [
+      "senate floor",
+      "toga",
+      "decree",
+      "plebiscite"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a ancient classical republic in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_wildlife_reserve",
+    "name": "Serengeti National Safari Reserve",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "nature wildlife documentary",
+    "targetDomain": "foraging midnight snacks in the fridge",
+    "imageryKeywords": [
+      "nocturnal watering hole",
+      "pride of lions",
+      "cautious approach",
+      "stalking"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a nature wildlife documentary in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_michelin_inspector",
+    "name": "Anonymous Michelin Star Culinary Inspection",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "luxury restaurant review",
+    "targetDomain": "critiquing tonight's homemade soup",
+    "imageryKeywords": [
+      "secret inspector",
+      "demotion",
+      "plating",
+      "subtle notes"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a luxury restaurant review in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_art_gallery",
+    "name": "Avant-Garde Modern Art Installation",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "contemporary gallery",
+    "targetDomain": "clothes draped across the exercise bike",
+    "imageryKeywords": [
+      "found object art",
+      "curator note",
+      "sculptural tension",
+      "critique"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a contemporary gallery in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_monastery_retreat",
+    "name": "Himalayan Silent Meditation Monastery",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "silent hermitage",
+    "targetDomain": "seeking five minutes of quiet in the house",
+    "imageryKeywords": [
+      "vow of silence",
+      "chime",
+      "inner peace",
+      "monk"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a silent hermitage in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_construction_site",
+    "name": "Heavy Industrial Civil Engineering Project",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "megaproject construction",
+    "targetDomain": "building flatpack IKEA furniture",
+    "imageryKeywords": [
+      "hard hat",
+      "blueprint",
+      "structural integrity",
+      "crane"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a megaproject construction in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_maritime_voyage",
+    "name": "18th Century High Seas Galleon Voyage",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "age of sail navigation",
+    "targetDomain": "driving through evening commuter traffic",
+    "imageryKeywords": [
+      "captain",
+      "starboard",
+      "rough waters",
+      "compass"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a age of sail navigation in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_secret_agent",
+    "name": "MI6 Covert Espionage & Intelligence",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "clandestine spycraft",
+    "targetDomain": "silently sneaking out of bed without waking partner",
+    "imageryKeywords": [
+      "infiltrator",
+      "night vision",
+      "covert asset",
+      "briefcase"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a clandestine spycraft in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_archaeological_dig",
+    "name": "Paleontological & Archaeological Excavation",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "ancient dig site",
+    "targetDomain": "clearing out the bottom freezer drawer",
+    "imageryKeywords": [
+      "carbon dating",
+      "fossil",
+      "trowel",
+      "relic"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a ancient dig site in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_weather_meteorology",
+    "name": "National Severe Storm Meteorological Center",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "doppler radar broadcast",
+    "targetDomain": "detecting morning mood before coffee",
+    "imageryKeywords": [
+      "pressure front",
+      "radar sweep",
+      "advisory",
+      "humidity"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a doppler radar broadcast in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_airline_flight",
+    "name": "Transatlantic Commercial Aviation",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "cabin crew in-flight service",
+    "targetDomain": "sharing a blanket on the sofa",
+    "imageryKeywords": [
+      "flight attendant",
+      "seatbelt sign",
+      "turbulence",
+      "tray table"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a cabin crew in-flight service in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_olympic_gymnastics",
+    "name": "Olympic Balance Beam & Floor Routine",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "elite international gymnastics",
+    "targetDomain": "stepping over floor obstacles in the dark",
+    "imageryKeywords": [
+      "difficulty score",
+      "landing",
+      "judges",
+      "chalk"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a elite international gymnastics in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_banking_treasury",
+    "name": "Central Bank Monetary Policy & Interest Rates",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "federal reserve boardroom",
+    "targetDomain": "discussing grocery receipts and price changes",
+    "imageryKeywords": [
+      "inflation hedge",
+      "liquidity",
+      "audit",
+      "treasury"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a federal reserve boardroom in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_circus_acrobatics",
+    "name": "Big Top Circus & Aerial Acrobatics",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "circus performance",
+    "targetDomain": "carrying five mugs at once from the desk",
+    "imageryKeywords": [
+      "juggler",
+      "high wire",
+      "safety net",
+      "applause"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a circus performance in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_quantum_physics",
+    "name": "Theoretical Particle Physics Lab",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "large hadron collider",
+    "targetDomain": "where the TV remote disappeared to",
+    "imageryKeywords": [
+      "uncertainty principle",
+      "wormhole",
+      "entanglement",
+      "quark"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a large hadron collider in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_botanical_garden",
+    "name": "Royal Arboretum & Exotic Flora",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "botanical conservatory",
+    "targetDomain": "the houseplant on the window sill",
+    "imageryKeywords": [
+      "photosynthesis",
+      "rare orchid",
+      "succulent",
+      "pruning"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a botanical conservatory in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_medieval_castle",
+    "name": "Feudal Castle Siege & Drawbridge Defense",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "medieval fortress",
+    "targetDomain": "defending personal pillow or corner of the couch",
+    "imageryKeywords": [
+      "drawbridge",
+      "parapet",
+      "moat",
+      "banner"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a medieval fortress in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_library_archives",
+    "name": "Ancient Vatican Restricted Manuscripts Archive",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "rare manuscript archives",
+    "targetDomain": "finding the instruction manual for the oven",
+    "imageryKeywords": [
+      "parchment",
+      "call catalog",
+      "white gloves",
+      "scroll"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a rare manuscript archives in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_postal_service",
+    "name": "Pony Express & Imperial Mail Service",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "intercontinental dispatch",
+    "targetDomain": "relaying messages from across the apartment",
+    "imageryKeywords": [
+      "express courier",
+      "telegram",
+      "registered delivery",
+      "postmark"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a intercontinental dispatch in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_rock_concert",
+    "name": "Stadium Rock World Tour",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "sold-out arena stadium",
+    "targetDomain": "listening to partner singing in the shower",
+    "imageryKeywords": [
+      "front row",
+      "encore",
+      "lead vocals",
+      "pyrotechnics"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a sold-out arena stadium in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_diplomatic_treaty",
+    "name": "Geneva Convention & International Accord",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "summit treaty conference",
+    "targetDomain": "settling who takes the recycling down",
+    "imageryKeywords": [
+      "plenipotentiary",
+      "bilateral accord",
+      "ratification",
+      "ceasefire"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a summit treaty conference in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_fashion_runway",
+    "name": "Paris High Fashion Week Runway",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "haute couture catwalk",
+    "targetDomain": "walking out in sweatpants and mismatched slippers",
+    "imageryKeywords": [
+      "catwalk",
+      "couture",
+      "silhouette",
+      "fashion editor"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a haute couture catwalk in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_broadway_musical",
+    "name": "West End Dramatic Musical",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "theatrical stage production",
+    "targetDomain": "a dramatic sigh when chores are mentioned",
+    "imageryKeywords": [
+      "overture",
+      "soliloquy",
+      "stage lighting",
+      "curtain call"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a theatrical stage production in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_alchemical_lab",
+    "name": "Renaissance Alchemist Crucible",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "medieval transmutation laboratory",
+    "targetDomain": "experimenting with strange leftovers in the fridge",
+    "imageryKeywords": [
+      "elixir",
+      "transmutation",
+      "crucible",
+      "philosopher stone"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a medieval transmutation laboratory in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  },
+  {
+    "id": "meta_zen_temple",
+    "name": "Kyoto Stone Rock Garden",
+    "domain": "dom_01_household_chores",
+    "sourceDomain": "zen temple meditation",
+    "targetDomain": "observing empty laundry basket in contemplative silence",
+    "imageryKeywords": [
+      "mindful breath",
+      "gravel rake",
+      "stillness",
+      "enlightenment"
+    ],
+    "compatibleSituationTypes": [
+      "routine_disagreement",
+      "habitual_quirk"
+    ],
+    "exampleAnalogies": [
+      "Treated like a zen temple meditation in the midst of daily domestic routines."
+    ],
+    "sourceIds": [
+      "purple-garden-original"
+    ]
+  }
+]

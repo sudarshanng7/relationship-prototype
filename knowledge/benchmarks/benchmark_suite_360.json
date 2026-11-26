@@ -1,0 +1,4682 @@
+[
+  {
+    "id": "bench_0001",
+    "domainId": "dom_01_household_chores",
+    "input": "Standard household routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0002",
+    "domainId": "dom_01_household_chores",
+    "input": "Negligible quantity of household during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0003",
+    "domainId": "dom_01_household_chores",
+    "input": "Definitive opinion that household is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0004",
+    "domainId": "dom_01_household_chores",
+    "input": "Not washing large household ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0005",
+    "domainId": "dom_01_household_chores",
+    "input": "Excessive volume while household on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0006",
+    "domainId": "dom_01_household_chores",
+    "input": "Leaving the wardrobe drawer half opened for household",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0007",
+    "domainId": "dom_01_household_chores",
+    "input": "Disagreement about scheduling and timing of household",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0008",
+    "domainId": "dom_01_household_chores",
+    "input": "Snoring loudly while sleeping near household",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0009",
+    "domainId": "dom_01_household_chores",
+    "input": "Burping after drinking household tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0010",
+    "domainId": "dom_01_household_chores",
+    "input": "Refusing to do household chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0011",
+    "domainId": "dom_02_cleaning_hygiene",
+    "input": "Standard cleaning routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0012",
+    "domainId": "dom_02_cleaning_hygiene",
+    "input": "Negligible quantity of cleaning during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0013",
+    "domainId": "dom_02_cleaning_hygiene",
+    "input": "Definitive opinion that cleaning is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0014",
+    "domainId": "dom_02_cleaning_hygiene",
+    "input": "Not washing large cleaning ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0015",
+    "domainId": "dom_02_cleaning_hygiene",
+    "input": "Excessive volume while cleaning on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0016",
+    "domainId": "dom_02_cleaning_hygiene",
+    "input": "Leaving the wardrobe drawer half opened for cleaning",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0017",
+    "domainId": "dom_02_cleaning_hygiene",
+    "input": "Disagreement about scheduling and timing of cleaning",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0018",
+    "domainId": "dom_02_cleaning_hygiene",
+    "input": "Snoring loudly while sleeping near cleaning",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0019",
+    "domainId": "dom_02_cleaning_hygiene",
+    "input": "Burping after drinking cleaning tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0020",
+    "domainId": "dom_02_cleaning_hygiene",
+    "input": "Refusing to do cleaning chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0021",
+    "domainId": "dom_03_home_organization",
+    "input": "Standard home routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0022",
+    "domainId": "dom_03_home_organization",
+    "input": "Negligible quantity of home during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0023",
+    "domainId": "dom_03_home_organization",
+    "input": "Definitive opinion that home is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0024",
+    "domainId": "dom_03_home_organization",
+    "input": "Not washing large home ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0025",
+    "domainId": "dom_03_home_organization",
+    "input": "Excessive volume while home on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0026",
+    "domainId": "dom_03_home_organization",
+    "input": "Leaving the wardrobe drawer half opened for home",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0027",
+    "domainId": "dom_03_home_organization",
+    "input": "Disagreement about scheduling and timing of home",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0028",
+    "domainId": "dom_03_home_organization",
+    "input": "Snoring loudly while sleeping near home",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0029",
+    "domainId": "dom_03_home_organization",
+    "input": "Burping after drinking home tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0030",
+    "domainId": "dom_03_home_organization",
+    "input": "Refusing to do home chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0031",
+    "domainId": "dom_04_appliances_technology",
+    "input": "Standard appliances routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0032",
+    "domainId": "dom_04_appliances_technology",
+    "input": "Negligible quantity of appliances during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0033",
+    "domainId": "dom_04_appliances_technology",
+    "input": "Definitive opinion that appliances is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0034",
+    "domainId": "dom_04_appliances_technology",
+    "input": "Not washing large appliances ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0035",
+    "domainId": "dom_04_appliances_technology",
+    "input": "Excessive volume while appliances on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0036",
+    "domainId": "dom_04_appliances_technology",
+    "input": "Leaving the wardrobe drawer half opened for appliances",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0037",
+    "domainId": "dom_04_appliances_technology",
+    "input": "Disagreement about scheduling and timing of appliances",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0038",
+    "domainId": "dom_04_appliances_technology",
+    "input": "Snoring loudly while sleeping near appliances",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0039",
+    "domainId": "dom_04_appliances_technology",
+    "input": "Burping after drinking appliances tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0040",
+    "domainId": "dom_04_appliances_technology",
+    "input": "Refusing to do appliances chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0041",
+    "domainId": "dom_05_furniture_belongings",
+    "input": "Standard furniture routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0042",
+    "domainId": "dom_05_furniture_belongings",
+    "input": "Negligible quantity of furniture during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0043",
+    "domainId": "dom_05_furniture_belongings",
+    "input": "Definitive opinion that furniture is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0044",
+    "domainId": "dom_05_furniture_belongings",
+    "input": "Not washing large furniture ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0045",
+    "domainId": "dom_05_furniture_belongings",
+    "input": "Excessive volume while furniture on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0046",
+    "domainId": "dom_05_furniture_belongings",
+    "input": "Leaving the wardrobe drawer half opened for furniture",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0047",
+    "domainId": "dom_05_furniture_belongings",
+    "input": "Disagreement about scheduling and timing of furniture",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0048",
+    "domainId": "dom_05_furniture_belongings",
+    "input": "Snoring loudly while sleeping near furniture",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0049",
+    "domainId": "dom_05_furniture_belongings",
+    "input": "Burping after drinking furniture tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0050",
+    "domainId": "dom_05_furniture_belongings",
+    "input": "Refusing to do furniture chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0051",
+    "domainId": "dom_06_energy_climate",
+    "input": "Standard energy, routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0052",
+    "domainId": "dom_06_energy_climate",
+    "input": "Negligible quantity of energy, during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0053",
+    "domainId": "dom_06_energy_climate",
+    "input": "Definitive opinion that energy, is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0054",
+    "domainId": "dom_06_energy_climate",
+    "input": "Not washing large energy, ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0055",
+    "domainId": "dom_06_energy_climate",
+    "input": "Excessive volume while energy, on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0056",
+    "domainId": "dom_06_energy_climate",
+    "input": "Leaving the wardrobe drawer half opened for energy,",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0057",
+    "domainId": "dom_06_energy_climate",
+    "input": "Disagreement about scheduling and timing of energy,",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0058",
+    "domainId": "dom_06_energy_climate",
+    "input": "Snoring loudly while sleeping near energy,",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0059",
+    "domainId": "dom_06_energy_climate",
+    "input": "Burping after drinking energy, tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0060",
+    "domainId": "dom_06_energy_climate",
+    "input": "Refusing to do energy, chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0061",
+    "domainId": "dom_07_cooking_preparation",
+    "input": "Standard cooking routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0062",
+    "domainId": "dom_07_cooking_preparation",
+    "input": "Negligible quantity of cooking during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0063",
+    "domainId": "dom_07_cooking_preparation",
+    "input": "Definitive opinion that cooking is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0064",
+    "domainId": "dom_07_cooking_preparation",
+    "input": "Not washing large cooking ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0065",
+    "domainId": "dom_07_cooking_preparation",
+    "input": "Excessive volume while cooking on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0066",
+    "domainId": "dom_07_cooking_preparation",
+    "input": "Leaving the wardrobe drawer half opened for cooking",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0067",
+    "domainId": "dom_07_cooking_preparation",
+    "input": "Disagreement about scheduling and timing of cooking",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0068",
+    "domainId": "dom_07_cooking_preparation",
+    "input": "Snoring loudly while sleeping near cooking",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0069",
+    "domainId": "dom_07_cooking_preparation",
+    "input": "Burping after drinking cooking tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0070",
+    "domainId": "dom_07_cooking_preparation",
+    "input": "Refusing to do cooking chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0071",
+    "domainId": "dom_08_eating_habits",
+    "input": "Standard eating routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0072",
+    "domainId": "dom_08_eating_habits",
+    "input": "Negligible quantity of eating during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0073",
+    "domainId": "dom_08_eating_habits",
+    "input": "Definitive opinion that eating is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0074",
+    "domainId": "dom_08_eating_habits",
+    "input": "Not washing large eating ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0075",
+    "domainId": "dom_08_eating_habits",
+    "input": "Excessive volume while eating on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0076",
+    "domainId": "dom_08_eating_habits",
+    "input": "Leaving the wardrobe drawer half opened for eating",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0077",
+    "domainId": "dom_08_eating_habits",
+    "input": "Disagreement about scheduling and timing of eating",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0078",
+    "domainId": "dom_08_eating_habits",
+    "input": "Snoring loudly while sleeping near eating",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0079",
+    "domainId": "dom_08_eating_habits",
+    "input": "Burping after drinking eating tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0080",
+    "domainId": "dom_08_eating_habits",
+    "input": "Refusing to do eating chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0081",
+    "domainId": "dom_09_beverages_ingredients",
+    "input": "Standard beverages routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0082",
+    "domainId": "dom_09_beverages_ingredients",
+    "input": "Negligible quantity of beverages during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0083",
+    "domainId": "dom_09_beverages_ingredients",
+    "input": "Definitive opinion that beverages is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0084",
+    "domainId": "dom_09_beverages_ingredients",
+    "input": "Not washing large beverages ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0085",
+    "domainId": "dom_09_beverages_ingredients",
+    "input": "Excessive volume while beverages on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0086",
+    "domainId": "dom_09_beverages_ingredients",
+    "input": "Leaving the wardrobe drawer half opened for beverages",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0087",
+    "domainId": "dom_09_beverages_ingredients",
+    "input": "Disagreement about scheduling and timing of beverages",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0088",
+    "domainId": "dom_09_beverages_ingredients",
+    "input": "Snoring loudly while sleeping near beverages",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0089",
+    "domainId": "dom_09_beverages_ingredients",
+    "input": "Burping after drinking beverages tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0090",
+    "domainId": "dom_09_beverages_ingredients",
+    "input": "Refusing to do beverages chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0091",
+    "domainId": "dom_10_shopping_groceries",
+    "input": "Standard shopping routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0092",
+    "domainId": "dom_10_shopping_groceries",
+    "input": "Negligible quantity of shopping during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0093",
+    "domainId": "dom_10_shopping_groceries",
+    "input": "Definitive opinion that shopping is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0094",
+    "domainId": "dom_10_shopping_groceries",
+    "input": "Not washing large shopping ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0095",
+    "domainId": "dom_10_shopping_groceries",
+    "input": "Excessive volume while shopping on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0096",
+    "domainId": "dom_10_shopping_groceries",
+    "input": "Leaving the wardrobe drawer half opened for shopping",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0097",
+    "domainId": "dom_10_shopping_groceries",
+    "input": "Disagreement about scheduling and timing of shopping",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0098",
+    "domainId": "dom_10_shopping_groceries",
+    "input": "Snoring loudly while sleeping near shopping",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0099",
+    "domainId": "dom_10_shopping_groceries",
+    "input": "Burping after drinking shopping tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0100",
+    "domainId": "dom_10_shopping_groceries",
+    "input": "Refusing to do shopping chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0101",
+    "domainId": "dom_11_health_exercise",
+    "input": "Standard health, routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0102",
+    "domainId": "dom_11_health_exercise",
+    "input": "Negligible quantity of health, during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0103",
+    "domainId": "dom_11_health_exercise",
+    "input": "Definitive opinion that health, is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0104",
+    "domainId": "dom_11_health_exercise",
+    "input": "Not washing large health, ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0105",
+    "domainId": "dom_11_health_exercise",
+    "input": "Excessive volume while health, on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0106",
+    "domainId": "dom_11_health_exercise",
+    "input": "Leaving the wardrobe drawer half opened for health,",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0107",
+    "domainId": "dom_11_health_exercise",
+    "input": "Disagreement about scheduling and timing of health,",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0108",
+    "domainId": "dom_11_health_exercise",
+    "input": "Snoring loudly while sleeping near health,",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0109",
+    "domainId": "dom_11_health_exercise",
+    "input": "Burping after drinking health, tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0110",
+    "domainId": "dom_11_health_exercise",
+    "input": "Refusing to do health, chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0111",
+    "domainId": "dom_12_grooming_care",
+    "input": "Standard personal routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0112",
+    "domainId": "dom_12_grooming_care",
+    "input": "Negligible quantity of personal during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0113",
+    "domainId": "dom_12_grooming_care",
+    "input": "Definitive opinion that personal is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0114",
+    "domainId": "dom_12_grooming_care",
+    "input": "Not washing large personal ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0115",
+    "domainId": "dom_12_grooming_care",
+    "input": "Excessive volume while personal on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0116",
+    "domainId": "dom_12_grooming_care",
+    "input": "Leaving the wardrobe drawer half opened for personal",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0117",
+    "domainId": "dom_12_grooming_care",
+    "input": "Disagreement about scheduling and timing of personal",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0118",
+    "domainId": "dom_12_grooming_care",
+    "input": "Snoring loudly while sleeping near personal",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0119",
+    "domainId": "dom_12_grooming_care",
+    "input": "Burping after drinking personal tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0120",
+    "domainId": "dom_12_grooming_care",
+    "input": "Refusing to do personal chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0121",
+    "domainId": "dom_13_speaking_voice",
+    "input": "Standard speaking, routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0122",
+    "domainId": "dom_13_speaking_voice",
+    "input": "Negligible quantity of speaking, during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0123",
+    "domainId": "dom_13_speaking_voice",
+    "input": "Definitive opinion that speaking, is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0124",
+    "domainId": "dom_13_speaking_voice",
+    "input": "Not washing large speaking, ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0125",
+    "domainId": "dom_13_speaking_voice",
+    "input": "Excessive volume while speaking, on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0126",
+    "domainId": "dom_13_speaking_voice",
+    "input": "Leaving the wardrobe drawer half opened for speaking,",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0127",
+    "domainId": "dom_13_speaking_voice",
+    "input": "Disagreement about scheduling and timing of speaking,",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0128",
+    "domainId": "dom_13_speaking_voice",
+    "input": "Snoring loudly while sleeping near speaking,",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0129",
+    "domainId": "dom_13_speaking_voice",
+    "input": "Burping after drinking speaking, tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0130",
+    "domainId": "dom_13_speaking_voice",
+    "input": "Refusing to do speaking, chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0131",
+    "domainId": "dom_14_listening_attention",
+    "input": "Standard listening routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0132",
+    "domainId": "dom_14_listening_attention",
+    "input": "Negligible quantity of listening during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0133",
+    "domainId": "dom_14_listening_attention",
+    "input": "Definitive opinion that listening is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0134",
+    "domainId": "dom_14_listening_attention",
+    "input": "Not washing large listening ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0135",
+    "domainId": "dom_14_listening_attention",
+    "input": "Excessive volume while listening on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0136",
+    "domainId": "dom_14_listening_attention",
+    "input": "Leaving the wardrobe drawer half opened for listening",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0137",
+    "domainId": "dom_14_listening_attention",
+    "input": "Disagreement about scheduling and timing of listening",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0138",
+    "domainId": "dom_14_listening_attention",
+    "input": "Snoring loudly while sleeping near listening",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0139",
+    "domainId": "dom_14_listening_attention",
+    "input": "Burping after drinking listening tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0140",
+    "domainId": "dom_14_listening_attention",
+    "input": "Refusing to do listening chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0141",
+    "domainId": "dom_15_humor_teasing",
+    "input": "Standard humor, routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0142",
+    "domainId": "dom_15_humor_teasing",
+    "input": "Negligible quantity of humor, during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0143",
+    "domainId": "dom_15_humor_teasing",
+    "input": "Definitive opinion that humor, is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0144",
+    "domainId": "dom_15_humor_teasing",
+    "input": "Not washing large humor, ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0145",
+    "domainId": "dom_15_humor_teasing",
+    "input": "Excessive volume while humor, on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0146",
+    "domainId": "dom_15_humor_teasing",
+    "input": "Leaving the wardrobe drawer half opened for humor,",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0147",
+    "domainId": "dom_15_humor_teasing",
+    "input": "Disagreement about scheduling and timing of humor,",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0148",
+    "domainId": "dom_15_humor_teasing",
+    "input": "Snoring loudly while sleeping near humor,",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0149",
+    "domainId": "dom_15_humor_teasing",
+    "input": "Burping after drinking humor, tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0150",
+    "domainId": "dom_15_humor_teasing",
+    "input": "Refusing to do humor, chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0151",
+    "domainId": "dom_16_opinions_disagreements",
+    "input": "Standard opinions routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0152",
+    "domainId": "dom_16_opinions_disagreements",
+    "input": "Negligible quantity of opinions during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0153",
+    "domainId": "dom_16_opinions_disagreements",
+    "input": "Definitive opinion that opinions is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0154",
+    "domainId": "dom_16_opinions_disagreements",
+    "input": "Not washing large opinions ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0155",
+    "domainId": "dom_16_opinions_disagreements",
+    "input": "Excessive volume while opinions on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0156",
+    "domainId": "dom_16_opinions_disagreements",
+    "input": "Leaving the wardrobe drawer half opened for opinions",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0157",
+    "domainId": "dom_16_opinions_disagreements",
+    "input": "Disagreement about scheduling and timing of opinions",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0158",
+    "domainId": "dom_16_opinions_disagreements",
+    "input": "Snoring loudly while sleeping near opinions",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0159",
+    "domainId": "dom_16_opinions_disagreements",
+    "input": "Burping after drinking opinions tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0160",
+    "domainId": "dom_16_opinions_disagreements",
+    "input": "Refusing to do opinions chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0161",
+    "domainId": "dom_17_decision_making",
+    "input": "Standard decision-making routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0162",
+    "domainId": "dom_17_decision_making",
+    "input": "Negligible quantity of decision-making during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0163",
+    "domainId": "dom_17_decision_making",
+    "input": "Definitive opinion that decision-making is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0164",
+    "domainId": "dom_17_decision_making",
+    "input": "Not washing large decision-making ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0165",
+    "domainId": "dom_17_decision_making",
+    "input": "Excessive volume while decision-making on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0166",
+    "domainId": "dom_17_decision_making",
+    "input": "Leaving the wardrobe drawer half opened for decision-making",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0167",
+    "domainId": "dom_17_decision_making",
+    "input": "Disagreement about scheduling and timing of decision-making",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0168",
+    "domainId": "dom_17_decision_making",
+    "input": "Snoring loudly while sleeping near decision-making",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0169",
+    "domainId": "dom_17_decision_making",
+    "input": "Burping after drinking decision-making tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0170",
+    "domainId": "dom_17_decision_making",
+    "input": "Refusing to do decision-making chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0171",
+    "domainId": "dom_18_bodily_habits",
+    "input": "Standard bodily routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0172",
+    "domainId": "dom_18_bodily_habits",
+    "input": "Negligible quantity of bodily during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0173",
+    "domainId": "dom_18_bodily_habits",
+    "input": "Definitive opinion that bodily is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0174",
+    "domainId": "dom_18_bodily_habits",
+    "input": "Not washing large bodily ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0175",
+    "domainId": "dom_18_bodily_habits",
+    "input": "Excessive volume while bodily on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0176",
+    "domainId": "dom_18_bodily_habits",
+    "input": "Leaving the wardrobe drawer half opened for bodily",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0177",
+    "domainId": "dom_18_bodily_habits",
+    "input": "Disagreement about scheduling and timing of bodily",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0178",
+    "domainId": "dom_18_bodily_habits",
+    "input": "Snoring loudly while sleeping near bodily",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0179",
+    "domainId": "dom_18_bodily_habits",
+    "input": "Burping after drinking bodily tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0180",
+    "domainId": "dom_18_bodily_habits",
+    "input": "Refusing to do bodily chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0181",
+    "domainId": "dom_19_sleep_routines",
+    "input": "Standard sleep routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0182",
+    "domainId": "dom_19_sleep_routines",
+    "input": "Negligible quantity of sleep during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0183",
+    "domainId": "dom_19_sleep_routines",
+    "input": "Definitive opinion that sleep is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0184",
+    "domainId": "dom_19_sleep_routines",
+    "input": "Not washing large sleep ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0185",
+    "domainId": "dom_19_sleep_routines",
+    "input": "Excessive volume while sleep on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0186",
+    "domainId": "dom_19_sleep_routines",
+    "input": "Leaving the wardrobe drawer half opened for sleep",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0187",
+    "domainId": "dom_19_sleep_routines",
+    "input": "Disagreement about scheduling and timing of sleep",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0188",
+    "domainId": "dom_19_sleep_routines",
+    "input": "Snoring loudly while sleeping near sleep",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0189",
+    "domainId": "dom_19_sleep_routines",
+    "input": "Burping after drinking sleep tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0190",
+    "domainId": "dom_19_sleep_routines",
+    "input": "Refusing to do sleep chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0191",
+    "domainId": "dom_20_punctuality_prep",
+    "input": "Standard punctuality routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0192",
+    "domainId": "dom_20_punctuality_prep",
+    "input": "Negligible quantity of punctuality during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0193",
+    "domainId": "dom_20_punctuality_prep",
+    "input": "Definitive opinion that punctuality is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0194",
+    "domainId": "dom_20_punctuality_prep",
+    "input": "Not washing large punctuality ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0195",
+    "domainId": "dom_20_punctuality_prep",
+    "input": "Excessive volume while punctuality on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0196",
+    "domainId": "dom_20_punctuality_prep",
+    "input": "Leaving the wardrobe drawer half opened for punctuality",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0197",
+    "domainId": "dom_20_punctuality_prep",
+    "input": "Disagreement about scheduling and timing of punctuality",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0198",
+    "domainId": "dom_20_punctuality_prep",
+    "input": "Snoring loudly while sleeping near punctuality",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0199",
+    "domainId": "dom_20_punctuality_prep",
+    "input": "Burping after drinking punctuality tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0200",
+    "domainId": "dom_20_punctuality_prep",
+    "input": "Refusing to do punctuality chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0201",
+    "domainId": "dom_21_planning_scheduling",
+    "input": "Standard planning routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0202",
+    "domainId": "dom_21_planning_scheduling",
+    "input": "Negligible quantity of planning during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0203",
+    "domainId": "dom_21_planning_scheduling",
+    "input": "Definitive opinion that planning is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0204",
+    "domainId": "dom_21_planning_scheduling",
+    "input": "Not washing large planning ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0205",
+    "domainId": "dom_21_planning_scheduling",
+    "input": "Excessive volume while planning on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0206",
+    "domainId": "dom_21_planning_scheduling",
+    "input": "Leaving the wardrobe drawer half opened for planning",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0207",
+    "domainId": "dom_21_planning_scheduling",
+    "input": "Disagreement about scheduling and timing of planning",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0208",
+    "domainId": "dom_21_planning_scheduling",
+    "input": "Snoring loudly while sleeping near planning",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0209",
+    "domainId": "dom_21_planning_scheduling",
+    "input": "Burping after drinking planning tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0210",
+    "domainId": "dom_21_planning_scheduling",
+    "input": "Refusing to do planning chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0211",
+    "domainId": "dom_22_work_study",
+    "input": "Standard work routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0212",
+    "domainId": "dom_22_work_study",
+    "input": "Negligible quantity of work during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0213",
+    "domainId": "dom_22_work_study",
+    "input": "Definitive opinion that work is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0214",
+    "domainId": "dom_22_work_study",
+    "input": "Not washing large work ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0215",
+    "domainId": "dom_22_work_study",
+    "input": "Excessive volume while work on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0216",
+    "domainId": "dom_22_work_study",
+    "input": "Leaving the wardrobe drawer half opened for work",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0217",
+    "domainId": "dom_22_work_study",
+    "input": "Disagreement about scheduling and timing of work",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0218",
+    "domainId": "dom_22_work_study",
+    "input": "Snoring loudly while sleeping near work",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0219",
+    "domainId": "dom_22_work_study",
+    "input": "Burping after drinking work tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0220",
+    "domainId": "dom_22_work_study",
+    "input": "Refusing to do work chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0221",
+    "domainId": "dom_23_digital_devices",
+    "input": "Standard digital routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0222",
+    "domainId": "dom_23_digital_devices",
+    "input": "Negligible quantity of digital during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0223",
+    "domainId": "dom_23_digital_devices",
+    "input": "Definitive opinion that digital is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0224",
+    "domainId": "dom_23_digital_devices",
+    "input": "Not washing large digital ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0225",
+    "domainId": "dom_23_digital_devices",
+    "input": "Excessive volume while digital on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0226",
+    "domainId": "dom_23_digital_devices",
+    "input": "Leaving the wardrobe drawer half opened for digital",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0227",
+    "domainId": "dom_23_digital_devices",
+    "input": "Disagreement about scheduling and timing of digital",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0228",
+    "domainId": "dom_23_digital_devices",
+    "input": "Snoring loudly while sleeping near digital",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0229",
+    "domainId": "dom_23_digital_devices",
+    "input": "Burping after drinking digital tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0230",
+    "domainId": "dom_23_digital_devices",
+    "input": "Refusing to do digital chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0231",
+    "domainId": "dom_24_hobbies_leisure",
+    "input": "Standard hobbies routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0232",
+    "domainId": "dom_24_hobbies_leisure",
+    "input": "Negligible quantity of hobbies during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0233",
+    "domainId": "dom_24_hobbies_leisure",
+    "input": "Definitive opinion that hobbies is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0234",
+    "domainId": "dom_24_hobbies_leisure",
+    "input": "Not washing large hobbies ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0235",
+    "domainId": "dom_24_hobbies_leisure",
+    "input": "Excessive volume while hobbies on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0236",
+    "domainId": "dom_24_hobbies_leisure",
+    "input": "Leaving the wardrobe drawer half opened for hobbies",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0237",
+    "domainId": "dom_24_hobbies_leisure",
+    "input": "Disagreement about scheduling and timing of hobbies",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0238",
+    "domainId": "dom_24_hobbies_leisure",
+    "input": "Snoring loudly while sleeping near hobbies",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0239",
+    "domainId": "dom_24_hobbies_leisure",
+    "input": "Burping after drinking hobbies tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0240",
+    "domainId": "dom_24_hobbies_leisure",
+    "input": "Refusing to do hobbies chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0241",
+    "domainId": "dom_25_quality_time",
+    "input": "Standard quality routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0242",
+    "domainId": "dom_25_quality_time",
+    "input": "Negligible quantity of quality during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0243",
+    "domainId": "dom_25_quality_time",
+    "input": "Definitive opinion that quality is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0244",
+    "domainId": "dom_25_quality_time",
+    "input": "Not washing large quality ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0245",
+    "domainId": "dom_25_quality_time",
+    "input": "Excessive volume while quality on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0246",
+    "domainId": "dom_25_quality_time",
+    "input": "Leaving the wardrobe drawer half opened for quality",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0247",
+    "domainId": "dom_25_quality_time",
+    "input": "Disagreement about scheduling and timing of quality",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0248",
+    "domainId": "dom_25_quality_time",
+    "input": "Snoring loudly while sleeping near quality",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0249",
+    "domainId": "dom_25_quality_time",
+    "input": "Burping after drinking quality tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0250",
+    "domainId": "dom_25_quality_time",
+    "input": "Refusing to do quality chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0251",
+    "domainId": "dom_26_affection_appreciation",
+    "input": "Standard affection routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0252",
+    "domainId": "dom_26_affection_appreciation",
+    "input": "Negligible quantity of affection during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0253",
+    "domainId": "dom_26_affection_appreciation",
+    "input": "Definitive opinion that affection is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0254",
+    "domainId": "dom_26_affection_appreciation",
+    "input": "Not washing large affection ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0255",
+    "domainId": "dom_26_affection_appreciation",
+    "input": "Excessive volume while affection on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0256",
+    "domainId": "dom_26_affection_appreciation",
+    "input": "Leaving the wardrobe drawer half opened for affection",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0257",
+    "domainId": "dom_26_affection_appreciation",
+    "input": "Disagreement about scheduling and timing of affection",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0258",
+    "domainId": "dom_26_affection_appreciation",
+    "input": "Snoring loudly while sleeping near affection",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0259",
+    "domainId": "dom_26_affection_appreciation",
+    "input": "Burping after drinking affection tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0260",
+    "domainId": "dom_26_affection_appreciation",
+    "input": "Refusing to do affection chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0261",
+    "domainId": "dom_27_friends_social",
+    "input": "Standard friends routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0262",
+    "domainId": "dom_27_friends_social",
+    "input": "Negligible quantity of friends during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0263",
+    "domainId": "dom_27_friends_social",
+    "input": "Definitive opinion that friends is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0264",
+    "domainId": "dom_27_friends_social",
+    "input": "Not washing large friends ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0265",
+    "domainId": "dom_27_friends_social",
+    "input": "Excessive volume while friends on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0266",
+    "domainId": "dom_27_friends_social",
+    "input": "Leaving the wardrobe drawer half opened for friends",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0267",
+    "domainId": "dom_27_friends_social",
+    "input": "Disagreement about scheduling and timing of friends",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0268",
+    "domainId": "dom_27_friends_social",
+    "input": "Snoring loudly while sleeping near friends",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0269",
+    "domainId": "dom_27_friends_social",
+    "input": "Burping after drinking friends tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0270",
+    "domainId": "dom_27_friends_social",
+    "input": "Refusing to do friends chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0271",
+    "domainId": "dom_28_family_relatives",
+    "input": "Standard family routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0272",
+    "domainId": "dom_28_family_relatives",
+    "input": "Negligible quantity of family during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0273",
+    "domainId": "dom_28_family_relatives",
+    "input": "Definitive opinion that family is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0274",
+    "domainId": "dom_28_family_relatives",
+    "input": "Not washing large family ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0275",
+    "domainId": "dom_28_family_relatives",
+    "input": "Excessive volume while family on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0276",
+    "domainId": "dom_28_family_relatives",
+    "input": "Leaving the wardrobe drawer half opened for family",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0277",
+    "domainId": "dom_28_family_relatives",
+    "input": "Disagreement about scheduling and timing of family",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0278",
+    "domainId": "dom_28_family_relatives",
+    "input": "Snoring loudly while sleeping near family",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0279",
+    "domainId": "dom_28_family_relatives",
+    "input": "Burping after drinking family tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0280",
+    "domainId": "dom_28_family_relatives",
+    "input": "Refusing to do family chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0281",
+    "domainId": "dom_29_celebrations_dates",
+    "input": "Standard celebrations routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0282",
+    "domainId": "dom_29_celebrations_dates",
+    "input": "Negligible quantity of celebrations during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0283",
+    "domainId": "dom_29_celebrations_dates",
+    "input": "Definitive opinion that celebrations is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0284",
+    "domainId": "dom_29_celebrations_dates",
+    "input": "Not washing large celebrations ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0285",
+    "domainId": "dom_29_celebrations_dates",
+    "input": "Excessive volume while celebrations on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0286",
+    "domainId": "dom_29_celebrations_dates",
+    "input": "Leaving the wardrobe drawer half opened for celebrations",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0287",
+    "domainId": "dom_29_celebrations_dates",
+    "input": "Disagreement about scheduling and timing of celebrations",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0288",
+    "domainId": "dom_29_celebrations_dates",
+    "input": "Snoring loudly while sleeping near celebrations",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0289",
+    "domainId": "dom_29_celebrations_dates",
+    "input": "Burping after drinking celebrations tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0290",
+    "domainId": "dom_29_celebrations_dates",
+    "input": "Refusing to do celebrations chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0291",
+    "domainId": "dom_30_travel_transport",
+    "input": "Standard travel routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0292",
+    "domainId": "dom_30_travel_transport",
+    "input": "Negligible quantity of travel during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0293",
+    "domainId": "dom_30_travel_transport",
+    "input": "Definitive opinion that travel is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0294",
+    "domainId": "dom_30_travel_transport",
+    "input": "Not washing large travel ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0295",
+    "domainId": "dom_30_travel_transport",
+    "input": "Excessive volume while travel on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0296",
+    "domainId": "dom_30_travel_transport",
+    "input": "Leaving the wardrobe drawer half opened for travel",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0297",
+    "domainId": "dom_30_travel_transport",
+    "input": "Disagreement about scheduling and timing of travel",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0298",
+    "domainId": "dom_30_travel_transport",
+    "input": "Snoring loudly while sleeping near travel",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0299",
+    "domainId": "dom_30_travel_transport",
+    "input": "Burping after drinking travel tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0300",
+    "domainId": "dom_30_travel_transport",
+    "input": "Refusing to do travel chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0301",
+    "domainId": "dom_31_money_spending",
+    "input": "Standard money routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0302",
+    "domainId": "dom_31_money_spending",
+    "input": "Negligible quantity of money during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0303",
+    "domainId": "dom_31_money_spending",
+    "input": "Definitive opinion that money is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0304",
+    "domainId": "dom_31_money_spending",
+    "input": "Not washing large money ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0305",
+    "domainId": "dom_31_money_spending",
+    "input": "Excessive volume while money on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0306",
+    "domainId": "dom_31_money_spending",
+    "input": "Leaving the wardrobe drawer half opened for money",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0307",
+    "domainId": "dom_31_money_spending",
+    "input": "Disagreement about scheduling and timing of money",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0308",
+    "domainId": "dom_31_money_spending",
+    "input": "Snoring loudly while sleeping near money",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0309",
+    "domainId": "dom_31_money_spending",
+    "input": "Burping after drinking money tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0310",
+    "domainId": "dom_31_money_spending",
+    "input": "Refusing to do money chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0311",
+    "domainId": "dom_32_commitments_fairness",
+    "input": "Standard shared routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0312",
+    "domainId": "dom_32_commitments_fairness",
+    "input": "Negligible quantity of shared during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0313",
+    "domainId": "dom_32_commitments_fairness",
+    "input": "Definitive opinion that shared is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0314",
+    "domainId": "dom_32_commitments_fairness",
+    "input": "Not washing large shared ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0315",
+    "domainId": "dom_32_commitments_fairness",
+    "input": "Excessive volume while shared on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0316",
+    "domainId": "dom_32_commitments_fairness",
+    "input": "Leaving the wardrobe drawer half opened for shared",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0317",
+    "domainId": "dom_32_commitments_fairness",
+    "input": "Disagreement about scheduling and timing of shared",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0318",
+    "domainId": "dom_32_commitments_fairness",
+    "input": "Snoring loudly while sleeping near shared",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0319",
+    "domainId": "dom_32_commitments_fairness",
+    "input": "Burping after drinking shared tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0320",
+    "domainId": "dom_32_commitments_fairness",
+    "input": "Refusing to do shared chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0321",
+    "domainId": "dom_33_parenting_caregiving",
+    "input": "Standard parenting routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0322",
+    "domainId": "dom_33_parenting_caregiving",
+    "input": "Negligible quantity of parenting during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0323",
+    "domainId": "dom_33_parenting_caregiving",
+    "input": "Definitive opinion that parenting is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0324",
+    "domainId": "dom_33_parenting_caregiving",
+    "input": "Not washing large parenting ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0325",
+    "domainId": "dom_33_parenting_caregiving",
+    "input": "Excessive volume while parenting on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0326",
+    "domainId": "dom_33_parenting_caregiving",
+    "input": "Leaving the wardrobe drawer half opened for parenting",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0327",
+    "domainId": "dom_33_parenting_caregiving",
+    "input": "Disagreement about scheduling and timing of parenting",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0328",
+    "domainId": "dom_33_parenting_caregiving",
+    "input": "Snoring loudly while sleeping near parenting",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0329",
+    "domainId": "dom_33_parenting_caregiving",
+    "input": "Burping after drinking parenting tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0330",
+    "domainId": "dom_33_parenting_caregiving",
+    "input": "Refusing to do parenting chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0331",
+    "domainId": "dom_34_pets_plants",
+    "input": "Standard pets routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0332",
+    "domainId": "dom_34_pets_plants",
+    "input": "Negligible quantity of pets during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0333",
+    "domainId": "dom_34_pets_plants",
+    "input": "Definitive opinion that pets is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0334",
+    "domainId": "dom_34_pets_plants",
+    "input": "Not washing large pets ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0335",
+    "domainId": "dom_34_pets_plants",
+    "input": "Excessive volume while pets on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0336",
+    "domainId": "dom_34_pets_plants",
+    "input": "Leaving the wardrobe drawer half opened for pets",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0337",
+    "domainId": "dom_34_pets_plants",
+    "input": "Disagreement about scheduling and timing of pets",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0338",
+    "domainId": "dom_34_pets_plants",
+    "input": "Snoring loudly while sleeping near pets",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0339",
+    "domainId": "dom_34_pets_plants",
+    "input": "Burping after drinking pets tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0340",
+    "domainId": "dom_34_pets_plants",
+    "input": "Refusing to do pets chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0341",
+    "domainId": "dom_35_emotional_expectations",
+    "input": "Standard emotional routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0342",
+    "domainId": "dom_35_emotional_expectations",
+    "input": "Negligible quantity of emotional during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0343",
+    "domainId": "dom_35_emotional_expectations",
+    "input": "Definitive opinion that emotional is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0344",
+    "domainId": "dom_35_emotional_expectations",
+    "input": "Not washing large emotional ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0345",
+    "domainId": "dom_35_emotional_expectations",
+    "input": "Excessive volume while emotional on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0346",
+    "domainId": "dom_35_emotional_expectations",
+    "input": "Leaving the wardrobe drawer half opened for emotional",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0347",
+    "domainId": "dom_35_emotional_expectations",
+    "input": "Disagreement about scheduling and timing of emotional",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0348",
+    "domainId": "dom_35_emotional_expectations",
+    "input": "Snoring loudly while sleeping near emotional",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0349",
+    "domainId": "dom_35_emotional_expectations",
+    "input": "Burping after drinking emotional tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0350",
+    "domainId": "dom_35_emotional_expectations",
+    "input": "Refusing to do emotional chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0351",
+    "domainId": "dom_36_boundaries_safety",
+    "input": "Standard personal routine in the morning",
+    "situationType": "routine_action",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0352",
+    "domainId": "dom_36_boundaries_safety",
+    "input": "Negligible quantity of personal during food prep",
+    "situationType": "negligible_quantity",
+    "requiredConceptIds": [
+      "c_beverage_tea",
+      "c_substance_milk"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_understatement_minimalism",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0353",
+    "domainId": "dom_36_boundaries_safety",
+    "input": "Definitive opinion that personal is not an exercise",
+    "situationType": "definitional_dispute",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_category_exercise"
+    ],
+    "requiredFrameId": "frame_evaluating_concept_proposition",
+    "requiredMechanismId": "mech_fictional_jurisdiction_incredulity",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0354",
+    "domainId": "dom_36_boundaries_safety",
+    "input": "Not washing large personal ever in the sink",
+    "situationType": "selective_avoidance",
+    "requiredConceptIds": [
+      "c_cookware_utensils",
+      "c_action_washing"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_archaeological_monument_soak",
+    "requiredConstructionId": "const_size_based_amnesty"
+  },
+  {
+    "id": "bench_0355",
+    "domainId": "dom_36_boundaries_safety",
+    "input": "Excessive volume while personal on the phone",
+    "situationType": "acoustic_spike",
+    "requiredConceptIds": [
+      "c_action_speaking",
+      "c_sensory_volume_loud"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0356",
+    "domainId": "dom_36_boundaries_safety",
+    "input": "Leaving the wardrobe drawer half opened for personal",
+    "situationType": "partial_closure",
+    "requiredConceptIds": [
+      "c_furniture_drawer",
+      "c_state_open"
+    ],
+    "requiredFrameId": "frame_open_drawer_organization",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0357",
+    "domainId": "dom_36_boundaries_safety",
+    "input": "Disagreement about scheduling and timing of personal",
+    "situationType": "scheduling_friction",
+    "requiredConceptIds": [
+      "c_activity_yoga",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_timing_anticlimax",
+    "requiredConstructionId": "const_olympic_ruling"
+  },
+  {
+    "id": "bench_0358",
+    "domainId": "dom_36_boundaries_safety",
+    "input": "Snoring loudly while sleeping near personal",
+    "situationType": "bodily_sound",
+    "requiredConceptIds": [
+      "c_bodily_snoring",
+      "c_action_speaking"
+    ],
+    "requiredFrameId": "frame_speaking_on_phone",
+    "requiredMechanismId": "mech_scale_acoustic_distortion",
+    "requiredConstructionId": "const_whole_neighborhood_update"
+  },
+  {
+    "id": "bench_0359",
+    "domainId": "dom_36_boundaries_safety",
+    "input": "Burping after drinking personal tea rapidly",
+    "situationType": "bodily_eructation",
+    "requiredConceptIds": [
+      "c_bodily_burping",
+      "c_beverage_tea"
+    ],
+    "requiredFrameId": "frame_beverage_preparation",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_homeopathic_dose"
+  },
+  {
+    "id": "bench_0360",
+    "domainId": "dom_36_boundaries_safety",
+    "input": "Refusing to do personal chore after being pressured",
+    "situationType": "boundary_refusal",
+    "requiredConceptIds": [
+      "c_action_washing",
+      "c_cookware_utensils"
+    ],
+    "requiredFrameId": "frame_washing_kitchenware",
+    "requiredMechanismId": "mech_observational_parody",
+    "requiredConstructionId": "const_size_based_amnesty"
+  }
+]

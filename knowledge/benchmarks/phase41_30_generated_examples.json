@@ -1,0 +1,1553 @@
+[
+  {
+    "input": "talking too loud on the phone",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_speaking_on_phone",
+    "opportunity": "excessive_volume",
+    "provenance": {
+      "frameId": "frame_speaking_on_phone",
+      "frameName": "Speaking loudly or broadcasting on telephone, speaker, or voice call",
+      "resolutionLevel": 1,
+      "actionPolarity": "excessive",
+      "humorOpportunity": "excessive_volume",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "target": "telephone",
+        "action": "talking"
+      },
+      "modifiers": [
+        "intensity:excessive->action"
+      ],
+      "contexts": [
+        "ctx_phone_call"
+      ],
+      "mechanismIds": [
+        "mech_scale_acoustic_distortion",
+        "mech_scale_acoustic_distortion",
+        "mech_scale_acoustic_distortion"
+      ],
+      "constructionIds": [
+        "pgc3_037_phone_auditorium_warmth_gentle",
+        "pgc3_038_phone_auditorium_warmth_playful",
+        "pgc3_039_phone_auditorium_warmth_exaggerated"
+      ],
+      "sensitivity": "mild_interpersonal",
+      "knowledgeSourcesUsed": [
+        "verbnet-cu",
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A lively phone call making sure every corner of the room stays warmly up to date.",
+      "playful": "Apparently this phone call came with complimentary front-row seats for the rest of the apartment.",
+      "exaggerated": "Speaking loud enough into the phone that cell towers can safely take the rest of the afternoon off."
+    },
+    "regenerations": [
+      {
+        "seed": 1,
+        "gentle": "An enthusiastic conversation that gently wandered straight into cheerful outdoor volume.",
+        "playful": "Someone's indoor volume dial quietly skipped past cozy chat to full stadium announcer mode.",
+        "exaggerated": "Even the hallway shoes are getting a crystal-clear live recap of tonight's phone conversation."
+      },
+      {
+        "seed": 2,
+        "gentle": "Friendly energy on the phone carrying right across the whole living space.",
+        "playful": "With projection like that, the phone microphone barely needs to clock into work today.",
+        "exaggerated": "Volume warm enough to skip satellites entirely and shout hello across two zip codes."
+      }
+    ]
+  },
+  {
+    "input": "making tea with just water and namesake milk",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_beverage_preparation",
+    "opportunity": "negligible_quantity",
+    "provenance": {
+      "frameId": "frame_beverage_preparation",
+      "frameName": "Preparing tea, coffee, espresso, or soup with specific ingredient ratios",
+      "resolutionLevel": 1,
+      "actionPolarity": "incomplete",
+      "humorOpportunity": "negligible_quantity",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "beverage": "tea",
+        "ingredient": "water",
+        "additive": "milk",
+        "action": "water"
+      },
+      "modifiers": [
+        "quantity:minimal->milk"
+      ],
+      "contexts": [
+        "ctx_kitchen_prep"
+      ],
+      "mechanismIds": [
+        "mech_understatement_minimalism",
+        "mech_understatement_minimalism",
+        "mech_understatement_minimalism"
+      ],
+      "constructionIds": [
+        "pgc3_028_bev_whisper_warmth_gentle",
+        "pgc3_029_bev_whisper_warmth_playful",
+        "pgc3_030_bev_whisper_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet",
+        "wikidata"
+      ]
+    },
+    "seed0": {
+      "gentle": "A warm cup of tea where the milk politely waved hello from across the counter.",
+      "playful": "This tea recipe mostly relies on hot water and a brave, optimistic rumor of milk.",
+      "exaggerated": "Holding the milk bottle gently near the kettle and letting pure imagination color the tea."
+    },
+    "regenerations": [
+      {
+        "seed": 1,
+        "gentle": "An unhurried mug of tea celebrating warm water with just a tiny hint of milk.",
+        "playful": "When water works the whole nine-to-five shift and the milk drops by just to sign the guestbook.",
+        "exaggerated": "Using barely enough milk to tint a teaspoon while promising it counts as a creamy tea."
+      },
+      {
+        "seed": 2,
+        "gentle": "A minimalist mug of tea with only the faintest whisper of milk.",
+        "playful": "That tea looks like milk was introduced to the mug via a polite photograph.",
+        "exaggerated": "Three molecules of milk nervously swimming across a whole ocean of hot tea."
+      }
+    ]
+  },
+  {
+    "input": "brewing espresso with barely any oat milk",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_beverage_preparation",
+    "opportunity": "negligible_quantity",
+    "provenance": {
+      "frameId": "frame_beverage_preparation",
+      "frameName": "Preparing tea, coffee, espresso, or soup with specific ingredient ratios",
+      "resolutionLevel": 2,
+      "actionPolarity": "incomplete",
+      "humorOpportunity": "negligible_quantity",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "action": "brew",
+        "beverage": "espresso",
+        "additive": "milk"
+      },
+      "modifiers": [
+        "quantity:minimal->oat milk"
+      ],
+      "contexts": [
+        "ctx_kitchen_prep"
+      ],
+      "mechanismIds": [
+        "mech_understatement_minimalism",
+        "mech_understatement_minimalism",
+        "mech_understatement_minimalism"
+      ],
+      "constructionIds": [
+        "pgc3_028_bev_whisper_warmth_gentle",
+        "pgc3_029_bev_whisper_warmth_playful",
+        "pgc3_030_bev_whisper_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "verbnet-cu",
+        "open-english-wordnet",
+        "wikidata"
+      ]
+    },
+    "seed0": {
+      "gentle": "A warm cup of espresso where the oat milk politely waved hello from across the counter.",
+      "playful": "This espresso recipe mostly relies on hot water and a brave, optimistic rumor of oat milk.",
+      "exaggerated": "Holding the oat milk bottle gently near the kettle and letting pure imagination color the espresso."
+    },
+    "regenerations": [
+      {
+        "seed": 1,
+        "gentle": "An unhurried mug of espresso celebrating warm water with just a tiny hint of oat milk.",
+        "playful": "When water works the whole nine-to-five shift and the oat milk drops by just to sign the guestbook.",
+        "exaggerated": "Using barely enough oat milk to tint a teaspoon while promising it counts as a creamy espresso."
+      },
+      {
+        "seed": 2,
+        "gentle": "A minimalist mug of espresso with only the faintest whisper of oat milk.",
+        "playful": "That espresso looks like oat milk was introduced to the mug via a polite photograph.",
+        "exaggerated": "Three molecules of oat milk nervously swimming across a whole ocean of hot espresso."
+      }
+    ]
+  },
+  {
+    "input": "Not washing big utensils ever",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_selective_chore_avoidance",
+    "opportunity": "selective_chore_avoidance",
+    "provenance": {
+      "frameId": "frame_selective_chore_avoidance",
+      "frameName": "Selective omission or refusal of large cookware washing",
+      "resolutionLevel": 1,
+      "actionPolarity": "negated",
+      "humorOpportunity": "selective_chore_avoidance",
+      "humorFamilies": [
+        "everyday_irony",
+        "everyday_irony",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "action": "washing",
+        "target": "utensils"
+      },
+      "modifiers": [
+        "comparison:large->utensils",
+        "negation:not->washing"
+      ],
+      "contexts": [
+        "ctx_sink_cleanup"
+      ],
+      "mechanismIds": [
+        "mech_understatement_minimalism",
+        "mech_understatement_minimalism",
+        "mech_understatement_minimalism"
+      ],
+      "constructionIds": [
+        "pgc3_010_selective_avoid_vip_gentle",
+        "pgc3_011_selective_avoid_vip_playful",
+        "pgc3_012_selective_avoid_vip_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "verbnet-cu",
+        "open-english-wordnet",
+        "wikidata"
+      ]
+    },
+    "seed0": {
+      "gentle": "Tiny spoons got an easy quick rinse while the big big utensils quietly waited its turn.",
+      "playful": "Everything smaller than a saucer got spotless right away while the giant big utensils slid to the back of the sink line.",
+      "exaggerated": "The forks walked out sparkling in thirty seconds while that oversized big utensils packed an overnight bag by the faucet."
+    },
+    "regenerations": [
+      {
+        "seed": 1,
+        "gentle": "A sink where light cutlery washes easily and heavyweight big utensils wait for brave evening hands.",
+        "playful": "Selective dishwashing diplomacy: cups get instant attention while heavy big utensils quietly stay off the roster.",
+        "exaggerated": "Treating that big big utensils like a museum boulder nobody is quite strong enough to lift toward the sponge."
+      },
+      {
+        "seed": 2,
+        "gentle": "The large big utensils resting patiently beside the drain while small plates finish their wash.",
+        "playful": "Small spoons earned priority express service while the bulky big utensils patiently watched from the sidelines.",
+        "exaggerated": "That massive big utensils practically owns the left corner of the sink like rent-free studio real estate."
+      }
+    ]
+  },
+  {
+    "input": "keeps scrubbing the cast iron skillet in the sink",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_active_cleaning_scrubbing",
+    "opportunity": "active_cleaning_vigor",
+    "provenance": {
+      "frameId": "frame_active_cleaning_scrubbing",
+      "frameName": "Actively scrubbing, wiping, or rinsing cookware",
+      "resolutionLevel": 1,
+      "actionPolarity": "repeated",
+      "humorOpportunity": "active_cleaning_vigor",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "target": "cast iron skillet",
+        "activity": "scrub",
+        "action": "scrubbing",
+        "location": "sink"
+      },
+      "modifiers": [
+        "frequency:always->action"
+      ],
+      "contexts": [
+        "ctx_sink_cleanup"
+      ],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_001_active_scrub_shine_obs_gentle",
+        "pgc3_002_active_scrub_shine_obs_playful",
+        "pgc3_003_active_scrub_shine_obs_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "verbnet-cu",
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "Giving that cast iron skillet a dedicated scrubbing session with plenty of quiet care in the sink.",
+      "playful": "Putting enough energy into scrubbing the cast iron skillet that you can practically see tomorrow's dinner reflected in it.",
+      "exaggerated": "Scrubbing the cast iron skillet so enthusiastically you could use it as a shaving mirror by morning."
+    },
+    "regenerations": [
+      {
+        "seed": 1,
+        "gentle": "Turning evening kitchen cleanup into an unhurried scrubbing ritual with the cast iron skillet.",
+        "playful": "Counting today's marathon scrubbing session on the cast iron skillet as a full upper-body arm workout.",
+        "exaggerated": "Polishing that cast iron skillet hard enough to erase seasoning from three apartments ago."
+      },
+      {
+        "seed": 2,
+        "gentle": "A patient, thorough round of scrubbing making sure the cast iron skillet shines completely.",
+        "playful": "Someone clearly refuses to stop scrubbing until the cast iron skillet looks brand new out of the box.",
+        "exaggerated": "Putting so much elbow grease into scrubbing that the kitchen tap asked for a water break."
+      }
+    ]
+  },
+  {
+    "input": "Wardrobe drawers are always half opened",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_open_drawer_organization",
+    "opportunity": "partial_closure",
+    "provenance": {
+      "frameId": "frame_open_drawer_organization",
+      "frameName": "Leaving drawers, wardrobe doors, or cabinets open or ajar",
+      "resolutionLevel": 1,
+      "actionPolarity": "repeated",
+      "humorOpportunity": "partial_closure",
+      "humorFamilies": [
+        "gentle_personification",
+        "gentle_personification",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "target": "wardrobe"
+      },
+      "modifiers": [
+        "frequency:always->action",
+        "scope:half->state"
+      ],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_harmless_personification",
+        "mech_harmless_personification",
+        "mech_harmless_personification"
+      ],
+      "constructionIds": [
+        "pgc3_073_drawer_ajar_warmth_gentle",
+        "pgc3_074_drawer_ajar_warmth_playful",
+        "pgc3_075_drawer_ajar_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet",
+        "wikidata"
+      ]
+    },
+    "seed0": {
+      "gentle": "The wardrobe politely peeking halfway out just to check how the bedroom is doing.",
+      "playful": "Our wardrobe appears convinced that closing all the way is an overly strict domestic tradition.",
+      "exaggerated": "Leaving the wardrobe propped half open like an inviting boutique display of folded sweaters."
+    },
+    "regenerations": [
+      {
+        "seed": 1,
+        "gentle": "Storage doors pausing mid-journey so clothes and socks can get a little fresh breeze.",
+        "playful": "An open-door policy ensuring every sock in the wardrobe keeps a clear view of the room.",
+        "exaggerated": "The wardrobe gently stopped at forty-five degrees just in case someone forgot what lives inside."
+      },
+      {
+        "seed": 2,
+        "gentle": "A familiar sight where the wardrobe took a cozy breather halfway back into place.",
+        "playful": "Apparently pushing the wardrobe the final two inches counts as an unnecessary extra step.",
+        "exaggerated": "Every single handle on the wardrobe standing ready at staggered heights like a piano keyboard."
+      }
+    ]
+  },
+  {
+    "input": "kitchen cabinets pulled open and never pushed shut",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_36_boundaries_safety_awareness",
+    "opportunity": "compositional_habit",
+    "provenance": {
+      "frameId": "frame_36_boundaries_safety_awareness",
+      "frameName": "Everyday relationship moment",
+      "resolutionLevel": 2,
+      "actionPolarity": "active",
+      "humorOpportunity": "compositional_habit",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "target": "kitchen",
+        "action": "push",
+        "location": "kitchen"
+      },
+      "modifiers": [
+        "negation:never->pushed"
+      ],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_121_comp_habit_warmth_gentle",
+        "pgc3_122_comp_habit_warmth_playful",
+        "pgc3_123_comp_habit_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "verbnet-cu",
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A familiar little moment around the kitchen running on its own gentle everyday rhythm.",
+      "playful": "Apparently handling the kitchen follows a charming unwritten house rule nobody mentioned.",
+      "exaggerated": "The kitchen quietly claiming center stage in today's memorable little home moment."
+    },
+    "regenerations": [
+      {
+        "seed": 1,
+        "gentle": "One tiny everyday chapter where kitchen keeps shared routines delightfully unpredictable.",
+        "playful": "Funny how ordinary life with kitchen always comes with an affectionate little twist.",
+        "exaggerated": "Another memorable episode in the ongoing domestic adventures starring our trusty kitchen."
+      },
+      {
+        "seed": 2,
+        "gentle": "Those tiny repeatable quirks with the kitchen give home life its warm unmistakable personality.",
+        "playful": "Consistent energy around the kitchen keeping every ordinary week playfully lively.",
+        "exaggerated": "If household walls could chuckle, they'd definitely grin at this signature kitchen routine."
+      }
+    ]
+  },
+  {
+    "input": "snoring like a revving chainsaw all night long",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_parent_domestic_chores",
+    "opportunity": "compositional_habit",
+    "provenance": {
+      "frameId": "frame_parent_domestic_chores",
+      "frameName": "Domestic upkeep and cleaning chores",
+      "resolutionLevel": 3,
+      "actionPolarity": "active",
+      "humorOpportunity": "compositional_habit",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "action": "snoring"
+      },
+      "modifiers": [
+        "intensity:prolonged->action"
+      ],
+      "contexts": [
+        "ctx_bedtime_rest"
+      ],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_121_comp_habit_warmth_gentle",
+        "pgc3_122_comp_habit_warmth_playful",
+        "pgc3_123_comp_habit_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A familiar little moment around the this routine running on its own gentle everyday rhythm.",
+      "playful": "Apparently handling the this routine follows a charming unwritten house rule nobody mentioned.",
+      "exaggerated": "The this routine quietly claiming center stage in today's memorable little home moment."
+    },
+    "regenerations": [
+      {
+        "seed": 1,
+        "gentle": "One tiny everyday chapter where this routine keeps shared routines delightfully unpredictable.",
+        "playful": "Funny how ordinary life with this routine always comes with an affectionate little twist.",
+        "exaggerated": "Another memorable episode in the ongoing domestic adventures starring our trusty this routine."
+      },
+      {
+        "seed": 2,
+        "gentle": "Those tiny repeatable quirks with the this routine give home life its warm unmistakable personality.",
+        "playful": "Consistent energy around the this routine keeping every ordinary week playfully lively.",
+        "exaggerated": "If household walls could chuckle, they'd definitely grin at this signature this routine routine."
+      }
+    ]
+  },
+  {
+    "input": "burping loudly right after finishing dinner",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_speaking_on_phone",
+    "opportunity": "excessive_volume",
+    "provenance": {
+      "frameId": "frame_speaking_on_phone",
+      "frameName": "Speaking loudly or broadcasting on telephone, speaker, or voice call",
+      "resolutionLevel": 1,
+      "actionPolarity": "excessive",
+      "humorOpportunity": "excessive_volume",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "action": "burping",
+        "ingredient": "dinner"
+      },
+      "modifiers": [
+        "intensity:excessive->action"
+      ],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_scale_acoustic_distortion",
+        "mech_scale_acoustic_distortion",
+        "mech_scale_acoustic_distortion"
+      ],
+      "constructionIds": [
+        "pgc3_037_phone_auditorium_warmth_gentle",
+        "pgc3_038_phone_auditorium_warmth_playful",
+        "pgc3_039_phone_auditorium_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "verbnet-cu",
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A lively dinner call making sure every corner of the room stays warmly up to date.",
+      "playful": "Apparently this dinner call came with complimentary front-row seats for the rest of the apartment.",
+      "exaggerated": "Speaking loud enough into the dinner that cell towers can safely take the rest of the afternoon off."
+    },
+    "regenerations": [
+      {
+        "seed": 1,
+        "gentle": "An enthusiastic conversation that gently wandered straight into cheerful outdoor volume.",
+        "playful": "Someone's indoor volume dial quietly skipped past cozy chat to full stadium announcer mode.",
+        "exaggerated": "Even the hallway shoes are getting a crystal-clear live recap of tonight's dinner conversation."
+      },
+      {
+        "seed": 2,
+        "gentle": "Friendly energy on the dinner carrying right across the whole living space.",
+        "playful": "With projection like that, the phone microphone barely needs to clock into work today.",
+        "exaggerated": "Volume warm enough to skip satellites entirely and shout hello across two zip codes."
+      }
+    ]
+  },
+  {
+    "input": "stealing the entire duvet at 3 AM",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_sleep_duvet_alarm",
+    "opportunity": "sleep_disruption",
+    "provenance": {
+      "frameId": "frame_sleep_duvet_alarm",
+      "frameName": "Bedtime duvet sharing, snoozing alarms, or late lights",
+      "resolutionLevel": 1,
+      "actionPolarity": "active",
+      "humorOpportunity": "sleep_disruption",
+      "humorFamilies": [
+        "playful_comparison",
+        "playful_comparison",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {},
+      "modifiers": [],
+      "contexts": [
+        "ctx_bedtime_rest"
+      ],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_094_sleep_duvet_comp_gentle",
+        "pgc3_095_sleep_duvet_comp_playful",
+        "pgc3_096_sleep_duvet_comp_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": []
+    },
+    "seed0": {
+      "gentle": "The blanket drifting gently across the bed to keep one cozy side extra tucked in.",
+      "playful": "Nighttime gravity clearly tilts steadily toward one lucky half of the mattress.",
+      "exaggerated": "Waking up at three in the morning negotiating peacefully for six inches of shared duvet."
+    },
+    "regenerations": [
+      {
+        "seed": 1,
+        "gentle": "The blanket drifting gently across the bed to keep one cozy side extra tucked in.",
+        "playful": "Nighttime gravity clearly tilts steadily toward one lucky half of the mattress.",
+        "exaggerated": "Waking up at three in the morning negotiating peacefully for six inches of shared duvet."
+      },
+      {
+        "seed": 2,
+        "gentle": "The blanket drifting gently across the bed to keep one cozy side extra tucked in.",
+        "playful": "Nighttime gravity clearly tilts steadily toward one lucky half of the mattress.",
+        "exaggerated": "Waking up at three in the morning negotiating peacefully for six inches of shared duvet."
+      }
+    ]
+  },
+  {
+    "input": "hitting the alarm snooze button eight times every morning",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_sleep_duvet_alarm",
+    "opportunity": "alarm_delay",
+    "provenance": {
+      "frameId": "frame_sleep_duvet_alarm",
+      "frameName": "Bedtime duvet sharing, snoozing alarms, or late lights",
+      "resolutionLevel": 1,
+      "actionPolarity": "delayed",
+      "humorOpportunity": "alarm_delay",
+      "humorFamilies": [
+        "everyday_irony",
+        "everyday_irony",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "target": "alarm",
+        "action": "snooze"
+      },
+      "modifiers": [
+        "frequency:always->action",
+        "intensity:prolonged->action"
+      ],
+      "contexts": [
+        "ctx_morning_routine"
+      ],
+      "mechanismIds": [
+        "mech_timing_anticlimax",
+        "mech_timing_anticlimax",
+        "mech_timing_anticlimax"
+      ],
+      "constructionIds": [
+        "pgc3_097_alarm_snooze_irony_gentle",
+        "pgc3_098_alarm_snooze_irony_playful",
+        "pgc3_099_alarm_snooze_irony_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A polite morning chorus of five-minute chimes easing gently out of cozy dreams.",
+      "playful": "Seven consecutive alarms just to be gently acquainted with the general rumor of morning.",
+      "exaggerated": "The alarm clock happily performed six encores while both eyes stayed loyally shut."
+    }
+  },
+  {
+    "input": "leaving every bathroom light blazing all night",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_light_climate_control",
+    "opportunity": "unstarted_appliance",
+    "provenance": {
+      "frameId": "frame_light_climate_control",
+      "frameName": "Leaving lights on or extreme thermostat/AC temperature settings",
+      "resolutionLevel": 1,
+      "actionPolarity": "active",
+      "humorOpportunity": "unstarted_appliance",
+      "humorFamilies": [
+        "gentle_personification",
+        "gentle_personification",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "target": "bathroom"
+      },
+      "modifiers": [
+        "intensity:prolonged->action"
+      ],
+      "contexts": [
+        "ctx_bedtime_rest"
+      ],
+      "mechanismIds": [
+        "mech_harmless_personification",
+        "mech_harmless_personification",
+        "mech_harmless_personification"
+      ],
+      "constructionIds": [
+        "pgc3_100_appliance_standby_warmth_gentle",
+        "pgc3_101_appliance_standby_warmth_playful",
+        "pgc3_102_appliance_standby_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "verbnet-cu",
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "The bathroom waiting calmly in case anyone wants to press go—or switch off—in a moment.",
+      "playful": "Apparently the bathroom thinks turning completely off or pushing start requires a formal reminder.",
+      "exaggerated": "That loyal hallway bathroom glowing like a lighthouse guiding ships safely past the closet."
+    }
+  },
+  {
+    "input": "setting the air conditioner to Arctic temperatures",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_light_climate_control",
+    "opportunity": "micro_climate",
+    "provenance": {
+      "frameId": "frame_light_climate_control",
+      "frameName": "Leaving lights on or extreme thermostat/AC temperature settings",
+      "resolutionLevel": 1,
+      "actionPolarity": "active",
+      "humorOpportunity": "micro_climate",
+      "humorFamilies": [
+        "playful_comparison",
+        "playful_comparison",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "target": "mise en scene"
+      },
+      "modifiers": [],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_weather_forecast",
+        "mech_weather_forecast",
+        "mech_weather_forecast"
+      ],
+      "constructionIds": [
+        "pgc3_103_climate_contrast_comp_gentle",
+        "pgc3_104_climate_contrast_comp_playful",
+        "pgc3_105_climate_contrast_comp_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "One side of the blanket votes cozy winter while the other votes refreshing cool breeze.",
+      "playful": "The mise en scene is quietly mediating between crisp winter glacier and sunny greenhouse preferences.",
+      "exaggerated": "Two loving partners sharing one living room while dressing for two completely separate seasons."
+    }
+  },
+  {
+    "input": "taking forty-five minutes to put on shoes before leaving",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_punctuality_departure_delay",
+    "opportunity": "timing_delay",
+    "provenance": {
+      "frameId": "frame_punctuality_departure_delay",
+      "frameName": "Prolonged getting ready, missing shoes/keys, or delayed departure",
+      "resolutionLevel": 1,
+      "actionPolarity": "delayed",
+      "humorOpportunity": "timing_delay",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "action": "put on",
+        "target": "shoe"
+      },
+      "modifiers": [
+        "intensity:prolonged->action"
+      ],
+      "contexts": [
+        "ctx_departure_departure_rush"
+      ],
+      "mechanismIds": [
+        "mech_timing_anticlimax",
+        "mech_timing_anticlimax",
+        "mech_timing_anticlimax"
+      ],
+      "constructionIds": [
+        "pgc3_106_punctuality_warmth_gentle",
+        "pgc3_107_punctuality_warmth_playful",
+        "pgc3_108_punctuality_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "Stepping out the door gets a few extra mindful warm-up minutes before heading out.",
+      "playful": "Today's departure clearly runs on cozy handcrafted time rather than brisk hallway clocks.",
+      "exaggerated": "Putting on shoes by the front door somehow turned into an unhurried twenty-minute ceremony."
+    }
+  },
+  {
+    "input": "waiting by the door while partner looks for sunglasses",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_punctuality_departure_delay",
+    "opportunity": "timing_delay",
+    "provenance": {
+      "frameId": "frame_punctuality_departure_delay",
+      "frameName": "Prolonged getting ready, missing shoes/keys, or delayed departure",
+      "resolutionLevel": 1,
+      "actionPolarity": "active",
+      "humorOpportunity": "timing_delay",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "activity": "wait",
+        "target": "door",
+        "action": "look"
+      },
+      "modifiers": [],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_121_comp_habit_warmth_gentle",
+        "pgc3_122_comp_habit_warmth_playful",
+        "pgc3_123_comp_habit_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A familiar little moment around the door running on its own gentle everyday rhythm.",
+      "playful": "Apparently handling the door follows a charming unwritten house rule nobody mentioned.",
+      "exaggerated": "The door quietly claiming center stage in today's memorable little home moment."
+    }
+  },
+  {
+    "input": "scrolling on phone during dinner",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_speaking_on_phone",
+    "opportunity": "excessive_volume",
+    "provenance": {
+      "frameId": "frame_speaking_on_phone",
+      "frameName": "Speaking loudly or broadcasting on telephone, speaker, or voice call",
+      "resolutionLevel": 1,
+      "actionPolarity": "active",
+      "humorOpportunity": "excessive_volume",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "target": "telephone",
+        "ingredient": "dinner"
+      },
+      "modifiers": [],
+      "contexts": [
+        "ctx_shared_mealtime"
+      ],
+      "mechanismIds": [
+        "mech_scale_acoustic_distortion",
+        "mech_scale_acoustic_distortion",
+        "mech_scale_acoustic_distortion"
+      ],
+      "constructionIds": [
+        "pgc3_037_phone_auditorium_warmth_gentle",
+        "pgc3_038_phone_auditorium_warmth_playful",
+        "pgc3_039_phone_auditorium_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A lively phone call making sure every corner of the room stays warmly up to date.",
+      "playful": "Apparently this phone call came with complimentary front-row seats for the rest of the apartment.",
+      "exaggerated": "Speaking loud enough into the phone that cell towers can safely take the rest of the afternoon off."
+    }
+  },
+  {
+    "input": "leaving wet towels on the bed every day",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_object_displacement",
+    "opportunity": "object_displacement",
+    "provenance": {
+      "frameId": "frame_object_displacement",
+      "frameName": "Everyday objects or crumbs left outside expected storage spots",
+      "resolutionLevel": 1,
+      "actionPolarity": "repeated",
+      "humorOpportunity": "object_displacement",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "action": "wet",
+        "target": "towel",
+        "location": "bed"
+      },
+      "modifiers": [
+        "frequency:always->action"
+      ],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_082_displacement_warmth_gentle",
+        "pgc3_083_displacement_warmth_playful",
+        "pgc3_084_displacement_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "Little hints of towel making themselves right at home around the bed.",
+      "playful": "Apparently the towel decided living out in the open on the bed beats sitting in a drawer.",
+      "exaggerated": "Leaving a gentle trail of towel across the bed so nobody forgets how cozy the evening was."
+    }
+  },
+  {
+    "input": "putting empty milk cartons back inside the fridge",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_empty_container_fridge",
+    "opportunity": "empty_container_fridge",
+    "provenance": {
+      "frameId": "frame_empty_container_fridge",
+      "frameName": "Placing empty beverage cartons or bottles back inside refrigerator",
+      "resolutionLevel": 1,
+      "actionPolarity": "omitted_forgotten",
+      "humorOpportunity": "empty_container_fridge",
+      "humorFamilies": [
+        "everyday_irony",
+        "everyday_irony",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "target": "milk carton",
+        "additive": "milk",
+        "action": "back",
+        "location": "fridge"
+      },
+      "modifiers": [],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_harmless_personification",
+        "mech_harmless_personification",
+        "mech_harmless_personification"
+      ],
+      "constructionIds": [
+        "pgc3_064_empty_fridge_carton_gentle",
+        "pgc3_065_empty_fridge_carton_playful",
+        "pgc3_066_empty_fridge_carton_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet",
+        "wikidata"
+      ]
+    },
+    "seed0": {
+      "gentle": "An empty milk carton resting peacefully on the fridge shelf just to keep the cold air company.",
+      "playful": "Putting an empty milk carton back in the refrigerator for optimal freshness of pure chilled air.",
+      "exaggerated": "That feather-light milk carton stayed chilly all night guarding exactly zero drops of milk inside."
+    }
+  },
+  {
+    "input": "leaving cardboard delivery boxes beside the sofa",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_object_displacement",
+    "opportunity": "object_displacement",
+    "provenance": {
+      "frameId": "frame_object_displacement",
+      "frameName": "Everyday objects or crumbs left outside expected storage spots",
+      "resolutionLevel": 1,
+      "actionPolarity": "active",
+      "humorOpportunity": "object_displacement",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "activity": "delivery",
+        "target": "sofa",
+        "location": "sofa"
+      },
+      "modifiers": [],
+      "contexts": [
+        "ctx_shared_living_space"
+      ],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_082_displacement_warmth_gentle",
+        "pgc3_083_displacement_warmth_playful",
+        "pgc3_084_displacement_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "Little hints of sofa making themselves right at home around the sofa.",
+      "playful": "Apparently the sofa decided living out in the open on the sofa beats sitting in a drawer.",
+      "exaggerated": "Leaving a gentle trail of sofa across the sofa so nobody forgets how cozy the evening was."
+    }
+  },
+  {
+    "input": "keeps dropping slippers right in the hallway",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_object_displacement",
+    "opportunity": "object_displacement",
+    "provenance": {
+      "frameId": "frame_object_displacement",
+      "frameName": "Everyday objects or crumbs left outside expected storage spots",
+      "resolutionLevel": 1,
+      "actionPolarity": "repeated",
+      "humorOpportunity": "object_displacement",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "target": "slipper",
+        "location": "hallway"
+      },
+      "modifiers": [
+        "frequency:always->action"
+      ],
+      "contexts": [
+        "ctx_shared_living_space"
+      ],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_082_displacement_warmth_gentle",
+        "pgc3_083_displacement_warmth_playful",
+        "pgc3_084_displacement_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "Little hints of slipper making themselves right at home around the hallway.",
+      "playful": "Apparently the slipper decided living out in the open on the hallway beats sitting in a drawer.",
+      "exaggerated": "Leaving a gentle trail of slipper across the hallway so nobody forgets how cozy the evening was."
+    }
+  },
+  {
+    "input": "never decides where to eat on Friday night",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_decision_preference_mismatch",
+    "opportunity": "indecision",
+    "provenance": {
+      "frameId": "frame_decision_preference_mismatch",
+      "frameName": "Meal indecision, off-brand grocery picks, or differing everyday tastes",
+      "resolutionLevel": 1,
+      "actionPolarity": "active",
+      "humorOpportunity": "indecision",
+      "humorFamilies": [
+        "playful_comparison",
+        "playful_comparison",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "action": "decide"
+      },
+      "modifiers": [
+        "negation:never->decides"
+      ],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_peace_summit",
+        "mech_peace_summit",
+        "mech_peace_summit"
+      ],
+      "constructionIds": [
+        "pgc3_115_decision_menu_comp_gentle",
+        "pgc3_116_decision_menu_comp_playful",
+        "pgc3_117_decision_menu_comp_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "Two thoughtful appetites taking their sweet time picking tonight's coziest dinner.",
+      "playful": "Deciding where to eat quietly evolved into a polite five-round dinner brainstorm.",
+      "exaggerated": "Half an hour later, still heroically asking 'I don't mind, whatever you're craving'."
+    }
+  },
+  {
+    "input": "talking loudly while I am trying to work on a call",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_speaking_on_phone",
+    "opportunity": "excessive_volume",
+    "provenance": {
+      "frameId": "frame_speaking_on_phone",
+      "frameName": "Speaking loudly or broadcasting on telephone, speaker, or voice call",
+      "resolutionLevel": 1,
+      "actionPolarity": "excessive",
+      "humorOpportunity": "excessive_volume",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "action": "work",
+        "target": "work"
+      },
+      "modifiers": [
+        "intensity:excessive->action"
+      ],
+      "contexts": [
+        "ctx_work_concentration"
+      ],
+      "mechanismIds": [
+        "mech_scale_acoustic_distortion",
+        "mech_scale_acoustic_distortion",
+        "mech_scale_acoustic_distortion"
+      ],
+      "constructionIds": [
+        "pgc3_037_phone_auditorium_warmth_gentle",
+        "pgc3_038_phone_auditorium_warmth_playful",
+        "pgc3_039_phone_auditorium_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "verbnet-cu",
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A lively work call making sure every corner of the room stays warmly up to date.",
+      "playful": "Apparently this work call came with complimentary front-row seats for the rest of the apartment.",
+      "exaggerated": "Speaking loud enough into the work that cell towers can safely take the rest of the afternoon off."
+    }
+  },
+  {
+    "input": "making weird noises during a serious conversation",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_serious_mood_contrast",
+    "opportunity": "context_interruption",
+    "provenance": {
+      "frameId": "frame_serious_mood_contrast",
+      "frameName": "Playful noises, teasing, or singing clashing with serious mood or work",
+      "resolutionLevel": 1,
+      "actionPolarity": "active",
+      "humorOpportunity": "context_interruption",
+      "humorFamilies": [
+        "everyday_irony",
+        "everyday_irony",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {},
+      "modifiers": [],
+      "contexts": [
+        "ctx_serious_conversation"
+      ],
+      "mechanismIds": [
+        "mech_timing_anticlimax",
+        "mech_timing_anticlimax",
+        "mech_timing_anticlimax"
+      ],
+      "constructionIds": [
+        "pgc3_046_serious_contrast_soundtrack_gentle",
+        "pgc3_047_serious_contrast_soundtrack_playful",
+        "pgc3_048_serious_contrast_soundtrack_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A thoughtful moment during a serious moment that picked up a tiny surprise soundtrack of its own.",
+      "playful": "Trying to focus during a serious moment apparently comes with complimentary live sound effects today.",
+      "exaggerated": "Our quiet a serious moment just received a bold avant-garde acoustic cameo nobody put on the agenda."
+    }
+  },
+  {
+    "input": "always forgetting to water the living room houseplant",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_houseplant_pet_care",
+    "opportunity": "care_routine",
+    "provenance": {
+      "frameId": "frame_houseplant_pet_care",
+      "frameName": "Watering houseplants or tending pets on shared schedule",
+      "resolutionLevel": 1,
+      "actionPolarity": "omitted_forgotten",
+      "humorOpportunity": "care_routine",
+      "humorFamilies": [
+        "gentle_personification",
+        "gentle_personification",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "target": "houseplant",
+        "ingredient": "water",
+        "action": "water"
+      },
+      "modifiers": [
+        "frequency:always->action"
+      ],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_harmless_personification",
+        "mech_harmless_personification",
+        "mech_harmless_personification"
+      ],
+      "constructionIds": [
+        "pgc3_055_plant_hydration_gentle_gentle",
+        "pgc3_056_plant_hydration_gentle_playful",
+        "pgc3_057_plant_hydration_gentle_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet",
+        "wikidata"
+      ]
+    },
+    "seed0": {
+      "gentle": "The houseplant resting patiently on the sill, quietly hoping for a refreshing sip of water.",
+      "playful": "That leafy houseplant gently cleared its throat to ask if today finally counts as watering day.",
+      "exaggerated": "The living room houseplant is dropping dramatic hints toward the watering can like a thirsty cactus."
+    }
+  },
+  {
+    "input": "leaving clean laundry piled on the bedroom chair",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_beverage_preparation",
+    "opportunity": "compositional_habit",
+    "provenance": {
+      "frameId": "frame_beverage_preparation",
+      "frameName": "Preparing tea, coffee, espresso, or soup with specific ingredient ratios",
+      "resolutionLevel": 2,
+      "actionPolarity": "active",
+      "humorOpportunity": "compositional_habit",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "action": "clean",
+        "target": "laundry"
+      },
+      "modifiers": [],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_121_comp_habit_warmth_gentle",
+        "pgc3_122_comp_habit_warmth_playful",
+        "pgc3_123_comp_habit_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "verbnet-cu",
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A familiar little moment around the laundry running on its own gentle everyday rhythm.",
+      "playful": "Apparently handling the laundry follows a charming unwritten house rule nobody mentioned.",
+      "exaggerated": "The laundry quietly claiming center stage in today's memorable little home moment."
+    }
+  },
+  {
+    "input": "ignoring GPS directions and taking a scenic detour",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_attention_distraction",
+    "opportunity": "attention_distraction",
+    "provenance": {
+      "frameId": "frame_attention_distraction",
+      "frameName": "Phone scrolling, screen distraction, or tuned-out listening",
+      "resolutionLevel": 1,
+      "actionPolarity": "active",
+      "humorOpportunity": "attention_distraction",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "action": "ignore"
+      },
+      "modifiers": [],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_112_screen_guest_warmth_gentle",
+        "pgc3_113_screen_guest_warmth_playful",
+        "pgc3_114_screen_guest_warmth_exaggerated"
+      ],
+      "sensitivity": "mild_interpersonal",
+      "knowledgeSourcesUsed": [
+        "verbnet-cu",
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A quick pause where the screen pulled up a tiny chair right beside our conversation.",
+      "playful": "The phone clearly worried it might miss tonight's stories if it stayed peacefully in a pocket.",
+      "exaggerated": "Scrolling feeds and passing dinner bowls simultaneously like an Olympic multi-tasking exhibition."
+    }
+  },
+  {
+    "input": "leaving one last square on the toilet roll cardboard",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_beverage_preparation",
+    "opportunity": "compositional_habit",
+    "provenance": {
+      "frameId": "frame_beverage_preparation",
+      "frameName": "Preparing tea, coffee, espresso, or soup with specific ingredient ratios",
+      "resolutionLevel": 2,
+      "actionPolarity": "active",
+      "humorOpportunity": "compositional_habit",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "ingredient": "toilet roll",
+        "location": "public square",
+        "target": "toilet",
+        "activity": "roll"
+      },
+      "modifiers": [],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_121_comp_habit_warmth_gentle",
+        "pgc3_122_comp_habit_warmth_playful",
+        "pgc3_123_comp_habit_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "verbnet-cu",
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A familiar little moment around the toilet running on its own gentle everyday rhythm.",
+      "playful": "Apparently handling the toilet follows a charming unwritten house rule nobody mentioned.",
+      "exaggerated": "The toilet quietly claiming center stage in today's memorable little home moment."
+    }
+  },
+  {
+    "input": "bringing home the wrong cereal brand from groceries",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_parent_domestic_chores",
+    "opportunity": "compositional_habit",
+    "provenance": {
+      "frameId": "frame_parent_domestic_chores",
+      "frameName": "Domestic upkeep and cleaning chores",
+      "resolutionLevel": 3,
+      "actionPolarity": "active",
+      "humorOpportunity": "compositional_habit",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "ingredient": "cereal",
+        "target": "grocery"
+      },
+      "modifiers": [],
+      "contexts": [],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_121_comp_habit_warmth_gentle",
+        "pgc3_122_comp_habit_warmth_playful",
+        "pgc3_123_comp_habit_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A familiar little moment around the grocery running on its own gentle everyday rhythm.",
+      "playful": "Apparently handling the grocery follows a charming unwritten house rule nobody mentioned.",
+      "exaggerated": "The grocery quietly claiming center stage in today's memorable little home moment."
+    }
+  },
+  {
+    "input": "dropping toast crumbs all over the sofa cushions",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_object_displacement",
+    "opportunity": "object_displacement",
+    "provenance": {
+      "frameId": "frame_object_displacement",
+      "frameName": "Everyday objects or crumbs left outside expected storage spots",
+      "resolutionLevel": 1,
+      "actionPolarity": "active",
+      "humorOpportunity": "object_displacement",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "target": "toast crumbs",
+        "location": "sofa"
+      },
+      "modifiers": [],
+      "contexts": [
+        "ctx_shared_living_space"
+      ],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_082_displacement_warmth_gentle",
+        "pgc3_083_displacement_warmth_playful",
+        "pgc3_084_displacement_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "verbnet-cu",
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "Little hints of toast crumbs making themselves right at home around the sofa.",
+      "playful": "Apparently the toast crumbs decided living out in the open on the sofa beats sitting in a drawer.",
+      "exaggerated": "Leaving a gentle trail of toast crumbs across the sofa so nobody forgets how cozy the evening was."
+    }
+  },
+  {
+    "input": "staying awake late reading while lamp shines in bed",
+    "enginePath": "knowledge_enriched",
+    "outcome": "playful_angles",
+    "frameId": "frame_punctuality_departure_delay",
+    "opportunity": "timing_delay",
+    "provenance": {
+      "frameId": "frame_punctuality_departure_delay",
+      "frameName": "Prolonged getting ready, missing shoes/keys, or delayed departure",
+      "resolutionLevel": 1,
+      "actionPolarity": "active",
+      "humorOpportunity": "timing_delay",
+      "humorFamilies": [
+        "observational_warmth",
+        "observational_warmth",
+        "situational_exaggeration"
+      ],
+      "boundRoles": {
+        "action": "wake up",
+        "activity": "reading",
+        "target": "lamp",
+        "location": "bed"
+      },
+      "modifiers": [],
+      "contexts": [
+        "ctx_bedtime_rest"
+      ],
+      "mechanismIds": [
+        "mech_observational_parody",
+        "mech_observational_parody",
+        "mech_observational_parody"
+      ],
+      "constructionIds": [
+        "pgc3_121_comp_habit_warmth_gentle",
+        "pgc3_122_comp_habit_warmth_playful",
+        "pgc3_123_comp_habit_warmth_exaggerated"
+      ],
+      "sensitivity": "ordinary_quirk",
+      "knowledgeSourcesUsed": [
+        "open-english-wordnet"
+      ]
+    },
+    "seed0": {
+      "gentle": "A familiar little moment around the lamp running on its own gentle everyday rhythm.",
+      "playful": "Apparently handling the lamp follows a charming unwritten house rule nobody mentioned.",
+      "exaggerated": "The lamp quietly claiming center stage in today's memorable little home moment."
+    }
+  }
+]

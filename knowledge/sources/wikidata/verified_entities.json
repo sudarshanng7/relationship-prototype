@@ -1,0 +1,1099 @@
+[
+  {
+    "id": "Q186263",
+    "label": "dishwasher",
+    "description": "mechanical device for cleaning dishware and cutlery",
+    "aliases": [
+      "dishwashers",
+      "dishwashing machine"
+    ],
+    "claims": {
+      "subclass_of": [
+        "Q212920",
+        "Q26270576"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q186263",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q212920",
+          "label": "home appliance"
+        },
+        {
+          "id": "Q26270576",
+          "label": "cleaning tool"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q124441",
+    "label": "washing machine",
+    "description": "machine which washes clothes automatically",
+    "aliases": [
+      "washer",
+      "laundry washer",
+      "laundry machine"
+    ],
+    "claims": {
+      "subclass_of": [
+        "Q12269769",
+        "Q212920",
+        "Q26270576",
+        "Q20076681"
+      ],
+      "has_use": [
+        "Q852100"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q124441",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q12269769",
+          "label": "major appliance"
+        },
+        {
+          "id": "Q212920",
+          "label": "home appliance"
+        },
+        {
+          "id": "Q26270576",
+          "label": "cleaning tool"
+        },
+        {
+          "id": "Q20076681",
+          "label": "Q20076681"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q852100",
+          "label": "laundry"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q37828",
+    "label": "refrigerator",
+    "description": "household or industrial appliance for preserving food at a low temperature",
+    "aliases": [
+      "fridge"
+    ],
+    "claims": {
+      "subclass_of": [
+        "Q12269769",
+        "Q1501558",
+        "Q212920",
+        "Q2425052"
+      ],
+      "has_use": [
+        "Q747713",
+        "Q11702361",
+        "Q173514"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q37828",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q12269769",
+          "label": "major appliance"
+        },
+        {
+          "id": "Q1501558",
+          "label": "Q1501558"
+        },
+        {
+          "id": "Q212920",
+          "label": "home appliance"
+        },
+        {
+          "id": "Q2425052",
+          "label": "electrical appliance"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q747713",
+          "label": "Q747713"
+        },
+        {
+          "id": "Q11702361",
+          "label": "food storage"
+        },
+        {
+          "id": "Q173514",
+          "label": "food preservation"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q127956",
+    "label": "microwave oven",
+    "description": "kitchen cooking appliance",
+    "aliases": [
+      "microwave"
+    ],
+    "claims": {
+      "instance_of": [
+        "Q57583712"
+      ],
+      "subclass_of": [
+        "Q212920",
+        "Q2425052",
+        "Q57583712"
+      ],
+      "has_use": [
+        "Q38695",
+        "Q4311765"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q127956",
+    "resolvedClaims": {
+      "instance_of": [
+        {
+          "id": "Q57583712",
+          "label": "cooking appliance"
+        }
+      ],
+      "subclass_of": [
+        {
+          "id": "Q212920",
+          "label": "home appliance"
+        },
+        {
+          "id": "Q2425052",
+          "label": "electrical appliance"
+        },
+        {
+          "id": "Q57583712",
+          "label": "cooking appliance"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q38695",
+          "label": "Q38695"
+        },
+        {
+          "id": "Q4311765",
+          "label": "Q4311765"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q14890",
+    "label": "toaster",
+    "description": "small oven for cooking bread",
+    "aliases": [
+      "toasters"
+    ],
+    "claims": {
+      "subclass_of": [
+        "Q212920",
+        "Q57583712",
+        "Q3558289"
+      ],
+      "has_use": [
+        "Q48782623"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q14890",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q212920",
+          "label": "home appliance"
+        },
+        {
+          "id": "Q57583712",
+          "label": "cooking appliance"
+        },
+        {
+          "id": "Q3558289",
+          "label": "Q3558289"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q48782623",
+          "label": "torrefacto"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q501862",
+    "label": "blender",
+    "description": "type of home appliance",
+    "aliases": [
+      "kitchen blender",
+      "liquidiser",
+      "mixer"
+    ],
+    "claims": {
+      "subclass_of": [
+        "Q212920",
+        "Q1521410",
+        "Q3558289",
+        "Q57583712"
+      ],
+      "has_use": [
+        "Q379697"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q501862",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q212920",
+          "label": "home appliance"
+        },
+        {
+          "id": "Q1521410",
+          "label": "kitchenware"
+        },
+        {
+          "id": "Q3558289",
+          "label": "Q3558289"
+        },
+        {
+          "id": "Q57583712",
+          "label": "cooking appliance"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q379697",
+          "label": "Q379697"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q127666",
+    "label": "frying pan",
+    "description": "flat-bottomed pan with sloped sides used for cooking food on a stove",
+    "aliases": [
+      "frypan",
+      "skillet"
+    ],
+    "claims": {
+      "subclass_of": [
+        "Q154038"
+      ],
+      "has_use": [
+        "Q300472",
+        "Q784148",
+        "Q1521462"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q127666",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q154038",
+          "label": "cookware and bakeware"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q300472",
+          "label": "frying"
+        },
+        {
+          "id": "Q784148",
+          "label": "Q784148"
+        },
+        {
+          "id": "Q1521462",
+          "label": "saut\u00e9ing"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q107444",
+    "label": "kettle",
+    "description": "appliance for boiling water",
+    "aliases": [
+      "tea kettle",
+      "teakettle"
+    ],
+    "claims": {
+      "subclass_of": [
+        "Q154038",
+        "Q2366864"
+      ],
+      "has_use": [
+        "Q41716"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q107444",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q154038",
+          "label": "cookware and bakeware"
+        },
+        {
+          "id": "Q2366864",
+          "label": "Q2366864"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q41716",
+          "label": "Q41716"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q9350",
+    "label": "yoga",
+    "description": "group of physical, mental and spiritual practices originating from ancient India",
+    "aliases": [],
+    "claims": {
+      "subclass_of": [
+        "Q219067",
+        "Q2270606",
+        "Q3527307",
+        "Q349"
+      ],
+      "part_of": [
+        "Q59544"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q9350",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q219067",
+          "label": "physical exercise"
+        },
+        {
+          "id": "Q2270606",
+          "label": "spiritual practice"
+        },
+        {
+          "id": "Q3527307",
+          "label": "mind\u2013body interventions"
+        },
+        {
+          "id": "Q349",
+          "label": "Q349"
+        }
+      ],
+      "part_of": [
+        {
+          "id": "Q59544",
+          "label": "Q59544"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q81895",
+    "label": "spoon",
+    "description": "utensil consisting of a small shallow bowl, oval or round, at the end of a handle",
+    "aliases": [],
+    "claims": {
+      "instance_of": [
+        "Q1310214"
+      ],
+      "subclass_of": [
+        "Q81944",
+        "Q154038",
+        "Q1191255"
+      ],
+      "has_use": [
+        "Q1663054",
+        "Q2826873"
+      ],
+      "part_of": [
+        "Q1191255"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q81895",
+    "resolvedClaims": {
+      "instance_of": [
+        {
+          "id": "Q1310214",
+          "label": "Q1310214"
+        }
+      ],
+      "subclass_of": [
+        {
+          "id": "Q81944",
+          "label": "cutlery"
+        },
+        {
+          "id": "Q154038",
+          "label": "cookware and bakeware"
+        },
+        {
+          "id": "Q1191255",
+          "label": "Q1191255"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q1663054",
+          "label": "ingestion"
+        },
+        {
+          "id": "Q2826873",
+          "label": "Q2826873"
+        }
+      ],
+      "part_of": [
+        {
+          "id": "Q1191255",
+          "label": "Q1191255"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q81881",
+    "label": "fork",
+    "description": "utensil to spear food",
+    "aliases": [
+      "forks"
+    ],
+    "claims": {
+      "instance_of": [
+        "Q1310214"
+      ],
+      "subclass_of": [
+        "Q81944"
+      ],
+      "has_use": [
+        "Q213449"
+      ],
+      "part_of": [
+        "Q1191255"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q81881",
+    "resolvedClaims": {
+      "instance_of": [
+        {
+          "id": "Q1310214",
+          "label": "Q1310214"
+        }
+      ],
+      "subclass_of": [
+        {
+          "id": "Q81944",
+          "label": "cutlery"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q213449",
+          "label": "eating"
+        }
+      ],
+      "part_of": [
+        {
+          "id": "Q1191255",
+          "label": "Q1191255"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q32489",
+    "label": "knife",
+    "description": "tool with a cutting edge or blade",
+    "aliases": [
+      "knives",
+      "knife blade"
+    ],
+    "claims": {
+      "instance_of": [
+        "Q1310214"
+      ],
+      "subclass_of": [
+        "Q39546",
+        "Q28692583",
+        "Q1514280",
+        "Q8205328"
+      ],
+      "has_use": [
+        "Q196751"
+      ],
+      "part_of": [
+        "Q1191255"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q32489",
+    "resolvedClaims": {
+      "instance_of": [
+        {
+          "id": "Q1310214",
+          "label": "Q1310214"
+        }
+      ],
+      "subclass_of": [
+        {
+          "id": "Q39546",
+          "label": "Q39546"
+        },
+        {
+          "id": "Q28692583",
+          "label": "bladed object"
+        },
+        {
+          "id": "Q1514280",
+          "label": "stabbing weapon"
+        },
+        {
+          "id": "Q8205328",
+          "label": "Q8205328"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q196751",
+          "label": "cutting"
+        }
+      ],
+      "part_of": [
+        {
+          "id": "Q1191255",
+          "label": "Q1191255"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q106106",
+    "label": "wardrobe",
+    "description": "storage cabinet",
+    "aliases": [
+      "armoire",
+      "wardrobes",
+      "armoires",
+      "almirah",
+      "standing closet"
+    ],
+    "claims": {
+      "subclass_of": [
+        "Q2741056",
+        "Q14745"
+      ],
+      "has_use": [
+        "Q9158768"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q106106",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q2741056",
+          "label": "Q2741056"
+        },
+        {
+          "id": "Q14745",
+          "label": "Q14745"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q9158768",
+          "label": "storage"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q223575",
+    "label": "drawer",
+    "description": "box-shaped container that is part of a piece of furniture and can be slid out horizontally to access its contents",
+    "aliases": [],
+    "claims": {
+      "subclass_of": [
+        "Q987767",
+        "Q28803767"
+      ],
+      "part_of": [
+        "Q14745",
+        "Q2741056"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q223575",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q987767",
+          "label": "container"
+        },
+        {
+          "id": "Q28803767",
+          "label": "Q28803767"
+        }
+      ],
+      "part_of": [
+        {
+          "id": "Q14745",
+          "label": "Q14745"
+        },
+        {
+          "id": "Q2741056",
+          "label": "Q2741056"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q876824",
+    "label": "slipper",
+    "description": "light footwear made for indoor wear, generally without means of fastening",
+    "aliases": [
+      "house shoe",
+      "slippers"
+    ],
+    "claims": {
+      "subclass_of": [
+        "Q100230935",
+        "Q1591290"
+      ],
+      "part_of": [
+        "Q1187616"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q876824",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q100230935",
+          "label": "slip-on shoe"
+        },
+        {
+          "id": "Q1591290",
+          "label": "Q1591290"
+        }
+      ],
+      "part_of": [
+        {
+          "id": "Q1187616",
+          "label": "nightwear"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q386215",
+    "label": "mug",
+    "description": "vessel for hot drinks with a handle",
+    "aliases": [],
+    "claims": {
+      "subclass_of": [
+        "Q81727"
+      ],
+      "has_use": [
+        "Q876776"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q386215",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q81727",
+          "label": "cup"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q876776",
+          "label": "drinking"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q131696",
+    "label": "towel",
+    "description": "absorbent fabric or paper used for drying or wiping a body or a surface",
+    "aliases": [
+      "towels"
+    ],
+    "claims": {
+      "subclass_of": [
+        "Q98792614",
+        "Q1521410",
+        "Q27891524"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q131696",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q98792614",
+          "label": "bathroom linen"
+        },
+        {
+          "id": "Q1521410",
+          "label": "kitchenware"
+        },
+        {
+          "id": "Q27891524",
+          "label": "Q27891524"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q131514",
+    "label": "couch",
+    "description": "piece of furniture for seating two or more persons in the form of a bench with armrests",
+    "aliases": [
+      "sofa",
+      "Sofa",
+      "loveseat",
+      "settee"
+    ],
+    "claims": {
+      "subclass_of": [
+        "Q129006002",
+        "Q14745"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q131514",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q129006002",
+          "label": "Q129006002"
+        },
+        {
+          "id": "Q14745",
+          "label": "Q14745"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q99895",
+    "label": "pillow",
+    "description": "cushion for the head",
+    "aliases": [],
+    "claims": {
+      "instance_of": [
+        "Q63981612"
+      ],
+      "subclass_of": [
+        "Q10971235",
+        "Q728"
+      ],
+      "has_use": [
+        "Q1762457"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q99895",
+    "resolvedClaims": {
+      "instance_of": [
+        {
+          "id": "Q63981612",
+          "label": "product category"
+        }
+      ],
+      "subclass_of": [
+        {
+          "id": "Q10971235",
+          "label": "Q10971235"
+        },
+        {
+          "id": "Q728",
+          "label": "Q728"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q1762457",
+          "label": "bedding"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q6097",
+    "label": "tea",
+    "description": "brewed drink made from tea leaves",
+    "aliases": [],
+    "claims": {
+      "subclass_of": [
+        "Q61951",
+        "Q19359564",
+        "Q1365365",
+        "Q11090700"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q6097",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q61951",
+          "label": "infusion"
+        },
+        {
+          "id": "Q19359564",
+          "label": "hot beverage"
+        },
+        {
+          "id": "Q1365365",
+          "label": "Q1365365"
+        },
+        {
+          "id": "Q11090700",
+          "label": "tea"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q8486",
+    "label": "coffee",
+    "description": "brewed beverage made from seeds of Coffea genus",
+    "aliases": [],
+    "claims": {
+      "subclass_of": [
+        "Q1365365",
+        "Q37756327",
+        "Q19359564",
+        "Q2647467"
+      ],
+      "part_of": [
+        "Q65129864"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q8486",
+    "resolvedClaims": {
+      "subclass_of": [
+        {
+          "id": "Q1365365",
+          "label": "Q1365365"
+        },
+        {
+          "id": "Q37756327",
+          "label": "coffee drink"
+        },
+        {
+          "id": "Q19359564",
+          "label": "hot beverage"
+        },
+        {
+          "id": "Q2647467",
+          "label": "non-alcoholic beverage"
+        }
+      ],
+      "part_of": [
+        {
+          "id": "Q65129864",
+          "label": "Q65129864"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q8495",
+    "label": "milk",
+    "description": "white liquid produced by the mammary glands of mammals",
+    "aliases": [],
+    "claims": {
+      "instance_of": [
+        "Q112826905"
+      ],
+      "subclass_of": [
+        "Q2095",
+        "Q25403900",
+        "Q1058795",
+        "Q187634"
+      ],
+      "has_use": [
+        "Q115435123",
+        "Q185217",
+        "Q2095",
+        "Q10943"
+      ],
+      "part_of": [
+        "Q13317",
+        "Q259642"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q8495",
+    "resolvedClaims": {
+      "instance_of": [
+        {
+          "id": "Q112826905",
+          "label": "class of anatomical entity"
+        }
+      ],
+      "subclass_of": [
+        {
+          "id": "Q2095",
+          "label": "food"
+        },
+        {
+          "id": "Q25403900",
+          "label": "Q25403900"
+        },
+        {
+          "id": "Q1058795",
+          "label": "body fluid"
+        },
+        {
+          "id": "Q187634",
+          "label": "Q187634"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q115435123",
+          "label": "Q115435123"
+        },
+        {
+          "id": "Q185217",
+          "label": "Q185217"
+        },
+        {
+          "id": "Q2095",
+          "label": "food"
+        },
+        {
+          "id": "Q10943",
+          "label": "cheese"
+        }
+      ],
+      "part_of": [
+        {
+          "id": "Q13317",
+          "label": "yogurt"
+        },
+        {
+          "id": "Q259642",
+          "label": "quark"
+        }
+      ]
+    }
+  },
+  {
+    "id": "Q283",
+    "label": "water",
+    "description": "chemical compound whose molecules are formed by two hydrogen atoms and one oxygen atom",
+    "aliases": [
+      "dihydrogen monoxide",
+      "dihydridooxygen",
+      "hydrogen hydroxide",
+      "dihydrogen oxide",
+      "oxidane"
+    ],
+    "claims": {
+      "instance_of": [
+        "Q113145171"
+      ],
+      "subclass_of": [
+        "Q50690",
+        "Q11723014"
+      ],
+      "has_use": [
+        "Q3535009",
+        "Q191667",
+        "Q266790",
+        "Q155640"
+      ],
+      "part_of": [
+        "Q2095",
+        "Q103135",
+        "Q14902498",
+        "Q14904766"
+      ]
+    },
+    "license": "CC0-1.0",
+    "url": "http://www.wikidata.org/entity/Q283",
+    "resolvedClaims": {
+      "instance_of": [
+        {
+          "id": "Q113145171",
+          "label": "Q113145171"
+        }
+      ],
+      "subclass_of": [
+        {
+          "id": "Q50690",
+          "label": "Q50690"
+        },
+        {
+          "id": "Q11723014",
+          "label": "dihydrogen chalcogenide"
+        }
+      ],
+      "has_use": [
+        {
+          "id": "Q3535009",
+          "label": "Q3535009"
+        },
+        {
+          "id": "Q191667",
+          "label": "hydroponics"
+        },
+        {
+          "id": "Q266790",
+          "label": "Q266790"
+        },
+        {
+          "id": "Q155640",
+          "label": "potential energy"
+        }
+      ],
+      "part_of": [
+        {
+          "id": "Q2095",
+          "label": "food"
+        },
+        {
+          "id": "Q103135",
+          "label": "hydrolysis"
+        },
+        {
+          "id": "Q14902498",
+          "label": "water channel activity"
+        },
+        {
+          "id": "Q14904766",
+          "label": "cellular water homeostasis"
+        }
+      ]
+    }
+  }
+]

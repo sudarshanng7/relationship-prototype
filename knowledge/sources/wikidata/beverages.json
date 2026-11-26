@@ -1,0 +1,438 @@
+[
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q15304009"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Zundert"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q15146313"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "beer in the United States"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q14942629"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Turk's Head"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q14641747"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Medalla Light"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q14635771"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Kubuli"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q13100774"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Gaita"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q12723126"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "B\u00fcrger"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q12334995"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Semper Ardens"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q12058313"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "tank beer"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q12012465"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "beer in Switzerland"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q12008405"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "low fermentation beer"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q11994509"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "high fermentation beer"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q11344627"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "MALT'S"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q11335934"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q11335934"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q11306726"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Premium Malt's"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q11304799"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q11304799"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q10860471"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "green beer"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q10727324"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q10727324"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q10581232"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "III beer"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q10507704"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Gotlandsdricka"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q10500888"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q10500888"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q10497514"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "folk\u00f6l"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q10437688"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "bult\u00f6l"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q10340754"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Oloyti"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q9263566"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Frater"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q8401949"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "zwickelbier"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7881784"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Umqombothi"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7565081"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "sour beer"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7431880"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Schneider"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7314949"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Resch's"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7306555"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Reeb"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7199017"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Piton"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q6450357"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Kwete"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q6144959"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "The One"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q6141888"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "James Ready"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q6081561"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Polar Ice"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q5763615"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Club Colombia"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q5400907"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Presidente"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q5183358"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "cream ale"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q5171042"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "corn beer"
+    }
+  }
+]

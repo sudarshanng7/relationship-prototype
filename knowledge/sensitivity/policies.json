@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "name": "Purple Garden Semantic Safety and Sensitivity Policy",
+  "firewallRules": [
+    {
+      "id": "safe_01_refusal_autonomy",
+      "category": "boundaries_consent",
+      "description": "Explicit refusal (e.g. 'I do not want to', 'forced to do', 'pushy to act') must never be reframed into comedic compliance.",
+      "action": "enforce_gentle_boundary_preservation",
+      "triggers": ["do not want", "refuse to", "forced to", "pushy to act", "no means no"],
+      "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+    },
+    {
+      "id": "safe_02_contempt_derogation",
+      "category": "contempt_insults",
+      "description": "Direct disparagement, contempt, mocking, or name-calling must be redirected toward dignity and de-escalation.",
+      "action": "neutralize_mockery_and_protect_dignity",
+      "triggers": ["mocking", "insulting", "stupid", "idiot", "belittling", "humiliating"],
+      "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+    },
+    {
+      "id": "safe_03_serious_harm_safety",
+      "category": "harm_abuse",
+      "description": "Domestic abuse, violence, intimidation, or coercive control must immediately trigger safety guidance without humor.",
+      "action": "refusal_and_safety_resources",
+      "triggers": ["hit", "hurt me", "threaten", "scared of him", "scared of her", "violence", "abuse"],
+      "sourceIds": ["relationship-research-peer-reviewed", "purple-garden-original"]
+    }
+  ]
+}

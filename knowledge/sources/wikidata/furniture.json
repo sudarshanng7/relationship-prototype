@@ -1,0 +1,441 @@
+[
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q136713009"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "furniture carcass"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q132715167"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "bobbin turning"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q131822428"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "barley twist"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q117833138"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "upright"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q117384097"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "pigeonhole"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q116970695"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "table leg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q115120714"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "book chain"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q110165067"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "top"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q109980866"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "top"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q107449073"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "seat rail"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q107382955"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "bed component"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q98785987"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Marlborough leg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q98757591"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "knee-hole"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q97959085"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "tambour"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q97699803"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "monopodium"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q95968272"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "chair back"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q56056049"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "furniture leg"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q48885552"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "tabletop"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q45242859"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "shelf"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q30902154"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "builders hardware"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q21550507"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "crest rails"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q14928267"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "trestle support"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q12059696"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "stretcher"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7978583"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Web frame"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7857931"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "Twig work"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7578415"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "splat"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q7577492"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "spindle"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q5689512"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "headboard"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q5465724"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "foot"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3389614"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "footrest"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3382618"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "footboard"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q3037336"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "backrest"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2822867"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "armrest"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q1411766"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "predella"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q997358"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "drawer slides"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q223575"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "drawer"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q12752672"
+    },
+    "itemLabel": {
+      "type": "literal",
+      "value": "Q12752672"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q2741056"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "cabinetry"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q366134"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "chest"
+    }
+  },
+  {
+    "item": {
+      "type": "uri",
+      "value": "http://www.wikidata.org/entity/Q116958026"
+    },
+    "itemLabel": {
+      "xml:lang": "en",
+      "type": "literal",
+      "value": "cat bed"
+    }
+  }
+]

@@ -1,0 +1,112 @@
+[
+  {
+    "id": "mod_negligible_quantity",
+    "name": "Negligible quantity / token presence",
+    "category": "quantity",
+    "canonicalValue": "minimal",
+    "expressions": ["namesake", "token", "trace", "drop", "dash", "whisper", "homeopathic", "barely any", "almost zero", "tiny drop"],
+    "appliesToConceptTypes": ["ingredient", "substance", "physical_object", "quantity"],
+    "semanticEffect": "Reduces the volume or presence of an ingredient/substance to a symbolic gesture rather than a practical amount.",
+    "sourceIds": ["purple-garden-original", "open-english-wordnet"]
+  },
+  {
+    "id": "mod_excessive_intensity",
+    "name": "Excessive intensity / volume",
+    "category": "intensity",
+    "canonicalValue": "excessive",
+    "expressions": ["too loud", "loudly", "blaring", "at max volume", "booming", "piercing", "screaming", "full decibel", "shouting", "very loudly"],
+    "appliesToConceptTypes": ["action", "sensory_experience", "behavior"],
+    "semanticEffect": "Magnifies acoustic or energetic output far beyond normal conversational baseline.",
+    "sourceIds": ["verbnet-cu", "open-english-wordnet"]
+  },
+  {
+    "id": "mod_large_scale",
+    "name": "Large scale / heavy dimension",
+    "category": "comparison",
+    "canonicalValue": "large",
+    "expressions": ["big", "large", "heavy", "oversized", "massive", "giant", "bulky", "industrial", "huge"],
+    "appliesToConceptTypes": ["physical_object", "sensory_experience"],
+    "semanticEffect": "Filters objects specifically by large dimensional footprint or substantial weight.",
+    "sourceIds": ["open-english-wordnet", "wikidata"]
+  },
+  {
+    "id": "mod_recurring_frequency",
+    "name": "Absolute or recurring frequency",
+    "category": "frequency",
+    "canonicalValue": "always",
+    "expressions": ["always", "constantly", "every time", "repeatedly", "nonstop", "forever", "without fail", "all the time", "day in and day out"],
+    "appliesToConceptTypes": ["behavior", "action", "activity"],
+    "semanticEffect": "Frames an occurrence as constant or invariant across repeated daily episodes.",
+    "sourceIds": ["open-english-wordnet", "purple-garden-original"]
+  },
+  {
+    "id": "mod_never_frequency",
+    "name": "Zero frequency / total avoidance",
+    "category": "frequency",
+    "canonicalValue": "never",
+    "expressions": ["never", "not ever", "zero times", "refuses to ever", "at no point"],
+    "appliesToConceptTypes": ["behavior", "action", "activity"],
+    "semanticEffect": "Establishes total absence or persistent omission of an expected routine action.",
+    "sourceIds": ["open-english-wordnet", "purple-garden-original"]
+  },
+  {
+    "id": "mod_propositional_negation",
+    "name": "Propositional / categorical negation",
+    "category": "negation",
+    "canonicalValue": "not",
+    "expressions": ["is not", "not an", "isn't", "does not count as", "doesn't qualify as", "hardly", "no true", "refuses to call"],
+    "appliesToConceptTypes": ["proposition", "opinion", "state"],
+    "semanticEffect": "Disputes a category membership or definitional validity of a target activity or concept.",
+    "sourceIds": ["open-english-wordnet", "purple-garden-original"]
+  },
+  {
+    "id": "mod_exclusive_limitation",
+    "name": "Exclusive limitation / sole ingredient",
+    "category": "scope",
+    "canonicalValue": "only",
+    "expressions": ["just", "only", "solely", "strictly", "merely", "nothing but", "simply"],
+    "appliesToConceptTypes": ["ingredient", "substance", "action", "physical_object"],
+    "semanticEffect": "Restricts composition or action to a solitary element, excluding expected complementary parts.",
+    "sourceIds": ["open-english-wordnet"]
+  },
+  {
+    "id": "mod_partial_completion",
+    "name": "Partial completion / incomplete state",
+    "category": "scope",
+    "canonicalValue": "half",
+    "expressions": ["half", "halfway", "partially", "slightly open", "ajar", "not fully", "midway"],
+    "appliesToConceptTypes": ["state", "action", "physical_object"],
+    "semanticEffect": "Identifies an action arrested before full closure or nominal completion.",
+    "sourceIds": ["open-english-wordnet", "purple-garden-original"]
+  },
+  {
+    "id": "mod_exception_exclusion",
+    "name": "Exception / selective exclusion",
+    "category": "scope",
+    "canonicalValue": "except",
+    "expressions": ["except for", "everything but", "apart from", "leaving out", "skipping only"],
+    "appliesToConceptTypes": ["physical_object", "action", "activity"],
+    "semanticEffect": "Isolates a specific subset of tasks or objects that receive contrary treatment from the remainder of the set.",
+    "sourceIds": ["open-english-wordnet", "purple-garden-original"]
+  },
+  {
+    "id": "mod_excessive_duration",
+    "name": "Excessive duration / prolonged pace",
+    "category": "intensity",
+    "canonicalValue": "forever",
+    "expressions": ["takes hours", "forever to get ready", "prolonged", "unending", "taking so long"],
+    "appliesToConceptTypes": ["action", "activity"],
+    "semanticEffect": "Highlights prolonged temporal duration exceeding standard expectation.",
+    "sourceIds": ["open-english-wordnet", "purple-garden-original"]
+  },
+  {
+    "id": "mod_comparative_preference",
+    "name": "Comparative preference / alternative choice",
+    "category": "comparison",
+    "canonicalValue": "rather",
+    "expressions": ["rather than", "instead of", "prefers over", "more than"],
+    "appliesToConceptTypes": ["opinion", "preference", "action"],
+    "semanticEffect": "Contrasts a preferred activity against an avoided alternative.",
+    "sourceIds": ["open-english-wordnet", "purple-garden-original"]
+  }
+]

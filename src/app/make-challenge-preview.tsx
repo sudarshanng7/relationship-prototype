@@ -152,7 +152,7 @@ export default function MakeChallengePreviewScreen() {
   const [selectedFallbackReward, setSelectedFallbackReward] = useState<string>("I choose the movie");
   const [customFallbackText, setCustomFallbackText] = useState<string>("");
   const [shareLighterThought, setShareLighterThought] =
-    useState(initialShareReframe);
+    useState(false);
   const [lighterThoughtText, setLighterThoughtText] =
     useState(incomingReframeText);
 
@@ -222,11 +222,6 @@ export default function MakeChallengePreviewScreen() {
     setSaveError(null);
     setIsSaving(true);
 
-    const isSharingLighter =
-      isFromReframe &&
-      shareLighterThought &&
-      lighterThoughtText.trim().length > 0;
-
     const mappedParticipant: "partner" | "both" =
       participantChoice === "both" ? "both" : "partner";
 
@@ -240,12 +235,8 @@ export default function MakeChallengePreviewScreen() {
       existingReframe?.private_irritation_input !== undefined
         ? existingReframe.private_irritation_input
         : undefined;
-    const reframeTone = isSharingLighter
-      ? (incomingReframeTone as any)
-      : existingReframe?.reframe_tone || undefined;
-    const reframeTextVal = isSharingLighter
-      ? lighterThoughtText.trim()
-      : existingReframe?.reframe_text || undefined;
+    const reframeTone = existingReframe?.reframe_tone || undefined;
+    const reframeTextVal = existingReframe?.reframe_text || incomingReframeText.trim() || undefined;
 
     const finalCompletionReward = customRewardText.trim() || selectedReward;
     const finalFallbackReward = customFallbackText.trim() || selectedFallbackReward;
@@ -267,7 +258,7 @@ export default function MakeChallengePreviewScreen() {
       sharedWithPartner: true,
       reframeTone,
       reframeText: reframeTextVal,
-      includeReframeWithPartner: isSharingLighter,
+      includeReframeWithPartner: false,
     });
 
     if (saveErr || !savedData) {
@@ -286,9 +277,9 @@ export default function MakeChallengePreviewScreen() {
       fallbackReward: finalFallbackReward,
       creatorName: displayName?.trim() || "You",
       partnerName: partnerName?.trim() || undefined,
-      reframeTone: isSharingLighter ? incomingReframeTone : undefined,
-      reframeText: isSharingLighter ? lighterThoughtText.trim() : undefined,
-      shareReframe: isSharingLighter,
+      reframeTone: undefined,
+      reframeText: undefined,
+      shareReframe: false,
       status: "pending",
     });
 
@@ -365,71 +356,18 @@ export default function MakeChallengePreviewScreen() {
 
             {/* Context banner when arriving from playful reframe */}
             {isFromReframe && (
-              <CouplySectionCard variant="lilac" style={styles.reframeBannerCard}>
+              <CouplySectionCard variant="muted" style={styles.reframeBannerCard}>
                 <View style={styles.reframeBannerHeader}>
-                  <View style={styles.reframeBannerBadge}>
-                    <Text style={styles.reframeBannerBadgeText}>
-                      FROM YOUR REFRAME
-                    </Text>
-                  </View>
+                  <Text style={styles.reframeBannerBadgeText}>
+                    🌱 INSPIRED BY YOUR REFLECTION
+                  </Text>
                 </View>
-                <Text style={styles.reframeBannerBody}>
-                  A small, kind idea to help you two reset. You can edit or keep
-                  the lighter thought below.
+                <Text style={styles.reframeBannerBody} numberOfLines={3}>
+                  "{incomingReframeText.trim()}"
                 </Text>
-
-                {/* Lighter thought Switch control */}
-                <View style={styles.switchWrapper}>
-                  <Pressable
-                    style={styles.switchRow}
-                    onPress={() => setShareLighterThought((prev) => !prev)}
-                    accessible={false}
-                  >
-                    <View style={styles.switchTextGroup}>
-                      <Text style={styles.switchTitle}>
-                        Include your lighter thought
-                      </Text>
-                      <Text style={styles.switchSubtitle}>
-                        {shareLighterThought
-                          ? "Your edited lighter thought will appear with this invitation."
-                          : "It stays private. Your original irritation is never shared."}
-                      </Text>
-                    </View>
-                    <Switch
-                      value={shareLighterThought}
-                      onValueChange={setShareLighterThought}
-                      trackColor={{
-                        false: tokens.colors.border,
-                        true: tokens.colors.plum,
-                      }}
-                      thumbColor={theme.primaryActionText}
-                      accessibilityRole="switch"
-                      accessibilityLabel="Include your lighter thought"
-                      accessibilityState={{ checked: shareLighterThought }}
-                    />
-                  </Pressable>
-
-                  {/* Lighter thought editable text */}
-                  <View style={styles.lighterThoughtInputBox}>
-                    <Text style={styles.lighterThoughtInputLabel}>
-                      Your lighter thought:
-                    </Text>
-                    <TextInput
-                      style={styles.lighterThoughtTextInput}
-                      value={lighterThoughtText}
-                      onChangeText={setLighterThoughtText}
-                      placeholder="A warm angle to share..."
-                      placeholderTextColor={tokens.colors.textMuted}
-                      multiline
-                      accessibilityLabel="Your lighter thought"
-                    />
-                    <Text style={styles.lighterThoughtPrivacyNote}>
-                      {shareLighterThought
-                        ? "Only this edited lighter thought will be shared. Your original irritation is never shared."
-                        : "This stays only with you. Your original irritation is never shared."}
-                    </Text>
-                  </View>
-                </View>
+                <Text style={styles.lighterThoughtPrivacyNote}>
+                  Private inspiration for this challenge. Your partner only receives the challenge details below.
+                </Text>
               </CouplySectionCard>
             )}
 
