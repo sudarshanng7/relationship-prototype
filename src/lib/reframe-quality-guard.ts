@@ -115,7 +115,31 @@ export function validateReframeQuality(
     }
   }
 
-  // 5. Basic grammar checks (starts with capital, ends with valid terminal punctuation)
+  // 6. Semantic grounding and anti-contradiction checks
+  if (boundSit && boundSit.rawText) {
+    const rawLower = boundSit.rawText.toLowerCase();
+    const combinedLower = combinedAll.toLowerCase();
+
+    // Guard: Active cleaning must not emit soaking/untouched/ignored lines
+    if (boundSit.actionPolarity === "active" && /\b(scrub|scrubbing|clean|cleaning|wash|washing)\b/i.test(rawLower)) {
+      if (/\b(soaking|bubble bath|unwashed|ignored|waiting for brave|untouched)\b/i.test(combinedLower)) {
+        issues.push("Contradictory soaking/omission reframe emitted for active cleaning action");
+      }
+    }
+
+    // Guard: Avoided/negated chores must not emit vigorous scrubbing lines
+    if ((boundSit.actionPolarity === "avoided" || boundSit.actionPolarity === "negated") &&
+        /\b(scrubbing so enthusiastically|elbow grease|shaving mirror|upper-body arm workout)\b/i.test(combinedLower)) {
+      issues.push("Contradictory vigorous scrubbing reframe emitted for avoided/negated chore");
+    }
+
+    // Guard: Unrelated room/location hallucination guard
+    if (/\bkitchen\b/i.test(rawLower) && !/\bbedroom\b/i.test(rawLower) && /\bcheck how the bedroom is doing\b/i.test(combinedLower)) {
+      issues.push("Contradictory room hallucination (bedroom in kitchen chore)");
+    }
+  }
+
+  // 7. Basic grammar checks (starts with capital, ends with valid terminal punctuation)
   const isCapitalized = (s: string) => /^[A-Z"“]/.test(s.trim());
   const hasTerminalPunctuation = (s: string) => /[.!?"]$/.test(s.trim());
 

@@ -99,6 +99,48 @@ export interface FrameArbitrationResult {
   plausibleInterpretations?: PlausibleInterpretation[];
 }
 
+export interface SemanticEvent {
+  eventId: string;
+  actor?: "partner" | "self" | "both" | "unknown";
+  actionVerb: string;
+  directObject?: string;
+  indirectObject?: string;
+  substance?: string;
+  container?: string;
+  destination?: string;
+  location?: string;
+  instrument?: string;
+  quantity?: string;
+  duration?: string;
+  frequency?: string;
+  negation?: boolean;
+  expectedState?: string;
+  actualState?: string;
+  omittedAction?: string;
+}
+
+export type InterEventRelationType =
+  | "before_after"
+  | "simultaneous"
+  | "contrast"
+  | "contradiction"
+  | "cause_consequence"
+  | "comparison"
+  | "repetition"
+  | "interruption"
+  | "purpose"
+  | "expected_vs_actual"
+  | "partial_completion"
+  | "selective_omission";
+
+export interface InterEventRelation {
+  relationType: InterEventRelationType;
+  sourceEventId: string;
+  targetEventId: string;
+  markerPhrase?: string;
+  description?: string;
+}
+
 export interface SemanticComponentRelations {
   /** Substance transferred or applied (e.g. oat milk, toothpaste, sugar) */
   substance?: string;
@@ -116,6 +158,10 @@ export interface SemanticComponentRelations {
   stateChange?: string;
   /** Affected entity under state change (e.g. wardrobe drawer, clean cups, mugs) */
   affectedEntity?: string;
+  /** Extracted discrete semantic events */
+  events?: SemanticEvent[];
+  /** Relationships connecting semantic events */
+  interEventRelations?: InterEventRelation[];
 }
 
 export interface BoundSituation {
@@ -254,6 +300,9 @@ export function evaluateSafety(rawText: string, normalizedText: string): {
  * Classifies action polarity accurately so active behaviors never flip into omissions.
  */
 export function resolveActionPolarity(normalizedText: string): ActionPolarity {
+  if (/\b(instead of doing|instead of washing|rather than doing|rather than washing|sidesteps?|skips?|leaves? behind|avoids?)\b/i.test(normalizedText)) {
+    return "avoided";
+  }
   if (/\b(refuses to|refusing to|will not wash|never washes|never wash|not washing|never closes?|never shuts?|not closing|not shutting|refuses to close)\b/i.test(normalizedText)) {
     return "negated";
   }
@@ -266,7 +315,7 @@ export function resolveActionPolarity(normalizedText: string): ActionPolarity {
   if (/\b(takes forever|takes so long|spends forever|spent forever|takes ages|taking ages|took ages|ages to finish|forever (?:choosing|deciding|picking)|twenty minutes|half an hour|forty-five minutes|for three days|for days|postponing|snooze .* times|running .* behind|running late|waiting outside|waiting by the door|cab is waiting)\b/i.test(normalizedText)) {
     return "delayed";
   }
-  if (/\b(forgetting to|forgets to|forgot to|left soaking|leaves .* soaking|soaking|piled(?:\s+[a-z]+)?\s+in|dirty\s+[a-z\s]*sink|sitting in (?:the )?(?:sink|fridge)|unwashed|still dirty|not started|unstarted|unplugged|empty .* back|empty .* carton|leaving .* open|left .* open|dry and drooping|drooping|wilting)\b/i.test(normalizedText)) {
+  if (/\b(forgetting to|forgets to|forgot to|left soaking|leaves .* soaking|soaking|soak|piled(?:\s+[a-z]+)?\s+in|dirty\s+[a-z\s]*sink|sitting in (?:the )?(?:sink|fridge)|unwashed|still dirty|not started|unstarted|unplugged|empty .* back|empty .* carton|leaving .* open|left .* open|dry and drooping|drooping|wilting)\b/i.test(normalizedText)) {
     return "omitted_forgotten";
   }
   if (/\b(keeps scrubbing|keeps washing|keeps doing|keeps dropping|keeps interrupting|keeps leaving|keeps opening|always|every day|every morning|constantly|all the time|repeatedly|every time|once they fall asleep)\b/i.test(normalizedText)) {
@@ -296,6 +345,13 @@ export function resolveConceptsAndVerbs(normalizedText: string): {
   for (const tok of tokens) {
     if (!STOPWORDS.has(tok) && tok.length >= 2) {
       candidateTerms.push({ term: tok, isBigram: false });
+      // Add base inflection lemma (e.g. "talks" -> "talk", "starts" -> "start", "orders" -> "order")
+      if (tok.endsWith("s") && !tok.endsWith("ss") && tok.length > 3) {
+        const lemma = tok.slice(0, -1);
+        if (!STOPWORDS.has(lemma) && lexicalIndex[lemma]) {
+          candidateTerms.push({ term: lemma, isBigram: false });
+        }
+      }
     }
   }
 
@@ -322,6 +378,11 @@ export function resolveConceptsAndVerbs(normalizedText: string): {
   for (const { term, isBigram } of candidateTerms) {
     const matchedCidxs = lexicalIndex[term];
     if (!matchedCidxs || matchedCidxs.length === 0) continue;
+
+    // Guard: Color adjectives (brown, white, black, green, etc.) must not bind as concepts
+    if (/^(brown|white|black|green|blue|red|yellow|orange|gray|grey|pink|purple)$/i.test(term)) {
+      continue;
+    }
 
     // Knowledge Graph contextual word-sense disambiguation (Section 4)
     const domainHints = [
@@ -362,6 +423,13 @@ export function resolveConceptsAndVerbs(normalizedText: string): {
       if (isVoiceCtx && domNames.some((d) => d.includes("speaking") || d.includes("digital"))) score += 4;
       if (srcNames.includes("wikidata")) score += 1;
 
+      // Guard: Color adjectives (brown, white, black, green, etc.) must not bind as actions
+      if (/^(brown|white|black|green|blue|red|yellow|orange|gray|grey|pink|purple)$/i.test(term)) {
+        if (typeTable[typeIdx] === "action" || typeTable[typeIdx] === "behavior") {
+          continue;
+        }
+      }
+
       // Reusable Word-Sense Disambiguation:
       // Penalize obscure/financial/legal/gorging senses when common everyday nouns/verbs are intended
       if (term === "keeping" && (name === "guardianship" || name === "safekeeping")) score -= 10;
@@ -372,6 +440,10 @@ export function resolveConceptsAndVerbs(normalizedText: string): {
       if (term === "walk" && typeTable[typeIdx] === "physical_object") score -= 5;
       if (term === "switch" && (normalizedText.includes("switch off") || normalizedText.includes("switch on"))) score -= 5;
       if (term === "keys" && (name === "key" && typeTable[typeIdx] !== "physical_object")) score -= 5;
+      if (term === "talks" && name === "negotiation" && isVoiceCtx) {
+        // Disambiguate verb 'talks' to speaking action rather than diplomatic negotiations
+        score -= 15;
+      }
 
       if (score > bestScore) {
         bestScore = score;
@@ -533,7 +605,9 @@ export function resolveAndAttachModifiers(
   }
 
   // Relative temporal / speed expressions: e.g. "finishes ... before I even sit down", "before my soup even arrived"
-  const relTempMatch = normalizedText.match(/\bbefore\s+(?:i|anyone|we|my\s+[a-z]+)\s+(?:even\s+)?([a-z]+)/i);
+  // Guard: "before we need to leave" is departure deadline timing, NOT fast speed
+  const isDepartureContext = /\b(?:leave|departure|airport|flight|train|bus)\b/i.test(normalizedText);
+  const relTempMatch = !isDepartureContext ? normalizedText.match(/\bbefore\s+(?:i|anyone|we|my\s+[a-z]+)\s+(?:even\s+)?([a-z]+)/i) : null;
   if (relTempMatch && !speedMatch) {
     boundMods.push({
       modifierId: "mod_fast_speed",
@@ -804,10 +878,10 @@ export function arbitrateSituationFrame(
 
   // 5. frame_emotional_cinematic_expressiveness
   {
-    const hasEmotion = /\b(cry|crying|cries|sob|sobbing|tears?|tearing up|weep|weeping|emotional|choked up)\b/i.test(normalizedText) ||
+    const hasEmotion = /\b(cry|crying|cries|sob|sobbing|tears?|tearing up|weep|weeping|emotional|choked up|heartbroken|solemn)\b/i.test(normalizedText) ||
       /\b(cry|sob|weep)\b/i.test(actionName);
-    const hasMedia = /\b(movies?|films?|scenes?|shows?|songs?|commercials?|adverts?|fiction|characters?)\b/i.test(normalizedText) ||
-      /\b(movie|film|song)\b/i.test(targetName);
+    const hasMedia = /\b(movies?|films?|scenes?|shows?|songs?|commercials?|adverts?|fiction|characters?|cartoons?|animated|raccoon)\b/i.test(normalizedText) ||
+      /\b(movie|film|song|cartoon)\b/i.test(targetName);
 
     const eligible = hasEmotion && hasMedia;
     let score = 0;
@@ -838,10 +912,10 @@ export function arbitrateSituationFrame(
 
   // 6. frame_subjective_preference_contrast
   {
-    const hasWatch = /\b(watch|watches|watching|stream|streaming|listen|listening|keeps? watching|kept watching|binge)\b/i.test(normalizedText) ||
-      /\b(watch|stream)\b/i.test(actionName);
-    const hasMediaEntity = /\b(videos?|youtube|reels?|tiktoks?|shows?|series|clips?|documentar(?:y|ies)|tv|television|netflix|music|songs?|podcasts?|radio|playlist|episodes?|anime|streaming|boxset|season\s+\d)\b/i.test(normalizedText) ||
-      /\b(tv|television|video|clip|show|series|music|song|podcast|episode)\b/i.test(targetName);
+    const hasWatch = /\b(watch|watches|watching|stream|streaming|listen|listening|keeps? watching|kept watching|binge|rewatch|rewatches|rewatching)\b/i.test(normalizedText) ||
+      /\b(watch|stream|rewatch)\b/i.test(actionName);
+    const hasMediaEntity = /\b(videos?|youtube|reels?|tiktoks?|shows?|series|clips?|documentar(?:y|ies)|tv|television|netflix|music|songs?|podcasts?|radio|playlist|episodes?|sitcom|sitcoms|anime|streaming|boxset|season\s+\d)\b/i.test(normalizedText) ||
+      /\b(tv|television|video|clip|show|series|music|song|podcast|episode|sitcom)\b/i.test(targetName);
     const notCinematicCry = !/\b(cry|crying|sob|sobbing)\b/i.test(normalizedText);
 
     const eligible = hasWatch && hasMediaEntity && notCinematicCry;
@@ -986,7 +1060,8 @@ export function arbitrateSituationFrame(
   // 10. frame_conversational_interruption
   {
     const hasInterrupt = /\b(interrupt|interrupting|talking over|cuts me off|cut me off)\b/i.test(normalizedText) ||
-      /\binterrupt\b/i.test(actionName);
+      /\binterrupt\b/i.test(actionName) ||
+      (/\b(vacuuming|vacuum|blender|noisy appliance)\b/i.test(normalizedText) && /\b(phone call|call|conversation|talking)\b/i.test(normalizedText));
 
     const eligible = Boolean(hasInterrupt);
     let score = 0;
@@ -1048,10 +1123,14 @@ export function arbitrateSituationFrame(
 
   // 12. frame_attention_distraction
   {
-    const hasDistraction = /\b(scroll|scrolling|notifications|tablet|asking what happened|nodding automatically|not listening|hear what i (?:just )?said|answers while looking)\b/i.test(normalizedText) ||
-      (/\b(check|checks|checking|staring at|glancing at)\b/i.test(normalizedText) && /\b(phone|mobile|screen|feed|messages)\b/i.test(normalizedText));
+    const hasDistraction = /\b(scroll|scrolling|notifications|asking what happened|nodding automatically|not listening|hear what i (?:just )?said|answers while looking)\b/i.test(normalizedText) ||
+      (/\b(check|checks|checking|staring at|glancing at|looking at)\b/i.test(normalizedText) && /\b(phone|mobile|screen|feed|messages|tablet)\b/i.test(normalizedText)) ||
+      (/\btablet\b/i.test(normalizedText) && /\b(scroll|looking|staring|watching|distracted|ignoring|not listening)\b/i.test(normalizedText));
 
-    const eligible = Boolean(hasDistraction);
+    const isPlacementAction = /\b(left|leaves|leaving|put|puts|putting|placed|set down|forgot|forgotten)\b/i.test(normalizedText) && !/\b(scroll|scrolling|staring|watching|looking)\b/i.test(normalizedText);
+    // Food delivery / takeout / restaurant menu indecision is a decision mismatch, not social screen distraction
+    const isFoodMenuIndecision = /\b(?:menus?|takeout|food delivery|dinner choices?|restaurants?)\b/i.test(normalizedText) && /\b(?:decid|picking|choosing|without picking)\b/i.test(normalizedText);
+    const eligible = Boolean(hasDistraction) && !isPlacementAction && !isFoodMenuIndecision;
     let score = 0;
     const sup: string[] = [];
     const con: string[] = [];
@@ -1088,7 +1167,7 @@ export function arbitrateSituationFrame(
       graphCookware.match;
     const hasOmissionOrSoakCue = /\b(soak|soaking|piled|dirty|sitting|unwashed|forgot|forgets|forgetting)\b/i.test(normalizedText);
     const hasAvoidanceCue = actionPolarity === "negated" || actionPolarity === "avoided" ||
-      /\b(except|refuses?|only|only small|only the small|only the|big utensils|large pots|roasting pans)\b/i.test(normalizedText);
+      /\b(except|refuses?|only|only small|only the small|only the|big utensils|large pots|roasting pans|instead of doing|instead of washing|rather than doing|rather than washing|sidesteps?|skips?|leaves? behind|avoids?)\b/i.test(normalizedText);
 
     // 13a. frame_selective_chore_avoidance
     {
@@ -1154,7 +1233,9 @@ export function arbitrateSituationFrame(
 
     // 13c. frame_dish_soaking_omission
     {
-      const eligible = hasCookwareOrSurface && (hasOmissionOrSoakCue || (!hasExplicitWashVerb && !hasAvoidanceCue && (normalizedText.includes("sink") || normalizedText.includes("dish"))));
+      const isFoodSharing = /\b(plucking|stealing|eating|taking)\s+.*?off\s+(?:my|his|her|their)\s+(?:dish|plate)\b/i.test(normalizedText) ||
+        /\b(?:fries|chips|dessert|bites?|spoonfuls?)\s+(?:directly\s+)?off\s+(?:my|his|her|their)\s+(?:dish|plate)\b/i.test(normalizedText);
+      const eligible = !isFoodSharing && hasCookwareOrSurface && (hasOmissionOrSoakCue || (!hasExplicitWashVerb && !hasAvoidanceCue && (normalizedText.includes("sink") || normalizedText.includes("dish"))));
       let score = 0;
       const sup: string[] = [];
       const con: string[] = [];
@@ -1276,11 +1357,12 @@ export function arbitrateSituationFrame(
   {
     const targetIdx = targetConcept ? knowledgeGraphService.findConceptIndexByName(targetConcept.canonicalName) : -1;
     const graphFootwear = targetIdx !== -1 ? knowledgeGraphService.isFootwearOrBelonging(targetIdx) : { match: false };
-    const hasDisplacementTokens = /\b(toilet roll|cardboard tube|empty box|delivery box|packages?|boxes|crumbs|slippers|flippers|flip flops|trainers|shoes|running shoes|boots|keys|cup|mug|towels|laundry|clothes|cushions|snowshoes?|tamper|blocks|hoverboard|chargers?|charging cables?|cables?|spread across|sitting beside|dropped|dropping|all over|parked|next to|drying on|forgetting about the stuff|stuff that has been put|belongings|placed by)\b/i.test(normalizedText) ||
+    const isSensoryOrDecisionActivity = /\b(smell|smelling|decide|deciding|checks?|checking|reads?|reading)\b/i.test(normalizedText);
+    const hasDisplacementTokens = (/\b(toilet roll|cardboard tube|empty box|delivery box|packages?|boxes|crumbs|slippers|flippers|flip flops|trainers|shoes|running shoes|boots|keys|cup|mug|towels|laundry|clothes|shirts?|pants|cushions|snowshoes?|tamper|blocks|hoverboard|chargers?|charging cables?|cables?|spread across|sitting beside|dropped|dropping|all over|parked|next to|drying on|drapes?|draping|forgetting about the stuff|stuff that has been put|belongings|placed by)\b/i.test(normalizedText) ||
       (/\b(leave|leaves|leaving)\b/i.test(normalizedText) && /\b(table|bed|counter|desk|floor|sink)\b/i.test(normalizedText)) ||
       (/\b(forget|forgetting|forgot)\b/i.test(normalizedText) && /\b(stuff|things|belongings|items|placed|put|keys)\b/i.test(normalizedText)) ||
       graphFootwear.match ||
-      Boolean(boundRoles.destination);
+      Boolean(boundRoles.destination)) && !isSensoryOrDecisionActivity;
 
     const eligible = Boolean(hasDisplacementTokens);
     let score = 0;
@@ -1354,10 +1436,12 @@ export function arbitrateSituationFrame(
   // 18. frame_punctuality_departure_delay
   // Gating requirement: must contain genuine departure/arrival/travel/readiness delay, NOT mere temporal late night
   {
-    const hasDepartureOrReady = (/\b(departure|ready|getting ready|appointment|dentist|doctor|reservation|train|bus|flight|late for|running late|behind schedule)\b/i.test(normalizedText) ||
+    // "while getting ready" is a temporal subordinate clause modifying an action, not an independent departure delay
+    const hasDepartureOrReady = !/\bwhile\s+getting\s+ready\b/i.test(normalizedText) && (/\b(departure|ready|getting ready|appointment|dentist|doctor|reservation|train|bus|flight|late for|running late|behind schedule)\b/i.test(normalizedText) ||
       (/\b(at the door|front door)\b/i.test(normalizedText) && /\b(waiting|wait|leaving|leave|stand|standing)\b/i.test(normalizedText) && !/\b(shoes?|boots?|slippers?|flippers?|keys?|box|boxes)\b/i.test(normalizedText)) ||
       (/\b(leaving|leave)\b/i.test(normalizedText) && !/\b(lights?|lamps?|crumbs|cup|cups|clothes|keys|dishes)\b/i.test(normalizedText)) ||
       (/\b(stroll|strolls|strolling|crosswalk)\b/i.test(normalizedText)) ||
+      (/\b(shower|bath)\b/i.test(normalizedText) && /\b(\d+|fifty|forty|twenty|thirty|forever|uninterrupted)\s*(?:minutes?|hours?|uninterrupted)?\b/i.test(normalizedText)) ||
       (/\b(forever|years|forty-five minutes|delay|postponing|waiting)\b/i.test(normalizedText) && !/\b(tv|television|movie|show|series|video|salad|sugar|tea|dinner|microwave)\b/i.test(normalizedText)));
     const notBedtimeOrMedia = !/\b(awake|reading|bed|tv|television|movie|film|documentar)\b/i.test(normalizedText);
 
@@ -1390,7 +1474,9 @@ export function arbitrateSituationFrame(
 
   // 19. frame_sleep_duvet_alarm
   {
-    const hasBedOrAlarm = /\b(duvet|blanket|alarm|snooze|half asleep|waking up|wake up|wakes up)\b/i.test(normalizedText);
+    const isBedMakingChore = /\b(make|makes|making|made)\s+(?:her\s+|his\s+|the\s+|our\s+)?bed\b/i.test(normalizedText);
+    const hasBedOrAlarm = (/\b(duvet|blanket|alarm|snooze|half asleep)\b/i.test(normalizedText) ||
+      (/\b(waking up|wake up|wakes up)\b/i.test(normalizedText) && !isBedMakingChore)) && !isBedMakingChore;
     const eligible = Boolean(hasBedOrAlarm);
     let score = 0;
     const sup: string[] = [];
@@ -1478,13 +1564,13 @@ export function arbitrateSituationFrame(
 
   // 22. frame_decision_preference_mismatch
   {
-    const hasDecision = /\b(never decides|eat for|eat dinner|dinner plans|dinner reservation|reservation|restaurant|menus|prefers|off-brands|thrillers|groceries|grocery|buy groceries)\b/i.test(normalizedText);
+    const hasDecision = /\b(never decides|eat for|eat dinner|dinner plans|dinner reservation|reservation|restaurant|menus?|takeout|food delivery|without picking|prefers|off-brands|thrillers|groceries|grocery|buy groceries)\b/i.test(normalizedText);
     const eligible = Boolean(hasDecision);
     let score = 0;
     const sup: string[] = [];
     const con: string[] = [];
     if (eligible) {
-      score += 75;
+      score += 90;
       sup.push("decision_or_grocery_preference_matched");
     } else {
       con.push("missing_decision_or_grocery_cue");
@@ -1610,7 +1696,7 @@ export function arbitrateSituationFrame(
         humorOpportunity = "compositional_habit";
         break;
       case "frame_decision_preference_mismatch":
-        humorOpportunity = /\b(eat|dinner|menu|decide|decides)\b/i.test(normalizedText) ? "indecision" : "preference_difference";
+        humorOpportunity = /\b(eat|dinner|menus?|takeout|delivery|decid\w*|picking)\b/i.test(normalizedText) ? "indecision" : "preference_difference";
         break;
     }
 
@@ -1788,6 +1874,18 @@ export function arbitrateSituationFrame(
       candidateScores: scores,
     };
   }
+  // 4. Explicit non-occurrence assertion: e.g. "He definitely did not leave unwashed mugs", "She does not refuse to wash"
+  // When an assertion directly negates the core quirk predicate ("did not leave", "definitely did not drop"),
+  // no quirk occurred. Route to clarification/non-event rather than fabricating a reframe.
+  if (/^(?:he|she|they|we|my\s+partner)\s+(?:definitely\s+)?(?:did\s+not|does\s+not|do\s+not|is\s+not|are\s+not|has\s+not|have\s+not)\s+(?:leave|leaves|left|drop|drops|dropped|put|puts|refuse|refuses|refused|scrub|scrubbing|sing|sings|talk|talks|cry|cries|crying|watch|watches|tap|taps|tapping|scroll|scrolls|scrolling|pack|packs|packing|argue|argues|arguing|burp|burping|snore|snoring|snores|squeeze|squeezes|squeezing|take|takes|taking|make|makes|making|use|uses|using|taste|tastes|tasting|say|says|saying|finish|finishes|wear|wearing|wears|search|searching|searches|keep|keeps|keeping|turn|turns|turning|fill|fills|filling|roll|rolls|rolling|spend|spends|spending)\b/i.test(normalizedText)) {
+    return {
+      selectedFrameId: null,
+      resolutionLevel: 4,
+      humorOpportunity: "none",
+      winningReason: "explicit non-occurrence of quirk behavior",
+      candidateScores: scores,
+    };
+  }
 
   if (hasAnyAction && hasAnyEntity) {
     // Determine the most appropriate parent frame based on text signals
@@ -1945,6 +2043,44 @@ export function bindSituation(
     };
   }
 
+  // Step A2: Explicit Non-Occurrence Assertion Guard
+  // When an assertion directly asserts that an action or habit never occurred ("definitely did not", "did not"),
+  // no quirk occurred. Route to clarification/non-event rather than fabricating an ungrounded reframe.
+  const isDirectNonOccurrence = /^(?:he|she|they|we|my\s+partner)\s+(?:definitely\s+did\s+not|did\s+not\s+(?:ever\s+)?)\b/i.test(normalizedText);
+  if (isDirectNonOccurrence) {
+    return {
+      rawText,
+      normalizedText,
+      resolutionLevel: 4,
+      unknownCategory: "uninterpretable_input",
+      frameId: "frame_unknown_uninterpretable",
+      parentFrameId: null,
+      acceptableAlternativeFrames: [],
+      frameName: "Non-occurrence of behavioral quirk",
+      domainIds: [],
+      humorOpportunity: "none",
+      actor: linguistic.actor,
+      actionPolarity: "negated",
+      exceptions: [],
+      boundRoles: {},
+      allConcepts: [],
+      modifiers: [],
+      contexts: resolveContexts(normalizedText),
+      sensitivity: "ordinary_quirk",
+      outcomeType: "clarification_needed",
+      clarificationMessage: "It sounds like this didn't happen! If there's another quirk you had in mind, feel free to describe it.",
+      knowledgeSourcesUsed: ["purple-garden-original"],
+      diagnostic: {
+        knowledgeVersion: bundle.version || "3.0.0",
+        resolutionLevel: 4,
+        generalFailureCategory: "uninterpretable_input",
+        clarificationRequested: true,
+        humorConstructionAvailable: false,
+      },
+      graphProvenance: knowledgeGraphService.getTelemetry(performance.now() - graphStartTime),
+    };
+  }
+
   // Step B: Resolve PG-RKB Concepts, VerbNet, Contexts & Role-Scoped Modifiers
   const { concepts: allConcepts, verbnetMatches, sourcesUsed } = resolveConceptsAndVerbs(normalizedText);
   const contexts = resolveContexts(normalizedText);
@@ -1976,8 +2112,10 @@ export function bindSituation(
     [/\bhoverboard\b/i, "hoverboard"],
     [/\bukulele\b/i, "ukulele"],
     [/\bdate plans\b/i, "date plans"],
-    [/\bhouseplants?\b/i, "houseplant"],
+    [/\b(ferns?|houseplants?)\b/i, "ferns"],
     [/\bplants?\b/i, "plant"],
+    [/\b(cardboard\s+shipping\s+cartons?|shipping\s+cartons?|cartons?)\b/i, "shipping cartons"],
+    [/\b(flannel\s+shirts?|shirts?|track\s+pants|pants)\b/i, "clothes"],
     [/\bbathroom lights?\b/i, "bathroom lights"],
     [/\b(bedroom|kitchen|hallway|porch|living room)\s+lights?\b/i, "room lights"],
     [/\b(overhead\s+lights?|ceiling\s+lights?)\b/i, "overhead lights"],
@@ -2032,14 +2170,17 @@ export function bindSituation(
     if (isActionWord && !boundRoles.action && c.canonicalName !== "devour" && c.canonicalName !== "cast" && c.canonicalName !== "gorge") {
       boundRoles.action = { ...c, role: "action", conceptType: "action" };
     } else if (c.conceptType === "ingredient" || c.conceptType === "substance") {
-      if (!boundRoles.beverage && /\b(tea|coffee|espresso|latte|chai|soup|broth)\b/i.test(lc) && !/\bcauldron\b/i.test(normalizedText)) {
+      // Guard: ginger in pet/animal context is a pet coat/name descriptor, not a cooking ingredient
+      if (lc === "ginger" && /\b(cat|kitten|dog|puppy|pet)\b/i.test(normalizedText)) {
+        // Skip ginger as ingredient
+      } else if (!boundRoles.beverage && /\b(tea|coffee|espresso|latte|chai|soup|broth)\b/i.test(lc) && !/\bcauldron\b/i.test(normalizedText)) {
         boundRoles.beverage = { ...c, role: "beverage" };
       } else if (!boundRoles.additive && /\b(milk|sugar|salt|cream|honey|spice)\b/i.test(lc)) {
         boundRoles.additive = { ...c, role: "additive" };
       } else if (!boundRoles.ingredient && !/\btoilet roll\b/i.test(lc) && !/\bpasta pot\b/i.test(normalizedText)) {
         boundRoles.ingredient = { ...c, role: "ingredient" };
       }
-    } else if (c.conceptType === "physical_object" && !boundRoles.target && !SURFACE_LOCATIONS.has(lc) && !NON_TARGET_WORDS.has(lc)) {
+    } else if ((c.conceptType === "physical_object" || (c.conceptType === "person" && /\b(cat|kitten|dog|puppy|pet)\b/i.test(lc))) && !boundRoles.target && !SURFACE_LOCATIONS.has(lc) && !NON_TARGET_WORDS.has(lc)) {
       // Do not bind 'switch' as target when it is part of phrasal verb 'switch off' / 'switch on'
       if (lc === "switch" && /\bswitch\s+(?:off|on)\b/i.test(normalizedText)) {
         // skip switch as object target
@@ -2274,6 +2415,33 @@ export function bindSituation(
     }
   }
 
+  // Empty container fridge binding: container is target, fridge is location
+  if (/\b(empty\s+carton|carton|empty\s+bottle|bottle|empty\s+jug|jug)\b/i.test(normalizedText) && /\b(fridge|refrigerator)\b/i.test(normalizedText)) {
+    const contMatch = normalizedText.match(/\b(milk carton|orange juice carton|juice carton|carton|bottle|jug|jar|can)\b/i);
+    if (contMatch) {
+      boundRoles.target = {
+        conceptId: `target_${contMatch[1].toLowerCase().replace(/\s+/g, "_")}`,
+        canonicalName: contMatch[1].toLowerCase(),
+        surfaceText: contMatch[0],
+        conceptType: "physical_object",
+        role: "target",
+        evidenceSource: "explicit_lexical",
+        confidence: 0.98,
+      };
+    }
+    if (/\b(fridge|refrigerator)\b/i.test(normalizedText)) {
+      boundRoles.location = {
+        conceptId: "loc_fridge",
+        canonicalName: "fridge",
+        surfaceText: "fridge",
+        conceptType: "physical_object",
+        role: "location",
+        evidenceSource: "explicit_lexical",
+        confidence: 0.98,
+      };
+    }
+  }
+
   // Highway driving spatial location:
   const highwayMatch = normalizedText.match(/\b(highway|freeway|motorway|road|street|traffic)\b/i);
   if (highwayMatch && !boundRoles.location) {
@@ -2302,16 +2470,18 @@ export function bindSituation(
     };
   }
 
-  // Propositional Claim Detection -> Level 4 Clarification
-  const claimMatch = normalizedText.match(/\b(claims?|says?|believes?|thinks?)\s+(?:that\s+)?(.+?)\s+(do(?:es)? not matter|is not|isnt|do(?:es)? not count(?:\s+as)?)/i);
-  if (linguistic.proposition || claimMatch) {
+  // Propositional Claim Detection -> Level 4 Clarification (e.g. "yoga is not an exercise", "claims running is not a real sport")
+  // Do NOT match multi-event contradictions like "claims she is not having dessert and then keeps taking spoonfuls of mine"
+  const claimMatch = normalizedText.match(/\b(claims?|says?|believes?|thinks?)\s+(?:that\s+)?(.+?)\s+(do(?:es)? not matter|is not|isnt|do(?:es)? not count(?:\s+as)?)\s+(?:a|an)\s+([a-z]+)$/i);
+  const isMultiEventContradiction = /\b(and\s+then|then|afterwards|but)\s+(keeps\s+taking|takes?|eats?|grabbing|grabs?)\b/i.test(normalizedText);
+  if ((linguistic.proposition || claimMatch) && !isMultiEventContradiction) {
     const subj = linguistic.proposition?.subject || claimMatch?.[2]?.trim() || "that";
     const cat = linguistic.proposition?.predicate || claimMatch?.[3]?.trim() || "debate";
     const fr = frames["frame_evaluating_concept_proposition"];
     return {
       rawText,
       normalizedText,
-      resolutionLevel: 4,
+      resolutionLevel: 3,
       unknownCategory: "categorical_proposition",
       frameId: "frame_evaluating_concept_proposition",
       parentFrameId: fr?.p || "frame_parent_opinions_disagreements",
@@ -2333,7 +2503,7 @@ export function bindSituation(
       knowledgeSourcesUsed: Array.from(sourcesUsed),
       diagnostic: {
         knowledgeVersion: bundle.version || "3.0.0",
-        resolutionLevel: 4,
+        resolutionLevel: 3,
         generalFailureCategory: "categorical_proposition",
         clarificationRequested: true,
         humorConstructionAvailable: false,

@@ -112,7 +112,31 @@ for idx, vc in enumerate(verbnet_classes):
                 verbnet_by_verb[base + 'ing'] = idx
                 verbnet_by_verb[base + 'ed'] = idx
 
-# 6. Compact Frames, Contexts, Modifiers, Constructions
+# 6. Compact Frames, Contexts, Modifiers, Constructions, Mechanisms, Metaphors
+compact_mechanisms = {}
+for m in mechanisms:
+    compact_mechanisms[m['id']] = {
+        "id": m['id'],
+        "n": m['name'],
+        "basis": m.get('theoreticalBasis', 'incongruity'),
+        "fams": m.get('metaphorFamilyIds', []),
+        "frames": m.get('compatibleSemanticFrames', []),
+        "types": m.get('compatibleConceptTypes', []),
+        "tones": m.get('compatibleTones', ['gentle', 'playful', 'exaggerated']),
+        "sens": m.get('allowedSensitivityLevels', ['ordinary_quirk'])
+    }
+
+compact_metaphors = {}
+for m in metaphors:
+    compact_metaphors[m['id']] = {
+        "id": m['id'],
+        "n": m['name'],
+        "src": m.get('sourceDomain', ''),
+        "tgt": m.get('targetDomain', ''),
+        "keys": m.get('imageryKeywords', [])[:5],
+        "dom": m.get('domain', '')
+    }
+
 compact_frames = {}
 frames_by_domain = defaultdict(list)
 for fr in frames:
@@ -184,6 +208,8 @@ bundle = {
         "frames": compact_frames,
         "modifiers": {m['id']: m for m in modifiers},
         "contexts": {ctx['id']: {"id": ctx['id'], "n": ctx['name'], "tr": ctx['triggers']} for ctx in contexts},
+        "mechanisms": compact_mechanisms,
+        "metaphors": compact_metaphors,
         "constructions": compact_constructions,
         "policies": policies
     }

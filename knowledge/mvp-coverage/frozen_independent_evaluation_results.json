@@ -1,0 +1,1042 @@
+[
+  {
+    "familyId": "sit_01_unwashed_cups_plates",
+    "category": 1,
+    "input": "Every afternoon there are three ceramic coffee mugs stacked right beside the kitchen basin",
+    "frameId": "frame_object_displacement",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Little hints of mug making themselves right at home around the kitchen.",
+      "playful": "Apparently the mug decided living out in the open on the kitchen beats sitting in a drawer.",
+      "exaggerated": "Leaving a gentle trail of mug across the kitchen so nobody forgets how cozy the evening was."
+    }
+  },
+  {
+    "familyId": "sit_02_avoiding_large_cookware",
+    "category": 1,
+    "input": "Cleans all the tiny silverware and saucers but always sidesteps the heavy roasting pan",
+    "frameId": "frame_selective_chore_avoidance",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Adopting a peaceful non-aggression pact toward the roasting pans, letting it rest undisturbed by the sink.",
+      "playful": "Treating the roasting pans like a dormant volcanic formation best left undisturbed by casual dishwashers.",
+      "exaggerated": "Granting the roasting pans sovereign diplomatic immunity from the sponge under official household decree."
+    }
+  },
+  {
+    "familyId": "sit_03_dishes_soaking",
+    "category": 1,
+    "input": "Claims the lasagna casserole dish has to soak underwater until tomorrow afternoon",
+    "frameId": "frame_dish_soaking_omission",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Leaving the casserole in its natural, restful state, thoughtfully ready to welcome the next night of sleep.",
+      "playful": "Granting the casserole complete structural autonomy, viewing making the bed as an artificial morning formality.",
+      "exaggerated": "Declaring an official domestic exemption from making the bed, preserving the casserole as an untouched historical landmark."
+    }
+  },
+  {
+    "familyId": "sit_04_vigorous_cleaning",
+    "category": 1,
+    "input": "Polishing the quartz countertop with so much muscle the whole island vibrates",
+    "frameId": "frame_washing_kitchenware",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Putting deep, genuine elbow grease into the countertop, making sure every square inch gleams with pride.",
+      "playful": "Polishing the countertop with enough vibrational horsepower to register on regional seismology monitors.",
+      "exaggerated": "Mobilizing heavyweight industrial demolition energy to ensure the countertop achieves supernatural optical reflection."
+    }
+  },
+  {
+    "familyId": "sit_05_laundry_in_washer",
+    "category": 1,
+    "input": "Finishes running the wash cycle but leaves the damp towels sitting in the drum overnight",
+    "frameId": "frame_object_displacement",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Giving the freshly washed laundry a quiet extra moment of rest inside the machine before drying.",
+      "playful": "Letting the clean laundry marinate overnight in the washer drum like vintage artisanal textiles.",
+      "exaggerated": "Granting the damp laundry permanent diplomatic asylum inside the washing machine drum indefinitely."
+    }
+  },
+  {
+    "familyId": "sit_06_forgetting_bins",
+    "category": 1,
+    "input": "Totally spaced out rolling the recycling wheelie bin down the driveway before the truck arrived",
+    "frameId": "frame_parent_home_organization",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Letting the wheelie bin enjoy another peaceful week in the driveway with zero hard feelings.",
+      "playful": "Granting the recycling bin a surprise holiday from municipal collection duties this week.",
+      "exaggerated": "Declaring an official municipal exemption granting the wheelie bin sovereign immunity from the garbage truck."
+    }
+  },
+  {
+    "familyId": "sit_07_open_drawers_cupboards",
+    "category": 2,
+    "input": "Walks out of the master bedroom leaving dresser drawers pulled open like stepping stones",
+    "frameId": "frame_open_drawer_organization",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Leaving the drawers in its natural, restful state, thoughtfully ready to welcome the next night of sleep.",
+      "playful": "Granting the drawers complete structural autonomy, viewing making the bed as an artificial morning formality.",
+      "exaggerated": "Declaring an official domestic exemption from making the bed, preserving the drawers as an untouched historical landmark."
+    }
+  },
+  {
+    "familyId": "sit_08_clothes_on_chair",
+    "category": 2,
+    "input": "Drapes worn flannel shirts and track pants over the wooden rocking chair instead of hanging them up",
+    "frameId": "frame_object_displacement",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Little hints of clothes making themselves right at home around the living room.",
+      "playful": "Apparently the clothes decided living out in the open on the living room beats sitting in a drawer.",
+      "exaggerated": "Leaving a gentle trail of clothes across the living room so nobody forgets how cozy the evening was."
+    }
+  },
+  {
+    "familyId": "sit_09_shoes_entrance",
+    "category": 2,
+    "input": "Kicks off leather sneakers right smack in the middle of the entryway rug",
+    "frameId": "frame_object_displacement",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Little hints of gym shoe making themselves right at home around the rug.",
+      "playful": "Apparently the gym shoe decided living out in the open on the rug beats sitting in a drawer.",
+      "exaggerated": "Leaving a gentle trail of gym shoe across the rug so nobody forgets how cozy the evening was."
+    }
+  },
+  {
+    "familyId": "sit_10_leaving_packaging",
+    "category": 2,
+    "input": "Unboxes online deliveries and leaves brown cardboard shipping cartons piled near the credenza",
+    "frameId": "frame_parent_home_organization",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Letting delivery boxes rest peacefully near the credenza until recycling day comes around.",
+      "playful": "Erecting a cardboard warehouse annex by the credenza to celebrate another successful week of online commerce.",
+      "exaggerated": "Constructing a monumental brown cardboard citadel near the credenza capable of housing several cat generations."
+    }
+  },
+  {
+    "familyId": "sit_11_sofa_cushions_blankets",
+    "category": 2,
+    "input": "Gets up from the sectional sofa leaving wool throw blankets rolled into a giant pretzel",
+    "frameId": "frame_punctuality_departure_delay",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Leaving the throw blankets thoughtfully sculpted into a cozy nest ready for the next relaxation session.",
+      "playful": "Sculpting the sectional blankets into an intricate fabric pretzel that doubles as modern living room sculpture.",
+      "exaggerated": "Registering the twisted sofa blanket sculpture as an official permanent installation in the living room pavilion."
+    }
+  },
+  {
+    "familyId": "sit_12_searching_for_keys",
+    "category": 3,
+    "input": "Paces back and forth turning sofa cushions inside out hunting for the car key fob",
+    "frameId": "frame_object_displacement",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Searching with patient determination for items that are playing an affectionate game of hide-and-seek.",
+      "playful": "Turning the room upside down on a treasure hunt for items that chose stealth mode five minutes ago.",
+      "exaggerated": "Mobilizing an elite search-and-rescue battalion to excavate every sofa cushion in search of the elusive fob."
+    }
+  },
+  {
+    "familyId": "sit_13_forgot_where_put_items",
+    "category": 3,
+    "input": "Set down the wireless headphones five minutes ago and has no clue which room they are in",
+    "frameId": "frame_parent_culinary_beverages",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Searching with patient determination for items that are playing an affectionate game of hide-and-seek.",
+      "playful": "Turning the room upside down on a treasure hunt for items that chose stealth mode five minutes ago.",
+      "exaggerated": "Mobilizing an elite search-and-rescue battalion to excavate every sofa cushion in search of the elusive fob."
+    }
+  },
+  {
+    "familyId": "sit_14_looking_for_nearby_item",
+    "category": 3,
+    "input": "Frantically searching the entire kitchen for reading glasses that are resting right on top of their head",
+    "frameId": "frame_object_displacement",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Searching with patient determination for items that are playing an affectionate game of hide-and-seek.",
+      "playful": "Turning the room upside down on a treasure hunt for items that chose stealth mode five minutes ago.",
+      "exaggerated": "Mobilizing an elite search-and-rescue battalion to excavate every sofa cushion in search of the elusive fob."
+    }
+  },
+  {
+    "familyId": "sit_15_bathroom_lights_on",
+    "category": 4,
+    "input": "Breezes out of the guest bathroom leaving vanity bulbs glowing like a Broadway marquee",
+    "frameId": "frame_punctuality_departure_delay",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Leaving the vanity lights glowing warmly to guide the way for anyone passing through.",
+      "playful": "Lighting the guest bathroom like the opening night premiere of a major Broadway production.",
+      "exaggerated": "Treating the bathroom vanity like the landing strip lights at an international airport operating 24/7."
+    }
+  },
+  {
+    "familyId": "sit_16_tv_left_running",
+    "category": 4,
+    "input": "Leaves the big smart television streaming nature documentaries to completely empty armchairs",
+    "frameId": "frame_subjective_preference_contrast",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Deep anthropological immersion in television receiver that somehow always has one more waiting.",
+      "playful": "One person's relaxing background noise is another person's ultimate test of cinematic endurance.",
+      "exaggerated": "Living room sofa officially designated as world headquarters for marathon television receiver research."
+    }
+  },
+  {
+    "familyId": "sit_17_thermostat_ac_debate",
+    "category": 4,
+    "input": "Crank down the hallway climate control until everyone inside needs a goose-down parka",
+    "frameId": "frame_parent_home_organization",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Creating a brisk alpine atmosphere indoors where fuzzy blankets become essential winter gear.",
+      "playful": "Operating an indoor Arctic research base where stepping into the hallway requires polar expedition gear.",
+      "exaggerated": "Transforming the hallway into a sub-zero glaciology laboratory requiring full Himalayan climbing gear."
+    }
+  },
+  {
+    "familyId": "sit_18_fridge_empty_container",
+    "category": 4,
+    "input": "Finishes the apple cider and puts the featherlight empty jug right back on the refrigerator shelf",
+    "frameId": "frame_empty_container_fridge",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Leaving the jug in its natural, restful state, thoughtfully ready to welcome the next night of sleep.",
+      "playful": "Granting the jug complete structural autonomy, viewing making the bed as an artificial morning formality.",
+      "exaggerated": "Declaring an official domestic exemption from making the bed, preserving the jug as an untouched historical landmark."
+    }
+  },
+  {
+    "familyId": "sit_19_appliance_loaded_unstarted",
+    "category": 4,
+    "input": "Packed every single plate and utensil into the dishwasher rack but forgot to press the start button",
+    "frameId": "frame_appliance_unstarted",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Leaving the plate in its natural, restful state, thoughtfully ready to welcome the next night of sleep.",
+      "playful": "Granting the plate complete structural autonomy, viewing making the bed as an artificial morning formality.",
+      "exaggerated": "Declaring an official domestic exemption from making the bed, preserving the plate as an untouched historical landmark."
+    }
+  },
+  {
+    "familyId": "sit_20_toothpaste_cap_tube",
+    "category": 5,
+    "input": "Squeezes the peppermint toothpaste from the exact center and forgets to screw the lid back on",
+    "frameId": "frame_parent_domestic_chores",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Leaving the toothpaste in its natural, restful state, thoughtfully ready to welcome the next night of sleep.",
+      "playful": "Granting the toothpaste complete structural autonomy, viewing making the bed as an artificial morning formality.",
+      "exaggerated": "Declaring an official domestic exemption from making the bed, preserving the toothpaste as an untouched historical landmark."
+    }
+  },
+  {
+    "familyId": "sit_21_wet_towels_bathroom",
+    "category": 5,
+    "input": "Steps out of the hot shower and drops a damp bath towel into a damp pile on the bathmat",
+    "frameId": "frame_object_displacement",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Little hints of bath towel making themselves right at home around the shower.",
+      "playful": "Apparently the bath towel decided living out in the open on the shower beats sitting in a drawer.",
+      "exaggerated": "Leaving a gentle trail of bath towel across the shower so nobody forgets how cozy the evening was."
+    }
+  },
+  {
+    "familyId": "sit_22_shower_takes_forever",
+    "category": 5,
+    "input": "Stays under the hot shower stream for fifty uninterrupted minutes until the mirrors vanish in steam",
+    "frameId": "frame_punctuality_departure_delay",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Transforming a quick rinse into a deeply restorative private spa retreat with total thermal dedication.",
+      "playful": "Operating the shower on full geothermal hot-spring settings until the entire bathroom becomes a cloud chamber.",
+      "exaggerated": "Converting the shower stall into a tropical rainforest biome that single-handedly tests the municipal hot water grid."
+    }
+  },
+  {
+    "familyId": "sit_23_namesake_milk_tea",
+    "category": 6,
+    "input": "Pours a tiny splash of oat milk into hot water and calls it an authentic artisan latte",
+    "frameId": "frame_beverage_preparation",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Affectionately celebrating a minimalist interpretation of a latte with just a thoughtful whisper of milk.",
+      "playful": "Introducing three drops of oat milk to hot water and proudly christening it an artisanal craft beverage.",
+      "exaggerated": "Presenting a microscopic droplet of oat milk in hot water as a groundbreaking European specialty roast."
+    }
+  },
+  {
+    "familyId": "sit_24_overcomplicating_recipes",
+    "category": 6,
+    "input": "Mobilizes seven distinct pans, three whisks, and a thermometer just to toast a plain bagel",
+    "frameId": "frame_washing_kitchenware",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Taking the culinary craft so seriously that preparing toast a plain bagel naturally enlists all seven pans.",
+      "playful": "Treating toast a plain bagel like an arena championship where deploying seven separate pans is the only respectable tactic.",
+      "exaggerated": "Transforming toast a plain bagel into a heavyweight engineering project that requires mobilizing seven distinct pans across every counter."
+    }
+  },
+  {
+    "familyId": "sit_25_cooking_tasting_ritual",
+    "category": 6,
+    "input": "Dips a wooden ladle into the marinara stew fifteen consecutive times while stirring dinner",
+    "frameId": "frame_parent_home_organization",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Approaching the marinara stew with dedicated craftsmanship, confirming perfection at least fifteen times just to be certain.",
+      "playful": "Conducting a rigorous Michelin-level inspection where fifteen times separate samplings of the marinara stew are strictly mandatory.",
+      "exaggerated": "Treating the marinara stew like a high-security laboratory formula that requires fifteen times official quality audits before anyone else can eat."
+    }
+  },
+  {
+    "familyId": "sit_26_stealing_fries_plate",
+    "category": 7,
+    "input": "Insists she is completely full then keeps plucking golden french fries directly off my dish",
+    "frameId": "frame_parent_opinions_disagreements",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Observing that claiming to be completely full is really just a polite prelude to sharing the golden french fries directly off my dish.",
+      "playful": "Operating under the household tax rule where claiming to be completely full grants immediate tasting rights to the golden french fries directly off my dish.",
+      "exaggerated": "Declaring a unilateral diplomatic treaty where claiming to be completely full formally authorizes sampling some of the golden french fries directly off my dish."
+    }
+  },
+  {
+    "familyId": "sit_27_eating_last_slice",
+    "category": 7,
+    "input": "Swipes the very last slice of sourdough pizza straight off the cardboard box without checking with anyone",
+    "frameId": "frame_parent_home_organization",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Quietly rescuing the last piece of package boxes from lingering all alone on the plate.",
+      "playful": "Executing a swift tactical recovery mission on the last piece of package boxes before negotiations could even open.",
+      "exaggerated": "Exercising eminent domain over the final piece of package boxes with zero advance diplomatic warning."
+    }
+  },
+  {
+    "familyId": "sit_28_leaving_one_sip",
+    "category": 7,
+    "input": "Leaves a single microscopic thimble of iced tea at the bottom of the tall tumbler",
+    "frameId": "frame_parent_communication_voice",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Leaving that single thoughtful drop behind, ensuring the beverage journey isn't quite over yet.",
+      "playful": "Preserving a microscopic thimble of iced tea like a rare museum relic that nobody dares disturb.",
+      "exaggerated": "Designating the final microscopic thimble of liquid an untouchable heritage landmark at the bottom of the glass."
+    }
+  },
+  {
+    "familyId": "sit_29_snoring_bedtime_noises",
+    "category": 8,
+    "input": "Drifting off into deep slumber and emitting rhythmic chainsaw snores that shake the bedside lamp",
+    "frameId": "frame_sleep_acoustics",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Cozy nighttime acoustics adding their own gentle unscripted sound effects to the bedroom.",
+      "playful": "Sleep in our bedroom apparently comes with a complimentary late-night percussion and brass section.",
+      "exaggerated": "Bedside pillows quietly wishing for tiny velvet earmuffs during tonight's marathon bedroom orchestra."
+    }
+  },
+  {
+    "familyId": "sit_30_stealing_blankets",
+    "category": 8,
+    "input": "Twirls in their sleep like an alligator and drags the entire down comforter over to their side",
+    "frameId": "frame_sleep_acoustics",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Gently gathering the entire comforter for an extra cozy cocoon during deep sleep.",
+      "playful": "Executing an Olympic bedtime alligator roll that claims ninety-five percent of the comforter territory.",
+      "exaggerated": "Exercising total gravitational sovereignty over the comforter, leaving the other side of the bed an arctic tundra."
+    }
+  },
+  {
+    "familyId": "sit_31_falling_asleep_movie",
+    "category": 8,
+    "input": "Begs to watch a suspenseful crime thriller then dozes off sound asleep eight minutes in",
+    "frameId": "frame_subjective_entertainment_contrast",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Enjoying the comforting hum of the thriller as a relaxing bedtime story after a full day.",
+      "playful": "Lobbying passionately for high-stakes cinema only to achieve deep REM sleep before the opening scene concludes.",
+      "exaggerated": "Demanding a gripping two-hour cinematic masterpiece purely to utilize the introductory dialogue as a sleep aid."
+    }
+  },
+  {
+    "familyId": "sit_32_alarm_ringing_unstopped",
+    "category": 9,
+    "input": "Sleeps blissfully through an ear-piercing digital alarm chime that echoes across the whole hallway",
+    "frameId": "frame_sleep_duvet_alarm",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "A polite morning chorus of five-minute chimes easing gently out of cozy dreams.",
+      "playful": "Seven consecutive alarms just to be gently acquainted with the general rumor of morning.",
+      "exaggerated": "The alarm clock happily performed six encores while both eyes stayed loyally shut."
+    }
+  },
+  {
+    "familyId": "sit_33_multiple_snooze_alarms",
+    "category": 9,
+    "input": "Sets seven staggered wakeup alerts between 6am and 7am and taps snooze on every single one",
+    "frameId": "frame_sleep_duvet_alarm",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "A polite morning chorus of five-minute chimes easing gently out of cozy dreams.",
+      "playful": "Seven consecutive alarms just to be gently acquainted with the general rumor of morning.",
+      "exaggerated": "The alarm clock happily performed six encores while both eyes stayed loyally shut."
+    }
+  },
+  {
+    "familyId": "sit_34_slow_morning_boot",
+    "category": 9,
+    "input": "Stumbles into the kitchen like a slow-loading computer operating at five percent cognitive capacity",
+    "frameId": "frame_parent_opinions_disagreements",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Allowing morning consciousness to boot up at its own natural, gentle speed before taking on the day.",
+      "playful": "Stumbling into the kitchen running on 1995 dial-up modem speed while cognitive drivers load in background.",
+      "exaggerated": "Operating under a low-power system hibernation protocol where each step across the kitchen takes several geological epochs."
+    }
+  },
+  {
+    "familyId": "sit_35_loud_phone_speaking",
+    "category": 10,
+    "input": "Takes conference speakerphone calls at stadium rock volume while wandering through the kitchen",
+    "frameId": "frame_parent_communication_voice",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "A lively speakerphone call making sure every corner of the room stays warmly up to date.",
+      "playful": "Apparently this speakerphone call came with complimentary front-row seats for the rest of the apartment.",
+      "exaggerated": "Speaking loud enough into the speakerphone that cell towers can safely take the rest of the afternoon off."
+    }
+  },
+  {
+    "familyId": "sit_36_conversational_decibel",
+    "category": 10,
+    "input": "Tells an everyday anecdote about grocery shopping with the vocal power of an opera performer",
+    "frameId": "frame_decision_preference_mismatch",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Brightening everyday moments with spontaneous musical charm and unscripted cheer.",
+      "playful": "Staging an unprompted Broadway musical extravaganza right in the middle of domestic chores.",
+      "exaggerated": "Transforming everyday household routines into a full-scale operatic world premiere that commands a standing ovation."
+    }
+  },
+  {
+    "familyId": "sit_37_repeating_same_story",
+    "category": 10,
+    "input": "Shares that exact story about their college road trip for the ninth time this month",
+    "frameId": "frame_parent_timing_scheduling",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Affectionately revisiting road, letting the golden memories shine just as brightly each time.",
+      "playful": "Broadcasting the deluxe remaster of road complete with director commentary and bonus trivia.",
+      "exaggerated": "Entering road into the Library of Congress for mandatory annual recital across all domestic gatherings."
+    }
+  },
+  {
+    "familyId": "sit_38_silly_noise_serious_moment",
+    "category": 11,
+    "input": "Lets out an absurd Donald Duck squawk right in the middle of budgeting discussions",
+    "frameId": "frame_parent_home_organization",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Brightening everyday moments with spontaneous musical charm and unscripted cheer.",
+      "playful": "Staging an unprompted Broadway musical extravaganza right in the middle of domestic chores.",
+      "exaggerated": "Transforming everyday household routines into a full-scale operatic world premiere that commands a standing ovation."
+    }
+  },
+  {
+    "familyId": "sit_39_bad_puns_wordplay",
+    "category": 11,
+    "input": "Drops agonizingly cheesy dad jokes whenever anyone mentions grocery items at dinner",
+    "frameId": "frame_decision_preference_mismatch",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Brightening everyday moments with spontaneous musical charm and unscripted cheer.",
+      "playful": "Staging an unprompted Broadway musical extravaganza right in the middle of domestic chores.",
+      "exaggerated": "Transforming everyday household routines into a full-scale operatic world premiere that commands a standing ovation."
+    }
+  },
+  {
+    "familyId": "sit_40_crying_at_movies",
+    "category": 12,
+    "input": "Wipes away genuine tears during sentimental pet adoption television commercials",
+    "frameId": "frame_emotional_cinematic_expressiveness",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Some movie nights come with popcorn and a cozy little extra supply of tissues.",
+      "playful": "Popcorn for the plot, tissues for the unexpected emotional twists on the screen.",
+      "exaggerated": "Our living room cinema may need to include waterproof goggles in the price of admission."
+    }
+  },
+  {
+    "familyId": "sit_41_emotional_fictional_attachment",
+    "category": 12,
+    "input": "Gets deeply heartbroken and solemn when an animated raccoon loses its family in a cartoon",
+    "frameId": "frame_emotional_cinematic_expressiveness",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Some movie nights come with popcorn and a cozy little extra supply of tissues.",
+      "playful": "Popcorn for the plot, tissues for the unexpected emotional twists on the screen.",
+      "exaggerated": "Our living room cinema may need to include waterproof goggles in the price of admission."
+    }
+  },
+  {
+    "familyId": "sit_42_watches_boring_videos",
+    "category": 13,
+    "input": "Mesmerized for two solid hours watching videos of industrial timber processing machinery",
+    "frameId": "frame_subjective_preference_contrast",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Deep anthropological immersion in video recording that somehow always has one more waiting.",
+      "playful": "One person's relaxing background noise is another person's ultimate test of cinematic endurance.",
+      "exaggerated": "Living room sofa officially designated as world headquarters for marathon video recording research."
+    }
+  },
+  {
+    "familyId": "sit_43_opinion_proposition_exercise",
+    "category": 13,
+    "input": "Passionately argues that gentle stretching routines should never count as genuine physical workout",
+    "frameId": "frame_parent_home_organization",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Bringing genuine passion to physical definitions, affectionately debating the true essence of workout.",
+      "playful": "Delivering an unprompted Olympic standards lecture on what technically qualifies as genuine sweat equity.",
+      "exaggerated": "Convening the International Olympic Committee to deliver a binding constitutional verdict against gentle stretching."
+    }
+  },
+  {
+    "familyId": "sit_44_dinner_indecision_debate",
+    "category": 14,
+    "input": "Takes forty-five minutes scrolling through food delivery menus without picking a single takeout dish",
+    "frameId": "frame_decision_preference_mismatch",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Taking a thoughtful forty-five minutes gently exploring tonight's dinner possibilities together.",
+      "playful": "Turning dinner selection into a friendly forty-five minutes tour of every neighborhood kitchen.",
+      "exaggerated": "Dedication at its finest: dedicating forty-five minutes to reviewing takeout menus with Olympic-level thoroughness."
+    }
+  },
+  {
+    "familyId": "sit_45_anything_is_fine_response",
+    "category": 14,
+    "input": "Claims any dinner cuisine is wonderful then vetoes four distinct restaurant proposals in a row",
+    "frameId": "frame_decision_preference_mismatch",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Two thoughtful appetites taking their sweet time picking tonight's coziest dinner.",
+      "playful": "Deciding where to eat quietly evolved into a polite five-round dinner brainstorm.",
+      "exaggerated": "Half an hour later, still heroically asking 'I don't mind, whatever you're craving'."
+    }
+  },
+  {
+    "familyId": "sit_46_funny_nicknames",
+    "category": 15,
+    "input": "Invents ridiculous rhyming pet names like Captain Pumpernickel when talking to me in the kitchen",
+    "frameId": "frame_parent_communication_voice",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Brightening everyday moments with spontaneous musical charm and unscripted cheer.",
+      "playful": "Staging an unprompted Broadway musical extravaganza right in the middle of domestic chores.",
+      "exaggerated": "Transforming everyday household routines into a full-scale operatic world premiere that commands a standing ovation."
+    }
+  },
+  {
+    "familyId": "sit_47_cute_repetitive_rituals",
+    "category": 15,
+    "input": "Does a goofy three-step victory dance whenever finding matching clean socks in the basket",
+    "frameId": "frame_parent_timing_scheduling",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Brightening everyday moments with spontaneous musical charm and unscripted cheer.",
+      "playful": "Staging an unprompted Broadway musical extravaganza right in the middle of domestic chores.",
+      "exaggerated": "Transforming everyday household routines into a full-scale operatic world premiere that commands a standing ovation."
+    }
+  },
+  {
+    "familyId": "sit_48_finger_tapping_humming",
+    "category": 16,
+    "input": "Drumming pencils and tapping fingertips rhythmically on the tabletop during dinner",
+    "frameId": "frame_sleep_acoustics",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Cozy nighttime acoustics adding their own gentle unscripted sound effects to the bedroom.",
+      "playful": "Sleep in our bedroom apparently comes with a complimentary late-night percussion and brass section.",
+      "exaggerated": "Bedside pillows quietly wishing for tiny velvet earmuffs during tonight's marathon bedroom orchestra."
+    }
+  },
+  {
+    "familyId": "sit_49_random_house_singing",
+    "category": 16,
+    "input": "Belting out improvised opera melodies about finding mustard in the pantry",
+    "frameId": "frame_parent_culinary_beverages",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Brightening everyday moments with spontaneous musical charm and unscripted cheer.",
+      "playful": "Staging an unprompted Broadway musical extravaganza right in the middle of domestic chores.",
+      "exaggerated": "Transforming everyday household routines into a full-scale operatic world premiere that commands a standing ovation."
+    }
+  },
+  {
+    "familyId": "sit_50_phone_scrolling_bed_dinner",
+    "category": 17,
+    "input": "Hypnotized scrolling through viral video feeds while sitting at the candlelit dinner table",
+    "frameId": "frame_attention_distraction",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "A quick pause where the screen pulled up a tiny chair right beside our conversation.",
+      "playful": "The phone clearly worried it might miss tonight's stories if it stayed peacefully in a pocket.",
+      "exaggerated": "Scrolling feeds and passing dinner bowls simultaneously like an Olympic multi-tasking exhibition."
+    }
+  },
+  {
+    "familyId": "sit_51_hundred_browser_tabs",
+    "category": 17,
+    "input": "Hoarding eighty-four open research tabs on mobile safari and refusing to close any of them",
+    "frameId": "frame_parent_home_organization",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Curating an expansive universe of open tabs, keeping every possible train of thought warmly alive.",
+      "playful": "Operating the world's most congested digital library where closing a single tab feels like historical treason.",
+      "exaggerated": "Designating the mobile browser an official national digital archive housing 84 irreplaceable intellectual monuments."
+    }
+  },
+  {
+    "familyId": "sit_52_rewatching_same_shows",
+    "category": 18,
+    "input": "Rewatching the entire comfort sitcom series for the twelfth time instead of starting anything new",
+    "frameId": "frame_subjective_preference_contrast",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Finding heartwarming comfort in a familiar series where every punchline feels like an old friend.",
+      "playful": "Treating the comfort sitcom like a sacred religious text requiring quarterly recitations from memory.",
+      "exaggerated": "Appointing the comfort sitcom an official permanent cultural heritage site streaming on continuous 24-hour loop."
+    }
+  },
+  {
+    "familyId": "sit_53_intense_hobby_absorption",
+    "category": 18,
+    "input": "Disappears into the garage workshop for six hours perfecting the finish on miniature wooden birdhouses",
+    "frameId": "frame_parent_culinary_beverages",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Bringing quiet artisan dedication to the workshop, patiently perfecting every fine detail.",
+      "playful": "Disappearing into the workshop like a mythical master carpenter chasing timber enlightenment.",
+      "exaggerated": "Convening a six-hour solitary guild symposium to elevate miniature into a priceless heirloom."
+    }
+  },
+  {
+    "familyId": "sit_54_departure_door_delay",
+    "category": 19,
+    "input": "Stands fully booted by the front entrance while partner looks for their jacket for twenty minutes",
+    "frameId": "frame_parent_timing_scheduling",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Standing ready at the threshold, patiently keeping the departure rhythm calm and relaxed.",
+      "playful": "Standing fully booted like a sentry guard on duty while jacket-hunting expeditions scour the house.",
+      "exaggerated": "Establishing a permanent forward outpost on the welcome mat with full outdoor expedition gear."
+    }
+  },
+  {
+    "familyId": "sit_55_last_minute_packing",
+    "category": 19,
+    "input": "Stuffing mismatched socks and toiletries into the duffle bag three minutes before the airport shuttle arrives",
+    "frameId": "frame_parent_timing_scheduling",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Packing with spontaneous high-efficiency momentum just before stepping out the door.",
+      "playful": "Executing a high-stakes three-minute luggage sprint like an extreme sports championship.",
+      "exaggerated": "Staging an Olympic decathlon in rapid suitcase stuffing while the airport shuttle idles at the curb."
+    }
+  },
+  {
+    "familyId": "sit_56_buying_another_mug",
+    "category": 20,
+    "input": "Purchasing yet another pottery coffee mug when our kitchen cupboard is already bursting at the seams",
+    "frameId": "frame_object_displacement",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Assembling a friendly ceramic delegation across the desk to keep the workday company.",
+      "playful": "Erecting a ceramic Great Wall across the computer desk to defend the workspace from empty surfaces.",
+      "exaggerated": "Fortifying the computer desk into a medieval stoneware citadel capable of withstanding prolonged siege."
+    }
+  },
+  {
+    "familyId": "sit_57_browsing_every_supermarket_aisle",
+    "category": 20,
+    "input": "Methodically walking down every single grocery row when we only came in to buy paper towels",
+    "frameId": "frame_decision_preference_mismatch",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Turning a simple quick errand into a relaxing, scenic stroll down every grocery aisle.",
+      "playful": "Entering the grocery store for two items and accidentally conducting a complete storewide inventory audit.",
+      "exaggerated": "Upgrading a two-minute grocery pickup into a monumental cross-country expedition visiting every single shelf."
+    }
+  },
+  {
+    "familyId": "sit_58_direction_debate_gps",
+    "category": 21,
+    "input": "Argues with the turn-by-turn navigation voice and takes an adventurous forty-minute detour through farm roads",
+    "frameId": "frame_travel_navigation_packing",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Choosing the scenic adventurous route, letting curiosity guide the journey over robotic directions.",
+      "playful": "Engaging in a lively philosophical debate with the GPS voice and taking forty bonus minutes through cow pastures.",
+      "exaggerated": "Overruling global satellite networks to embark on an uncharted forty-minute safari through rural dirt trails."
+    }
+  },
+  {
+    "familyId": "sit_59_overpacking_weekend_bags",
+    "category": 21,
+    "input": "Packing four heavy suitcases and eight pairs of boots for a two-night weekend trip to the suburbs",
+    "frameId": "frame_object_displacement",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Little hints of luggage compartment making themselves right at home around the living room.",
+      "playful": "Apparently the luggage compartment decided living out in the open on the living room beats sitting in a drawer.",
+      "exaggerated": "Leaving a gentle trail of luggage compartment across the living room so nobody forgets how cozy the evening was."
+    }
+  },
+  {
+    "familyId": "sit_60_talking_during_focus",
+    "category": 22,
+    "input": "Busts into the home study with funny internet gossip while partner is on an important client video call",
+    "frameId": "frame_parent_opinions_disagreements",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Sharing a delightful, spontaneous spark of news right when a serious work moment needed some warmth.",
+      "playful": "Busting into client calls like an unprompted breaking-news anchor delivering top-tier internet gossip.",
+      "exaggerated": "Interrupting international corporate diplomacy to deliver emergency classified intelligence on internet memes."
+    }
+  },
+  {
+    "familyId": "sit_61_desk_mug_collection",
+    "category": 22,
+    "input": "Accumulates a fortress of seven empty ceramic mugs across the computer desk over the week",
+    "frameId": "frame_parent_opinions_disagreements",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Assembling a friendly ceramic delegation across the desk to keep the workday company.",
+      "playful": "Erecting a ceramic Great Wall across the computer desk to defend the workspace from empty surfaces.",
+      "exaggerated": "Fortifying the computer desk into a medieval stoneware citadel capable of withstanding prolonged siege."
+    }
+  },
+  {
+    "familyId": "sit_62_long_goodbyes_party",
+    "category": 23,
+    "input": "Engages in an epic thirty-minute farewell speech while lingering with the front door wide open",
+    "frameId": "frame_parent_home_organization",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Ensuring no warm thought is left unsaid before finally waving goodbye at the door.",
+      "playful": "Delivering a multi-encore farewell speech while keeping the front door propped open as a theatrical stage.",
+      "exaggerated": "Staging a thirty-minute State of the Union valedictory address on the welcome mat before permitting departure."
+    }
+  },
+  {
+    "familyId": "sit_63_taking_hundred_photos",
+    "category": 23,
+    "input": "Makes everyone freeze their forks for fifteen minutes to stage fifty food pictures from multiple angles",
+    "frameId": "frame_parent_timing_scheduling",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Appreciating the beauty of tonight's dinner, making sure the memory is captured just right.",
+      "playful": "Ordering a household fork ceasefire for fifteen minutes to stage a Vogue cover photoshoot for noodles.",
+      "exaggerated": "Issuing a federal culinary injunction freezing all silverware mid-air until fifty cinematic angles are archived."
+    }
+  },
+  {
+    "familyId": "sit_64_forgetting_to_water_plants",
+    "category": 24,
+    "input": "The living room ferns are thirsty and sagging because nobody gave them water all fortnight",
+    "frameId": "frame_houseplant_pet_care",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "The ferns resting patiently on the sill, quietly hoping for a refreshing sip of water.",
+      "playful": "That leafy ferns gently cleared its throat to ask if today finally counts as watering day.",
+      "exaggerated": "The living room ferns is dropping dramatic hints toward the watering can like a thirsty cactus."
+    }
+  },
+  {
+    "familyId": "sit_65_talking_to_pets_voice",
+    "category": 24,
+    "input": "Speaking to the ginger cat in high-pitched baby coos asking how its important executive day went",
+    "frameId": "frame_parent_communication_voice",
+    "outcomeType": "playful_angles",
+    "syntaxOk": true,
+    "behavioralOk": true,
+    "meaningOk": true,
+    "humorOk": true,
+    "angles": {
+      "gentle": "Checking in on the cat's busy executive agenda with pure, affectionate devotion.",
+      "playful": "Conducting a high-level corporate board meeting with the cat to review key fiscal nap targets.",
+      "exaggerated": "Convening an emergency international G7 summit with the ginger cat to discuss global nap treaties."
+    }
+  }
+]

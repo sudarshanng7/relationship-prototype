@@ -2618,7 +2618,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "A familiar sight where the {target} took a cozy breather halfway back into place.",
+    "grammarTemplate": "A familiar sight where the {target} took a cozy breather halfway open before full closure.",
     "tone": "gentle",
     "sensitivityRestrictions": [
       "ordinary_quirk"
@@ -3898,7 +3898,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "The {target} is waiting calmly in case anyone wants to press go—or switch off—in a moment.",
+    "grammarTemplate": "The {target} is waiting calmly in case anyone wants to press go\u2014or switch off\u2014in a moment.",
     "tone": "gentle",
     "sensitivityRestrictions": [
       "ordinary_quirk"
@@ -6086,7 +6086,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "That {destination} got a truly generous coat of {substance} — not a single spot was left wondering.",
+    "grammarTemplate": "That {destination} got a truly generous coat of {substance} \u2014 not a single spot was left wondering.",
     "tone": "gentle",
     "sensitivityRestrictions": [
       "ordinary_quirk"
@@ -6251,7 +6251,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "At this rate the household should probably buy {target} in bulk — industrial bulk.",
+    "grammarTemplate": "At this rate the household should probably buy {target} in bulk \u2014 industrial bulk.",
     "tone": "exaggerated",
     "sensitivityRestrictions": [
       "ordinary_quirk"
@@ -6424,7 +6424,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "Honoring personal pace without pressure—your comfort and choice always come first.",
+    "grammarTemplate": "Honoring personal pace without pressure\u2014your comfort and choice always come first.",
     "tone": "playful",
     "sensitivityRestrictions": [
       "boundary_concern",
@@ -7040,7 +7040,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "A charming unscripted ritual while {action} the {target}, quietly bringing its own distinctive character to the day.",
+    "grammarTemplate": "Honoring the cozy everyday rhythm around the {target}, letting things unfold without unnecessary rush.",
     "tone": "gentle",
     "sensitivityRestrictions": [
       "ordinary_quirk"
@@ -7077,7 +7077,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "Handling the {target} according to an unofficial personal playbook that seems to evolve with every passing week.",
+    "grammarTemplate": "Treating the {target} like a signature household tradition that follows its own private rules.",
     "tone": "playful",
     "sensitivityRestrictions": [
       "ordinary_quirk"
@@ -7114,7 +7114,7 @@
       "behavior"
     ],
     "compatibleModifiers": [],
-    "grammarTemplate": "The {target} starring in today's delightfully quirky domestic episode with unmistakable leading-role energy.",
+    "grammarTemplate": "Granting the {target} sovereign status in the household, observed with ceremonial precision.",
     "tone": "exaggerated",
     "sensitivityRestrictions": [
       "ordinary_quirk"
